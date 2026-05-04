@@ -85,6 +85,8 @@ Additionally, a Corporation controller needs to remotely query and manage the st
 
 #### Corporation (VPR Group)
 
+*This section is not normative.*
+
 As defined in the VPR Specification v4:
 
 > A **corporation** is a VPR **group** which is the owner of a specific resource in the VPR.
@@ -95,32 +97,36 @@ The `VERANA_CORPORATION` environment variable identifies the VPR group this agen
 
 #### Agent Account (vs_operator)
 
+*This section is not normative.*
+
 The agent's Verana account, derived from `AGENT_VERANA_MNEMONIC`, acts as the `vs_operator` for on-chain operations.
 
 #### Agent Account Authorizations
 
-The `vs_operator` account SHOULD have been granted appropriate authorizations by the `VERANA_CORPORATION` group:
+*This section is not normative.*
 
-RECOMMENDED:
+The `vs_operator` account should have been granted appropriate authorizations by the `VERANA_CORPORATION` group:
+
+recommended:
 
 - **`VSOperatorAuthorization`**: Grants the agent the right to execute `CreateOrUpdatePermissionSession`, `TriggerResolver`, `SetPermissionVPToValidated` on behalf of the corporation, for specific permissions. See VPR Spec [AUTHZ-CHECK-3].
   - If `vs_operator_authz_with_feegrant` is `true` on the relevant permission, the corporation's account covers transaction fees and the agent account does not need to be independently funded.
   - If `vs_operator_authz_with_feegrant` is `false`, the agent account MUST have sufficient balance to pay transaction fees.
 
-### Configuration and Bootstrap
+### [VSA-VTI-CFG] Configuration
 
-#### Container Environment Variables
+#### [VSA-VTI-CFG-ENV] Container Environment Variables
 
 The following environment variables MUST be provided when the VS Agent container is started.
 
-##### Identity and Corporation
+##### [VSA-VTI-CFG-ENV-ID] Identity and Corporation
 
 | Variable | Required | Description |
 |---|---|---|
 | `VERANA_CORPORATION` | REQUIRED | The VPR group identifier of the corporation this agent belongs to. All on-chain resources (permissions, trust registries,...) are owned by this corporation. |
 | `AGENT_VERANA_MNEMONIC` | REQUIRED | BIP-39 mnemonic used to derive the agent's Verana blockchain account. This account MUST have been granted a `VSOperatorAuthorization` by the `VERANA_CORPORATION` group for the permissions it operates under.|
 
-##### Network Configuration
+##### [VSA-VTI-CFG-ENV-NET] Network Configuration
 
 | Variable | Required | Description |
 |---|---|---|
@@ -128,7 +134,7 @@ The following environment variables MUST be provided when the VS Agent container
 | `VERANA_INDEXER` | REQUIRED | Verana indexer API URL (e.g., `https://idx.testnet.verana.network`). |
 | `VERANA_CHAIN_ID` | OPTIONAL | Chain ID. |
 
-##### Agent Configuration Mode
+##### [VSA-VTI-CFG-ENV-MODE] Agent Configuration Mode
 
 Agent mode depends on whether you want the agent to obtain an ECS-Organization or ECS-Persona credential (standalone): Verifiable Trust VS-REQ-3; or delegated Verifiable Trust VS-REQ-4.
 
@@ -139,7 +145,7 @@ See [comparison between VS-REQ-3 and VS-REQ-4](https://verana-labs.github.io/ver
 | `VS_AGENT_MODE` | OPTIONAL | One of `standalone` or `delegated`. Default: `standalone`. See [ECS Standalone Mode](#ecs-standalone-mode). |
 | `VS_DELEGATED_ISSUER_DID` | CONDITIONAL | DID of the parent Verifiable Service to contact for obtaining a Service credential. REQUIRED when `VS_AGENT_MODE` = `delegated`. |
 
-### Notifications
+### [VSA-VTI-NOTIF] Notifications
 
 The agent MUST maintain a permanent WebSocket connection to the VPR indexer and subscribe to notifications related to:
 
@@ -148,13 +154,15 @@ The agent MUST maintain a permanent WebSocket connection to the VPR indexer and 
 
 The indexer tracks all on-chain objects where `did` matches the agent's DID including Trust Registries, Credential Schemas (within those Trust Registries), and objects that match `vs_account`, like Permissions, Permission Sessions, Authorizations — and emits a notification whenever any of these objects is created or modified by a transaction.
 
-If the WebSocket connection is lost, the agent MUST reconnect with exponential backoff and re-synchronize by querying the indexer REST API for any events missed during the disconnection.
+If the WebSocket connection is lost, the agent MUST reconnect with exponential backoff and re-synchronize by querying the indexer REST API for any events missed during the disconnection: Agent MUST maintain the last fully processed block-height in its state, so that when it restarts, it can request missing events from this block + 1 until websocket notified block height, before starting to process new messages from websocket. Shall a processed message have been already processed, it MUST be discarded.
 
 The following table lists all VPR transactions that produce a notification for the subscribed agent, grouped by the agent's role.
 
 Each notification must be associated with a specific handler interface in the VS Agent. A default implementation will be provided to handle the most important notifications. Developers can implement their own handlers to override VS Agent default handlers (or provide an implementation for notifications not handled by the default implementation).
 
-#### Trust Registry Owner Notifications
+Other messages not mentionned here COULD be possibly received and SHOULD be ignored.
+
+#### [VSA-VTI-NOTIF-TR] Trust Registry Owner Notifications
 
 These notifications are emitted when objects in a Trust Registry owned by the agent's DID (`TrustRegistry.did` = agent DID) are created or modified.
 
@@ -164,53 +172,52 @@ These notifications are emitted when objects in a Trust Registry owned by the ag
 | `UpdateTrustRegistry` [MOD-TR-MSG-4] | The Trust Registry has been updated. | N/A. |
 | `AddGovernanceFrameworkDocument` [MOD-TR-MSG-2] | A Governance Framework document has been added to the Trust Registry. | N/A. |
 | `IncreaseActiveGFVersion` [MOD-TR-MSG-3] | The active Governance Framework version has been incremented. | N/A. |
-| `CreateNewCredentialSchema` [MOD-CS-MSG-1] | A new Credential Schema has been created in the agent's Trust Registry. | Trigger automatic VTJSC publication (see [VTJSC Management](#vtjsc-management)). |
+| `CreateNewCredentialSchema` [MOD-CS-MSG-1] | A new Credential Schema has been created in the agent's Trust Registry. | Trigger automatic VTJSC publication (see [VTJSC Management](#vsa-vti-vtjsc-vtjsc-management)). |
 | `UpdateCredentialSchema` [MOD-CS-MSG-2] | A Credential Schema has been updated (e.g., validation validity periods). | N/A. |
 | `ArchiveCredentialSchema` [MOD-CS-MSG-3] | A Credential Schema has been archived or unarchived. | N/A. |
 
-#### Permission Notifications
+#### [VSA-VTI-NOTIF-PERM] Permission Notifications
 
 All notifications are sent both to the Applicant and Validator matching `applicant_permission.vs_agent` or `validator_permission.vs_agent`.
 
 | VPR Transaction | Description | Default Handler Implementation |
 | --- | --- | --- |
-| `StartPermissionVP` [MOD-PERM-MSG-1] | An applicant has started a new Validation Process targeting the DID of this agent. | For Validator: N/A. For Applicant: Progress the credential acquisition flow (see [new validation process](#new-validation-process)). |
-| `RenewPermissionVP` [MOD-PERM-MSG-2] | An applicant has renewed an existing Validation Process. | For Validator: N/A. For Applicant: Progress the credential acquisition flow (see [renew validation process](#renew-validation-process)). |
-| `SetPermissionVPToValidated` [MOD-PERM-MSG-3] | Validator has set the agent's permission `vp_state` to `VALIDATED`. | For Validator: Progress the credential acquisition flow (see [new validation process](#new-validation-process)). For Applicant: N/A. |
+| `StartPermissionVP` [MOD-PERM-MSG-1] | An applicant has started a new Validation Process targeting the DID of this agent. | For Validator: N/A. For Applicant: Progress the credential acquisition flow (see [new validation process](#vsa-vti-flow-vp-new-new-validation-process)). |
+| `RenewPermissionVP` [MOD-PERM-MSG-2] | An applicant has renewed an existing Validation Process. | For Validator: N/A. For Applicant: Progress the credential acquisition flow (see [renew validation process](#vsa-vti-flow-vp-renew-renew-validation-process)). |
+| `SetPermissionVPToValidated` [MOD-PERM-MSG-3] | Validator has set the agent's permission `vp_state` to `VALIDATED`. | For Validator: Progress the credential acquisition flow (see [new validation process](#vsa-vti-flow-vp-new-new-validation-process)). For Applicant: N/A. |
 | `AdjustPermission` [MOD-PERM-MSG-8] | Validator or ancestor has adjusted the agent's permission `effective_until`. | N/A. |
 | `RevokePermission` [MOD-PERM-MSG-9] | Validator, ancestor, or TR controller has revoked the agent's permission. | Remove linked VP from DID Document if exists, delete credential if exists. |
 | `SlashPermissionTrustDeposit` [MOD-PERM-MSG-12] | Validator or TR controller has slashed the agent's permission trust deposit. | Clean up the associated flow state. |
 | `RepayPermissionSlashedTrustDeposit` [MOD-PERM-MSG-13] | The agent's slashed trust deposit has been repaid (confirmation of own tx). | N/A. |
 | `CancelPermissionVPLastRequest` [MOD-PERM-MSG-6] | An applicant has cancelled a pending Validation Process. | Clean up the associated flow state. |
 
-#### Authorization Notifications
+#### [VSA-VTI-NOTIF-AUTH] Authorization Notifications
 
 These notifications are emitted whenever an authorization or fee grant whose `operator`, `vs_operator`, or `grantee` is the agent's `vs_account` is created, modified, or revoked (see [Authorization and Fee Grants](https://verana-labs.github.io/verifiable-trust-vpr-spec/#authorization-and-fee-grants) in the VPR Specification).
 
 | VPR Transaction | Description | Default Handler Implementation |
 | --- | --- | --- |
-| `GrantOperatorAuthorization` [MOD-DE-MSG-3] | The corporation has granted the agent's `vs_account` an `OperatorAuthorization` covering one or more `msg_types`. | Refresh the cached `OperatorAuthorization` for `vs_account`. |
-| `RevokeOperatorAuthorization` [MOD-DE-MSG-4] | An `OperatorAuthorization` previously granted to the agent's `vs_account` has been revoked. | Invalidate the cached `OperatorAuthorization`. Stop submitting transactions whose `msg_type` is no longer authorized. |
+
 | `GrantVSOperatorAuthorization` [MOD-DE-MSG-5] | The corporation has granted the agent's `vs_account` a `VSOperatorAuthorization` for one or more permissions. | Refresh the cached `VSOperatorAuthorization`; `CreateOrUpdatePermissionSession` and `TriggerResolver` MAY now be signed for the newly authorized permissions. |
 | `RevokeVSOperatorAuthorization` [MOD-DE-MSG-6] | The agent's `VSOperatorAuthorization` has been revoked. | Invalidate the cached `VSOperatorAuthorization`. Stop signing `CreateOrUpdatePermissionSession` and `TriggerResolver` for the affected permissions until a new authorization is granted. |
-| `GrantFeeAllowance` [MOD-DE-MSG-1] | A fee grant has been created where the agent's `vs_account` is the `grantee`; the corporation account now pays transaction fees within the grant's scope. | Refresh the cached fee-grant state. |
-| `RevokeFeeAllowance` [MOD-DE-MSG-2] | A fee grant where the agent's `vs_account` is the `grantee` has been revoked. | Invalidate the cached fee-grant state. Subsequent transactions submitted by the agent MUST be paid from the agent account's own balance. |
 
-#### Bootstrap Sequence
+### [VSA-VTI-BOOT] Bootstrap Sequence
 
-When the VS Agent starts, it MUST execute the following steps in order:
+When the VS Agent starts, it SHOULD execute the following steps in order:
 
 1. **Validate configuration**: All REQUIRED environment variables MUST be present and well-formed. If any variable is missing or invalid, the agent MUST fail with a descriptive error.
 
 2. **Derive Verana account**: Derive the blockchain account from `AGENT_VERANA_MNEMONIC` and store the derived address as the agent's `vs_operator` account.
 
-3. **Connect to indexer WebSocket**: Establish a persistent WebSocket connection to the VPR indexer and subscribe to DID-related notifications for real-time awareness of on-chain changes (see [indexer subscription](#indexer-websocket-subscription)). Subscription returns a `block-height`. Query the indexer for all objects linked to the agent's DID at `block-height - 1` to initialize the agent's state. Start processing WebSocket notifications from `block-height`.
+3. **Start DIDComm message processor**: Enable DIDComm for outgoing messages.
 
-4. **Start DIDComm message processor**: Begin listening for incoming DIDComm messages, including validation and issuance requests, revocation notifications, and credential updates,...
+4. **Connect to indexer WebSocket**: Establish a persistent WebSocket connection to the VPR indexer and subscribe to DID-related notifications for real-time awareness of on-chain changes (see [indexer subscription](#vsa-vti-notif-notifications)). Subscription returns a `block-height`. Agent MUST first synchronize its state from last fully processed block stored in its state as [explained here](#vsa-vti-notif-notifications). When done, start processing WebSocket notifications from `block-height`. These actions may trigger outgoing DIDComm messages.
+
+5. **Start processing the queued incoming DIDComm messages**.
 
 > If no `VSOperatorAuthorization` has been granted to this VS Agent AND account balance of `vs_account` is equal to 0, a warning should be printed in the log.
 
-### VTJSC Management
+### [VSA-VTI-VTJSC] VTJSC Management
 
 Each Verifiable Trust Ecosystem publishes one or more Credential Schemas in its Trust Registry. For each such schema, the Ecosystem controller (the VS Agent whose DID owns the Trust Registry) MUST attach to its own DID Document a corresponding VTJSC — a JSON Schema Credential that binds the on-chain schema definition to the controlling Ecosystem DID (see [VT-JSON-SCHEMA-CRED-W3C](https://verana-labs.github.io/verifiable-trust-spec/#vt-json-schema-cred-w3c-verifiable-trust-json-schema-credential) and [VT-ECOSYSTEM-DIDDOC](https://verana-labs.github.io/verifiable-trust-spec/#vt-ecosystem-diddoc-ecosystem-did-document)).
 
@@ -232,9 +239,9 @@ sequenceDiagram
 
 1. The Ecosystem controller submits a [`CreateCredentialSchema`](https://verana-labs.github.io/verifiable-trust-vpr-spec/#mod-cs-msg-1-create-credential-schema) transaction on-chain, referencing the Trust Registry owned by the agent's DID. Credential Schemas in the VPR are immutable once created, so this event is a one-off trigger per schema.
 
-2. The VPR indexer emits a `CreateNewCredentialSchema` notification (see [Trust Registry Owner Notifications](#trust-registry-owner-notifications)) to the Trust Registry owner — i.e., the agent.
+2. The VPR indexer emits a `CreateNewCredentialSchema` notification (see [Trust Registry Owner Notifications](#vsa-vti-notif-tr-trust-registry-owner-notifications)) to the Trust Registry owner — i.e., the agent.
 
-3. The agent MUST automatically produce and publish the corresponding VTJSC (see [Automatic VTJSC Maintenance](#automatic-vtjsc-maintenance) for the normative requirements):
+3. The agent MUST automatically produce and publish the corresponding VTJSC:
    - Generate a VTJSC conforming to [VT-JSON-SCHEMA-CRED-W3C], whose `credentialSubject.jsonSchema.$ref` points to the on-chain `CredentialSchema` entry and whose `credentialSubject.digestSRI` carries the SRI digest of the referenced JSON schema content. The VTJSC is signed with the Ecosystem's DID key.
    - Wrap the VTJSC in a Verifiable Presentation signed by the same Ecosystem DID.
    - Add a `LinkedVerifiablePresentation` service entry to the Ecosystem's DID Document, with a fragment that starts with `#vpr-schemas-` and ends with `-vtjsc-vp`, as required by [VT-ECOSYSTEM-DIDDOC].
@@ -245,11 +252,15 @@ sequenceDiagram
 
 ### Permission and Credential Acquisition Logic
 
+*This section is non normative.*
+
 Ecosystems create trust registry in a VPR and define one or more credential schemas. Credential schemas have different configuration modes. These modes defines how applicants onboard the ecosystem, and have a direct effect on the workflows used.
 
 Configuration modes are [defined here](https://verana-labs.github.io/verifiable-trust-vpr-spec/#credential-schemas-and-permissions).
 
 #### ECS Permissions and Credentials
+
+*This section is non normative.*
 
 To be a Verifiable Service, an agent MUST obtain permissions and/or credentials from a trusted ECS Trust Registry. The vs-agent implements two modes, as specified in the Verifiable Trust spec. They are configured via the `VS_AGENT_MODE` env variable.
 
@@ -259,8 +270,8 @@ To be a Verifiable Service, an agent MUST obtain permissions and/or credentials 
 
 In standalone mode:
 
-1. Applicant starts a [validation process flow](#new-validation-process) to obtains an **ECS-Organization** or **ECS-Persona** credential schema HOLDER permission and its corresponding credential via DIDComm from an authorized ISSUER registered under a trusted ECS Trust Registry.
-2. Applicant starts a [validation process flow](#new-validation-process) to obtain an ISSUER permission for the **Service** credential schema from the same trusted ECS Trust Registry.
+1. Applicant starts a [validation process flow](#vsa-vti-flow-vp-new-new-validation-process) to obtains an **ECS-Organization** or **ECS-Persona** credential schema HOLDER permission and its corresponding credential via DIDComm from an authorized ISSUER registered under a trusted ECS Trust Registry.
+2. Applicant starts a [validation process flow](#vsa-vti-flow-vp-new-new-validation-process) to obtain an ISSUER permission for the **Service** credential schema from the same trusted ECS Trust Registry.
 
 > As defined in [VS-CONN-VS](https://verana-labs.github.io/verifiable-trust-spec/#vs-conn-vs-requirements-for-a-vs-to-accept-a-connection-from-another-service), validator agent CAN accept connections of not yet verifiable agent, if and only if the purpose of the connection is the issuance of [VT-ECS-ORG-CRED-W3C] or [VT-ECS-PERSONA-CRED-W3C] or [VT-ECS-SERVICE-CRED-W3C] credentials
 
@@ -268,11 +279,13 @@ In standalone mode:
 
 In delegated mode, the agent contacts the parent VS specified by `VS_DELEGATED_ISSUER_DID` to obtain its Service credential:
 
-1. Applicant starts a [validation process flow](#new-validation-process) to obtain a HOLDER permission and its corresponding **Service credential** from the parent VS via DIDComm.
+1. Applicant starts a [validation process flow](#vsa-vti-flow-vp-new-new-validation-process) to obtain a HOLDER permission and its corresponding **Service credential** from the parent VS via DIDComm.
 
 The parent VS (`VS_DELEGATED_ISSUER_DID`) MUST already possess an ISSUER permission for the Service schema and MUST be a Verifiable Service. If the agent cannot reach the parent VS or the parent VS rejects the request, or if the parent agent IS NOT verifiable, the agent MUST fail with a descriptive error.
 
 #### Logic for Other Permissions and Credentials
+
+*This section is non normative.*
 
 To obtain a permission and/or credential from a specific issuer of a Credential Schema `cs` of a specific Ecosystem trust registry, flow to choose depends on:
 
@@ -284,6 +297,8 @@ To obtain a permission and/or credential from a specific issuer of a Credential 
 The flows described in the next section provide a list of Possible Applicant/Validator combinations for which they are relevant.
 
 ### Permission and Credential Acquisition Flows
+
+*This section is non normative.*
 
 In all flows below, actors represented as Applicant and Validator can be: an agent, or any operator of a corporation that has been granted (authorized) the execution of corresponding VPR Messages .
 
@@ -303,7 +318,7 @@ Possible Applicant/Validator combinations:
 | VERIFIER | ECOSYSTEM | Verifier onboarding mode = `ECOSYSTEM_VALIDATION_PROCESS` |
 | HOLDER | ISSUER | Holder onboarding mode = `ISSUER_VALIDATION_PROCESS` |
 
-##### New Validation Process
+##### [VSA-VTI-FLOW-VP-NEW] New Validation Process
 
 ```mermaid
 sequenceDiagram
@@ -333,7 +348,7 @@ sequenceDiagram
 
 1. The applicant submits `start-perm-vp` on-chain, referencing the validator permission's `validator_perm_id`, and all other required attributes as specified in [start permission VP](https://verana-labs.github.io/verifiable-trust-vpr-spec/#mod-perm-msg-1-start-permission-vp). This creates a permission with `vp_state=PENDING` and return its id, `perm_id`. Vs-agent is notified.
 
-2. The agent connects to the validator via DIDComm (see [didcomm-message-summary-for-vt_flow](#didcomm-message-summary-for-vt_flow)). The validator MUST verify that the connecting agent is compliant with [VS-CONN-VS] before accepting the connection.
+2. The agent connects to the validator via DIDComm (see [didcomm-message-summary-for-vt_flow](#vsa-vti-flow-didcomm-didcomm-message-summary-for-vt_flow)). The validator MUST verify that the connecting agent is compliant with [VS-CONN-VS] before accepting the connection.
 
 3. The applicant sends a **VR (Validation Request)** message containing the following (to be used later for `createOrUpdatePermissionSession`):
    - `perm_id`: The applicant permission ID.
@@ -370,7 +385,7 @@ All steps below are optional and executed only if the validator issues a credent
     - it has just become a Verifiable Service by newly complying with [VS-REQ](https://verana-labs.github.io/verifiable-trust-spec/#vs-req-verifiable-service-basic-requirements-and-linked-vps); or
     - it has added or removed a `LinkedVerifiablePresentation` entry in its DID Document.
 
-##### Renew Validation Process
+##### [VSA-VTI-FLOW-VP-RENEW] Renew Validation Process
 
 This flow is used when the Applicant wants to extend the validity of an existing Permission whose `vp_state` is `VALIDATED`, by re-running a Validation Process with the same Validator.
 
@@ -393,16 +408,16 @@ sequenceDiagram
 
 **Preconditions**:
 
-- `applicant_perm.vp_state` MUST be `VALIDATED`. Renewal cannot be initiated while a previous request is still `PENDING` — the Applicant MUST first cancel the pending request (see [Cancel VP Last Request](#cancel-vp-last-request)).
+- `applicant_perm.vp_state` MUST be `VALIDATED`. Renewal cannot be initiated while a previous request is still `PENDING` — the Applicant MUST first cancel the pending request (see [Cancel VP Last Request](#vsa-vti-flow-vp-cancel-cancel-vp-last-request)).
 - Permission cannot be either slashed, repaid, or revoked.
-- `applicant_perm.validator_perm_id` MUST still be an [active permission](https://verana-labs.github.io/verifiable-trust-vpr-spec/#term:active-permission). If the Validator's permission is no longer active, the Applicant MUST start a [New Validation Process](#new-validation-process) with another Validator instead.
-- Renewal MUST NOT change `validation_fees`, `issuance_fees`, `verification_fees`, `issuance_fee_discount`, or `verification_fee_discount`. To change any of these, the Applicant MUST start a [New Validation Process](#new-validation-process).
+- `applicant_perm.validator_perm_id` MUST still be an [active permission](https://verana-labs.github.io/verifiable-trust-vpr-spec/#term:active-permission). If the Validator's permission is no longer active, the Applicant MUST start a [New Validation Process](#vsa-vti-flow-vp-new-new-validation-process) with another Validator instead.
+- Renewal MUST NOT change `validation_fees`, `issuance_fees`, `verification_fees`, `issuance_fee_discount`, or `verification_fee_discount`. To change any of these, the Applicant MUST start a [New Validation Process](#vsa-vti-flow-vp-new-new-validation-process).
 
 **Step-by-step**:
 
 1. The Applicant submits `renew-perm-vp` on-chain referencing its own permission `perm_id`, as specified in [renew permission VP](https://verana-labs.github.io/verifiable-trust-vpr-spec/#mod-perm-msg-2-renew-permission-vp). On success, `vp_state` returns to `PENDING`, and the corresponding validation trust deposit and (if any) validation fees are re-escrowed.
 
-2. The Applicant connects to the same Validator via DIDComm (see [didcomm-message-summary-for-vt_flow](#didcomm-message-summary-for-vt_flow)). If a DIDComm session was kept open from the previous flow, that session SHOULD be reused. The Validator MUST verify that the connecting agent is compliant with [VS-CONN-VS] before accepting the connection.
+2. The Applicant connects to the same Validator via DIDComm (see [didcomm-message-summary-for-vt_flow](#vsa-vti-flow-didcomm-didcomm-message-summary-for-vt_flow)). If a DIDComm session was kept open from the previous flow, that session SHOULD be reused. The Validator MUST verify that the connecting agent is compliant with [VS-CONN-VS] before accepting the connection.
 
 3. The Applicant sends a **VR (Validation Request)** message containing `perm_id` and (RECOMMENDED) a fresh `session_uuid`. The Applicant MAY include updated credential claims and supporting proofs. The Validator MUST recognise that `perm_id` corresponds to a renewal (its previous flow was `COMPLETED`) and reuse / update the associated flow state rather than create a new one.
 
@@ -410,7 +425,7 @@ sequenceDiagram
 
 5. After validation, the Validator calls `set-perm-vp-validated` on-chain. For a renewal, the VPR enforces that `validation_fees`, `issuance_fees`, `verification_fees`, and fee discounts MUST equal the values originally agreed; any modification will be rejected on-chain. On success, `vp_state` returns to `VALIDATED` and `vp_exp` is extended by the schema-defined `validity_period`.
 
-Steps 6–13 are identical to those of [New Validation Process](#new-validation-process) and are executed only if the Validator chooses to issue an updated credential as part of the renewal. If a credential is delivered:
+Steps 6–13 are identical to those of [New Validation Process](#vsa-vti-flow-vp-new-new-validation-process) and are executed only if the Validator chooses to issue an updated credential as part of the renewal. If a credential is delivered:
 
 - The Applicant MUST replace the previously stored credential with the updated one in its credential store and delete any previously created linked-vp linked to the old credential.
 - **Optionally**, the Applicant create the corresponding `LinkedVerifiablePresentation` entry in its DID Document.
@@ -418,7 +433,7 @@ Steps 6–13 are identical to those of [New Validation Process](#new-validation-
   - it has just become a Verifiable Service by newly complying with [VS-REQ](https://verana-labs.github.io/verifiable-trust-spec/#vs-req-verifiable-service-basic-requirements-and-linked-vps); or
   - it has added or removed a `LinkedVerifiablePresentation` entry in its DID Document.
 
-##### Cancel VP Last Request
+##### [VSA-VTI-FLOW-VP-CANCEL] Cancel VP Last Request
 
 This flow describes what happens when the Applicant cancels the in-flight Validation Request (either a `start-perm-vp` or a `renew-perm-vp`) before the Validator has set `vp_state` to `VALIDATED`. On-chain cancellation is exclusively driven by the [`CancelPermissionVPLastRequest`](https://verana-labs.github.io/verifiable-trust-vpr-spec/#mod-perm-msg-6-cancel-permission-vp-last-request) message and is only valid when `applicant_perm.vp_state` is `PENDING`.
 
@@ -451,14 +466,14 @@ sequenceDiagram
 **Applicant behaviour**:
 
 1. Submit `cancel-perm-vp-last-request` on-chain referencing `perm_id`.
-2. On confirmation, the Applicant receives a `CancelPermissionVPLastRequest` notification for its own transaction (see [Permission Notifications](#permission-notifications)). The handler updates local Flow State based on the resulting on-chain `vp_state`:
+2. On confirmation, the Applicant receives a `CancelPermissionVPLastRequest` notification for its own transaction (see [Permission Notifications](#vsa-vti-notif-perm-permission-notifications)). The handler updates local Flow State based on the resulting on-chain `vp_state`:
    - **`TERMINATED`** (cancelled a `start-perm-vp`): set Connection State to `TERMINATED` and Flow State to `TERMINATED_BY_APPLICANT`. The Applicant MAY send a final `ERROR` (or otherwise informational) message to the Validator over DIDComm before closing the session.
    - **`VALIDATED`** (cancelled a `renew-perm-vp`): keep Connection State as `ESTABLISHED` and Flow State as `COMPLETED`. The DIDComm session SHOULD remain open for future Validator updates (revocation notices, credential refresh, etc.).
 3. Clean up any local resources associated with the cancelled request (pending `OOB_LINK` URLs, draft claim data, etc.).
 
 **Validator behaviour**:
 
-1. The Validator receives the `CancelPermissionVPLastRequest` notification from the indexer for an `applicant_perm_id` matching one of its in-flight flows (see [Permission Notifications](#permission-notifications)).
+1. The Validator receives the `CancelPermissionVPLastRequest` notification from the indexer for an `applicant_perm_id` matching one of its in-flight flows (see [Permission Notifications](#vsa-vti-notif-perm-permission-notifications)).
 2. The Validator MUST stop any pending validation work for this flow:
    - Abort off-chain validation tasks.
    - Invalidate any outstanding `OOB_LINK` URL.
@@ -469,7 +484,7 @@ sequenceDiagram
 
 > There is no dedicated DIDComm message for cancellation. Both peers learn about it via the on-chain `CancelPermissionVPLastRequest` notification delivered by the indexer. Any DIDComm message exchanged between the peers after cancellation is informational only.
 
-##### Revoke Permission / Slash Permission Trust Deposit
+##### [VSA-VTI-FLOW-VP-REVOKE] Revoke Permission / Slash Permission Trust Deposit
 
 Possible Applicant/Validator combinations: All.
 
@@ -484,7 +499,7 @@ The two messages differ only on-chain:
 | Permission must be active | yes | no — MAY be applied to expired or revoked permissions |
 | VS Operator Authorization (ISSUER / VERIFIER only) | revoked | revoked |
 
-Either message produces an indexer notification (see [Permission Notifications](#permission-notifications)) delivered to every VS Agent whose DID is implicated in the permission tree:
+Either message produces an indexer notification (see [Permission Notifications](#vsa-vti-notif-perm-permission-notifications)) delivered to every VS Agent whose DID is implicated in the permission tree:
 
 - The grantee (Applicant) of the affected Permission.
 - Each ancestor Validator in the permission chain (including the Trust Registry controller).
@@ -523,7 +538,7 @@ sequenceDiagram
 
 > Revocation and slashing are irreversible from the agent's perspective: a revoked or slashed Permission cannot be revived. To resume operating, the corporation MUST obtain a new Permission via a new validation process — and, for slashed permissions, MUST first repay the slashed trust deposit.
 
-#### Credential Direct Issuance
+#### [VSA-VTI-FLOW-DI] Credential Direct Issuance
 
 This flow is used when an applicant wants to obtain a credential that can be issued directly without an on-chain validation process.
 
@@ -564,7 +579,7 @@ sequenceDiagram
 
 4. The validator generates and signs the credential, and computes the digest.
 
-5. The **validator** calls `createOrUpdatePermissionSession` on-chain (see [authorization](#authorization)). The credential MUST NOT be delivered until this transaction succeeds.
+5. The **validator** calls `createOrUpdatePermissionSession` on-chain (see [Agent Account Authorizations](#agent-account-authorizations)). The credential MUST NOT be delivered until this transaction succeeds.
 
 6. The validator delivers the signed credential to the applicant via the DIDComm session.
 
@@ -585,7 +600,7 @@ sequenceDiagram
 
 > Note: revocation status of a credential issued without a corresponding HOLDER permission must be managed by the validator with a separated revocation list.
 
-#### Validator Updates
+#### [VSA-VTI-FLOW-UPD] Validator Updates
 
 Possible Applicant/Validator combinations: All
 
@@ -603,7 +618,7 @@ The validator sends a `CRED_STATE_CHANGE` message when the credential's status c
 A revocation of a credential is distinct from a revocation of a permission. When a credential has been revoked, a new one can be requested by re-executing the Credential Direct Issuance flow.
 :::
 
-#### Permission Self Creation
+#### [VSA-VTI-FLOW-SELF] Permission Self Creation
 
 This flow is used when a Credential Schema's onboarding mode for the requested permission type is `OPEN`. The Applicant self-creates its permission directly on-chain via [`SelfCreatePermission`](https://verana-labs.github.io/verifiable-trust-vpr-spec/#mod-perm-msg-14-self-create-permission); no Validator is involved, no DIDComm session is opened, and no Flow State is maintained on the agent.
 
@@ -628,11 +643,11 @@ sequenceDiagram
 
 1. The Applicant submits `self-create-permission` on-chain referencing the target `schema_id`, the permission `type` (ISSUER or VERIFIER), and the other required attributes (DID, `effective_from`, fees, optional VS operator authorization parameters) as specified in [Self Create Permission](https://verana-labs.github.io/verifiable-trust-vpr-spec/#mod-perm-msg-14-self-create-permission). On success, the new permission is immediately active — no `vp_state`, no escrow, no Validator.
 
-2. The Applicant receives the `SelfCreatePermission` notification from the indexer for its own transaction (see [Permission Notifications](#permission-notifications)) and records the resulting `perm_id` for later use.
+2. The Applicant receives the `SelfCreatePermission` notification from the indexer for its own transaction (see [Permission Notifications](#vsa-vti-notif-perm-permission-notifications)) and records the resulting `perm_id` for later use.
 
-> Permission Self Creation does not open a DIDComm session, does not create any Flow State entry, and does not involve a Validator. The corporation MUST nevertheless ensure that its self-created permission complies with the ecosystem's EGF — an OPEN-mode permission CAN still be revoked or slashed by ecosystem governance (see [Revoke Permission / Slash Permission Trust Deposit](#revoke-permission--slash-permission-trust-deposit)).
+> Permission Self Creation does not open a DIDComm session, does not create any Flow State entry, and does not involve a Validator. The corporation MUST nevertheless ensure that its self-created permission complies with the ecosystem's EGF — an OPEN-mode permission CAN still be revoked or slashed by ecosystem governance (see [Revoke Permission / Slash Permission Trust Deposit](#vsa-vti-flow-vp-revoke-revoke-permission--slash-permission-trust-deposit)).
 
-#### DIDComm Message Summary for `vt_flow`
+#### [VSA-VTI-FLOW-DIDCOMM] DIDComm Message Summary for `vt_flow`
 
 The following table lists all DIDComm message types exchanged within a `vt_flow` session:
 
@@ -644,17 +659,17 @@ The following table lists all DIDComm message types exchanged within a `vt_flow`
 | `VALIDATING` | In validation process | Validator | Requested additional information submitted by the applicant via the OOB link; currently under validation. |
 | `CRED_OFFER` | Credential Offer | Validator | Delivers the signed credential to the applicant after on-chain `createOrUpdatePermissionSession` succeeds. |
 | `CRED_ACCEPT` | Accept Credential Offer | Applicant | Confirms the applicant has verified and accepted the offered credential (validator authorization + digest match). |
-| `CRED_STATE_CHANGE` | Credential State Change | Validator | Notifies the applicant of a credential status change. Includes the new state (`REVOKED`) and a reason (see [Validator Updates](#validator-updates) for credential-level revocations and [Revoke Permission / Slash Permission Trust Deposit](#revoke-permission--slash-permission-trust-deposit) for permission-level events). |
-| `ERROR` | Generic Error Message | Applicant or Validator | Contains one of the following error codes and a descriptive error message: `IR_REQUIRED`, `VR_REQUIRED`, `INVALID_CLAIMS`, `INVALID_SCHEMA`, `INVALID_PERM_ID`, `INVALID_AGENT_PERM_ID`, `INVALID_WALLET_AGENT_PERM_ID` (sent by the Validator during flow setup); `FLOW_CANCELLED` (sent by the Applicant after [Cancel VP Last Request](#cancel-vp-last-request)); `PERM_REVOKED`, `PERM_SLASHED` (sent by either peer following [Revoke Permission / Slash Permission Trust Deposit](#revoke-permission--slash-permission-trust-deposit)). |
+| `CRED_STATE_CHANGE` | Credential State Change | Validator | Notifies the applicant of a credential status change. Includes the new state (`REVOKED`) and a reason (see [Validator Updates](#vsa-vti-flow-upd-validator-updates) for credential-level revocations and [Revoke Permission / Slash Permission Trust Deposit](#vsa-vti-flow-vp-revoke-revoke-permission--slash-permission-trust-deposit) for permission-level events). |
+| `ERROR` | Generic Error Message | Applicant or Validator | Contains one of the following error codes and a descriptive error message: `IR_REQUIRED`, `VR_REQUIRED`, `INVALID_CLAIMS`, `INVALID_SCHEMA`, `INVALID_PERM_ID`, `INVALID_AGENT_PERM_ID`, `INVALID_WALLET_AGENT_PERM_ID` (sent by the Validator during flow setup); `FLOW_CANCELLED` (sent by the Applicant after [Cancel VP Last Request](#vsa-vti-flow-vp-cancel-cancel-vp-last-request)); `PERM_REVOKED`, `PERM_SLASHED` (sent by either peer following [Revoke Permission / Slash Permission Trust Deposit](#vsa-vti-flow-vp-revoke-revoke-permission--slash-permission-trust-deposit)). |
 
-#### Additional Considerations
+#### [VSA-VTI-FLOW-MISC] Additional Considerations
 
 - **Credential update**: At any time, the validator MAY send an updated credential to the applicant via a `CRED_OFFER` message through the existing DIDComm session. Upon receiving an updated credential, the applicant MUST delete the old credential from the credential store, replace it with the new one, and update the corresponding `LinkedVerifiablePresentation` in its DID Document if the credential was previously linked.
 - **Out-of-band requests**: At any time, the validator MAY send an `OOB_LINK` message — for example, to revalidate applicant information, to extend a permission lifetime, or to collect additional data before issuing an updated credential.
 - **Reconnection**: If the applicant reconnects to the validator after a connection has been closed, it MUST resend a `VR` or `IR` message. The validator MUST identify that the message is related to an existing flow and reassign the flow to the new connection.
 - **Validation renewal**: When a validation process must be renewed, the applicant MUST first execute the required VPR on-chain transaction and then resend a `VR` message to the validator to re-trigger validation.
 
-#### Flow State
+#### [VSA-VTI-FLOW-STATE] Flow State
 
 Each credential acquisition flow has two orthogonal state dimensions that can be queried through the Administration API:
 
@@ -663,22 +678,22 @@ Each credential acquisition flow has two orthogonal state dimensions that can be
 
 | Connection State | Flow State | Role | Flow | Description |
 | --- | --- | --- | --- | --- |
-| `NOT_CONNECTED` | `AWAITING_VP` | Applicant | [New Validation Process](#new-validation-process) | Waiting for the applicant to start/renew an on-chain VP. |
-| `ESTABLISHED` | `VR_SENT` | Applicant | [New Validation Process](#new-validation-process) | VR sent to validator. |
-| `ESTABLISHED` | `AWAITING_VR` | Validator | [New Validation Process](#new-validation-process) | VR expected but not yet received, or last VR was rejected with error (applicant may retry). |
-| `ESTABLISHED` | `IR_SENT` | Applicant | [Credential Direct Issuance](#credential-direct-issuance) | IR sent to validator. |
-| `ESTABLISHED` | `AWAITING_IR` | Validator | [Credential Direct Issuance](#credential-direct-issuance) | IR expected but not yet received, or last IR was rejected with error (applicant may retry). |
+| `NOT_CONNECTED` | `AWAITING_VP` | Applicant | [New Validation Process](#vsa-vti-flow-vp-new-new-validation-process) | Waiting for the applicant to start/renew an on-chain VP. |
+| `ESTABLISHED` | `VR_SENT` | Applicant | [New Validation Process](#vsa-vti-flow-vp-new-new-validation-process) | VR sent to validator. |
+| `ESTABLISHED` | `AWAITING_VR` | Validator | [New Validation Process](#vsa-vti-flow-vp-new-new-validation-process) | VR expected but not yet received, or last VR was rejected with error (applicant may retry). |
+| `ESTABLISHED` | `IR_SENT` | Applicant | [Credential Direct Issuance](#vsa-vti-flow-di-credential-direct-issuance) | IR sent to validator. |
+| `ESTABLISHED` | `AWAITING_IR` | Validator | [Credential Direct Issuance](#vsa-vti-flow-di-credential-direct-issuance) | IR expected but not yet received, or last IR was rejected with error (applicant may retry). |
 | `ESTABLISHED` | `OOB_PENDING` | Both | Both | Validator sent an `OOB_LINK` for out-of-band information collection; awaiting applicant completion. |
-| `ESTABLISHED` | `VALIDATING` | Both | [New Validation Process](#new-validation-process) | Validator is performing off-chain validation of the applicant. |
-| `ESTABLISHED` | `VALIDATED` | Both | [New Validation Process](#new-validation-process) | Validator called `set-perm-vp-validated` on-chain; `vp_state` is now `VALIDATED`. |
+| `ESTABLISHED` | `VALIDATING` | Both | [New Validation Process](#vsa-vti-flow-vp-new-new-validation-process) | Validator is performing off-chain validation of the applicant. |
+| `ESTABLISHED` | `VALIDATED` | Both | [New Validation Process](#vsa-vti-flow-vp-new-new-validation-process) | Validator called `set-perm-vp-validated` on-chain; `vp_state` is now `VALIDATED`. |
 | `ESTABLISHED` | `CRED_OFFERED` | Both | Both | Credential offered to applicant; awaiting `CRED_ACCEPT`. |
-| `ESTABLISHED` | `COMPLETED` | Both | Both | Credential accepted, stored, and optionally linked as VP in DID Document. Connection remains open for future validator updates (see [Validator Updates](#validator-updates), [Additional Considerations](#additional-considerations)). |
+| `ESTABLISHED` | `COMPLETED` | Both | Both | Credential accepted, stored, and optionally linked as VP in DID Document. Connection remains open for future validator updates (see [Validator Updates](#vsa-vti-flow-upd-validator-updates), [Additional Considerations](#vsa-vti-flow-misc-additional-considerations)). |
 | `TERMINATED` | `TERMINATED_BY_VALIDATOR` | Both | Both | Flow terminated by the validator (e.g., rejection, timeout, or policy decision). |
 | `TERMINATED` | `TERMINATED_BY_APPLICANT` | Both | Both | Flow terminated by the applicant (e.g., cancellation or timeout). |
 | `TERMINATED` | `ERROR` | Both | Both | Unrecoverable error occurred; connection closed. |
-| `TERMINATED` | `PERM_REVOKED` | Both | [New Validation Process](#new-validation-process) | On-chain permission has been revoked; validator closed the connection (see [Permission Notifications](#permission-notifications)). |
-| `TERMINATED` | `PERM_SLASHED` | Both | [New Validation Process](#new-validation-process) | On-chain permission has been slashed; validator closed the connection (see [Permission Notifications](#permission-notifications)). |
-| `ESTABLISHED` | `CRED_REVOKED` | Both | Both | Credential permanently revoked by validator (see [Validator Updates](#validator-updates)). |
+| `TERMINATED` | `PERM_REVOKED` | Both | [New Validation Process](#vsa-vti-flow-vp-new-new-validation-process) | On-chain permission has been revoked; validator closed the connection (see [Permission Notifications](#vsa-vti-notif-perm-permission-notifications)). |
+| `TERMINATED` | `PERM_SLASHED` | Both | [New Validation Process](#vsa-vti-flow-vp-new-new-validation-process) | On-chain permission has been slashed; validator closed the connection (see [Permission Notifications](#vsa-vti-notif-perm-permission-notifications)). |
+| `ESTABLISHED` | `CRED_REVOKED` | Both | Both | Credential permanently revoked by validator (see [Validator Updates](#vsa-vti-flow-upd-validator-updates)). |
 
 
 ```mermaid
@@ -730,17 +745,8 @@ For each API method, one or several access mode can be configured:
 
 - INTERNAL: by containers of the same pod or deployment. No authentication needed.
 - ACCOUNT_WHITELIST: by a verana account listed in the `ADMIN_API_ACCOUNT_WHITELIST` env variable.
-- CORPORATE: by any verana account that has at least  to the `VERANA_CORPORATION` group.
-
-::todo
-TBD
-:::
 
 ### Authentication and Authorization
-
-::todo
-TBD
-:::
 
 1. The VS Agent MUST authenticate callers using a Verana-account-based mechanism (e.g., ADR-036 signature challenge) and verify that the authenticated account belongs to the same Corporation as the agent's configured `VERANA_CORPORATION`.
 2. Authenticated users MAY perform **read** operations (queries) on the Administration API.
@@ -757,7 +763,7 @@ The VS Agent MUST provide read-only query endpoints that expose the agent's conf
 - listFlows(role: Applicant/Validator, schema_id, flowState, connectionState peerDID, )
 - getFlow
 
-- **List flows** — List and inspect existing flows. MUST support filtering by agent role (applicant or validator), Connection State, Flow State, peer DID, `perm_id`, `schema_id`, and `session_uuid` (see [Flow State](#flow-state)). Each result MUST include peer DID, the applicable `perm_id`s, `schema_id`, `session_uuid`, last-event timestamp, submitted credential claims and proofs, any outstanding `OOB_LINK` URL, and — once a credential is generated — the offered credential identifier, its digest, and the on-chain `PermissionSession` reference.
+- **List flows** — List and inspect existing flows. MUST support filtering by agent role (applicant or validator), Connection State, Flow State, peer DID, `perm_id`, `schema_id`, and `session_uuid` (see [Flow State](#vsa-vti-flow-state-flow-state)). Each result MUST include peer DID, the applicable `perm_id`s, `schema_id`, `session_uuid`, last-event timestamp, submitted credential claims and proofs, any outstanding `OOB_LINK` URL, and — once a credential is generated — the offered credential identifier, its digest, and the on-chain `PermissionSession` reference.
 
 #### Actions
 
@@ -774,14 +780,14 @@ The Administration API MUST expose the following write operations, scoped by the
 **Flow only methods** (does not require a specific authorization on the ledger):
 
 - **Edit credential claims** — Create, modify, or override the credential claims submitted by the applicant.
-- **Send OOB link** — Send or resend an `OOB_LINK` message to the applicant requesting additional information (see [didcomm-message-summary-for-vt_flow](#didcomm-message-summary-for-vt_flow)).
-- **Validate** — Mark the applicant's documentation as validated. When a Validation Process is involved, this is independent from the on-chain `set-perm-vp-validated` transaction and MAY trigger credential issuance (see [new-validation-process](#new-validation-process) steps 6–8).
-- **Revoke credential** — Revoke a previously issued credential. The agent MUST notify the applicant via a `CRED_STATE_CHANGE` message over DIDComm (see [Validator Updates](#validator-updates)).
+- **Send OOB link** — Send or resend an `OOB_LINK` message to the applicant requesting additional information (see [didcomm-message-summary-for-vt_flow](#vsa-vti-flow-didcomm-didcomm-message-summary-for-vt_flow)).
+- **Validate** — Mark the applicant's documentation as validated. When a Validation Process is involved, this is independent from the on-chain `set-perm-vp-validated` transaction and MAY trigger credential issuance (see [new-validation-process](#vsa-vti-flow-vp-new-new-validation-process) steps 6–8).
+- **Revoke credential** — Revoke a previously issued credential. The agent MUST notify the applicant via a `CRED_STATE_CHANGE` message over DIDComm (see [Validator Updates](#vsa-vti-flow-upd-validator-updates)).
 - **Terminate flow** — Close the DIDComm session and terminate the credential acquisition flow. Applicable to Direct Issuance flows only; for Validation Process flows, termination is performed on-chain.
 
 **Ledger methods** (requires authorization)
 
-- **Set VP Validated** — Submit `SetPermissionVPValidated` for an Applicant Permission currently being validated by this agent. Required to advance a [New Validation Process](#new-validation-process) or [Renew Validation Process](#renew-validation-process) past `VALIDATING`; no credential can be offered until this transaction succeeds.
+- **Set VP Validated** — Submit `SetPermissionVPValidated` for an Applicant Permission currently being validated by this agent. Required to advance a [New Validation Process](#vsa-vti-flow-vp-new-new-validation-process) or [Renew Validation Process](#vsa-vti-flow-vp-renew-renew-validation-process) past `VALIDATING`; no credential can be offered until this transaction succeeds.
 
 > Note: some VS Agent implementations may not support all actions, or may prefer sending the user to a portal for providing proofs, etc... using the OOB link.
 
