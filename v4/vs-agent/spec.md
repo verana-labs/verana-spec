@@ -429,7 +429,7 @@ sequenceDiagram
     participant Validator as Agent (Validator)
 
     Applicant->>VPR: 1. cancel-perm-vp-last-request(perm_id)
-    Note over VPR: vp_current_fees refunded;<br/>vp_current_deposit released;<br/>vp_state = TERMINATED<br/>(or VALIDATED if vp_exp != null)
+    Note over VPR: vp_current_fees refunded<br/>vp_current_deposit released<br/>vp_state = TERMINATED<br/>(or VALIDATED if vp_exp != null)
     VPR->>Validator: 2. CancelPermissionVPLastRequest event (via Indexer)
     VPR->>Applicant: 3. own-tx confirmation (via Indexer)
     Applicant-->>Validator: 4. (optional) informational message over DIDComm
@@ -496,7 +496,7 @@ sequenceDiagram
     participant Others as Other VS Agents in the<br/>permission chain
 
     Initiator->>VPR: 1. revoke-permission(id) OR<br/>slash-permission-trust-deposit(id, amt)
-    Note over VPR: perm marked revoked / slashed;<br/>VS Operator Authz revoked<br/>(ISSUER/VERIFIER)
+    Note over VPR: perm marked revoked / slashed<br/>VS Operator Authz revoked<br/>(ISSUER/VERIFIER)
     VPR->>Others: 2. Revoke / Slash notification (via Indexer)
     Initiator-->>Others: 3. (optional, validator-initiated)<br/>inform peer via DIDComm<br/>(CRED_STATE_CHANGE)
 ```
