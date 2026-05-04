@@ -348,7 +348,7 @@ sequenceDiagram
 
 1. The applicant submits `start-perm-vp` on-chain, referencing the validator permission's `validator_perm_id`, and all other required attributes as specified in [start permission VP](https://verana-labs.github.io/verifiable-trust-vpr-spec/#mod-perm-msg-1-start-permission-vp). This creates a permission with `vp_state=PENDING` and return its id, `perm_id`. Vs-agent is notified.
 
-2. The agent connects to the validator via DIDComm (see [didcomm-message-summary-for-vt_flow](#vsa-vti-flow-didcomm-didcomm-message-summary-for-vt_flow)). The validator MUST verify that the connecting agent is compliant with [VS-CONN-VS] before accepting the connection.
+2. The agent connects to the validator via DIDComm (see [didcomm-message-summary-for-vt_flow](#vsa-vti-flow-didcomm-didcomm-message-summary)). The validator MUST verify that the connecting agent is compliant with [VS-CONN-VS] before accepting the connection.
 
 3. The applicant sends a **VR (Validation Request)** message containing the following (to be used later for `createOrUpdatePermissionSession`):
    - `perm_id`: The applicant permission ID.
@@ -417,7 +417,7 @@ sequenceDiagram
 
 1. The Applicant submits `renew-perm-vp` on-chain referencing its own permission `perm_id`, as specified in [renew permission VP](https://verana-labs.github.io/verifiable-trust-vpr-spec/#mod-perm-msg-2-renew-permission-vp). On success, `vp_state` returns to `PENDING`, and the corresponding validation trust deposit and (if any) validation fees are re-escrowed.
 
-2. The Applicant connects to the same Validator via DIDComm (see [didcomm-message-summary-for-vt_flow](#vsa-vti-flow-didcomm-didcomm-message-summary-for-vt_flow)). If a DIDComm session was kept open from the previous flow, that session SHOULD be reused. The Validator MUST verify that the connecting agent is compliant with [VS-CONN-VS] before accepting the connection.
+2. The Applicant connects to the same Validator via DIDComm (see [didcomm-message-summary-for-vt_flow](#vsa-vti-flow-didcomm-didcomm-message-summary)). If a DIDComm session was kept open from the previous flow, that session SHOULD be reused. The Validator MUST verify that the connecting agent is compliant with [VS-CONN-VS] before accepting the connection.
 
 3. The Applicant sends a **VR (Validation Request)** message containing `perm_id` and (RECOMMENDED) a fresh `session_uuid`. The Applicant MAY include updated credential claims and supporting proofs. The Validator MUST recognise that `perm_id` corresponds to a renewal (its previous flow was `COMPLETED`) and reuse / update the associated flow state rather than create a new one.
 
@@ -739,67 +739,268 @@ stateDiagram-v2
 
 ## Administration API
 
-The VS Agent MUST expose a secure Administration API that allows authorized members of the agent's Corporation to remotely query and manage the agent's state: for example, from the Verana frontend, or from a backend container connected to agent.
-
-For each API method, one or several access mode can be configured:
-
-- INTERNAL: by containers of the same pod or deployment. No authentication needed.
-- ACCOUNT_WHITELIST: by a verana account listed in the `ADMIN_API_ACCOUNT_WHITELIST` env variable.
+The VS Agent MUST expose a secure Administration API that allows authenticated and authorized entities to remotely query and manage the agent's state: for example, from the Verana frontend, or from a backend container connected to agent.
 
 ### Authentication and Authorization
 
-1. The VS Agent MUST authenticate callers using a Verana-account-based mechanism (e.g., ADR-036 signature challenge) and verify that the authenticated account belongs to the same Corporation as the agent's configured `VERANA_CORPORATION`.
-2. Authenticated users MAY perform **read** operations (queries) on the Administration API.
-3. **Write** operations (actions) MUST additionally require that the caller's Verana account has been granted an `OperatorAuthorization` by the Corporation for the relevant scope.
+#### Authentication
 
-### Queries
+1. The VS Agent MUST authenticate callers using a Verana-account-based mechanism (e.g., ADR-036 signature challenge).
+2. Authenticated users MAY be authorized to perform queries and action on the Administration API. See [Authorization](#authorization).
 
-::todo
-TBD
-:::
+#### Authorization
 
-The VS Agent MUST provide read-only query endpoints that expose the agent's configuration, cached on-chain state, and runtime state. All endpoints MUST support filtering and pagination where applicable, and MUST NOT expose secret material such as `AGENT_VERANA_MNEMONIC` or raw private keys.
+For each API method, one or several authorization access mode can be configured:
 
-- listFlows(role: Applicant/Validator, schema_id, flowState, connectionState peerDID, )
-- getFlow
+- INTERNAL: by containers of the same pod or deployment. No authentication needed.
+- CORPORATION: by a verana account that is granted `OperatorAuthorization` authorization in the `VERANA_CORPORATION` group. For CORPORATION mode, each API method defines the `OperatorAuthorization` message type that it requires.
 
-- **List flows** — List and inspect existing flows. MUST support filtering by agent role (applicant or validator), Connection State, Flow State, peer DID, `perm_id`, `schema_id`, and `session_uuid` (see [Flow State](#vsa-vti-flow-state-flow-state)). Each result MUST include peer DID, the applicable `perm_id`s, `schema_id`, `session_uuid`, last-event timestamp, submitted credential claims and proofs, any outstanding `OOB_LINK` URL, and — once a credential is generated — the offered credential identifier, its digest, and the on-chain `PermissionSession` reference.
+Example for a method:
 
-#### Actions
+- method name: listFlows
+- required scope: `OperatorAuthorization` with msgType = `SetPermissionVPValidated`
 
-::todo
-TBD
-:::
+### Container Environment Variables
 
-The Administration API MUST expose the following write operations, scoped by the agent's role in the flow. All actions MUST be logged and linked to the Verana account that performed them. Some actions submit on-chain transactions to the VPR. Each one either starts/terminates a credential acquisition flow, or is a mandatory on-chain step without which an in-flight flow cannot progress. The Administration API MUST reject the call when `vs_account` does not hold a `VSOperatorAuthorization` covering the message and permission in scope (see [Agent Account Authorizations](#agent-account-authorizations)). All submitted transactions MUST be linked to the flow they relate to (when applicable) and to the Verana account that initiated them.
+The following environment variables MUST be provided when the VS Agent container is started.
 
-> Ledger based methods can be used to build services that automatically fully handle flows on their own. Example: an ECS-Organization issuer service that connects to organization registry and is able to request digital signature to prove signature of legal representatives.
+| Variable | Required | Description |
+|---|---|---|
+| `ADMIN_API_ENABLE_CORPORATION` | REQUIRED | Enable access to accounts that have `OperatorAuthorization`s for the corporation group `VERANA_CORPORATION`. |
+| `ADMIN_API_CORPORATION_ACCOUNT_WHITELIST` | OPTIONAL | If set, limit corporation access to accounts from this list. As no effect is `ADMIN_API_ENABLE_CORPORATION` is set to false.|
+| `ADMIN_API_ENABLE_INTERNAL` | REQUIRED | Enable full API access for containers of the same pod or deployment. No authentication needed. |
 
-##### Validator actions
+### Flow Management
 
-**Flow only methods** (does not require a specific authorization on the ledger):
+The following methods list and progress credential-acquisition flows handled by the agent (see [[VSA-VTI-FLOW-STATE] Flow State](#vsa-vti-flow-state-flow-state)).
 
-- **Edit credential claims** — Create, modify, or override the credential claims submitted by the applicant.
-- **Send OOB link** — Send or resend an `OOB_LINK` message to the applicant requesting additional information (see [didcomm-message-summary-for-vt_flow](#vsa-vti-flow-didcomm-didcomm-message-summary-for-vt_flow)).
-- **Validate** — Mark the applicant's documentation as validated. When a Validation Process is involved, this is independent from the on-chain `set-perm-vp-validated` transaction and MAY trigger credential issuance (see [new-validation-process](#vsa-vti-flow-vp-new-new-validation-process) steps 6–8).
-- **Revoke credential** — Revoke a previously issued credential. The agent MUST notify the applicant via a `CRED_STATE_CHANGE` message over DIDComm (see [Validator Updates](#vsa-vti-flow-upd-validator-updates)).
-- **Terminate flow** — Close the DIDComm session and terminate the credential acquisition flow. Applicable to Direct Issuance flows only; for Validation Process flows, termination is performed on-chain.
+| Module | Method Name | Relative REST API path | Type | Requirements | Authz |
+| --- | --- | --- | --- | --- | --- |
+| Flow Management | `listFlows` | | Query | | INTERNAL, CORPORATION (`SetPermissionVPValidated` or `StartPermissionVP` or `RenewPermissionVP`) |
+| Flow Management | `editCredentialClaims` | | Action | | INTERNAL, CORPORATION |
+| Flow Management | `sendOobLink` | | Action | | INTERNAL, CORPORATION (`SetPermissionVPValidated`) |
+| Flow Management | `validateFlow` | | Action | | INTERNAL, CORPORATION (`SetPermissionVPValidated`) |
+| Flow Management | `revokeCredential` | | Action | | INTERNAL, CORPORATION (`SetPermissionVPValidated`) |
 
-**Ledger methods** (requires authorization)
+> Note: some VS Agent implementations may not support all actions, or may prefer sending the user to a portal for providing proofs, etc., using the OOB link.
 
-- **Set VP Validated** — Submit `SetPermissionVPValidated` for an Applicant Permission currently being validated by this agent. Required to advance a [New Validation Process](#vsa-vti-flow-vp-new-new-validation-process) or [Renew Validation Process](#vsa-vti-flow-vp-renew-renew-validation-process) past `VALIDATING`; no credential can be offered until this transaction succeeds.
+#### listFlows
 
-> Note: some VS Agent implementations may not support all actions, or may prefer sending the user to a portal for providing proofs, etc... using the OOB link.
+Lists and inspects existing credential-acquisition flows handled by the agent.
 
-##### Applicant actions
+**Inputs** (all OPTIONAL filters):
 
+- `role` — filter by agent role in the flow: `applicant` or `validator`.
+- `connectionState` — one of the Connection State values defined in [Flow State](#vsa-vti-flow-state-flow-state).
+- `flowState` — one of the Flow State values defined in [Flow State](#vsa-vti-flow-state-flow-state).
+- `peerDID` — DID of the remote peer.
+- `perm_id` — applicant or validator permission identifier. If `role` is `applicant`, `perm_id` is `validator` permission. If `role` is `validator`, `perm_id` is `applicant` permission.
+- `schema_id` — credential schema identifier.
+- `session_uuid` — DIDComm session identifier.
 
-## Service Endpoint Management
+**Output**: an array of flow records. Each record MUST include at minimum:
 
-### Administration API
+- peer DID;
+- the applicable `perm_id`(s);
+- `schema_id`;
+- `session_uuid`;
+- last-event timestamp;
+- submitted credential claims and proofs;
+- any outstanding `OOB_LINK` URL;
+- once a credential has been generated: the offered credential identifier, its digest, and the on-chain `PermissionSession` reference.
 
-- listServiceEndpoints
-- deleteServiceEndpoint
-- addServiceEndpoint
-- updateServiceEndpoint
+**Requirements**: none beyond caller authentication and corporation-scoped authorization.
 
+#### editCredentialClaims
+
+Creates, modifies, or overrides the credential claims submitted by the applicant for a given flow.
+
+**Inputs**:
+
+- `session_uuid` (REQUIRED) — identifier of the target flow.
+- `claims` (REQUIRED) — replacement or patch set for the credential claims.
+
+**Output**: the updated claim set as stored on the flow.
+
+**Requirements**:
+
+- MUST be called by an account holding `OperatorAuthorization` with msgType = `SetPermissionVPValidated` for the permission in scope.
+- MUST refuse when connection is not in `ESTABLISHED` state.
+- MUST refuse when the flow is not `VALIDATING` or `CRED_REVOKED` (see [Flow State](#vsa-vti-flow-state-flow-state)).
+
+**Errors**:
+
+- `NOT_FOUND` — no flow with the given `session_uuid`.
+- `INVALID_STATE` — the flow is not in `VALIDATING` or `CRED_REVOKED` state.
+
+#### sendOobLink
+
+Sends or resends an `OOB_LINK` DIDComm message to the applicant for out-of-DIDComm information collection (see [[VSA-VTI-FLOW-DIDCOMM] DIDComm Message Summary](#vsa-vti-flow-didcomm-didcomm-message-summary)).
+
+**Inputs**:
+
+- `session_uuid` (REQUIRED) — identifier of the target flow.
+- `url` (REQUIRED) — the OOB URL to send.
+- `message` (OPTIONAL) — descriptive text shown to the applicant.
+
+**Output**: confirmation that the message was dispatched.
+
+**Requirements**:
+
+- MUST be called by an account holding `OperatorAuthorization` with msgType = `SetPermissionVPValidated` for the permission in scope.
+- MUST refuse when the flow's Connection State is not `ESTABLISHED`.
+
+**Errors**:
+
+- `NOT_FOUND` — no flow with the given `session_uuid`.
+- `INVALID_STATE` — the flow's Connection State is not `ESTABLISHED`.
+
+#### validateFlow
+
+Marks the applicant's documentation as validated for a given flow. When a Validation Process is involved, this is independent from the on-chain `set-perm-vp-validated` transaction and MAY trigger credential issuance (see [[VSA-VTI-FLOW-VP-NEW] New Validation Process](#vsa-vti-flow-vp-new-new-validation-process) steps 6–8).
+
+**Inputs**:
+
+- `session_uuid` (REQUIRED) — identifier of the target flow.
+
+**Output**: the updated flow record.
+
+**Requirements**:
+
+- MUST be called by an account holding `OperatorAuthorization` with msgType = `SetPermissionVPValidated` for the permission in scope.
+
+**Errors**:
+
+- `NOT_FOUND` — no flow with the given `session_uuid`.
+- `INVALID_STATE` — the flow is not in a state where validation is expected.
+
+#### revokeCredential
+
+Revokes a previously issued credential for a given flow. The agent MUST notify the applicant via a `CRED_STATE_CHANGE` message over DIDComm (see [[VSA-VTI-FLOW-UPD] Validator Updates](#vsa-vti-flow-upd-validator-updates)).
+
+**Inputs**:
+
+- `session_uuid` (REQUIRED) — identifier of the target flow.
+- `reason` (OPTIONAL) — human-readable reason for the revocation.
+
+**Output**: confirmation of revocation.
+
+**Requirements**:
+
+- MUST be called by an account holding `OperatorAuthorization` with msgType = `RevokePermission` for the permission in scope.
+- MUST send a `CRED_STATE_CHANGE` DIDComm message to the applicant.
+
+**Errors**:
+
+- `NOT_FOUND` — no flow with the given `session_uuid`.
+
+> Applicant-side methods — requiring `OperatorAuthorization` with msgType = `StartPermissionVP` and msgType = `RenewPermissionVP` — are to be specified.
+
+### Service Endpoint Management
+
+The following methods manage the **additional consumable** service entries declared in the agent's DID Document — i.e., the entries added under [[VS-SVC-3]](https://verana-labs.github.io/verifiable-trust-spec/#vs-svc-service-declaration), such as `MCP`, `A2A`, `LinkedDomains`, or any other ecosystem-defined consumable type.
+
+| Module | Method Name | Relative REST API path | Type | Requirements | Authz |
+| --- | --- | --- | --- | --- | --- |
+| Service Endpoint Management | `listServiceEndpoints` | | Query | | INTERNAL |
+| Service Endpoint Management | `deleteServiceEndpoint` | | Action | | INTERNAL |
+| Service Endpoint Management | `addServiceEndpoint` | | Action | | INTERNAL |
+| Service Endpoint Management | `updateServiceEndpoint` | | Action | | INTERNAL |
+
+These methods MUST NOT be used to manipulate:
+
+- `DIDCommMessaging` entries: the mandatory bootstrap channel required by [[VS-SVC-2]](https://verana-labs.github.io/verifiable-trust-spec/#vs-svc-service-declaration) is derived from the agent's container configuration and is maintained automatically by the agent.
+- `LinkedVerifiablePresentation` entries: per [[VS-SVC-6]](https://verana-labs.github.io/verifiable-trust-spec/#vs-svc-service-declaration), those are part of the identity layer and are produced and maintained automatically by the agent through [[VSA-VTI-VTJSC] VTJSC Management](#vsa-vti-vtjsc-vtjsc-management) and the credential acquisition flows.
+
+For every successful mutation (`addServiceEndpoint`, `updateServiceEndpoint`, `deleteServiceEndpoint`):
+
+- the agent MUST publish the updated DID Document;
+- the agent SHOULD call `TriggerResolver` on-chain so the agent's trust-resolution state reflects the change.
+
+#### listServiceEndpoints
+
+Returns every consumable service entry currently declared in the agent's DID Document.
+
+**Inputs**: none.
+
+**Output**: an array of service entries, each containing:
+
+- `id` — DID-relative URL of the entry (e.g., `did:example:agent#mcp`).
+- `type` — service type.
+- `serviceEndpoint` — URI string or object as defined in [DID-CORE].
+
+**Requirements**:
+
+- MUST exclude entries whose `type` is `DIDCommMessaging` or `LinkedVerifiablePresentation` (managed automatically by the agent — see preamble).
+- MUST reflect the currently published DID Document.
+
+#### deleteServiceEndpoint
+
+Removes a consumable service entry from the agent's DID Document.
+
+**Inputs**:
+
+- `id` (REQUIRED) — identifier of the entry to remove (DID-relative fragment such as `#mcp`, or full DID URL).
+
+**Output**: the deleted entry.
+
+**Requirements**:
+
+- MUST refuse if `id` refers to a `DIDCommMessaging` or `LinkedVerifiablePresentation` entry (managed automatically by the agent — see preamble).
+
+**Errors**:
+
+- `NOT_FOUND` — no entry with the given `id`.
+- `DIDCOMM_ENTRY` — `id` refers to a `DIDCommMessaging` entry.
+- `LINKED_VP_ENTRY` — `id` refers to a `LinkedVerifiablePresentation` entry.
+
+#### addServiceEndpoint
+
+Adds a new consumable service entry to the agent's DID Document.
+
+**Inputs**:
+
+- `type` (REQUIRED) — service type (e.g., `MCP`, `A2A`, `LinkedDomains`). MUST NOT be `DIDCommMessaging` or `LinkedVerifiablePresentation`.
+- `serviceEndpoint` (REQUIRED) — URI string or object per [DID-CORE].
+- `id` (OPTIONAL) — DID-relative fragment for the new entry. If omitted, the agent MUST generate a unique fragment.
+
+**Output**: the resulting service entry.
+
+**Requirements**:
+
+- MUST refuse `type = DIDCommMessaging` or `type = LinkedVerifiablePresentation` (managed automatically by the agent — see preamble).
+- MUST refuse if the resulting `id` collides with an existing entry in the DID Document.
+- MUST validate the shape of `serviceEndpoint` per [DID-CORE] before publishing.
+
+**Errors**:
+
+- `DUPLICATE_ID` — an entry with the given/derived `id` already exists.
+- `INVALID_SERVICE_ENDPOINT` — `serviceEndpoint` does not conform to [DID-CORE].
+- `DIDCOMM_ENTRY` — caller attempted to add a `DIDCommMessaging` entry.
+- `LINKED_VP_ENTRY` — caller attempted to add a `LinkedVerifiablePresentation` entry.
+
+#### updateServiceEndpoint
+
+Updates the `type` and/or `serviceEndpoint` of an existing consumable service entry in the agent's DID Document.
+
+**Inputs**:
+
+- `id` (REQUIRED) — identifier of the entry to update.
+- `type` (OPTIONAL) — new service type.
+- `serviceEndpoint` (OPTIONAL) — new endpoint value.
+
+At least one of `type` or `serviceEndpoint` MUST be provided.
+
+**Output**: the updated service entry.
+
+**Requirements**:
+
+- MUST refuse to update an entry whose existing `type` is `DIDCommMessaging` or `LinkedVerifiablePresentation`, and MUST refuse to change an entry's `type` to `DIDCommMessaging` or `LinkedVerifiablePresentation` (managed automatically by the agent — see preamble).
+- MUST validate the new `serviceEndpoint` shape per [DID-CORE] before publishing.
+
+**Errors**:
+
+- `NOT_FOUND` — no entry with the given `id`.
+- `DIDCOMM_ENTRY` — `id` refers to a `DIDCommMessaging` entry, or the requested change would produce one.
+- `LINKED_VP_ENTRY` — `id` refers to a `LinkedVerifiablePresentation` entry, or the requested change would produce one.
+- `INVALID_SERVICE_ENDPOINT` — `serviceEndpoint` does not conform to [DID-CORE].
