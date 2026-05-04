@@ -1,4 +1,4 @@
-# VS Agent Specification
+# VS Agent v4 Specification
 
 **Latest Draft:** spec v4-draft1
 

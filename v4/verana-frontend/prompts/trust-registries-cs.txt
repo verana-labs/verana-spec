@@ -1,0 +1,126 @@
+Design "My Ecosystems" page.
+
+1) List view with same responsive table rules as DIDs (put 4 rows as example).
+
+Columns:
+- Id: integer
+- DID: DID
+- Controller: address
+- Created: date
+- Modified: date
+- Role: one of OWNER, ISSUER_GRANTOR, ISSUER, VERIFIER_GRANTOR, VERIFIER (use a different color per role)
+- EGF (content is always an icon linking to an external resource)
+- Value (VNA amount)
+- Your Deposit (VNA amount)
+
+click on row routes to 2) Ecosystem Info.
+
+Create New Ecosystem Trust Registry form:
+- form with: DID, aka, Primary Governance Framework Language (select), Governance Framework Document URL (String). With message: You'll need approx. 5.900000 VNA to complete the transaction, CANCEL/CONFIRM and success routing to 2) Ecosystem Info.
+
+2) Ecosystem Info: click on table row shows Ecosystem Info (new view, not popup, with consistent “Back to list” affordances that respect session filters).
+View includes the following sections:
+
+2.1) Basic Information Section: id, DID, aka, controller, ecosystem value in VNA, deposit amount in VNA, Primary Governance Framework Language, Active Governance Framework (integer). Edit button that makes the DID and the aka editable, with message: You'll need approx. 5.900000 VNA to complete the transaction, CANCEL/CONFIRM and success routing back to DID Info.
+2.2) EGF Documents Section: a simple List of documents ordered by version desc, with clickable links, no pagination, no column labels, example:
+    - Version 3: https://psycho.uche.org (en) *draft*
+    - Version 2: https://psycho.uche.org (en) **active since 2025-10-15**
+    - Version 1: https://psycho.uche.org (en) from 2025-10-13 to 2025-10-15
+a CTA "Add new EGF document" for adding a new governance framework document (popup): Governance Framework Language (select), Governance Framework Document URL (String) with message: You'll need approx. 5.900000 VNA to complete the transaction, CANCEL/CONFIRM and success updating the list.
+a CTA "Increase active EGF version"  (popup): no form, just with message: You'll need approx. 5.900000 VNA to complete the transaction, CANCEL/CONFIRM and success updating the list.
+
+2.3) Credential Schemas: list; New schema two-step form; View schema (permissions hidden for now).
+
+Columns:
+- Id: integer
+- Title: String
+- Description: String
+- Created: date
+- Modified: date
+
+Create New Credential Schema:
+- form with (popup): Issuer Permission Management Mode (select), Verifier Permission Management Mode (select), Issuer Grantor Validation Validity Period (int), Verifier Grantor Validation Validity Period (int) Issuer Validation Validity Period (int), Verifier Validation Validity Period (int), Holder Validation Validity Period (int), Json Schema (json textarea). With message: You'll need approx. 5.900000 VNA to complete the transaction, CANCEL/CONFIRM and success updating list.
+
+
+
+---
+
+
+Design "My Ecosystems" page.
+
+1) List view with same responsive table rules as DIDs (put 4 rows as example).
+
+Columns:
+- Id: integer
+- DID: DID
+
+click on row routes to 2) Ecosystem Info.
+
+Create New Ecosystem Trust Registry form:
+- form with: DID, aka, Primary Governance Framework Language (select), Governance Framework Document URL (String). With message: You'll need approx. 5.900000 VNA to complete the transaction, CANCEL/CONFIRM and success routing to 2) Ecosystem Info.
+
+2) Ecosystem Info: click on table row shows Ecosystem Info (new view, not popup, with consistent “Back to list” affordances that respect session filters).
+View includes the following sections:
+
+2.3) Credential Schemas: list; New schema two-step form; View schema (permissions hidden for now).
+
+
+Columns:
+- Id: integer
+- Title: String
+- Created: date
+- Modified: date
+
+click on schema opens a new view "Credential Schema" (2.3.1)
+
+Create New Credential Schema:
+- form with (popup): Issuer Permission Management Mode (select), Verifier Permission Management Mode (select), Issuer Grantor Validation Validity Period (int), Verifier Grantor Validation Validity Period (int) Issuer Validation Validity Period (int), Verifier Validation Validity Period (int), Holder Validation Validity Period (int), Json Schema (json textarea). With message: You'll need approx. 5.900000 VNA to complete the transaction, CANCEL/CONFIRM and success updating list.
+
+
+2.3.1) Credential Schema
+
+Make sure to put a link to go back to previous Ecosystem Info view.
+
+"Infos" sections
+
+- id (number) => credential schema Id
+- json_schema (show a preview String, and a link to expand and show the json schema as formatted json) => The Json Schema of this Credential Schema
+- issuer_grantor_validation_validity_period (number) => Validity Period, in days, of a permission granted to an Issuer Grantor.
+- verifier_grantor_validation_validity_period (number) => Validity Period, in days, of a permission granted to a Verifier Grantor.
+- issuer_validation_validity_period (number) => Validity Period, in days, of a permission granted to an Issuer.
+- verifier_validation_validity_period (number) => Validity Period, in days, of a permission granted to a Verifier.
+- holder_validation_validity_period (number) => Validity Period, in days, of a permission approved by an Issuer Grantor to an Issuer.
+- issuer_perm_management_mode (number) => TRUST_REGISTRY, GRANTOR or OPEN. TRUST_REGISTRY, GRANTOR means a validation process is needed to obtain an Issuer or Issuer Grantor permission. OPEN means no approval is needed for joining the Ecosystem as Issuer.
+- verifier_perm_management_mode (number) => TRUST_REGISTRY, GRANTOR or OPEN. TRUST_REGISTRY, GRANTOR means a validation process is needed to obtain an Verifier or Verifier Grantor permission. OPEN means no approval is needed for joining the Ecosystem as Verifier.
+
+"My Permissions" sections
+
+Show a list of my permissions as cards:
+
+  *id: uint64
+  did: string
+  +created: timestamp
+  +modified: timestamp
+  +extended: timestamp
+  +slashed: timestamp
+  +repaid: timestamp
+  effective_from: timestamp
+  effective_until: timestamp
+  +validation_fees: number
+  +issuance_fees: number
+  +verification_fees: number
+  +deposit: number
+  +slashed_deposit: number
+  +repaid_deposit: number
+  revoked: timestamp
+  country: string
+  stat: number
+  +vp_exp: timestamp
+  +vp_last_state_change: timestamp
+  +vp_validator_deposit: number
+  +vp_current_fees: number
+  +vp_current_deposit: number
+  +vp_summary_digest_sri: digest_sri
+  +vp_term_requested: timestamp
+
+

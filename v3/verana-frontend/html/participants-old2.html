@@ -1,0 +1,1469 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Participants</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script> window.FontAwesomeConfig = { autoReplaceSvg: 'nest'};</script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/js/all.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        ::-webkit-scrollbar { display: none;}
+        * { font-family: 'Inter', sans-serif; }
+        .dark { --tw-bg-opacity: 1; background-color: rgb(11 11 18 / var(--tw-bg-opacity)); }
+        .dark .dark\:bg-gray-800 { --tw-bg-opacity: 1; background-color: rgb(21 24 36 / var(--tw-bg-opacity)); }
+        .dark .dark\:text-white { --tw-text-opacity: 1; color: rgb(255 255 255 / var(--tw-text-opacity)); }
+        .dark .dark\:text-gray-300 { --tw-text-opacity: 1; color: rgb(139 148 165 / var(--tw-text-opacity)); }
+        .dark .dark\:border-gray-700 { --tw-border-opacity: 1; border-color: rgb(215 219 226 / var(--tw-border-opacity)); }
+        .dark .dark\:bg-gray-900 { --tw-bg-opacity: 1; background-color: rgb(11 11 18 / var(--tw-bg-opacity)); }
+        .crypto-gradient { background: linear-gradient(135deg, #763EF0 0%, #553C9A 100%); }
+        .trust-gradient { background: linear-gradient(135deg, #29C68C 0%, #2E6BE6 100%); }
+        .network-gradient { background: linear-gradient(135deg, #2E6BE6 0%, #29C68C 100%); }
+        .skeleton { animation: skeleton-loading 1s linear infinite alternate; }
+        @keyframes skeleton-loading { 0% { opacity: 1; } 100% { opacity: 0.4; } }
+        .rtl { direction: rtl; }
+        .rtl .rtl\:mr-4 { margin-right: 1rem; }
+        .rtl .rtl\:ml-0 { margin-left: 0; }
+        .glass-effect { backdrop-filter: blur(10px); background-color: rgba(255, 255, 255, 0.1); }
+        .pulse-dot::before { content: ''; position: absolute; top: 0; left: 0; right: 0; bottom: 0; border-radius: 50%; background: inherit; animation: pulse-ring 2s ease-out infinite; }
+        @keyframes pulse-ring { 0% { transform: scale(1); opacity: 1; } 100% { transform: scale(2); opacity: 0; } }
+        .tree-node { transition: all 0.2s ease; }
+        .tree-node:hover { background-color: rgba(118, 62, 240, 0.05); }
+        .tree-node.selected { background-color: rgba(118, 62, 240, 0.1); }
+        .chevron-rotate { transition: transform 0.2s ease; }
+        .chevron-rotate.expanded { transform: rotate(90deg); }
+        .tooltip { position: relative; }
+        .tooltip .tooltiptext { visibility: hidden; width: 200px; background-color: #1f2937; color: #fff; text-align: left; border-radius: 6px; padding: 8px; position: absolute; z-index: 1; bottom: 125%; left: 50%; margin-left: -100px; opacity: 0; transition: opacity 0.3s; font-size: 12px; line-height: 1.4; }
+        .tooltip:hover .tooltiptext { visibility: visible; opacity: 1; }
+    </style>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: { 
+                            50: '#f5f3ff', 
+                            100: '#ede9fe', 
+                            200: '#ddd6fe', 
+                            300: '#c4b5fd', 
+                            400: '#a78bfa', 
+                            500: '#9F7AEA', 
+                            600: '#763EF0', 
+                            700: '#553C9A', 
+                            800: '#4c1d95', 
+                            900: '#1e1b4b' 
+                        },
+                        accent: { 
+                            50: '#eff6ff', 
+                            100: '#dbeafe', 
+                            200: '#bfdbfe', 
+                            300: '#93c5fd', 
+                            400: '#60a5fa', 
+                            500: '#2E6BE6', 
+                            600: '#2563eb', 
+                            700: '#1d4ed8', 
+                            800: '#1e40af', 
+                            900: '#1e3a8a' 
+                        },
+                        success: { 
+                            50: '#ecfdf5', 
+                            100: '#d1fae5', 
+                            200: '#a7f3d0', 
+                            300: '#6ee7b7', 
+                            400: '#34d399', 
+                            500: '#29C68C', 
+                            600: '#059669', 
+                            700: '#047857', 
+                            800: '#065f46', 
+                            900: '#064e3b' 
+                        },
+                        neutral: {
+                            20: '#D7DBE2',
+                            70: '#8B94A5'
+                        },
+                        surface: {
+                            DEFAULT: '#f8fafc',
+                            muted: '#f1f5f9'
+                        },
+                        verana: { 50: '#f5f3ff', 100: '#ede9fe', 200: '#ddd6fe', 300: '#c4b5fd', 400: '#a78bfa', 500: '#9F7AEA', 600: '#763EF0', 700: '#553C9A', 800: '#4c1d95', 900: '#1e1b4b' }
+                    },
+                    fontFamily: { inter: ['Inter', 'sans-serif'] },
+                    spacing: { '18': '4.5rem', '88': '22rem', '128': '32rem' },
+                    borderRadius: {
+                        'lg': '16px',
+                        'md': '12px', 
+                        'sm': '8px'
+                    },
+                    boxShadow: {
+                        'focus': '0 0 0 3px rgba(118, 62, 240, 0.35)'
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-gray-50 dark:bg-gray-900 transition-colors duration-300">
+
+<div id="transaction-popup" class="fixed top-20 right-4 w-96 z-50 hidden">
+    <div class="bg-white dark:bg-surface border border-neutral-20 dark:border-neutral-70 rounded-xl shadow-lg overflow-hidden">
+        <div id="tx-broadcasting" class="p-4 hidden">
+            <div class="flex items-start space-x-3">
+                <div class="w-8 h-8 bg-blue-100 dark:bg-blue-900/20 rounded-full flex items-center justify-center flex-shrink-0">
+                    <div class="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+                </div>
+                <div class="flex-1">
+                    <h4 class="text-sm font-semibold text-gray-900 dark:text-white">Broadcasting Transaction</h4>
+                    <p class="text-sm text-neutral-70 dark:text-neutral-70 mt-1" id="tx-description">Your transaction is being broadcast to the network.</p>
+                </div>
+                <button onclick="hideTransactionPopup()" class="text-neutral-70 hover:text-gray-500 dark:hover:text-gray-300">
+                    <i class="fas fa-xmark"></i>
+                </button>
+            </div>
+        </div>
+
+        <div id="tx-processing" class="p-4 hidden">
+            <div class="flex items-start space-x-3">
+                <div class="w-8 h-8 bg-yellow-100 dark:bg-yellow-900/20 rounded-full flex items-center justify-center flex-shrink-0">
+                    <div class="w-4 h-4 border-2 border-yellow-600 border-t-transparent rounded-full animate-spin"></div>
+                </div>
+                <div class="flex-1">
+                    <h4 class="text-sm font-semibold text-gray-900 dark:text-white">Processing Transaction</h4>
+                    <p class="text-sm text-neutral-70 dark:text-neutral-70 mt-1" id="tx-processing-description">Your transaction is being processed.</p>
+                    <span class="text-sm text-primary-600 dark:text-primary-400 hover:underline mt-1 block font-mono cursor-pointer" id="tx-hash-link" target="_blank">
+                        View on Explorer
+                    </span>
+                </div>
+                <button onclick="hideTransactionPopup()" class="text-neutral-70 hover:text-gray-500 dark:hover:text-gray-300">
+                    <i class="fas fa-xmark"></i>
+                </button>
+            </div>
+        </div>
+
+        <div id="tx-success" class="p-4 hidden">
+            <div class="flex items-start space-x-3">
+                <div class="w-8 h-8 bg-success-100 dark:bg-success-900/20 rounded-full flex items-center justify-center flex-shrink-0">
+                    <i class="text-success-600 dark:text-success-400 fas fa-check"></i>
+                </div>
+                <div class="flex-1">
+                    <h4 class="text-sm font-semibold text-success-900 dark:text-success-100">Transaction Successful</h4>
+                    <p class="text-sm text-success-700 dark:text-success-300 mt-1" id="tx-success-description">Your transaction has been completed successfully.</p>
+                </div>
+            </div>
+        </div>
+
+        <div id="tx-error" class="p-4 hidden">
+            <div class="flex items-start space-x-3">
+                <div class="w-8 h-8 bg-red-100 dark:bg-red-900/20 rounded-full flex items-center justify-center flex-shrink-0">
+                    <i class="text-red-600 dark:text-red-400 fas fa-triangle-exclamation"></i>
+                </div>
+                <div class="flex-1">
+                    <h4 class="text-sm font-semibold text-red-900 dark:text-red-100">Transaction Failed</h4>
+                    <p class="text-sm text-red-700 dark:text-red-300 mt-1" id="tx-error-description">Transaction failed due to an error.</p>
+                    <div class="flex space-x-2 mt-3">
+                        <button onclick="retryTransaction()" class="px-3 py-1 bg-red-600 text-white text-sm rounded-lg hover:bg-red-700 transition-colors">
+                            Retry
+                        </button>
+                        <button onclick="hideTransactionPopup()" class="px-3 py-1 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 text-sm rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors">
+                            Dismiss
+                        </button>
+                    </div>
+                </div>
+                <button onclick="hideTransactionPopup()" class="text-neutral-70 hover:text-gray-500 dark:hover:text-gray-300">
+                    <i class="fas fa-xmark"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div id="action-modal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full hidden z-50">
+    <div class="relative top-20 mx-auto p-5 border w-full max-w-lg shadow-lg rounded-xl bg-white dark:bg-surface">
+        <div class="flex items-center justify-between mb-4">
+            <h3 class="text-lg font-semibold text-gray-900 dark:text-white" id="modal-title">Action</h3>
+            <button onclick="closeActionModal()" class="text-neutral-70 hover:text-gray-500 dark:hover:text-gray-300">
+                <i class="text-lg fas fa-xmark"></i>
+            </button>
+        </div>
+        <div id="modal-content" class="mb-6">
+        </div>
+        <div class="flex justify-end space-x-3">
+            <button onclick="closeActionModal()" class="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors">
+                Cancel
+            </button>
+            <button id="modal-confirm-btn" onclick="confirmAction()" class="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors">
+                Confirm
+            </button>
+        </div>
+    </div>
+</div>
+
+<header id="header" class="bg-white dark:bg-surface border-b border-neutral-20 dark:border-neutral-70 sticky top-0 z-40 transition-colors duration-300">
+    <div class="px-4 sm:px-6 lg:px-8">
+        <div class="flex items-center justify-between h-16">
+            <div class="flex items-center space-x-3 rtl:space-x-reverse">
+                <img src="https://verana.io/logo.svg" alt="Veranito Logo" class="w-8 h-8">
+                <h1 class="text-xl font-bold text-gray-900 dark:text-white hidden sm:block">Verana</h1>
+            </div>
+
+            <button id="mobile-menu-btn" class="lg:hidden p-2 rounded-md text-gray-400 hover:text-gray-500 hover:bg-surface-muted dark:hover:bg-surface-muted transition-colors">
+                <i class="text-lg fas fa-bars"></i>
+            </button>
+
+            <div class="hidden lg:flex items-center space-x-4 rtl:space-x-reverse">
+                <div class="flex items-center space-x-2 px-3 py-1 bg-success-50 dark:bg-success-900/20 rounded-full">
+                    <div class="w-2 h-2 bg-success-500 rounded-full pulse-dot relative"></div>
+                    <span class="text-sm text-success-700 dark:text-success-300 font-medium">Mainnet</span>
+                </div>
+
+                <button class="p-2 text-neutral-70 hover:text-gray-500 hover:bg-surface-muted dark:hover:bg-surface-muted rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500">
+                    <i class="text-lg fas fa-gear"></i>
+                </button>
+
+                <button id="theme-toggle" class="p-2 text-neutral-70 hover:text-gray-500 hover:bg-surface-muted dark:hover:bg-surface-muted rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500">
+                    <i class="text-lg dark:hidden fas fa-moon"></i>
+                    <i class="text-lg hidden dark:inline fas fa-sun"></i>
+                </button>
+
+                <div id="account-zone" class="flex items-center space-x-2 px-3 py-2 bg-surface-muted dark:bg-surface-muted rounded-xl">
+                    <div class="w-8 h-8 bg-gradient-to-br from-green-500 to-green-600 rounded-full flex items-center justify-center">
+                        <i class="text-white text-sm fas fa-check"></i>
+                    </div>
+                    <div class="hidden xl:block cursor-pointer" onclick="copyAddressFromHeader()">
+                        <p class="text-sm font-medium text-gray-900 dark:text-white">0x1234...5678</p>
+                        <p class="text-xs text-neutral-70 dark:text-neutral-70">Connected</p>
+                    </div>
+                    <div class="flex items-center space-x-1 ml-2">
+                        <button class="relative group p-2 text-neutral-70 hover:text-gray-500 hover:bg-surface-muted dark:hover:bg-surface-muted rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500" onclick="document.getElementById('qr-modal').classList.remove('hidden')">
+                            <i class="text-sm fas fa-qrcode"></i>
+                            <div class="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 bg-gray-900 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none">
+                                Show QR
+                            </div>
+                        </button>
+                        <button class="relative group p-2 text-neutral-70 hover:text-gray-500 hover:bg-surface-muted dark:hover:bg-surface-muted rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500" onclick="openExplorer()">
+                            <i class="text-sm fas fa-up-right-from-square"></i>
+                            <div class="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 bg-gray-900 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none">
+                                Explorer
+                            </div>
+                        </button>
+                        <button class="relative group p-2 text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-red-500" id="header-disconnect-btn">
+                            <i class="text-sm fas fa-right-from-bracket"></i>
+                            <div class="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 bg-gray-900 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none">
+                                Disconnect
+                            </div>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</header>
+
+<div class="flex">
+    <aside id="sidebar" class="hidden lg:flex lg:flex-shrink-0">
+        <div class="flex flex-col w-64 bg-white dark:bg-surface border-r border-neutral-20 dark:border-neutral-70 transition-colors duration-300">
+            <div class="flex-1 flex flex-col pt-5 pb-4 overflow-y-auto">
+                <nav class="mt-5 flex-1 px-2 space-y-1">
+                    <span class="text-gray-700 dark:text-gray-300 hover:bg-primary-50 dark:hover:bg-primary-900/20 hover:text-primary-700 dark:hover:text-primary-300 group flex items-center px-2 py-2 text-sm font-medium rounded-md cursor-pointer">
+                        <i class="text-gray-400 mr-3 text-sm fas fa-gauge-high"></i>
+                        Dashboard
+                    </span>
+
+                    <span class="text-gray-700 dark:text-gray-300 hover:bg-primary-50 dark:hover:bg-primary-900/20 hover:text-primary-700 dark:hover:text-primary-300 group flex items-center px-2 py-2 text-sm font-medium rounded-md cursor-pointer">
+                        <i class="text-gray-400 mr-3 text-sm fas fa-circle-user"></i>
+                        Account
+                    </span>
+
+                    <span class="text-gray-700 dark:text-gray-300 hover:bg-primary-50 dark:hover:bg-primary-900/20 hover:text-primary-700 dark:hover:text-primary-300 group flex items-center px-2 py-2 text-sm font-medium rounded-md cursor-pointer">
+                        <i class="text-gray-400 mr-3 text-sm fas fa-id-card"></i>
+                        Manage DIDs
+                    </span>
+
+                    <span class="bg-primary-50 dark:bg-primary-900/20 text-primary-700 dark:text-primary-300 group flex items-center px-2 py-2 text-sm font-medium rounded-md cursor-pointer">
+                        <i class="text-primary-500 mr-3 text-sm fas fa-shield-halved"></i>
+                        My Ecosystems
+                    </span>
+
+                    <span class="text-gray-700 dark:text-gray-300 hover:bg-primary-50 dark:hover:bg-primary-900/20 hover:text-primary-700 dark:hover:text-primary-300 group flex items-center px-2 py-2 text-sm font-medium rounded-md cursor-pointer">
+                        <i class="text-gray-400 mr-3 text-sm fas fa-compass"></i>
+                        Discover & Join
+                    </span>
+
+                    <span class="text-gray-700 dark:text-gray-300 hover:bg-primary-50 dark:hover:bg-primary-900/20 hover:text-primary-700 dark:hover:text-primary-300 group flex items-center px-2 py-2 text-sm font-medium rounded-md cursor-pointer">
+                        <div class="relative mr-3">
+                            <i class="text-gray-400 text-sm fas fa-list-check"></i>
+                            <div class="absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full flex items-center justify-center">
+                                <span class="text-white text-xs font-bold">3</span>
+                            </div>
+                        </div>
+                        Pending Tasks
+                    </span>
+                </nav>
+
+                <div class="flex-shrink-0 px-2 py-4 border-t border-neutral-20 dark:border-neutral-70">
+                    <div class="flex items-center">
+                        <img src="https://verana.io/logo.svg" alt="Verana Logo" class="w-6 h-6 mr-2">
+                        <div class="flex-1 min-w-0">
+                            <p class="text-sm font-medium text-gray-900 dark:text-white truncate">Verana Network</p>
+                            <p class="text-xs text-neutral-70 dark:text-neutral-70">v2.4.1</p>
+                        </div>
+                    </div>
+                    <div class="mt-3 flex space-x-2">
+                        <span class="text-neutral-70 hover:text-gray-500 dark:hover:text-gray-300 cursor-pointer">
+                            <i class="text-sm fab fa-github"></i>
+                        </span>
+                        <span class="text-neutral-70 hover:text-gray-500 dark:hover:text-gray-300 cursor-pointer">
+                            <i class="text-sm fas fa-book"></i>
+                        </span>
+                        <span class="text-neutral-70 hover:text-gray-500 dark:hover:text-gray-300 cursor-pointer">
+                            <i class="text-sm fas fa-circle-question"></i>
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </aside>
+
+    <div id="mobile-sidebar-overlay" class="fixed inset-0 flex z-40 lg:hidden hidden">
+        <div class="fixed inset-0 bg-gray-600 bg-opacity-75" id="mobile-sidebar-backdrop"></div>
+        <div class="relative flex-1 flex flex-col max-w-xs w-full bg-white dark:bg-surface">
+            <div class="absolute top-0 right-0 -mr-12 pt-2">
+                <button id="mobile-sidebar-close" class="ml-1 flex items-center justify-center h-10 w-10 rounded-full focus:outline-none focus:ring-2 focus:ring-inset focus:ring-white">
+                    <i class="text-white text-lg fas fa-xmark"></i>
+                </button>
+            </div>
+            <div class="flex-1 h-0 pt-5 pb-4 overflow-y-auto">
+                <div class="flex-shrink-0 flex items-center px-4">
+                    <img src="https://verana.io/logo.svg" alt="Veranito Logo" class="w-8 h-8 mr-3">
+                    <h1 class="text-xl font-bold text-gray-900 dark:text-white">Verana</h1>
+                </div>
+                <nav class="mt-5 px-2 space-y-1">
+                    <span class="text-gray-700 dark:text-gray-300 group flex items-center px-2 py-2 text-base font-medium rounded-md cursor-pointer">
+                        <i class="text-gray-400 mr-4 fas fa-gauge-high"></i>
+                        Dashboard
+                    </span>
+                    <span class="text-gray-700 dark:text-gray-300 group flex items-center px-2 py-2 text-base font-medium rounded-md cursor-pointer">
+                        <i class="text-gray-400 mr-4 fas fa-circle-user"></i>
+                        Account
+                    </span>
+                    <span class="text-gray-700 dark:text-gray-300 group flex items-center px-2 py-2 text-base font-medium rounded-md cursor-pointer">
+                        <i class="text-gray-400 mr-4 fas fa-id-card"></i>
+                        Manage DIDs
+                    </span>
+                    <span class="bg-primary-50 dark:bg-primary-900/20 text-primary-700 dark:text-primary-300 group flex items-center px-2 py-2 text-base font-medium rounded-md cursor-pointer">
+                        <i class="text-primary-500 mr-4 fas fa-shield-halved"></i>
+                        My Ecosystems
+                    </span>
+                    <span class="text-gray-700 dark:text-gray-300 group flex items-center px-2 py-2 text-base font-medium rounded-md cursor-pointer">
+                        <i class="text-gray-400 mr-4 fas fa-compass"></i>
+                        Discover & Join
+                    </span>
+                    <span class="text-gray-700 dark:text-gray-300 group flex items-center px-2 py-2 text-base font-medium rounded-md cursor-pointer">
+                        <div class="relative mr-4">
+                            <i class="text-gray-400 fas fa-list-check"></i>
+                            <div class="absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full flex items-center justify-center">
+                                <span class="text-white text-xs font-bold">3</span>
+                            </div>
+                        </div>
+                        Pending Tasks
+                    </span>
+                </nav>
+            </div>
+        </div>
+    </div>
+
+    <div class="flex-1 overflow-auto">
+        <main id="participants-page" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+            
+            <section id="breadcrumbs" class="mb-6">
+                <nav class="flex flex-wrap items-center text-sm" aria-label="Breadcrumb">
+                    <a href="#" class="text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 transition-colors">Healthcare Trust Registry</a>
+                    <i class="mx-2 text-neutral-70 fas fa-chevron-right text-xs"></i>
+                    <a href="#" class="text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 transition-colors">Healthcare Credential Schema</a>
+                    <i class="mx-2 text-neutral-70 fas fa-chevron-right text-xs"></i>
+                    <span class="text-gray-900 dark:text-white font-medium">Participants</span>
+                </nav>
+            </section>
+
+            <section id="page-header" class="mb-8">
+                <h1 class="text-3xl font-bold text-gray-900 dark:text-white">Participants</h1>
+            </section>
+
+            <section id="permission-tree-card" class="bg-white dark:bg-surface border border-neutral-20 dark:border-neutral-70 rounded-xl p-6 mb-6">
+                <div class="flex items-center justify-between mb-6">
+                    <h2 class="text-xl font-semibold text-gray-900 dark:text-white">Permission Tree</h2>
+                    <div class="flex items-center space-x-4">
+                        <label class="flex items-center space-x-2 cursor-pointer">
+                            <input type="checkbox" id="show-weight" class="rounded border-neutral-20 text-primary-600 focus:ring-primary-500">
+                            <span class="text-sm text-gray-700 dark:text-gray-300">Weight</span>
+                        </label>
+                        <label class="flex items-center space-x-2 cursor-pointer">
+                            <input type="checkbox" id="show-business" class="rounded border-neutral-20 text-primary-600 focus:ring-primary-500">
+                            <span class="text-sm text-gray-700 dark:text-gray-300">Business Rules</span>
+                        </label>
+                        <label class="flex items-center space-x-2 cursor-pointer">
+                            <input type="checkbox" id="show-stats" class="rounded border-neutral-20 text-primary-600 focus:ring-primary-500">
+                            <span class="text-sm text-gray-700 dark:text-gray-300">Stats</span>
+                        </label>
+                    </div>
+                </div>
+
+                <div id="tree-container" class="space-y-2">
+                    
+                    <div class="tree-node rounded-lg p-2 cursor-pointer" data-id="eco-1" data-expanded="true">
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center space-x-2">
+                                <i class="fas fa-chevron-right text-neutral-70 text-xs chevron-rotate expanded" onclick="toggleNode(event, 'eco-1')"></i>
+                                <i class="fas fa-crown text-yellow-500"></i>
+                                <span class="font-medium text-gray-900 dark:text-white" onclick="selectNode(event, 'eco-1', 'ECOSYSTEM', 'Healthcare Ecosystem')">Healthcare Ecosystem</span>
+                                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-300">active</span>
+                            </div>
+                            <div class="flex items-center space-x-4 text-sm text-gray-600 dark:text-gray-400">
+                                <span class="weight-addon hidden"><i class="fas fa-scale-balanced text-purple-800"></i> 500k VNA</span>
+                                <span class="business-addon hidden"><i class="fas fa-coins text-purple-800"></i> val: 10 VNA</span>
+                                <span class="stats-addon hidden"><i class="fas fa-chart-column text-purple-800"></i> issued: 5234</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="ml-6 space-y-2" id="eco-1-children">
+                        <div class="tree-node rounded-lg p-2 cursor-pointer" data-id="ig-dir-1" data-expanded="false">
+                            <div class="flex items-center space-x-2">
+                                <i class="fas fa-chevron-right text-neutral-70 text-xs chevron-rotate" onclick="toggleNode(event, 'ig-dir-1')"></i>
+                                <i class="fas fa-folder text-blue-500"></i>
+                                <span class="text-gray-700 dark:text-gray-300" onclick="toggleNode(event, 'ig-dir-1')">Issuer Grantors (2)</span>
+                            </div>
+                        </div>
+
+                        <div class="ml-6 space-y-2 hidden" id="ig-dir-1-children">
+                            <div class="tree-node rounded-lg p-2 cursor-pointer" data-id="ig-1a">
+                                <div class="flex items-center justify-between">
+                                    <div class="flex items-center space-x-2">
+                                        <i class="fas fa-chevron-right text-neutral-70 text-xs chevron-rotate" onclick="toggleNode(event, 'ig-1a')"></i>
+                                        <i class="fas fa-crown text-yellow-500"></i>
+                                        <span class="font-medium text-gray-900 dark:text-white" onclick="selectNode(event, 'ig-1a', 'ISSUER_GRANTOR', 'Primary Issuer Grantor')">Primary Issuer Grantor</span>
+                                        <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-300">active</span>
+                                    </div>
+                                    <div class="flex items-center space-x-4 text-sm text-gray-600 dark:text-gray-400">
+                                        <span class="weight-addon hidden"><i class="fas fa-scale-balanced text-blue-800"></i> 234k VNA</span>
+                                        <span class="business-addon hidden"><i class="fas fa-coins text-blue-800"></i> val: 5 VNA iss: 1 VNA</span>
+                                        <span class="stats-addon hidden"><i class="fas fa-chart-column text-blue-800"></i> issued: 2341</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="ml-6 space-y-2 hidden" id="ig-1a-children">
+                                <div class="tree-node rounded-lg p-2 cursor-pointer" data-id="iss-dir-1a">
+                                    <div class="flex items-center space-x-2">
+                                        <i class="fas fa-chevron-right text-neutral-70 text-xs chevron-rotate" onclick="toggleNode(event, 'iss-dir-1a')"></i>
+                                        <i class="fas fa-folder text-green-500"></i>
+                                        <span class="text-gray-700 dark:text-gray-300" onclick="toggleNode(event, 'iss-dir-1a')">Issuers (3)</span>
+                                    </div>
+                                </div>
+
+                                <div class="ml-6 space-y-2 hidden" id="iss-dir-1a-children">
+                                    <div class="tree-node rounded-lg p-2 cursor-pointer" data-id="iss-1">
+                                        <div class="flex items-center justify-between">
+                                            <div class="flex items-center space-x-2">
+                                                <i class="fas fa-chevron-right text-neutral-70 text-xs chevron-rotate" onclick="toggleNode(event, 'iss-1')"></i>
+                                                <i class="fas fa-crown text-yellow-500"></i>
+                                                <span class="font-medium text-gray-900 dark:text-white" onclick="selectNode(event, 'iss-1', 'ISSUER', 'Medical Center Issuer')">Medical Center Issuer</span>
+                                                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-300">active</span>
+                                            </div>
+                                            <div class="flex items-center space-x-4 text-sm text-gray-600 dark:text-gray-400">
+                                                <span class="weight-addon hidden"><i class="fas fa-scale-balanced text-green-800"></i> 125k VNA</span>
+                                                <span class="business-addon hidden"><i class="fas fa-coins text-green-800"></i> iss: 0.25 VNA</span>
+                                                <span class="stats-addon hidden"><i class="fas fa-chart-column text-green-800"></i> issued: 1234</span>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div class="ml-6 space-y-2 hidden" id="iss-1-children">
+                                        <div class="tree-node rounded-lg p-2 cursor-pointer" data-id="hold-dir-1">
+                                            <div class="flex items-center space-x-2">
+                                                <i class="fas fa-chevron-right text-neutral-70 text-xs chevron-rotate" onclick="toggleNode(event, 'hold-dir-1')"></i>
+                                                <i class="fas fa-folder text-pink-500"></i>
+                                                <span class="text-gray-700 dark:text-gray-300" onclick="toggleNode(event, 'hold-dir-1')">Holders (2)</span>
+                                            </div>
+                                        </div>
+
+                                        <div class="ml-6 space-y-2 hidden" id="hold-dir-1-children">
+                                            <div class="tree-node rounded-lg p-2 cursor-pointer" data-id="hold-a">
+                                                <div class="flex items-center justify-between">
+                                                    <div class="flex items-center space-x-2">
+                                                        <i class="fas fa-eye text-gray-400 ml-4"></i>
+                                                        <span class="font-medium text-gray-900 dark:text-white" onclick="selectNode(event, 'hold-a', 'HOLDER', 'Patient A')">Patient A</span>
+                                                        <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-300">active</span>
+                                                    </div>
+                                                    <div class="flex items-center space-x-4 text-sm text-gray-600 dark:text-gray-400">
+                                                        <span class="weight-addon hidden"><i class="fas fa-scale-balanced text-pink-800"></i> 5k VNA</span>
+                                                        <span class="stats-addon hidden"><i class="fas fa-chart-column text-pink-800"></i> verified: 45</span>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <div class="tree-node rounded-lg p-2 cursor-pointer" data-id="hold-b">
+                                                <div class="flex items-center justify-between">
+                                                    <div class="flex items-center space-x-2">
+                                                        <i class="fas fa-eye text-gray-400 ml-4"></i>
+                                                        <span class="font-medium text-gray-900 dark:text-white" onclick="selectNode(event, 'hold-b', 'HOLDER', 'Patient B')">Patient B</span>
+                                                        <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-300">expire soon</span>
+                                                    </div>
+                                                    <div class="flex items-center space-x-4 text-sm text-gray-600 dark:text-gray-400">
+                                                        <span class="weight-addon hidden"><i class="fas fa-scale-balanced text-pink-800"></i> 3k VNA</span>
+                                                        <span class="stats-addon hidden"><i class="fas fa-chart-column text-pink-800"></i> verified: 12</span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div class="tree-node rounded-lg p-2 cursor-pointer" data-id="iss-2">
+                                        <div class="flex items-center justify-between">
+                                            <div class="flex items-center space-x-2">
+                                                <i class="fas fa-eye text-gray-400 ml-4"></i>
+                                                <span class="font-medium text-gray-900 dark:text-white" onclick="selectNode(event, 'iss-2', 'ISSUER', 'Clinic Issuer')">Clinic Issuer</span>
+                                                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-300">pending approbation</span>
+                                            </div>
+                                            <div class="flex items-center space-x-4 text-sm text-gray-600 dark:text-gray-400">
+                                                <span class="weight-addon hidden"><i class="fas fa-scale-balanced text-green-800"></i> 50k VNA</span>
+                                                <span class="business-addon hidden"><i class="fas fa-coins text-green-800"></i> iss: 0.3 VNA</span>
+                                                <span class="stats-addon hidden"><i class="fas fa-chart-column text-green-800"></i> issued: 0</span>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div class="tree-node rounded-lg p-2 cursor-pointer" data-id="iss-3">
+                                        <div class="flex items-center justify-between">
+                                            <div class="flex items-center space-x-2">
+                                                <i class="fas fa-eye text-gray-400 ml-4"></i>
+                                                <span class="font-medium text-gray-900 dark:text-white" onclick="selectNode(event, 'iss-3', 'ISSUER', 'Hospital Issuer')">Hospital Issuer</span>
+                                                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-red-900 text-red-100 dark:bg-red-300/20 dark:text-red-800">slashed</span>
+                                            </div>
+                                            <div class="flex items-center space-x-4 text-sm text-gray-600 dark:text-gray-400">
+                                                <span class="weight-addon hidden"><i class="fas fa-scale-balanced text-green-800"></i> 75k VNA</span>
+                                                <span class="business-addon hidden"><i class="fas fa-coins text-green-800"></i> iss: 0.2 VNA</span>
+                                                <span class="stats-addon hidden"><i class="fas fa-chart-column text-green-800"></i> issued: 567</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="tree-node rounded-lg p-2 cursor-pointer" data-id="ig-1b">
+                                <div class="flex items-center justify-between">
+                                    <div class="flex items-center space-x-2">
+                                        <i class="fas fa-eye text-gray-400 ml-4"></i>
+                                        <span class="font-medium text-gray-900 dark:text-white" onclick="selectNode(event, 'ig-1b', 'ISSUER_GRANTOR', 'Secondary Issuer Grantor')">Secondary Issuer Grantor</span>
+                                        <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-300">active</span>
+                                    </div>
+                                    <div class="flex items-center space-x-4 text-sm text-gray-600 dark:text-gray-400">
+                                        <span class="weight-addon hidden"><i class="fas fa-scale-balanced text-blue-800"></i> 180k VNA</span>
+                                        <span class="business-addon hidden"><i class="fas fa-coins text-blue-800"></i> val: 4 VNA iss: 0.8 VNA</span>
+                                        <span class="stats-addon hidden"><i class="fas fa-chart-column text-blue-800"></i> issued: 1890</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="tree-node rounded-lg p-2 cursor-pointer" data-id="vg-dir-1" data-expanded="false">
+                            <div class="flex items-center space-x-2">
+                                <i class="fas fa-chevron-right text-neutral-70 text-xs chevron-rotate" onclick="toggleNode(event, 'vg-dir-1')"></i>
+                                <i class="fas fa-folder text-slate-500"></i>
+                                <span class="text-gray-700 dark:text-gray-300" onclick="toggleNode(event, 'vg-dir-1')">Verifier Grantors (2)</span>
+                            </div>
+                        </div>
+
+                        <div class="ml-6 space-y-2 hidden" id="vg-dir-1-children">
+                            <div class="tree-node rounded-lg p-2 cursor-pointer" data-id="vg-x">
+                                <div class="flex items-center justify-between">
+                                    <div class="flex items-center space-x-2">
+                                        <i class="fas fa-chevron-right text-neutral-70 text-xs chevron-rotate" onclick="toggleNode(event, 'vg-x')"></i>
+                                        <i class="fas fa-crown text-yellow-500"></i>
+                                        <span class="font-medium text-gray-900 dark:text-white" onclick="selectNode(event, 'vg-x', 'VERIFIER_GRANTOR', 'Primary Verifier Grantor')">Primary Verifier Grantor</span>
+                                        <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-300">active</span>
+                                    </div>
+                                    <div class="flex items-center space-x-4 text-sm text-gray-600 dark:text-gray-400">
+                                        <span class="weight-addon hidden"><i class="fas fa-scale-balanced text-slate-800"></i> 150k VNA</span>
+                                        <span class="business-addon hidden"><i class="fas fa-coins text-slate-800"></i> val: 3 VNA ver: 0.5 VNA</span>
+                                        <span class="stats-addon hidden"><i class="fas fa-chart-column text-slate-800"></i> verified: 3456</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="ml-6 space-y-2 hidden" id="vg-x-children">
+                                <div class="tree-node rounded-lg p-2 cursor-pointer" data-id="ver-dir-x">
+                                    <div class="flex items-center space-x-2">
+                                        <i class="fas fa-chevron-right text-neutral-70 text-xs chevron-rotate" onclick="toggleNode(event, 'ver-dir-x')"></i>
+                                        <i class="fas fa-folder text-orange-500"></i>
+                                        <span class="text-gray-700 dark:text-gray-300" onclick="toggleNode(event, 'ver-dir-x')">Verifiers (2)</span>
+                                    </div>
+                                </div>
+
+                                <div class="ml-6 space-y-2 hidden" id="ver-dir-x-children">
+                                    <div class="tree-node rounded-lg p-2 cursor-pointer" data-id="ver-alpha">
+                                        <div class="flex items-center justify-between">
+                                            <div class="flex items-center space-x-2">
+                                                <i class="fas fa-eye text-gray-400 ml-4"></i>
+                                                <span class="font-medium text-gray-900 dark:text-white" onclick="selectNode(event, 'ver-alpha', 'VERIFIER', 'Insurance Verifier Alpha')">Insurance Verifier Alpha</span>
+                                                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-300">active</span>
+                                            </div>
+                                            <div class="flex items-center space-x-4 text-sm text-gray-600 dark:text-gray-400">
+                                                <span class="weight-addon hidden"><i class="fas fa-scale-balanced text-orange-800"></i> 80k VNA</span>
+                                                <span class="business-addon hidden"><i class="fas fa-coins text-orange-800"></i> ver: 0.25 VNA</span>
+                                                <span class="stats-addon hidden"><i class="fas fa-chart-column text-orange-800"></i> verified: 1789</span>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div class="tree-node rounded-lg p-2 cursor-pointer" data-id="ver-beta">
+                                        <div class="flex items-center justify-between">
+                                            <div class="flex items-center space-x-2">
+                                                <i class="fas fa-eye text-gray-400 ml-4"></i>
+                                                <span class="font-medium text-gray-900 dark:text-white" onclick="selectNode(event, 'ver-beta', 'VERIFIER', 'Pharmacy Verifier Beta')">Pharmacy Verifier Beta</span>
+                                                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-300">active</span>
+                                            </div>
+                                            <div class="flex items-center space-x-4 text-sm text-gray-600 dark:text-gray-400">
+                                                <span class="weight-addon hidden"><i class="fas fa-scale-balanced text-orange-800"></i> 60k VNA</span>
+                                                <span class="business-addon hidden"><i class="fas fa-coins text-orange-800"></i> ver: 0.2 VNA</span>
+                                                <span class="stats-addon hidden"><i class="fas fa-chart-column text-orange-800"></i> verified: 1667</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="tree-node rounded-lg p-2 cursor-pointer" data-id="vg-y">
+                                <div class="flex items-center justify-between">
+                                    <div class="flex items-center space-x-2">
+                                        <i class="fas fa-eye text-gray-400 ml-4"></i>
+                                        <span class="font-medium text-gray-900 dark:text-white" onclick="selectNode(event, 'vg-y', 'VERIFIER_GRANTOR', 'Secondary Verifier Grantor')">Secondary Verifier Grantor</span>
+                                        <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800 dark:bg-gray-900/20 dark:text-gray-300">expired</span>
+                                    </div>
+                                    <div class="flex items-center space-x-4 text-sm text-gray-600 dark:text-gray-400">
+                                        <span class="weight-addon hidden"><i class="fas fa-scale-balanced text-slate-800"></i> 100k VNA</span>
+                                        <span class="business-addon hidden"><i class="fas fa-coins text-slate-800"></i> val: 2.5 VNA ver: 0.4 VNA</span>
+                                        <span class="stats-addon hidden"><i class="fas fa-chart-column text-slate-800"></i> verified: 890</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="tree-node rounded-lg p-2 cursor-pointer" data-id="eco-2" data-expanded="false">
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center space-x-2">
+                                <i class="fas fa-chevron-right text-neutral-70 text-xs chevron-rotate" onclick="toggleNode(event, 'eco-2')"></i>
+                                <i class="fas fa-eye text-gray-400"></i>
+                                <span class="font-medium text-gray-900 dark:text-white" onclick="selectNode(event, 'eco-2', 'ECOSYSTEM', 'Research Ecosystem')">Research Ecosystem</span>
+                                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-300">active</span>
+                            </div>
+                            <div class="flex items-center space-x-4 text-sm text-gray-600 dark:text-gray-400">
+                                <span class="weight-addon hidden"><i class="fas fa-scale-balanced text-purple-800"></i> 250k VNA</span>
+                                <span class="business-addon hidden"><i class="fas fa-coins text-purple-800"></i> val: 8 VNA</span>
+                                <span class="stats-addon hidden"><i class="fas fa-chart-column text-purple-800"></i> issued: 1567</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="ml-6 space-y-2 hidden" id="eco-2-children">
+                        <div class="tree-node rounded-lg p-2 cursor-pointer" data-id="ig-dir-2">
+                            <div class="flex items-center space-x-2">
+                                <i class="fas fa-folder text-blue-500 ml-4"></i>
+                                <span class="text-gray-700 dark:text-gray-300">Issuer Grantors (1)</span>
+                            </div>
+                        </div>
+
+                        <div class="tree-node rounded-lg p-2 cursor-pointer" data-id="vg-dir-2">
+                            <div class="flex items-center space-x-2">
+                                <i class="fas fa-folder text-slate-500 ml-4"></i>
+                                <span class="text-gray-700 dark:text-gray-300">Verifier Grantors (0)</span>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+            </section>
+
+            <section id="permission-detail-card" class="bg-white dark:bg-surface border border-neutral-20 dark:border-neutral-70 rounded-xl p-6 hidden">
+                <div class="mb-6">
+                    <div class="flex items-start justify-between mb-2">
+                        <h2 class="text-2xl font-bold text-gray-900 dark:text-white" id="detail-name">Permission Name</h2>
+                        <button onclick="closeDetailCard()" class="text-neutral-70 hover:text-gray-500">
+                            <i class="fas fa-xmark text-xl"></i>
+                        </button>
+                    </div>
+                    <div class="flex flex-wrap items-center gap-2 mb-2">
+                        <span id="detail-role-badge" class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium"></span>
+                        <span id="detail-state-badge" class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium"></span>
+                    </div>
+                    <p class="text-sm text-neutral-70 dark:text-neutral-70" id="detail-breadcrumb"></p>
+                    <p class="text-sm font-medium text-gray-900 dark:text-white mt-1" id="detail-schema">Healthcare Credential Schema</p>
+                </div>
+
+                <div class="space-y-6">
+                    
+                    <div>
+                        <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Key Metadata</h3>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <div class="tooltip inline-block">
+                                    <label class="text-xs font-medium text-neutral-70 dark:text-neutral-70 cursor-help">DID</label>
+                                    <span class="tooltiptext">DID of the related verifiable service</span>
+                                </div>
+                                <div class="flex items-center justify-between">
+                                    <p class="text-sm font-mono text-gray-900 dark:text-white break-all" id="detail-did" title="Full DID">did:verana:mainnet:z6Mk...</p>
+                                    <div class="flex items-center space-x-1 ml-2">
+                                        <button class="p-1 text-neutral-70 hover:text-primary-600" onclick="copyToClipboard('did')">
+                                            <i class="fas fa-copy text-xs"></i>
+                                        </button>
+                                        <button class="p-1 text-neutral-70 hover:text-primary-600" onclick="openVisualizer('did')">
+                                            <i class="fas fa-eye text-xs"></i>
+                                        </button>
+                                        <button class="p-1 text-neutral-70 hover:text-primary-600" onclick="openService('did')">
+                                            <i class="fas fa-external-link-alt text-xs"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div>
+                                <div class="tooltip inline-block">
+                                    <label class="text-xs font-medium text-neutral-70 dark:text-neutral-70 cursor-help">Grantee</label>
+                                    <span class="tooltiptext">Verana account</span>
+                                </div>
+                                <div class="flex items-center justify-between">
+                                    <p class="text-sm font-mono text-gray-900 dark:text-white break-all" id="detail-grantee">verana1abc...</p>
+                                    <div class="flex items-center space-x-1 ml-2">
+                                        <button class="p-1 text-neutral-70 hover:text-primary-600" onclick="copyToClipboard('grantee')">
+                                            <i class="fas fa-copy text-xs"></i>
+                                        </button>
+                                        <button class="p-1 text-neutral-70 hover:text-primary-600" onclick="openVisualizer('grantee')">
+                                            <i class="fas fa-eye text-xs"></i>
+                                        </button>
+                                        <button class="p-1 text-neutral-70 hover:text-primary-600" onclick="openExplorer('grantee')">
+                                            <i class="fas fa-external-link-alt text-xs"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div>
+                                <div class="tooltip inline-block">
+                                    <label class="text-xs font-medium text-neutral-70 dark:text-neutral-70 cursor-help">ID</label>
+                                    <span class="tooltiptext">Permission ID</span>
+                                </div>
+                                <div class="flex items-center justify-between">
+                                    <p class="text-sm text-gray-900 dark:text-white" id="detail-id">12001</p>
+                                    <div class="flex items-center space-x-1 ml-2">
+                                        <button class="p-1 text-neutral-70 hover:text-primary-600" onclick="copyToClipboard('id')">
+                                            <i class="fas fa-copy text-xs"></i>
+                                        </button>
+                                        <button class="p-1 text-neutral-70 hover:text-primary-600" onclick="openVisualizer('id')">
+                                            <i class="fas fa-eye text-xs"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div>
+                                <div class="tooltip inline-block">
+                                    <label class="text-xs font-medium text-neutral-70 dark:text-neutral-70 cursor-help">Deposit</label>
+                                    <span class="tooltiptext">Deposit amount in VNA</span>
+                                </div>
+                                <p class="text-sm text-gray-900 dark:text-white" id="detail-deposit">125.50 VNA</p>
+                            </div>
+
+                            <div>
+                                <div class="tooltip inline-block">
+                                    <label class="text-xs font-medium text-neutral-70 dark:text-neutral-70 cursor-help">Effective From</label>
+                                    <span class="tooltiptext">Start date of permission</span>
+                                </div>
+                                <p class="text-sm text-gray-900 dark:text-white" id="detail-effective-from">2024-01-15</p>
+                            </div>
+
+                            <div>
+                                <div class="tooltip inline-block">
+                                    <label class="text-xs font-medium text-neutral-70 dark:text-neutral-70 cursor-help">Effective Until</label>
+                                    <span class="tooltiptext">Expiration date of permission</span>
+                                </div>
+                                <p class="text-sm text-gray-900 dark:text-white" id="detail-effective-until">2024-12-15</p>
+                            </div>
+
+                            <div>
+                                <div class="tooltip inline-block">
+                                    <label class="text-xs font-medium text-neutral-70 dark:text-neutral-70 cursor-help">Country</label>
+                                    <span class="tooltiptext">Country this permission applies to</span>
+                                </div>
+                                <p class="text-sm text-gray-900 dark:text-white" id="detail-country">US</p>
+                            </div>
+
+                            <div>
+                                <div class="tooltip inline-block">
+                                    <label class="text-xs font-medium text-neutral-70 dark:text-neutral-70 cursor-help">Issued Credentials</label>
+                                    <span class="tooltiptext">Number of credentials issued</span>
+                                </div>
+                                <p class="text-sm text-gray-900 dark:text-white" id="detail-issued">1,234</p>
+                            </div>
+
+                            <div>
+                                <div class="tooltip inline-block">
+                                    <label class="text-xs font-medium text-neutral-70 dark:text-neutral-70 cursor-help">Verified Credentials</label>
+                                    <span class="tooltiptext">Number of credentials verified</span>
+                                </div>
+                                <p class="text-sm text-gray-900 dark:text-white" id="detail-verified">789</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div>
+                        <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Permission Lifecycle</h3>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <div class="tooltip inline-block">
+                                    <label class="text-xs font-medium text-neutral-70 dark:text-neutral-70 cursor-help">Created</label>
+                                    <span class="tooltiptext">Date of creation</span>
+                                </div>
+                                <p class="text-sm text-gray-900 dark:text-white" id="detail-created">2024-01-15 10:30:00</p>
+                            </div>
+
+                            <div>
+                                <div class="tooltip inline-block">
+                                    <label class="text-xs font-medium text-neutral-70 dark:text-neutral-70 cursor-help">Created By</label>
+                                    <span class="tooltiptext">Verana account that created this permission</span>
+                                </div>
+                                <div class="flex items-center justify-between">
+                                    <p class="text-sm font-mono text-gray-900 dark:text-white break-all" id="detail-created-by">verana1xyz...</p>
+                                    <div class="flex items-center space-x-1 ml-2">
+                                        <button class="p-1 text-neutral-70 hover:text-primary-600" onclick="copyToClipboard('created-by')">
+                                            <i class="fas fa-copy text-xs"></i>
+                                        </button>
+                                        <button class="p-1 text-neutral-70 hover:text-primary-600" onclick="openVisualizer('created-by')">
+                                            <i class="fas fa-eye text-xs"></i>
+                                        </button>
+                                        <button class="p-1 text-neutral-70 hover:text-primary-600" onclick="openExplorer('created-by')">
+                                            <i class="fas fa-external-link-alt text-xs"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div>
+                                <div class="tooltip inline-block">
+                                    <label class="text-xs font-medium text-neutral-70 dark:text-neutral-70 cursor-help">Modified</label>
+                                    <span class="tooltiptext">Last modification date</span>
+                                </div>
+                                <p class="text-sm text-gray-900 dark:text-white" id="detail-modified">2024-03-10 14:22:00</p>
+                            </div>
+
+                            <div>
+                                <div class="tooltip inline-block">
+                                    <label class="text-xs font-medium text-neutral-70 dark:text-neutral-70 cursor-help">Modified By</label>
+                                    <span class="tooltiptext">Verana account that last modified this permission</span>
+                                </div>
+                                <div class="flex items-center justify-between">
+                                    <p class="text-sm font-mono text-gray-900 dark:text-white break-all" id="detail-modified-by">verana1def...</p>
+                                    <div class="flex items-center space-x-1 ml-2">
+                                        <button class="p-1 text-neutral-70 hover:text-primary-600" onclick="copyToClipboard('modified-by')">
+                                            <i class="fas fa-copy text-xs"></i>
+                                        </button>
+                                        <button class="p-1 text-neutral-70 hover:text-primary-600" onclick="openVisualizer('modified-by')">
+                                            <i class="fas fa-eye text-xs"></i>
+                                        </button>
+                                        <button class="p-1 text-neutral-70 hover:text-primary-600" onclick="openExplorer('modified-by')">
+                                            <i class="fas fa-external-link-alt text-xs"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div>
+                                <div class="tooltip inline-block">
+                                    <label class="text-xs font-medium text-neutral-70 dark:text-neutral-70 cursor-help">Extended</label>
+                                    <span class="tooltiptext">Last extension date</span>
+                                </div>
+                                <p class="text-sm text-gray-900 dark:text-white" id="detail-extended">-</p>
+                            </div>
+
+                            <div>
+                                <div class="tooltip inline-block">
+                                    <label class="text-xs font-medium text-neutral-70 dark:text-neutral-70 cursor-help">Extended By</label>
+                                    <span class="tooltiptext">Verana account that extended this permission</span>
+                                </div>
+                                <p class="text-sm text-gray-900 dark:text-white" id="detail-extended-by">-</p>
+                            </div>
+
+                            <div>
+                                <div class="tooltip inline-block">
+                                    <label class="text-xs font-medium text-neutral-70 dark:text-neutral-70 cursor-help">Revoked</label>
+                                    <span class="tooltiptext">Revocation date</span>
+                                </div>
+                                <p class="text-sm text-gray-900 dark:text-white" id="detail-revoked">-</p>
+                            </div>
+
+                            <div>
+                                <div class="tooltip inline-block">
+                                    <label class="text-xs font-medium text-neutral-70 dark:text-neutral-70 cursor-help">Revoked By</label>
+                                    <span class="tooltiptext">Verana account that revoked this permission</span>
+                                </div>
+                                <p class="text-sm text-gray-900 dark:text-white" id="detail-revoked-by">-</p>
+                            </div>
+                        </div>
+
+                        <div class="flex justify-end space-x-3 mt-4">
+                            <button onclick="openActionModal('extend')" class="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors">
+                                <i class="fas fa-calendar-plus mr-2"></i>Extend Permission
+                            </button>
+                            <button onclick="openActionModal('revoke')" class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors">
+                                <i class="fas fa-ban mr-2"></i>Revoke Permission
+                            </button>
+                        </div>
+                    </div>
+
+                    <div>
+                        <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Validation Process</h3>
+                        <div class="mb-3">
+                            <span id="detail-vp-state-badge" class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">VALIDATED</span>
+                        </div>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <div class="tooltip inline-block">
+                                    <label class="text-xs font-medium text-neutral-70 dark:text-neutral-70 cursor-help">VP Expiration</label>
+                                    <span class="tooltiptext">Date the validation process of this permission will expire</span>
+                                </div>
+                                <p class="text-sm text-gray-900 dark:text-white" id="detail-vp-exp">2024-12-31</p>
+                            </div>
+
+                            <div>
+                                <div class="tooltip inline-block">
+                                    <label class="text-xs font-medium text-neutral-70 dark:text-neutral-70 cursor-help">VP Last State Change</label>
+                                    <span class="tooltiptext">Date the validation process of this permission last changed state</span>
+                                </div>
+                                <p class="text-sm text-gray-900 dark:text-white" id="detail-vp-last-change">2024-02-01 09:15:00</p>
+                            </div>
+
+                            <div>
+                                <div class="tooltip inline-block">
+                                    <label class="text-xs font-medium text-neutral-70 dark:text-neutral-70 cursor-help">VP Validator Deposit</label>
+                                    <span class="tooltiptext">Deposit managed by this validation process</span>
+                                </div>
+                                <p class="text-sm text-gray-900 dark:text-white" id="detail-vp-validator-deposit">50.00 VNA</p>
+                            </div>
+
+                            <div>
+                                <div class="tooltip inline-block">
+                                    <label class="text-xs font-medium text-neutral-70 dark:text-neutral-70 cursor-help">VP Current Fees</label>
+                                    <span class="tooltiptext">Validation process escrowed fees</span>
+                                </div>
+                                <p class="text-sm text-gray-900 dark:text-white" id="detail-vp-current-fees">2.50 VNA</p>
+                            </div>
+
+                            <div>
+                                <div class="tooltip inline-block">
+                                    <label class="text-xs font-medium text-neutral-70 dark:text-neutral-70 cursor-help">VP Current Deposit</label>
+                                    <span class="tooltiptext">Deposit managed by this validation process</span>
+                                </div>
+                                <p class="text-sm text-gray-900 dark:text-white" id="detail-vp-current-deposit">75.50 VNA</p>
+                            </div>
+
+                            <div>
+                                <div class="tooltip inline-block">
+                                    <label class="text-xs font-medium text-neutral-70 dark:text-neutral-70 cursor-help">VP Summary Digest</label>
+                                    <span class="tooltiptext">Checksum of the documentation linked to this permission</span>
+                                </div>
+                                <p class="text-sm font-mono text-gray-900 dark:text-white break-all" id="detail-vp-digest">sha256-abc123...</p>
+                            </div>
+                        </div>
+
+                        <div class="flex justify-end space-x-3 mt-4">
+                            <button onclick="openActionModal('renew-vp')" class="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors">
+                                <i class="fas fa-rotate-right mr-2"></i>Renew VP
+                            </button>
+                            <button onclick="openActionModal('cancel-vp')" class="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors">
+                                <i class="fas fa-xmark mr-2"></i>Cancel Request
+                            </button>
+                            <button onclick="openActionModal('accept-vp')" class="px-4 py-2 bg-success-600 text-white rounded-lg hover:bg-success-700 transition-colors">
+                                <i class="fas fa-check mr-2"></i>Accept & Validate
+                            </button>
+                        </div>
+                    </div>
+
+                    <div>
+                        <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Business Models</h3>
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div>
+                                <div class="tooltip inline-block">
+                                    <label class="text-xs font-medium text-neutral-70 dark:text-neutral-70 cursor-help">Validation Fees</label>
+                                    <span class="tooltiptext">Fees that must pay applicants that want to run a validation process</span>
+                                </div>
+                                <p class="text-sm text-gray-900 dark:text-white" id="detail-validation-fees">2.5 VNA</p>
+                            </div>
+
+                            <div>
+                                <div class="tooltip inline-block">
+                                    <label class="text-xs font-medium text-neutral-70 dark:text-neutral-70 cursor-help">Issuance Fees</label>
+                                    <span class="tooltiptext">Fees charged by this participant when a child permission issues a credential</span>
+                                </div>
+                                <p class="text-sm text-gray-900 dark:text-white" id="detail-issuance-fees">1.0 VNA</p>
+                            </div>
+
+                            <div>
+                                <div class="tooltip inline-block">
+                                    <label class="text-xs font-medium text-neutral-70 dark:text-neutral-70 cursor-help">Verification Fees</label>
+                                    <span class="tooltiptext">Fees charged by this participant when a child permission verifies a credential of this schema</span>
+                                </div>
+                                <p class="text-sm text-gray-900 dark:text-white" id="detail-verification-fees">0.5 VNA</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div>
+                        <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Slashing</h3>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <div class="tooltip inline-block">
+                                    <label class="text-xs font-medium text-neutral-70 dark:text-neutral-70 cursor-help">Slashed Deposit</label>
+                                    <span class="tooltiptext">Amount of deposit that has been slashed</span>
+                                </div>
+                                <p class="text-sm text-gray-900 dark:text-white" id="detail-slashed-deposit">0 VNA</p>
+                            </div>
+
+                            <div>
+                                <div class="tooltip inline-block">
+                                    <label class="text-xs font-medium text-neutral-70 dark:text-neutral-70 cursor-help">Repaid Deposit</label>
+                                    <span class="tooltiptext">Amount of deposit that has been repaid</span>
+                                </div>
+                                <p class="text-sm text-gray-900 dark:text-white" id="detail-repaid-deposit">0 VNA</p>
+                            </div>
+
+                            <div>
+                                <div class="tooltip inline-block">
+                                    <label class="text-xs font-medium text-neutral-70 dark:text-neutral-70 cursor-help">Slashed</label>
+                                    <span class="tooltiptext">Date last slashed</span>
+                                </div>
+                                <p class="text-sm text-gray-900 dark:text-white" id="detail-slashed">-</p>
+                            </div>
+
+                            <div>
+                                <div class="tooltip inline-block">
+                                    <label class="text-xs font-medium text-neutral-70 dark:text-neutral-70 cursor-help">Slashed By</label>
+                                    <span class="tooltiptext">Verana account that slashed this permission</span>
+                                </div>
+                                <p class="text-sm text-gray-900 dark:text-white" id="detail-slashed-by">-</p>
+                            </div>
+
+                            <div>
+                                <div class="tooltip inline-block">
+                                    <label class="text-xs font-medium text-neutral-70 dark:text-neutral-70 cursor-help">Repaid</label>
+                                    <span class="tooltiptext">Date repaid</span>
+                                </div>
+                                <p class="text-sm text-gray-900 dark:text-white" id="detail-repaid">-</p>
+                            </div>
+
+                            <div>
+                                <div class="tooltip inline-block">
+                                    <label class="text-xs font-medium text-neutral-70 dark:text-neutral-70 cursor-help">Repaid By</label>
+                                    <span class="tooltiptext">Verana account that repaid the slashed deposit</span>
+                                </div>
+                                <p class="text-sm text-gray-900 dark:text-white" id="detail-repaid-by">-</p>
+                            </div>
+                        </div>
+
+                        <div class="flex justify-end space-x-3 mt-4">
+                            <button onclick="openActionModal('slash')" class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors">
+                                <i class="fas fa-exclamation-triangle mr-2"></i>Slash Deposit
+                            </button>
+                            <button onclick="openActionModal('repay')" class="px-4 py-2 bg-success-600 text-white rounded-lg hover:bg-success-700 transition-colors">
+                                <i class="fas fa-hand-holding-dollar mr-2"></i>Repay Slashed Deposit
+                            </button>
+                        </div>
+                    </div>
+
+                    <div>
+                        <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Activity Timeline</h3>
+                        <div class="space-y-3">
+                            <div class="flex items-start space-x-3 p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg">
+                                <div class="w-8 h-8 bg-success-100 dark:bg-success-900/20 rounded-full flex items-center justify-center flex-shrink-0">
+                                    <i class="fas fa-check text-success-600 dark:text-success-400 text-xs"></i>
+                                </div>
+                                <div class="flex-1">
+                                    <p class="text-sm font-medium text-gray-900 dark:text-white">Permission Created</p>
+                                    <p class="text-xs text-neutral-70 dark:text-neutral-70 mt-1">2024-01-15 10:30:00 by verana1xyz...</p>
+                                </div>
+                            </div>
+
+                            <div class="flex items-start space-x-3 p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg">
+                                <div class="w-8 h-8 bg-blue-100 dark:bg-blue-900/20 rounded-full flex items-center justify-center flex-shrink-0">
+                                    <i class="fas fa-play text-blue-600 dark:text-blue-400 text-xs"></i>
+                                </div>
+                                <div class="flex-1">
+                                    <p class="text-sm font-medium text-gray-900 dark:text-white">Validation Process Started</p>
+                                    <p class="text-xs text-neutral-70 dark:text-neutral-70 mt-1">2024-01-20 14:45:00 by verana1def...</p>
+                                </div>
+                            </div>
+
+                            <div class="flex items-start space-x-3 p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg">
+                                <div class="w-8 h-8 bg-success-100 dark:bg-success-900/20 rounded-full flex items-center justify-center flex-shrink-0">
+                                    <i class="fas fa-check-double text-success-600 dark:text-success-400 text-xs"></i>
+                                </div>
+                                <div class="flex-1">
+                                    <p class="text-sm font-medium text-gray-900 dark:text-white">Validation Process Validated</p>
+                                    <p class="text-xs text-neutral-70 dark:text-neutral-70 mt-1">2024-02-01 09:15:00 by verana1ghi...</p>
+                                </div>
+                            </div>
+
+                            <div class="flex items-start space-x-3 p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg">
+                                <div class="w-8 h-8 bg-primary-100 dark:bg-primary-900/20 rounded-full flex items-center justify-center flex-shrink-0">
+                                    <i class="fas fa-edit text-primary-600 dark:text-primary-400 text-xs"></i>
+                                </div>
+                                <div class="flex-1">
+                                    <p class="text-sm font-medium text-gray-900 dark:text-white">Permission Modified</p>
+                                    <p class="text-xs text-neutral-70 dark:text-neutral-70 mt-1">2024-03-10 14:22:00 by verana1def...</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+            </section>
+
+        </main>
+    </div>
+</div>
+
+<div id="qr-modal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full hidden z-50">
+    <div class="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-xl bg-white dark:bg-surface">
+        <div class="mt-3 text-center">
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Account QR Code</h3>
+                <button onclick="document.getElementById('qr-modal').classList.add('hidden')" class="text-neutral-70 hover:text-gray-500 dark:hover:text-gray-300">
+                    <i class="text-lg fas fa-xmark"></i>
+                </button>
+            </div>
+            <div class="w-48 h-48 mx-auto mb-4 bg-white rounded-lg p-4 shadow-sm border border-neutral-20 dark:border-neutral-70">
+                <div class="w-full h-full bg-gray-200 dark:bg-gray-600 rounded flex items-center justify-center">
+                    <i class="text-6xl text-gray-400 fas fa-qrcode"></i>
+                </div>
+            </div>
+            <p class="text-sm text-neutral-70 dark:text-neutral-70 mb-4">Scan to copy wallet address</p>
+            <div class="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-3 mb-4">
+                <code class="text-xs font-mono text-gray-900 dark:text-white break-all">0x1234567890abcdef1234567890abcdef12345678</code>
+            </div>
+            <button class="w-full px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors">
+                Copy Address
+            </button>
+        </div>
+    </div>
+</div>
+
+<script>
+    const themeToggle = document.getElementById('theme-toggle');
+    const html = document.documentElement;
+    
+    themeToggle.addEventListener('click', () => {
+        html.classList.toggle('dark');
+        localStorage.setItem('theme', html.classList.contains('dark') ? 'dark' : 'light');
+    });
+
+    if (localStorage.getItem('theme') === 'dark' || (!localStorage.getItem('theme') && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+        html.classList.add('dark');
+    }
+
+    const mobileMenuBtn = document.getElementById('mobile-menu-btn');
+    const mobileSidebarOverlay = document.getElementById('mobile-sidebar-overlay');
+    const mobileSidebarClose = document.getElementById('mobile-sidebar-close');
+    const mobileSidebarBackdrop = document.getElementById('mobile-sidebar-backdrop');
+
+    mobileMenuBtn.addEventListener('click', () => {
+        mobileSidebarOverlay.classList.remove('hidden');
+    });
+
+    mobileSidebarClose.addEventListener('click', () => {
+        mobileSidebarOverlay.classList.add('hidden');
+    });
+
+    mobileSidebarBackdrop.addEventListener('click', () => {
+        mobileSidebarOverlay.classList.add('hidden');
+    });
+
+    document.getElementById('show-weight').addEventListener('change', function() {
+        document.querySelectorAll('.weight-addon').forEach(el => {
+            el.classList.toggle('hidden', !this.checked);
+        });
+    });
+
+    document.getElementById('show-business').addEventListener('change', function() {
+        document.querySelectorAll('.business-addon').forEach(el => {
+            el.classList.toggle('hidden', !this.checked);
+        });
+    });
+
+    document.getElementById('show-stats').addEventListener('change', function() {
+        document.querySelectorAll('.stats-addon').forEach(el => {
+            el.classList.toggle('hidden', !this.checked);
+        });
+    });
+
+    function toggleNode(event, nodeId) {
+        event.stopPropagation();
+        const node = document.querySelector(`[data-id="${nodeId}"]`);
+        const chevron = node.querySelector('.chevron-rotate');
+        const children = document.getElementById(`${nodeId}-children`);
+        
+        if (children) {
+            children.classList.toggle('hidden');
+            chevron.classList.toggle('expanded');
+            
+            const isExpanded = !children.classList.contains('hidden');
+            node.setAttribute('data-expanded', isExpanded);
+        }
+    }
+
+    function selectNode(event, nodeId, role, name) {
+        event.stopPropagation();
+        
+        document.querySelectorAll('.tree-node').forEach(n => n.classList.remove('selected'));
+        document.querySelector(`[data-id="${nodeId}"]`).classList.add('selected');
+        
+        const detailCard = document.getElementById('permission-detail-card');
+        detailCard.classList.remove('hidden');
+        
+        document.getElementById('detail-name').textContent = name;
+        
+        const roleBadge = document.getElementById('detail-role-badge');
+        const roleColors = {
+            'ECOSYSTEM': 'bg-purple-100 text-purple-800 dark:bg-purple-900/20 dark:text-purple-300',
+            'ISSUER_GRANTOR': 'bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-300',
+            'ISSUER': 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-300',
+            'VERIFIER_GRANTOR': 'bg-slate-100 text-slate-800 dark:bg-slate-900/20 dark:text-slate-300',
+            'VERIFIER': 'bg-orange-100 text-orange-800 dark:bg-orange-900/20 dark:text-orange-300',
+            'HOLDER': 'bg-pink-100 text-pink-800 dark:bg-pink-900/20 dark:text-pink-300'
+        };
+        roleBadge.className = `inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${roleColors[role]}`;
+        roleBadge.textContent = role.replace('_', ' ');
+        
+        detailCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+
+    function closeDetailCard() {
+        document.getElementById('permission-detail-card').classList.add('hidden');
+        document.querySelectorAll('.tree-node').forEach(n => n.classList.remove('selected'));
+    }
+
+    function copyToClipboard(field) {
+        console.log('Copying:', field);
+        alert('Copied to clipboard!');
+    }
+
+    function openVisualizer(field) {
+        console.log('Opening visualizer for:', field);
+    }
+
+    function openService(field) {
+        console.log('Opening service for:', field);
+    }
+
+    function openExplorer(field) {
+        console.log('Opening explorer for:', field);
+        window.open('https://explorer.verana.io', '_blank');
+    }
+
+    function copyAddressFromHeader() {
+        navigator.clipboard.writeText('0x1234567890abcdef1234567890abcdef12345678');
+        alert('Address copied to clipboard!');
+    }
+
+    let currentAction = null;
+    let currentActionData = {};
+
+    function openActionModal(action) {
+        currentAction = action;
+        const modal = document.getElementById('action-modal');
+        const modalTitle = document.getElementById('modal-title');
+        const modalContent = document.getElementById('modal-content');
+        const confirmBtn = document.getElementById('modal-confirm-btn');
+        
+        let title = '';
+        let content = '';
+        let btnText = 'Confirm';
+        let btnClass = 'bg-primary-600 hover:bg-primary-700';
+        
+        switch(action) {
+            case 'extend':
+                title = 'Extend Permission';
+                content = `
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">New Expiration Date</label>
+                            <input type="date" class="w-full px-3 py-2 border border-neutral-20 dark:border-neutral-70 rounded-lg focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white" id="extend-date">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Additional Deposit (VNA)</label>
+                            <input type="number" class="w-full px-3 py-2 border border-neutral-20 dark:border-neutral-70 rounded-lg focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white" placeholder="0.00" id="extend-deposit">
+                        </div>
+                    </div>
+                `;
+                break;
+            case 'revoke':
+                title = 'Revoke Permission';
+                content = `
+                    <div class="space-y-4">
+                        <p class="text-sm text-gray-700 dark:text-gray-300">Are you sure you want to revoke this permission? This action cannot be undone.</p>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Reason for Revocation</label>
+                            <textarea class="w-full px-3 py-2 border border-neutral-20 dark:border-neutral-70 rounded-lg focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white" rows="3" placeholder="Enter reason..." id="revoke-reason"></textarea>
+                        </div>
+                    </div>
+                `;
+                btnText = 'Revoke';
+                btnClass = 'bg-red-600 hover:bg-red-700';
+                break;
+            case 'renew-vp':
+                title = 'Renew Validation Process';
+                content = `
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">New VP Expiration Date</label>
+                            <input type="date" class="w-full px-3 py-2 border border-neutral-20 dark:border-neutral-70 rounded-lg focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white" id="vp-date">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Additional Validator Deposit (VNA)</label>
+                            <input type="number" class="w-full px-3 py-2 border border-neutral-20 dark:border-neutral-70 rounded-lg focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white" placeholder="0.00" id="vp-deposit">
+                        </div>
+                    </div>
+                `;
+                break;
+            case 'cancel-vp':
+                title = 'Cancel Validation Request';
+                content = `<p class="text-sm text-gray-700 dark:text-gray-300">Are you sure you want to cancel this validation request? Your deposit will be returned.</p>`;
+                btnText = 'Cancel Request';
+                btnClass = 'bg-gray-600 hover:bg-gray-700';
+                break;
+            case 'accept-vp':
+                title = 'Accept & Validate';
+                content = `
+                    <div class="space-y-4">
+                        <p class="text-sm text-gray-700 dark:text-gray-300">Review the validation documentation and accept to validate this permission.</p>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Validation Notes</label>
+                            <textarea class="w-full px-3 py-2 border border-neutral-20 dark:border-neutral-70 rounded-lg focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white" rows="3" placeholder="Optional notes..." id="accept-notes"></textarea>
+                        </div>
+                    </div>
+                `;
+                btnText = 'Accept & Validate';
+                btnClass = 'bg-success-600 hover:bg-success-700';
+                break;
+            case 'slash':
+                title = 'Slash Deposit';
+                content = `
+                    <div class="space-y-4">
+                        <p class="text-sm text-red-600 dark:text-red-400">Warning: This action will slash the participant's deposit due to misconduct or violation.</p>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Amount to Slash (VNA)</label>
+                            <input type="number" class="w-full px-3 py-2 border border-neutral-20 dark:border-neutral-70 rounded-lg focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white" placeholder="0.00" id="slash-amount">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Reason for Slashing</label>
+                            <textarea class="w-full px-3 py-2 border border-neutral-20 dark:border-neutral-70 rounded-lg focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white" rows="3" placeholder="Enter detailed reason..." id="slash-reason"></textarea>
+                        </div>
+                    </div>
+                `;
+                btnText = 'Slash Deposit';
+                btnClass = 'bg-red-600 hover:bg-red-700';
+                break;
+            case 'repay':
+                title = 'Repay Slashed Deposit';
+                content = `
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Amount to Repay (VNA)</label>
+                            <input type="number" class="w-full px-3 py-2 border border-neutral-20 dark:border-neutral-70 rounded-lg focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white" placeholder="0.00" id="repay-amount">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Repayment Notes</label>
+                            <textarea class="w-full px-3 py-2 border border-neutral-20 dark:border-neutral-70 rounded-lg focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white" rows="3" placeholder="Optional notes..." id="repay-notes"></textarea>
+                        </div>
+                    </div>
+                `;
+                btnText = 'Repay Deposit';
+                btnClass = 'bg-success-600 hover:bg-success-700';
+                break;
+        }
+        
+        modalTitle.textContent = title;
+        modalContent.innerHTML = content;
+        confirmBtn.textContent = btnText;
+        confirmBtn.className = `px-4 py-2 text-white rounded-lg transition-colors ${btnClass}`;
+        
+        modal.classList.remove('hidden');
+    }
+
+    function closeActionModal() {
+        document.getElementById('action-modal').classList.add('hidden');
+        currentAction = null;
+        currentActionData = {};
+    }
+
+    function confirmAction() {
+        console.log('Confirming action:', currentAction);
+        showTransactionPopup('broadcasting', `Processing ${currentAction} action...`);
+        closeActionModal();
+        
+        setTimeout(() => {
+            showTransactionPopup('processing', `Transaction submitted. Hash: 0xabc123...`);
+        }, 2000);
+        
+        setTimeout(() => {
+            showTransactionPopup('success', `${currentAction} completed successfully!`);
+        }, 5000);
+    }
+
+    function showTransactionPopup(state, description) {
+        const popup = document.getElementById('transaction-popup');
+        const states = ['tx-broadcasting', 'tx-processing', 'tx-success', 'tx-error'];
+        
+        states.forEach(s => {
+            document.getElementById(s).classList.add('hidden');
+        });
+        
+        if (state === 'broadcasting') {
+            document.getElementById('tx-broadcasting').classList.remove('hidden');
+            document.getElementById('tx-description').textContent = description;
+        } else if (state === 'processing') {
+            document.getElementById('tx-processing').classList.remove('hidden');
+            document.getElementById('tx-processing-description').textContent = description;
+        } else if (state === 'success') {
+            document.getElementById('tx-success').classList.remove('hidden');
+            document.getElementById('tx-success-description').textContent = description;
+            setTimeout(() => {
+                hideTransactionPopup();
+            }, 3000);
+        } else if (state === 'error') {
+            document.getElementById('tx-error').classList.remove('hidden');
+            document.getElementById('tx-error-description').textContent = description;
+        }
+        
+        popup.classList.remove('hidden');
+    }
+
+    function hideTransactionPopup() {
+        document.getElementById('transaction-popup').classList.add('hidden');
+    }
+
+    function retryTransaction() {
+        hideTransactionPopup();
+        if (currentAction) {
+            confirmAction();
+        }
+    }
+
+    document.getElementById('header-disconnect-btn').addEventListener('click', function() {
+        if (confirm('Are you sure you want to disconnect?')) {
+            console.log('Disconnecting...');
+            alert('Wallet disconnected');
+        }
+    });
+</script>
+
+</body>
+</html>

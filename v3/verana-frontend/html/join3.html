@@ -1,0 +1,1044 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Join Ecosystem</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script> window.FontAwesomeConfig = { autoReplaceSvg: 'nest'};</script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/js/all.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        ::-webkit-scrollbar { display: none;}
+        * { font-family: 'Inter', sans-serif; }
+        .dark { --tw-bg-opacity: 1; background-color: rgb(11 11 18 / var(--tw-bg-opacity)); }
+        .dark .dark\:bg-gray-800 { --tw-bg-opacity: 1; background-color: rgb(21 24 36 / var(--tw-bg-opacity)); }
+        .dark .dark\:text-white { --tw-text-opacity: 1; color: rgb(255 255 255 / var(--tw-text-opacity)); }
+        .dark .dark\:text-gray-300 { --tw-text-opacity: 1; color: rgb(139 148 165 / var(--tw-text-opacity)); }
+        .dark .dark\:border-gray-700 { --tw-border-opacity: 1; border-color: rgb(215 219 226 / var(--tw-border-opacity)); }
+        .dark .dark\:bg-gray-900 { --tw-bg-opacity: 1; background-color: rgb(11 11 18 / var(--tw-bg-opacity)); }
+        .crypto-gradient { background: linear-gradient(135deg, #763EF0 0%, #553C9A 100%); }
+        .trust-gradient { background: linear-gradient(135deg, #29C68C 0%, #2E6BE6 100%); }
+        .network-gradient { background: linear-gradient(135deg, #2E6BE6 0%, #29C68C 100%); }
+        .skeleton { animation: skeleton-loading 1s linear infinite alternate; }
+        @keyframes skeleton-loading { 0% { opacity: 1; } 100% { opacity: 0.4; } }
+        .rtl { direction: rtl; }
+        .rtl .rtl\:mr-4 { margin-right: 1rem; }
+        .rtl .rtl\:ml-0 { margin-left: 0; }
+        .glass-effect { backdrop-filter: blur(10px); background-color: rgba(255, 255, 255, 0.1); }
+        .pulse-dot::before { content: ''; position: absolute; top: 0; left: 0; right: 0; bottom: 0; border-radius: 50%; background: inherit; animation: pulse-ring 2s ease-out infinite; }
+        @keyframes pulse-ring { 0% { transform: scale(1); opacity: 1; } 100% { transform: scale(2); opacity: 0; } }
+        .wizard-step { position: relative; }
+        .wizard-step::after { content: ''; position: absolute; top: 50%; left: 100%; width: 100%; height: 2px; background: #e5e7eb; transform: translateY(-50%); z-index: -1; }
+        .wizard-step:last-child::after { display: none; }
+        .dark .wizard-step::after { background: #374151; }
+        .wizard-step.active .step-circle { background: linear-gradient(135deg, #763EF0 0%, #9F7AEA 100%); color: white; }
+        .wizard-step.completed .step-circle { background: #29C68C; color: white; }
+        .step-circle { width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; background: #e5e7eb; color: #6b7280; font-weight: 600; transition: all 0.3s; }
+        .dark .step-circle { background: #374151; color: #9ca3af; }
+        .schema-card { transition: all 0.3s; cursor: pointer; }
+        .schema-card.selected { border-color: #763EF0; background: linear-gradient(135deg, rgba(118, 62, 240, 0.05) 0%, rgba(159, 122, 234, 0.05) 100%); }
+        .validator-row { transition: all 0.3s; cursor: pointer; }
+        .validator-row:hover { background: rgba(118, 62, 240, 0.05); }
+        .validator-row.selected { background: linear-gradient(135deg, rgba(118, 62, 240, 0.1) 0%, rgba(159, 122, 234, 0.1) 100%); border-color: #763EF0; }
+    </style>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: { 
+                            50: '#f5f3ff', 
+                            100: '#ede9fe', 
+                            200: '#ddd6fe', 
+                            300: '#c4b5fd', 
+                            400: '#a78bfa', 
+                            500: '#9F7AEA', 
+                            600: '#763EF0', 
+                            700: '#553C9A', 
+                            800: '#4c1d95', 
+                            900: '#1e1b4b' 
+                        },
+                        accent: { 
+                            50: '#eff6ff', 
+                            100: '#dbeafe', 
+                            200: '#bfdbfe', 
+                            300: '#93c5fd', 
+                            400: '#60a5fa', 
+                            500: '#2E6BE6', 
+                            600: '#2563eb', 
+                            700: '#1d4ed8', 
+                            800: '#1e40af', 
+                            900: '#1e3a8a' 
+                        },
+                        success: { 
+                            50: '#ecfdf5', 
+                            100: '#d1fae5', 
+                            200: '#a7f3d0', 
+                            300: '#6ee7b7', 
+                            400: '#34d399', 
+                            500: '#29C68C', 
+                            600: '#059669', 
+                            700: '#047857', 
+                            800: '#065f46', 
+                            900: '#064e3b' 
+                        },
+                        neutral: {
+                            20: '#D7DBE2',
+                            70: '#8B94A5'
+                        },
+                        surface: {
+                            DEFAULT: '#f8fafc',
+                            muted: '#f1f5f9'
+                        }
+                    },
+                    fontFamily: { inter: ['Inter', 'sans-serif'] },
+                    spacing: { '18': '4.5rem', '88': '22rem', '128': '32rem' },
+                    borderRadius: {
+                        'lg': '16px',
+                        'md': '12px', 
+                        'sm': '8px'
+                    },
+                    boxShadow: {
+                        'focus': '0 0 0 3px rgba(118, 62, 240, 0.35)'
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-gray-50 dark:bg-gray-900 transition-colors duration-300">
+
+<header id="header" class="bg-white dark:bg-surface border-b border-neutral-20 dark:border-neutral-70 sticky top-0 z-40 transition-colors duration-300">
+    <div class="px-4 sm:px-6 lg:px-8">
+        <div class="flex items-center justify-between h-16">
+            <div class="flex items-center space-x-3 rtl:space-x-reverse">
+                <img src="https://verana.io/logo.svg" alt="Veranito Logo" class="w-8 h-8">
+                <h1 class="text-xl font-bold text-gray-900 dark:text-white hidden sm:block">Verana</h1>
+            </div>
+
+            <button id="mobile-menu-btn" class="lg:hidden p-2 rounded-md text-gray-400 hover:text-gray-500 hover:bg-surface-muted dark:hover:bg-surface-muted transition-colors">
+                <i class="text-lg fas fa-bars"></i>
+            </button>
+
+            <div class="hidden lg:flex items-center space-x-4 rtl:space-x-reverse">
+                <div class="flex items-center space-x-2 px-3 py-1 bg-success-50 dark:bg-success-900/20 rounded-full">
+                    <div class="w-2 h-2 bg-success-500 rounded-full pulse-dot relative"></div>
+                    <span class="text-sm text-success-700 dark:text-success-300 font-medium">Mainnet</span>
+                </div>
+
+                <button class="p-2 text-neutral-70 hover:text-gray-500 hover:bg-surface-muted dark:hover:bg-surface-muted rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500">
+                    <i class="text-lg fas fa-gear"></i>
+                </button>
+
+                <button id="theme-toggle" class="p-2 text-neutral-70 hover:text-gray-500 hover:bg-surface-muted dark:hover:bg-surface-muted rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500">
+                    <i class="text-lg dark:hidden fas fa-moon"></i>
+                    <i class="text-lg hidden dark:inline fas fa-sun"></i>
+                </button>
+
+                <div id="account-zone" class="flex items-center space-x-2 px-3 py-2 bg-surface-muted dark:bg-surface-muted rounded-xl">
+                    <div class="w-8 h-8 bg-gradient-to-br from-green-500 to-green-600 rounded-full flex items-center justify-center">
+                        <i class="text-white text-sm fas fa-check"></i>
+                    </div>
+                    <div class="hidden xl:block cursor-pointer">
+                        <p class="text-sm font-medium text-gray-900 dark:text-white">0x1234...5678</p>
+                        <p class="text-xs text-neutral-70 dark:text-neutral-70">Connected</p>
+                    </div>
+                    <div class="flex items-center space-x-1 ml-2">
+                        <button class="relative group p-2 text-neutral-70 hover:text-gray-500 hover:bg-surface-muted dark:hover:bg-surface-muted rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500">
+                            <i class="text-sm fas fa-qrcode"></i>
+                            <div class="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 bg-gray-900 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none">
+                                Show QR
+                            </div>
+                        </button>
+                        <button class="relative group p-2 text-neutral-70 hover:text-gray-500 hover:bg-surface-muted dark:hover:bg-surface-muted rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500">
+                            <i class="text-sm fas fa-up-right-from-square"></i>
+                            <div class="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 bg-gray-900 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none">
+                                Explorer
+                            </div>
+                        </button>
+                        <button class="relative group p-2 text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-red-500">
+                            <i class="text-sm fas fa-right-from-bracket"></i>
+                            <div class="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 bg-gray-900 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none">
+                                Disconnect
+                            </div>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</header>
+
+<div class="flex">
+    <aside id="sidebar" class="hidden lg:flex lg:flex-shrink-0">
+        <div class="flex flex-col w-64 bg-white dark:bg-surface border-r border-neutral-20 dark:border-neutral-70 transition-colors duration-300">
+            <div class="flex-1 flex flex-col pt-5 pb-4 overflow-y-auto">
+                <nav class="mt-5 flex-1 px-2 space-y-1">
+                    <span class="text-gray-700 dark:text-gray-300 hover:bg-primary-50 dark:hover:bg-primary-900/20 hover:text-primary-700 dark:hover:text-primary-300 group flex items-center px-2 py-2 text-sm font-medium rounded-md cursor-pointer">
+                        <i class="text-gray-400 mr-3 text-sm fas fa-gauge-high"></i>
+                        Dashboard
+                    </span>
+
+                    <span class="text-gray-700 dark:text-gray-300 hover:bg-primary-50 dark:hover:bg-primary-900/20 hover:text-primary-700 dark:hover:text-primary-300 group flex items-center px-2 py-2 text-sm font-medium rounded-md cursor-pointer">
+                        <i class="text-gray-400 mr-3 text-sm fas fa-circle-user"></i>
+                        Account
+                    </span>
+
+                    <span class="text-gray-700 dark:text-gray-300 hover:bg-primary-50 dark:hover:bg-primary-900/20 hover:text-primary-700 dark:hover:text-primary-300 group flex items-center px-2 py-2 text-sm font-medium rounded-md cursor-pointer">
+                        <i class="text-gray-400 mr-3 text-sm fas fa-id-card"></i>
+                        Manage DIDs
+                    </span>
+
+                    <span class="text-gray-700 dark:text-gray-300 hover:bg-primary-50 dark:hover:bg-primary-900/20 hover:text-primary-700 dark:hover:text-primary-300 group flex items-center px-2 py-2 text-sm font-medium rounded-md cursor-pointer">
+                        <i class="text-gray-400 mr-3 text-sm fas fa-shield-halved"></i>
+                        My Ecosystems
+                    </span>
+
+                    <span class="bg-primary-50 dark:bg-primary-900/20 text-primary-700 dark:text-primary-300 group flex items-center px-2 py-2 text-sm font-medium rounded-md cursor-pointer">
+                        <i class="text-primary-500 mr-3 text-sm fas fa-compass"></i>
+                        Discover & Join
+                    </span>
+
+                    <span class="text-gray-700 dark:text-gray-300 hover:bg-primary-50 dark:hover:bg-primary-900/20 hover:text-primary-700 dark:hover:text-primary-300 group flex items-center px-2 py-2 text-sm font-medium rounded-md cursor-pointer">
+                        <div class="relative mr-3">
+                            <i class="text-gray-400 text-sm fas fa-list-check"></i>
+                            <div class="absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full flex items-center justify-center">
+                                <span class="text-white text-xs font-bold">3</span>
+                            </div>
+                        </div>
+                        Pending Tasks
+                    </span>
+                </nav>
+
+                <div class="flex-shrink-0 px-2 py-4 border-t border-neutral-20 dark:border-neutral-70">
+                    <div class="flex items-center">
+                        <img src="https://verana.io/logo.svg" alt="Verana Logo" class="w-6 h-6 mr-2">
+                        <div class="flex-1 min-w-0">
+                            <p class="text-sm font-medium text-gray-900 dark:text-white truncate">Verana Network</p>
+                            <p class="text-xs text-neutral-70 dark:text-neutral-70">v2.4.1</p>
+                        </div>
+                    </div>
+                    <div class="mt-3 flex space-x-2">
+                        <span class="text-neutral-70 hover:text-gray-500 dark:hover:text-gray-300 cursor-pointer">
+                            <i class="text-sm fab fa-github"></i>
+                        </span>
+                        <span class="text-neutral-70 hover:text-gray-500 dark:hover:text-gray-300 cursor-pointer">
+                            <i class="text-sm fas fa-book"></i>
+                        </span>
+                        <span class="text-neutral-70 hover:text-gray-500 dark:hover:text-gray-300 cursor-pointer">
+                            <i class="text-sm fas fa-circle-question"></i>
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </aside>
+
+    <div id="mobile-sidebar-overlay" class="fixed inset-0 flex z-40 lg:hidden hidden">
+        <div class="fixed inset-0 bg-gray-600 bg-opacity-75" id="mobile-sidebar-backdrop"></div>
+        <div class="relative flex-1 flex flex-col max-w-xs w-full bg-white dark:bg-surface">
+            <div class="absolute top-0 right-0 -mr-12 pt-2">
+                <button id="mobile-sidebar-close" class="ml-1 flex items-center justify-center h-10 w-10 rounded-full focus:outline-none focus:ring-2 focus:ring-inset focus:ring-white">
+                    <i class="text-white text-lg fas fa-xmark"></i>
+                </button>
+            </div>
+            <div class="flex-1 h-0 pt-5 pb-4 overflow-y-auto">
+                <div class="flex-shrink-0 flex items-center px-4">
+                    <img src="https://verana.io/logo.svg" alt="Veranito Logo" class="w-8 h-8 mr-3">
+                    <h1 class="text-xl font-bold text-gray-900 dark:text-white">Verana</h1>
+                </div>
+                <nav class="mt-5 px-2 space-y-1">
+                    <span class="text-gray-700 dark:text-gray-300 group flex items-center px-2 py-2 text-base font-medium rounded-md cursor-pointer">
+                        <i class="text-gray-400 mr-4 fas fa-gauge-high"></i>
+                        Dashboard
+                    </span>
+                    <span class="text-gray-700 dark:text-gray-300 group flex items-center px-2 py-2 text-base font-medium rounded-md cursor-pointer">
+                        <i class="text-gray-400 mr-4 fas fa-circle-user"></i>
+                        Account
+                    </span>
+                    <span class="text-gray-700 dark:text-gray-300 group flex items-center px-2 py-2 text-base font-medium rounded-md cursor-pointer">
+                        <i class="text-gray-400 mr-4 fas fa-id-card"></i>
+                        Manage DIDs
+                    </span>
+                    <span class="text-gray-700 dark:text-gray-300 group flex items-center px-2 py-2 text-base font-medium rounded-md cursor-pointer">
+                        <i class="text-gray-400 mr-4 fas fa-shield-halved"></i>
+                        My Ecosystems
+                    </span>
+                    <span class="bg-primary-50 dark:bg-primary-900/20 text-primary-700 dark:text-primary-300 group flex items-center px-2 py-2 text-base font-medium rounded-md cursor-pointer">
+                        <i class="text-primary-500 mr-4 fas fa-compass"></i>
+                        Discover & Join
+                    </span>
+                    <span class="text-gray-700 dark:text-gray-300 group flex items-center px-2 py-2 text-base font-medium rounded-md cursor-pointer">
+                        <div class="relative mr-4">
+                            <i class="text-gray-400 fas fa-list-check"></i>
+                            <div class="absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full flex items-center justify-center">
+                                <span class="text-white text-xs font-bold">3</span>
+                            </div>
+                        </div>
+                        Pending Tasks
+                    </span>
+                </nav>
+            </div>
+        </div>
+    </div>
+
+    <div class="flex-1 overflow-auto">
+        <main id="join-ecosystem" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+            
+            <section id="page-header" class="mb-8">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between">
+                    <div>
+                        <h1 class="text-3xl font-bold text-gray-900 dark:text-white">Join Ecosystem</h1>
+                        <p class="mt-2 text-sm text-neutral-70 dark:text-neutral-70">Complete the steps below to join an ecosystem</p>
+                    </div>
+                </div>
+            </section>
+
+            <section id="wizard-progress" class="mb-12">
+                <div class="bg-white dark:bg-surface rounded-xl border border-neutral-20 dark:border-neutral-70 p-6">
+                    <div class="flex items-center justify-between">
+                        <div class="wizard-step active flex-1 flex flex-col items-center">
+                            <div class="step-circle">1</div>
+                            <p class="text-xs font-medium text-gray-900 dark:text-white mt-2">Ecosystem DID</p>
+                        </div>
+                        <div class="wizard-step flex-1 flex flex-col items-center">
+                            <div class="step-circle">2</div>
+                            <p class="text-xs font-medium text-gray-500 dark:text-gray-400 mt-2">Review EGF</p>
+                        </div>
+                        <div class="wizard-step flex-1 flex flex-col items-center">
+                            <div class="step-circle">3</div>
+                            <p class="text-xs font-medium text-gray-500 dark:text-gray-400 mt-2">Select Schema</p>
+                        </div>
+                        <div class="wizard-step flex-1 flex flex-col items-center">
+                            <div class="step-circle">4</div>
+                            <p class="text-xs font-medium text-gray-500 dark:text-gray-400 mt-2">Choose Role</p>
+                        </div>
+                        <div class="wizard-step flex-1 flex flex-col items-center">
+                            <div class="step-circle">5</div>
+                            <p class="text-xs font-medium text-gray-500 dark:text-gray-400 mt-2">Select Validator</p>
+                        </div>
+                        <div class="wizard-step flex-1 flex flex-col items-center">
+                            <div class="step-circle">6</div>
+                            <p class="text-xs font-medium text-gray-500 dark:text-gray-400 mt-2">Service DID</p>
+                        </div>
+                        <div class="wizard-step flex-1 flex flex-col items-center">
+                            <div class="step-circle">7</div>
+                            <p class="text-xs font-medium text-gray-500 dark:text-gray-400 mt-2">Complete</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section id="step-1" class="bg-white dark:bg-surface rounded-xl border border-neutral-20 dark:border-neutral-70 p-8">
+                <div class="max-w-2xl mx-auto">
+                    <h2 class="text-2xl font-bold text-gray-900 dark:text-white mb-2">Enter Ecosystem DID</h2>
+                    <p class="text-sm text-neutral-70 dark:text-neutral-70 mb-6">Enter the DID of the ecosystem you want to join</p>
+                    
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Ecosystem DID</label>
+                            <input type="text" id="ecosystem-did-input" placeholder="did:verana:mainnet:..." class="w-full px-4 py-3 border border-neutral-20 dark:border-neutral-70 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent bg-white dark:bg-surface text-gray-900 dark:text-white">
+                        </div>
+                        
+                        <button onclick="confirmEcosystemDID()" class="w-full px-6 py-3 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors font-medium">
+                            Confirm & Continue
+                        </button>
+                    </div>
+                </div>
+            </section>
+
+            <section id="step-2" class="bg-white dark:bg-surface rounded-xl border border-neutral-20 dark:border-neutral-70 p-8 hidden">
+                <div class="max-w-4xl mx-auto">
+                    <div class="flex items-start justify-between mb-6">
+                        <div>
+                            <h2 class="text-2xl font-bold text-gray-900 dark:text-white mb-2">Review Ecosystem Governance Framework</h2>
+                            <p class="text-sm text-neutral-70 dark:text-neutral-70">Please review and accept the governance framework to continue</p>
+                        </div>
+                        <button onclick="changeEcosystemDID()" class="text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 text-sm font-medium">
+                            <i class="fas fa-edit mr-1"></i>Change DID
+                        </button>
+                    </div>
+                    
+                    <div class="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-4 mb-4">
+                        <div class="flex items-start space-x-3">
+                            <div class="w-8 h-8 bg-green-100 dark:bg-green-900/20 rounded-full flex items-center justify-center flex-shrink-0">
+                                <i class="text-green-600 dark:text-green-400 fas fa-shield-check"></i>
+                            </div>
+                            <div>
+                                <p class="text-sm font-medium text-gray-900 dark:text-white">Ecosystem Information</p>
+                                <p class="text-sm text-neutral-70 dark:text-neutral-70 mt-1">
+                                    <span class="font-mono" id="confirmed-ecosystem-did">did:verana:mainnet:z6MkHealthcareEcosystem2024</span>
+                                </p>
+                                <p class="text-sm text-neutral-70 dark:text-neutral-70">Healthcare Trust Registry</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bg-green-50 dark:bg-green-900/20 rounded-lg p-4 mb-6">
+                        <div class="flex items-center space-x-2">
+                            <i class="text-green-600 dark:text-green-400 fas fa-check-circle"></i>
+                            <p class="text-sm font-medium text-green-800 dark:text-green-300">The integrity of this Ecosystem Governance Framework has been verified.</p>
+                        </div>
+                    </div>
+                    
+                    <div class="border border-neutral-20 dark:border-neutral-70 rounded-lg overflow-hidden mb-4">
+                        <div class="bg-gray-100 dark:bg-gray-700/50 px-4 py-3 border-b border-neutral-20 dark:border-neutral-70 flex items-center justify-between">
+                            <div class="flex items-center space-x-2">
+                                <i class="text-red-600 dark:text-red-400 fas fa-file-pdf"></i>
+                                <span class="text-sm font-medium text-gray-900 dark:text-white">Healthcare_EGF_v2.pdf</span>
+                            </div>
+                            <button class="text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 text-sm font-medium">
+                                <i class="fas fa-download mr-1"></i>Download
+                            </button>
+                        </div>
+                        <div class="h-96 bg-white dark:bg-gray-800 flex items-center justify-center">
+                            <div class="text-center">
+                                <i class="text-6xl text-red-400 dark:text-red-500 fas fa-file-pdf mb-4"></i>
+                                <p class="text-sm text-neutral-70 dark:text-neutral-70">PDF Preview</p>
+                                <p class="text-xs text-neutral-70 dark:text-neutral-70 mt-1">Ecosystem Governance Framework Document</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="flex items-start space-x-3 mb-6">
+                        <input type="checkbox" id="accept-egf" class="mt-1 w-4 h-4 text-primary-600 border-neutral-20 dark:border-neutral-70 rounded focus:ring-primary-500">
+                        <label for="accept-egf" class="text-sm text-gray-700 dark:text-gray-300 cursor-pointer">
+                            I have read and accept the Ecosystem Governance Framework and agree to comply with its terms and conditions.
+                        </label>
+                    </div>
+                    
+                    <button id="accept-egf-btn" onclick="acceptEGF()" disabled class="w-full px-6 py-3 bg-gray-300 dark:bg-gray-700 text-gray-500 dark:text-gray-400 rounded-lg font-medium cursor-not-allowed">
+                        Accept & Continue
+                    </button>
+                </div>
+            </section>
+
+            <section id="step-3" class="bg-white dark:bg-surface rounded-xl border border-neutral-20 dark:border-neutral-70 p-8 hidden">
+                <div class="max-w-5xl mx-auto">
+                    <h2 class="text-2xl font-bold text-gray-900 dark:text-white mb-2">Select Credential Schema</h2>
+                    <p class="text-sm text-neutral-70 dark:text-neutral-70 mb-6">Choose the credential schema you want to participate in. Note: If you want to join for multiple schemas, you must repeat this process for each one.</p>
+                    
+                    <div class="space-y-4 mb-6">
+                        <div class="schema-card border-2 border-neutral-20 dark:border-neutral-70 rounded-xl p-6" onclick="selectSchema(1)">
+                            <div class="flex items-start justify-between mb-4">
+                                <div class="flex items-center space-x-3">
+                                    <input type="radio" name="schema" value="1" class="w-5 h-5 text-primary-600 border-neutral-20 dark:border-neutral-70 focus:ring-primary-500">
+                                    <div>
+                                        <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Credential Schema #1001</h3>
+                                        <p class="text-sm text-neutral-70 dark:text-neutral-70">Healthcare Professional Credential</p>
+                                    </div>
+                                </div>
+                                <button onclick="event.stopPropagation(); viewJsonSchema(1)" class="text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 text-sm font-medium">
+                                    <i class="fas fa-code mr-1"></i>View Schema
+                                </button>
+                            </div>
+                            
+                            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+                                <div>
+                                    <label class="text-xs font-medium text-neutral-70 dark:text-neutral-70">Issuer Grantor Validity</label>
+                                    <p class="text-sm font-medium text-gray-900 dark:text-white">365 days</p>
+                                </div>
+                                <div>
+                                    <label class="text-xs font-medium text-neutral-70 dark:text-neutral-70">Verifier Grantor Validity</label>
+                                    <p class="text-sm font-medium text-gray-900 dark:text-white">365 days</p>
+                                </div>
+                                <div>
+                                    <label class="text-xs font-medium text-neutral-70 dark:text-neutral-70">Issuer Validity</label>
+                                    <p class="text-sm font-medium text-gray-900 dark:text-white">180 days</p>
+                                </div>
+                                <div>
+                                    <label class="text-xs font-medium text-neutral-70 dark:text-neutral-70">Verifier Validity</label>
+                                    <p class="text-sm font-medium text-gray-900 dark:text-white">180 days</p>
+                                </div>
+                            </div>
+                            
+                            <div class="grid grid-cols-2 md:grid-cols-3 gap-4">
+                                <div>
+                                    <label class="text-xs font-medium text-neutral-70 dark:text-neutral-70">Holder Validity</label>
+                                    <p class="text-sm font-medium text-gray-900 dark:text-white">90 days</p>
+                                </div>
+                                <div>
+                                    <label class="text-xs font-medium text-neutral-70 dark:text-neutral-70">Issuer Management</label>
+                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-300">
+                                        TRUST_REGISTRY
+                                    </span>
+                                </div>
+                                <div>
+                                    <label class="text-xs font-medium text-neutral-70 dark:text-neutral-70">Verifier Management</label>
+                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-300">
+                                        GRANTOR
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="schema-card border-2 border-neutral-20 dark:border-neutral-70 rounded-xl p-6" onclick="selectSchema(2)">
+                            <div class="flex items-start justify-between mb-4">
+                                <div class="flex items-center space-x-3">
+                                    <input type="radio" name="schema" value="2" class="w-5 h-5 text-primary-600 border-neutral-20 dark:border-neutral-70 focus:ring-primary-500">
+                                    <div>
+                                        <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Credential Schema #1002</h3>
+                                        <p class="text-sm text-neutral-70 dark:text-neutral-70">Medical Device Certification</p>
+                                    </div>
+                                </div>
+                                <button onclick="event.stopPropagation(); viewJsonSchema(2)" class="text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 text-sm font-medium">
+                                    <i class="fas fa-code mr-1"></i>View Schema
+                                </button>
+                            </div>
+                            
+                            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+                                <div>
+                                    <label class="text-xs font-medium text-neutral-70 dark:text-neutral-70">Issuer Grantor Validity</label>
+                                    <p class="text-sm font-medium text-gray-900 dark:text-white">730 days</p>
+                                </div>
+                                <div>
+                                    <label class="text-xs font-medium text-neutral-70 dark:text-neutral-70">Verifier Grantor Validity</label>
+                                    <p class="text-sm font-medium text-gray-900 dark:text-white">730 days</p>
+                                </div>
+                                <div>
+                                    <label class="text-xs font-medium text-neutral-70 dark:text-neutral-70">Issuer Validity</label>
+                                    <p class="text-sm font-medium text-gray-900 dark:text-white">365 days</p>
+                                </div>
+                                <div>
+                                    <label class="text-xs font-medium text-neutral-70 dark:text-neutral-70">Verifier Validity</label>
+                                    <p class="text-sm font-medium text-gray-900 dark:text-white">365 days</p>
+                                </div>
+                            </div>
+                            
+                            <div class="grid grid-cols-2 md:grid-cols-3 gap-4">
+                                <div>
+                                    <label class="text-xs font-medium text-neutral-70 dark:text-neutral-70">Holder Validity</label>
+                                    <p class="text-sm font-medium text-gray-900 dark:text-white">180 days</p>
+                                </div>
+                                <div>
+                                    <label class="text-xs font-medium text-neutral-70 dark:text-neutral-70">Issuer Management</label>
+                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-cyan-100 text-cyan-800 dark:bg-cyan-900/20 dark:text-cyan-300">
+                                        OPEN
+                                    </span>
+                                </div>
+                                <div>
+                                    <label class="text-xs font-medium text-neutral-70 dark:text-neutral-70">Verifier Management</label>
+                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-300">
+                                        TRUST_REGISTRY
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <button id="schema-continue-btn" onclick="continueFromSchema()" disabled class="w-full px-6 py-3 bg-gray-300 dark:bg-gray-700 text-gray-500 dark:text-gray-400 rounded-lg font-medium cursor-not-allowed">
+                        Continue
+                    </button>
+                </div>
+            </section>
+
+            <section id="step-4" class="bg-white dark:bg-surface rounded-xl border border-neutral-20 dark:border-neutral-70 p-8 hidden">
+                <div class="max-w-3xl mx-auto">
+                    <h2 class="text-2xl font-bold text-gray-900 dark:text-white mb-2">Select Your Role</h2>
+                    <p class="text-sm text-neutral-70 dark:text-neutral-70 mb-6">Choose the role you want to have in this ecosystem</p>
+                    
+                    <div class="space-y-4 mb-6">
+                        <div class="border-2 border-neutral-20 dark:border-neutral-70 rounded-xl p-6 cursor-pointer hover:border-primary-500 transition-colors" onclick="selectRole('ISSUER_GRANTOR')">
+                            <div class="flex items-start space-x-4">
+                                <input type="radio" name="role" value="ISSUER_GRANTOR" class="mt-1 w-5 h-5 text-primary-600 border-neutral-20 dark:border-neutral-70 focus:ring-primary-500">
+                                <div class="flex-1">
+                                    <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-1">Issuer Grantor</h3>
+                                    <p class="text-sm text-neutral-70 dark:text-neutral-70">Act as a trust registry operator and select issuers for this schema on behalf of the Ecosystem</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="border-2 border-neutral-20 dark:border-neutral-70 rounded-xl p-6 cursor-pointer hover:border-primary-500 transition-colors" onclick="selectRole('VERIFIER_GRANTOR')">
+                            <div class="flex items-start space-x-4">
+                                <input type="radio" name="role" value="VERIFIER_GRANTOR" class="mt-1 w-5 h-5 text-primary-600 border-neutral-20 dark:border-neutral-70 focus:ring-primary-500">
+                                <div class="flex-1">
+                                    <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-1">Verifier Grantor</h3>
+                                    <p class="text-sm text-neutral-70 dark:text-neutral-70">Act as a trust registry operator and select verifiers for this schema on behalf of the Ecosystem</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="border-2 border-neutral-20 dark:border-neutral-70 rounded-xl p-6 cursor-pointer hover:border-primary-500 transition-colors" onclick="selectRole('ISSUER')">
+                            <div class="flex items-start space-x-4">
+                                <input type="radio" name="role" value="ISSUER" class="mt-1 w-5 h-5 text-primary-600 border-neutral-20 dark:border-neutral-70 focus:ring-primary-500">
+                                <div class="flex-1">
+                                    <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-1">Issuer</h3>
+                                    <p class="text-sm text-neutral-70 dark:text-neutral-70">Issue credentials of this schema to holders</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="border-2 border-neutral-20 dark:border-neutral-70 rounded-xl p-6 cursor-pointer hover:border-primary-500 transition-colors" onclick="selectRole('VERIFIER')">
+                            <div class="flex items-start space-x-4">
+                                <input type="radio" name="role" value="VERIFIER" class="mt-1 w-5 h-5 text-primary-600 border-neutral-20 dark:border-neutral-70 focus:ring-primary-500">
+                                <div class="flex-1">
+                                    <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-1">Verifier</h3>
+                                    <p class="text-sm text-neutral-70 dark:text-neutral-70">Request and verify presentations of credentials of this schema</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="border-2 border-neutral-20 dark:border-neutral-70 rounded-xl p-6 cursor-pointer hover:border-primary-500 transition-colors" onclick="selectRole('HOLDER')">
+                            <div class="flex items-start space-x-4">
+                                <input type="radio" name="role" value="HOLDER" class="mt-1 w-5 h-5 text-primary-600 border-neutral-20 dark:border-neutral-70 focus:ring-primary-500">
+                                <div class="flex-1">
+                                    <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-1">Holder</h3>
+                                    <p class="text-sm text-neutral-70 dark:text-neutral-70">Obtain credentials from issuers and present them to verifiers</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <button id="role-continue-btn" onclick="continueFromRole()" disabled class="w-full px-6 py-3 bg-gray-300 dark:bg-gray-700 text-gray-500 dark:text-gray-400 rounded-lg font-medium cursor-not-allowed">
+                        Continue
+                    </button>
+                </div>
+            </section>
+
+            <section id="step-5" class="bg-white dark:bg-surface rounded-xl border border-neutral-20 dark:border-neutral-70 p-8 hidden">
+                <div class="max-w-6xl mx-auto">
+                    <h2 class="text-2xl font-bold text-gray-900 dark:text-white mb-2">Select Validator</h2>
+                    <p class="text-sm text-neutral-70 dark:text-neutral-70 mb-6">Choose a validator to process your permission request</p>
+                    
+                    <div class="overflow-x-auto mb-6">
+                        <table class="min-w-full divide-y divide-neutral-20 dark:divide-neutral-70">
+                            <thead class="bg-gray-50 dark:bg-gray-700/50">
+                                <tr>
+                                    <th class="px-4 py-3 text-left text-xs font-medium text-neutral-70 dark:text-neutral-70 uppercase tracking-wider">Select</th>
+                                    <th class="px-4 py-3 text-left text-xs font-medium text-neutral-70 dark:text-neutral-70 uppercase tracking-wider">Validator DID</th>
+                                    <th class="px-4 py-3 text-left text-xs font-medium text-neutral-70 dark:text-neutral-70 uppercase tracking-wider">Controller</th>
+                                    <th class="px-4 py-3 text-left text-xs font-medium text-neutral-70 dark:text-neutral-70 uppercase tracking-wider">Deposit</th>
+                                    <th class="px-4 py-3 text-left text-xs font-medium text-neutral-70 dark:text-neutral-70 uppercase tracking-wider">Validation Fees</th>
+                                    <th class="px-4 py-3 text-left text-xs font-medium text-neutral-70 dark:text-neutral-70 uppercase tracking-wider">Issuance Fees</th>
+                                    <th class="px-4 py-3 text-left text-xs font-medium text-neutral-70 dark:text-neutral-70 uppercase tracking-wider">Verification Fees</th>
+                                    <th class="px-4 py-3 text-left text-xs font-medium text-neutral-70 dark:text-neutral-70 uppercase tracking-wider">Country</th>
+                                </tr>
+                            </thead>
+                            <tbody class="bg-white dark:bg-surface divide-y divide-neutral-20 dark:divide-neutral-70">
+                                <tr class="validator-row border-2 border-transparent" onclick="selectValidator(1)">
+                                    <td class="px-4 py-4">
+                                        <input type="radio" name="validator" value="1" class="w-5 h-5 text-primary-600 border-neutral-20 dark:border-neutral-70 focus:ring-primary-500">
+                                    </td>
+                                    <td class="px-4 py-4">
+                                        <span class="text-sm font-mono text-gray-900 dark:text-white">did:verana:mainnet:z6MkValidator001</span>
+                                    </td>
+                                    <td class="px-4 py-4">
+                                        <span class="text-sm font-mono text-gray-900 dark:text-white">0xabcd...1234</span>
+                                    </td>
+                                    <td class="px-4 py-4">
+                                        <span class="text-sm font-mono text-gray-900 dark:text-white">500.00 VNA</span>
+                                    </td>
+                                    <td class="px-4 py-4">
+                                        <span class="text-sm font-mono text-gray-900 dark:text-white">5.00 VNA</span>
+                                    </td>
+                                    <td class="px-4 py-4">
+                                        <span class="text-sm font-mono text-gray-900 dark:text-white">2.00 VNA</span>
+                                    </td>
+                                    <td class="px-4 py-4">
+                                        <span class="text-sm font-mono text-gray-900 dark:text-white">1.00 VNA</span>
+                                    </td>
+                                    <td class="px-4 py-4">
+                                        <span class="text-sm text-gray-900 dark:text-white">US</span>
+                                    </td>
+                                </tr>
+                                <tr class="validator-row border-2 border-transparent" onclick="selectValidator(2)">
+                                    <td class="px-4 py-4">
+                                        <input type="radio" name="validator" value="2" class="w-5 h-5 text-primary-600 border-neutral-20 dark:border-neutral-70 focus:ring-primary-500">
+                                    </td>
+                                    <td class="px-4 py-4">
+                                        <span class="text-sm font-mono text-gray-900 dark:text-white">did:verana:mainnet:z6MkValidator002</span>
+                                    </td>
+                                    <td class="px-4 py-4">
+                                        <span class="text-sm font-mono text-gray-900 dark:text-white">0xefgh...5678</span>
+                                    </td>
+                                    <td class="px-4 py-4">
+                                        <span class="text-sm font-mono text-gray-900 dark:text-white">750.00 VNA</span>
+                                    </td>
+                                    <td class="px-4 py-4">
+                                        <span class="text-sm font-mono text-gray-900 dark:text-white">4.50 VNA</span>
+                                    </td>
+                                    <td class="px-4 py-4">
+                                        <span class="text-sm font-mono text-gray-900 dark:text-white">1.80 VNA</span>
+                                    </td>
+                                    <td class="px-4 py-4">
+                                        <span class="text-sm font-mono text-gray-900 dark:text-white">0.90 VNA</span>
+                                    </td>
+                                    <td class="px-4 py-4">
+                                        <span class="text-sm text-gray-900 dark:text-white">Worldwide</span>
+                                    </td>
+                                </tr>
+                                <tr class="validator-row border-2 border-transparent" onclick="selectValidator(3)">
+                                    <td class="px-4 py-4">
+                                        <input type="radio" name="validator" value="3" class="w-5 h-5 text-primary-600 border-neutral-20 dark:border-neutral-70 focus:ring-primary-500">
+                                    </td>
+                                    <td class="px-4 py-4">
+                                        <span class="text-sm font-mono text-gray-900 dark:text-white">did:verana:mainnet:z6MkValidator003</span>
+                                    </td>
+                                    <td class="px-4 py-4">
+                                        <span class="text-sm font-mono text-gray-900 dark:text-white">0xijkl...9012</span>
+                                    </td>
+                                    <td class="px-4 py-4">
+                                        <span class="text-sm font-mono text-gray-900 dark:text-white">600.00 VNA</span>
+                                    </td>
+                                    <td class="px-4 py-4">
+                                        <span class="text-sm font-mono text-gray-900 dark:text-white">5.50 VNA</span>
+                                    </td>
+                                    <td class="px-4 py-4">
+                                        <span class="text-sm font-mono text-gray-900 dark:text-white">2.20 VNA</span>
+                                    </td>
+                                    <td class="px-4 py-4">
+                                        <span class="text-sm font-mono text-gray-900 dark:text-white">1.10 VNA</span>
+                                    </td>
+                                    <td class="px-4 py-4">
+                                        <span class="text-sm text-gray-900 dark:text-white">CA</span>
+                                    </td>
+                                </tr>
+                                <tr class="validator-row border-2 border-transparent" onclick="selectValidator(4)">
+                                    <td class="px-4 py-4">
+                                        <input type="radio" name="validator" value="4" class="w-5 h-5 text-primary-600 border-neutral-20 dark:border-neutral-70 focus:ring-primary-500">
+                                    </td>
+                                    <td class="px-4 py-4">
+                                        <span class="text-sm font-mono text-gray-900 dark:text-white">did:verana:mainnet:z6MkValidator004</span>
+                                    </td>
+                                    <td class="px-4 py-4">
+                                        <span class="text-sm font-mono text-gray-900 dark:text-white">0xmnop...3456</span>
+                                    </td>
+                                    <td class="px-4 py-4">
+                                        <span class="text-sm font-mono text-gray-900 dark:text-white">450.00 VNA</span>
+                                    </td>
+                                    <td class="px-4 py-4">
+                                        <span class="text-sm font-mono text-gray-900 dark:text-white">4.00 VNA</span>
+                                    </td>
+                                    <td class="px-4 py-4">
+                                        <span class="text-sm font-mono text-gray-900 dark:text-white">1.60 VNA</span>
+                                    </td>
+                                    <td class="px-4 py-4">
+                                        <span class="text-sm font-mono text-gray-900 dark:text-white">0.80 VNA</span>
+                                    </td>
+                                    <td class="px-4 py-4">
+                                        <span class="text-sm text-gray-900 dark:text-white">UK</span>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    
+                    <div class="flex items-center justify-between">
+                        <div class="text-sm text-neutral-70 dark:text-neutral-70">
+                            Showing 4 validators
+                        </div>
+                        <button id="validator-continue-btn" onclick="continueFromValidator()" disabled class="px-6 py-3 bg-gray-300 dark:bg-gray-700 text-gray-500 dark:text-gray-400 rounded-lg font-medium cursor-not-allowed">
+                            Continue
+                        </button>
+                    </div>
+                </div>
+            </section>
+
+            <section id="step-6" class="bg-white dark:bg-surface rounded-xl border border-neutral-20 dark:border-neutral-70 p-8 hidden">
+                <div class="max-w-2xl mx-auto">
+                    <h2 class="text-2xl font-bold text-gray-900 dark:text-white mb-2">Enter Service DID</h2>
+                    <p class="text-sm text-neutral-70 dark:text-neutral-70 mb-6">Provide the DID of your service to complete the permission request</p>
+                    
+                    <div class="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4 mb-6">
+                        <p class="text-sm text-blue-700 dark:text-blue-300">You'll need approx. 5.900000 VNA to complete the transaction.</p>
+                    </div>
+                    
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Service DID</label>
+                            <input type="text" id="service-did-input" placeholder="did:verana:mainnet:..." class="w-full px-4 py-3 border border-neutral-20 dark:border-neutral-70 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent bg-white dark:bg-surface text-gray-900 dark:text-white">
+                        </div>
+                        
+                        <button onclick="joinEcosystem()" class="w-full px-6 py-3 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors font-medium">
+                            Join Ecosystem
+                        </button>
+                    </div>
+                </div>
+            </section>
+
+            <section id="step-7" class="bg-white dark:bg-surface rounded-xl border border-neutral-20 dark:border-neutral-70 p-8 hidden">
+                <div class="max-w-2xl mx-auto text-center">
+                    <div class="w-20 h-20 bg-green-100 dark:bg-green-900/20 rounded-full flex items-center justify-center mx-auto mb-6">
+                        <i class="text-4xl text-green-600 dark:text-green-400 fas fa-check"></i>
+                    </div>
+                    
+                    <h2 class="text-2xl font-bold text-gray-900 dark:text-white mb-3">Congratulations!</h2>
+                    <p class="text-base text-neutral-70 dark:text-neutral-70 mb-8">Your request is being processed by the Ecosystem. Connect to the validator service to continue with the onboarding process by scanning this QR code.</p>
+                    
+                    <div class="w-64 h-64 mx-auto mb-6 bg-white dark:bg-gray-800 rounded-xl p-6 shadow-lg border border-neutral-20 dark:border-neutral-70">
+                        <div class="w-full h-full bg-gray-200 dark:bg-gray-600 rounded-lg flex items-center justify-center">
+                            <i class="text-8xl text-gray-400 fas fa-qrcode"></i>
+                        </div>
+                    </div>
+                    
+                    <p class="text-sm text-neutral-70 dark:text-neutral-70 mb-4">or</p>
+                    
+                    <button class="inline-flex items-center px-6 py-3 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors font-medium">
+                        <i class="mr-2 fas fa-link"></i>
+                        Click this link to continue
+                    </button>
+                    
+                    <div class="mt-8 pt-8 border-t border-neutral-20 dark:border-neutral-70">
+                        <button onclick="returnToDashboard()" class="text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 text-sm font-medium">
+                            Return to Dashboard
+                        </button>
+                    </div>
+                </div>
+            </section>
+
+        </main>
+    </div>
+</div>
+
+<div id="json-schema-modal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full hidden z-50">
+    <div class="relative top-20 mx-auto p-5 border w-full max-w-3xl shadow-lg rounded-xl bg-white dark:bg-surface">
+        <div class="flex items-center justify-between mb-4">
+            <h3 class="text-lg font-semibold text-gray-900 dark:text-white">JSON Schema</h3>
+            <button onclick="document.getElementById('json-schema-modal').classList.add('hidden')" class="text-neutral-70 hover:text-gray-500 dark:hover:text-gray-300">
+                <i class="text-lg fas fa-xmark"></i>
+            </button>
+        </div>
+        <div class="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-4 h-96 overflow-y-auto border border-neutral-20 dark:border-neutral-70">
+            <pre class="text-sm text-gray-900 dark:text-white font-mono whitespace-pre-wrap">{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "title": "Healthcare Credential Schema",
+  "description": "Schema for healthcare professional credentials",
+  "properties": {
+    "credentialSubject": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "format": "uri"
+        },
+        "name": {
+          "type": "string",
+          "description": "Full name of the healthcare professional"
+        },
+        "profession": {
+          "type": "string",
+          "enum": ["doctor", "nurse", "pharmacist", "therapist"]
+        },
+        "licenseNumber": {
+          "type": "string",
+          "description": "Professional license number"
+        },
+        "specialization": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "validFrom": {
+          "type": "string",
+          "format": "date"
+        },
+        "validUntil": {
+          "type": "string",
+          "format": "date"
+        }
+      },
+      "required": ["id", "name", "profession", "licenseNumber"]
+    }
+  },
+  "required": ["credentialSubject"]
+}</pre>
+        </div>
+    </div>
+</div>
+
+<script>
+    const themeToggle = document.getElementById('theme-toggle');
+    const html = document.documentElement;
+    
+    themeToggle.addEventListener('click', () => {
+        html.classList.toggle('dark');
+        localStorage.setItem('theme', html.classList.contains('dark') ? 'dark' : 'light');
+    });
+
+    if (localStorage.getItem('theme') === 'dark' || (!localStorage.getItem('theme') && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+        html.classList.add('dark');
+    }
+
+    const mobileMenuBtn = document.getElementById('mobile-menu-btn');
+    const mobileSidebarOverlay = document.getElementById('mobile-sidebar-overlay');
+    const mobileSidebarClose = document.getElementById('mobile-sidebar-close');
+    const mobileSidebarBackdrop = document.getElementById('mobile-sidebar-backdrop');
+
+    mobileMenuBtn.addEventListener('click', () => {
+        mobileSidebarOverlay.classList.remove('hidden');
+    });
+
+    mobileSidebarClose.addEventListener('click', () => {
+        mobileSidebarOverlay.classList.add('hidden');
+    });
+
+    mobileSidebarBackdrop.addEventListener('click', () => {
+        mobileSidebarOverlay.classList.add('hidden');
+    });
+
+    let currentStep = 1;
+    let selectedSchema = null;
+    let selectedRole = null;
+    let selectedValidator = null;
+
+    function updateWizardProgress(step) {
+        const steps = document.querySelectorAll('.wizard-step');
+        steps.forEach((stepEl, index) => {
+            const stepNum = index + 1;
+            const circle = stepEl.querySelector('.step-circle');
+            const text = stepEl.querySelector('p');
+            
+            if (stepNum < step) {
+                stepEl.classList.add('completed');
+                stepEl.classList.remove('active');
+                circle.innerHTML = '<i class="fas fa-check text-sm"></i>';
+                text.classList.remove('text-gray-500', 'dark:text-gray-400');
+                text.classList.add('text-gray-900', 'dark:text-white');
+            } else if (stepNum === step) {
+                stepEl.classList.add('active');
+                stepEl.classList.remove('completed');
+                circle.textContent = stepNum;
+                text.classList.remove('text-gray-500', 'dark:text-gray-400');
+                text.classList.add('text-gray-900', 'dark:text-white');
+            } else {
+                stepEl.classList.remove('active', 'completed');
+                circle.textContent = stepNum;
+                text.classList.remove('text-gray-900', 'dark:text-white');
+                text.classList.add('text-gray-500', 'dark:text-gray-400');
+            }
+        });
+    }
+
+    function showStep(step) {
+        for (let i = 1; i <= 7; i++) {
+            document.getElementById(`step-${i}`).classList.add('hidden');
+        }
+        document.getElementById(`step-${step}`).classList.remove('hidden');
+        currentStep = step;
+        updateWizardProgress(step);
+    }
+
+    function confirmEcosystemDID() {
+        const did = document.getElementById('ecosystem-did-input').value.trim();
+        if (!did) {
+            alert('Please enter an Ecosystem DID');
+            return;
+        }
+        document.getElementById('confirmed-ecosystem-did').textContent = did;
+        showStep(2);
+    }
+
+    function changeEcosystemDID() {
+        showStep(1);
+    }
+
+    document.getElementById('accept-egf').addEventListener('change', function() {
+        const btn = document.getElementById('accept-egf-btn');
+        if (this.checked) {
+            btn.disabled = false;
+            btn.classList.remove('bg-gray-300', 'dark:bg-gray-700', 'text-gray-500', 'dark:text-gray-400', 'cursor-not-allowed');
+            btn.classList.add('bg-primary-600', 'text-white', 'hover:bg-primary-700', 'cursor-pointer');
+        } else {
+            btn.disabled = true;
+            btn.classList.add('bg-gray-300', 'dark:bg-gray-700', 'text-gray-500', 'dark:text-gray-400', 'cursor-not-allowed');
+            btn.classList.remove('bg-primary-600', 'text-white', 'hover:bg-primary-700', 'cursor-pointer');
+        }
+    });
+
+    function acceptEGF() {
+        if (document.getElementById('accept-egf').checked) {
+            showStep(3);
+        }
+    }
+
+    function selectSchema(schemaId) {
+        selectedSchema = schemaId;
+        document.querySelectorAll('.schema-card').forEach(card => {
+            card.classList.remove('selected');
+        });
+        event.currentTarget.classList.add('selected');
+        document.querySelector(`input[name="schema"][value="${schemaId}"]`).checked = true;
+        
+        const btn = document.getElementById('schema-continue-btn');
+        btn.disabled = false;
+        btn.classList.remove('bg-gray-300', 'dark:bg-gray-700', 'text-gray-500', 'dark:text-gray-400', 'cursor-not-allowed');
+        btn.classList.add('bg-primary-600', 'text-white', 'hover:bg-primary-700', 'cursor-pointer');
+    }
+
+    function viewJsonSchema(schemaId) {
+        document.getElementById('json-schema-modal').classList.remove('hidden');
+    }
+
+    function continueFromSchema() {
+        if (selectedSchema) {
+            showStep(4);
+        }
+    }
+
+    function selectRole(role) {
+        selectedRole = role;
+        document.querySelector(`input[name="role"][value="${role}"]`).checked = true;
+        
+        const btn = document.getElementById('role-continue-btn');
+        btn.disabled = false;
+        btn.classList.remove('bg-gray-300', 'dark:bg-gray-700', 'text-gray-500', 'dark:text-gray-400', 'cursor-not-allowed');
+        btn.classList.add('bg-primary-600', 'text-white', 'hover:bg-primary-700', 'cursor-pointer');
+    }
+
+    function continueFromRole() {
+        if (selectedRole) {
+            showStep(5);
+        }
+    }
+
+    function selectValidator(validatorId) {
+        selectedValidator = validatorId;
+        document.querySelectorAll('.validator-row').forEach(row => {
+            row.classList.remove('selected');
+        });
+        event.currentTarget.classList.add('selected');
+        document.querySelector(`input[name="validator"][value="${validatorId}"]`).checked = true;
+        
+        const btn = document.getElementById('validator-continue-btn');
+        btn.disabled = false;
+        btn.classList.remove('bg-gray-300', 'dark:bg-gray-700', 'text-gray-500', 'dark:text-gray-400', 'cursor-not-allowed');
+        btn.classList.add('bg-primary-600', 'text-white', 'hover:bg-primary-700', 'cursor-pointer');
+    }
+
+    function continueFromValidator() {
+        if (selectedValidator) {
+            showStep(6);
+        }
+    }
+
+    function joinEcosystem() {
+        const serviceDid = document.getElementById('service-did-input').value.trim();
+        if (!serviceDid) {
+            alert('Please enter a Service DID');
+            return;
+        }
+        showStep(7);
+    }
+
+    function returnToDashboard() {
+        console.log('Navigate to dashboard');
+    }
+
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+            document.getElementById('json-schema-modal').classList.add('hidden');
+        }
+    });
+
+    document.getElementById('json-schema-modal').addEventListener('click', (e) => {
+        if (e.target === e.currentTarget) {
+            document.getElementById('json-schema-modal').classList.add('hidden');
+        }
+    });
+</script>
+
+</body>
+</html>

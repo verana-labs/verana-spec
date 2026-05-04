@@ -1,0 +1,39 @@
+# Join Ecosystem
+
+## With Validation Process
+
+We want a wizard-like system, with a green progress bar showing: the percentage of the wizard that has been already completed (green), the completed tasks (green), the current task (purple) and the next tasks (grey). It must be responsive and work for mobile, too. Percentage must start at 0%.
+
+1. User input a DID and click confirm. Page updates and shows Ecosystem Information that includes: icon, name, short description, DID, created date, number of participants, trust deposit size, and if active or inactive. At this point user can change the DID of the ecosystem.
+2. Still show Ecosystem icon, name, short description, DID; and show a button for downloading the egf with version, number of pages, last updated date. A short section called "Key Governance Points" is shown, with a list of 5 points. A message must be shown saying "The integrity of this Ecosystem Governance Framework has been verified." User must accept the EGF to continue to the next step.
+3. Show Credential Schemas with a radio button to select a schema (selected schema should be visually clearly identifiable) (explain that if user wants to join the ecosystem for participating in several credential schema, they must repeat the process for each credential schema): 
+- id (number) => credential schema Id
+- json_schema (show a link to a popup to see the json schema as formatted json) => The Json Schema of this Credential Schema
+- issuer_grantor_validation_validity_period (number) => Validity Period, in days, of a permission granted to an Issuer Grantor.
+- verifier_grantor_validation_validity_period (number) => Validity Period, in days, of a permission granted to a Verifier Grantor.
+- issuer_validation_validity_period (number) => Validity Period, in days, of a permission granted to an Issuer.
+- verifier_validation_validity_period (number) => Validity Period, in days, of a permission granted to a Verifier.
+- holder_validation_validity_period (number) => Validity Period, in days, of a permission approved by an Issuer Grantor to an Issuer.
+- issuer_perm_management_mode (number) => TRUST_REGISTRY, GRANTOR or OPEN. TRUST_REGISTRY, GRANTOR means a validation process is needed to obtain an Issuer or Issuer Grantor permission. OPEN means no approval is needed for joining the Ecosystem as Issuer.
+- verifier_perm_management_mode (number) => TRUST_REGISTRY, GRANTOR or OPEN. TRUST_REGISTRY, GRANTOR means a validation process is needed to obtain an Verifier or Verifier Grantor permission. OPEN means no approval is needed for joining the Ecosystem as Verifier.
+4. Select a role: ISSUER_GRANTOR (to act as a trust registry operator and select issuers for this schema on behalf of the Ecosystem), VERIFIER_GRANTOR (to act as a trust registry operator and select verifiers for this schema on behalf of the Ecosystem), ISSUER (to issue credential of this schema), VERIFIER (to request presentation of credentials of this schema), or HOLDER (to obtain a credential from an issuer)
+5. For the selected role, show a list of available validators as card (one card per row, ideally horizontal content, if window width is reduced (mobile), then content of card can switch to vertical), with pagination. Each row must show: validator DID, controller, deposit, validation fees, issuance fees, verification fees, country (if set, if not set means worldwide). User selects a row/card, selected row/card must be clearly identifiable. Add a select above the result list to filter by country.
+6. Show the form for the permission creation: 
+- "Selected validator": the card of the validator selected in the previous step.
+- "Service DID" (DID) => The DID of your service,
+and the button: "Join Ecosystem" to trigger the "Start Permission Validation Process" transaction.
+7. When transaction completes, show the message: "Congratulations! Your request is being processed by the Ecosystem. Connect to the validator service to continue with the onboarding process by scanning this QR" and show a QR code to continue, and a button "or click this link to continue". 
+
+## Without Validation Process
+
+Wizard:
+
+
+6. Show the form for the permission creation: 
+- "Service DID" (DID) => The DID of your service,
+- Verification Fees (VNA), 
+- Validation Fees (VNA),
+- Effective From (optional, if specified must be in the future), 
+- Effective Until (optional, if specified must be in the future and greater than Effective From)
+and the button: "Join Ecosystem" to trigger the "Create Permission" transaction.
+7. When transaction completes, show the message: "Congratulations! Your have successfully joined this Ecosystem. 

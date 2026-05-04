@@ -1,0 +1,914 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script> window.FontAwesomeConfig = { autoReplaceSvg: 'nest'};</script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/js/all.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        ::-webkit-scrollbar { display: none;}
+        * { font-family: 'Inter', sans-serif; }
+        .dark { --tw-bg-opacity: 1; background-color: rgb(11 11 18 / var(--tw-bg-opacity)); }
+        .dark .dark\:bg-gray-800 { --tw-bg-opacity: 1; background-color: rgb(21 24 36 / var(--tw-bg-opacity)); }
+        .dark .dark\:text-white { --tw-text-opacity: 1; color: rgb(255 255 255 / var(--tw-text-opacity)); }
+        .dark .dark\:text-gray-300 { --tw-text-opacity: 1; color: rgb(139 148 165 / var(--tw-text-opacity)); }
+        .dark .dark\:border-gray-700 { --tw-border-opacity: 1; border-color: rgb(215 219 226 / var(--tw-border-opacity)); }
+        .dark .dark\:bg-gray-900 { --tw-bg-opacity: 1; background-color: rgb(11 11 18 / var(--tw-bg-opacity)); }
+        .crypto-gradient { background: linear-gradient(135deg, #763EF0 0%, #553C9A 100%); }
+        .trust-gradient { background: linear-gradient(135deg, #29C68C 0%, #2E6BE6 100%); }
+        .network-gradient { background: linear-gradient(135deg, #2E6BE6 0%, #29C68C 100%); }
+        .skeleton { animation: skeleton-loading 1s linear infinite alternate; }
+        @keyframes skeleton-loading { 0% { opacity: 1; } 100% { opacity: 0.4; } }
+        .rtl { direction: rtl; }
+        .rtl .rtl\:mr-4 { margin-right: 1rem; }
+        .rtl .rtl\:ml-0 { margin-left: 0; }
+        .glass-effect { backdrop-filter: blur(10px); background-color: rgba(255, 255, 255, 0.1); }
+        .pulse-dot::before { content: ''; position: absolute; top: 0; left: 0; right: 0; bottom: 0; border-radius: 50%; background: inherit; animation: pulse-ring 2s ease-out infinite; }
+        @keyframes pulse-ring { 0% { transform: scale(1); opacity: 1; } 100% { transform: scale(2); opacity: 0; } }
+    </style>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: { 
+                            50: '#f5f3ff', 
+                            100: '#ede9fe', 
+                            200: '#ddd6fe', 
+                            300: '#c4b5fd', 
+                            400: '#a78bfa', 
+                            500: '#9F7AEA', 
+                            600: '#763EF0', 
+                            700: '#553C9A', 
+                            800: '#4c1d95', 
+                            900: '#1e1b4b' 
+                        },
+                        accent: { 
+                            50: '#eff6ff', 
+                            100: '#dbeafe', 
+                            200: '#bfdbfe', 
+                            300: '#93c5fd', 
+                            400: '#60a5fa', 
+                            500: '#2E6BE6', 
+                            600: '#2563eb', 
+                            700: '#1d4ed8', 
+                            800: '#1e40af', 
+                            900: '#1e3a8a' 
+                        },
+                        success: { 
+                            50: '#ecfdf5', 
+                            100: '#d1fae5', 
+                            200: '#a7f3d0', 
+                            300: '#6ee7b7', 
+                            400: '#34d399', 
+                            500: '#29C68C', 
+                            600: '#059669', 
+                            700: '#047857', 
+                            800: '#065f46', 
+                            900: '#064e3b' 
+                        },
+                        neutral: {
+                            20: '#D7DBE2',
+                            70: '#8B94A5'
+                        },
+                        surface: {
+                            DEFAULT: '#f8fafc',
+                            muted: '#f1f5f9'
+                        },
+                        verana: { 50: '#f5f3ff', 100: '#ede9fe', 200: '#ddd6fe', 300: '#c4b5fd', 400: '#a78bfa', 500: '#9F7AEA', 600: '#763EF0', 700: '#553C9A', 800: '#4c1d95', 900: '#1e1b4b' }
+                    },
+                    fontFamily: { inter: ['Inter', 'sans-serif'] },
+                    spacing: { '18': '4.5rem', '88': '22rem', '128': '32rem' },
+                    borderRadius: {
+                        'lg': '16px',
+                        'md': '12px', 
+                        'sm': '8px'
+                    },
+                    boxShadow: {
+                        'focus': '0 0 0 3px rgba(118, 62, 240, 0.35)'
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-gray-50 dark:bg-gray-900 transition-colors duration-300">
+
+<header id="header" class="bg-white dark:bg-surface border-b border-neutral-20 dark:border-neutral-70 sticky top-0 z-50 transition-colors duration-300">
+    <div class="px-4 sm:px-6 lg:px-8">
+        <div class="flex items-center justify-between h-16">
+            <div class="flex items-center space-x-3 rtl:space-x-reverse">
+                <img src="https://verana.io/logo.svg" alt="Veranito Logo" class="w-8 h-8">
+                <h1 class="text-xl font-bold text-gray-900 dark:text-white hidden sm:block">Verana</h1>
+            </div>
+
+            <button id="mobile-menu-btn" class="lg:hidden p-2 rounded-md text-gray-400 hover:text-gray-500 hover:bg-surface-muted dark:hover:bg-surface-muted transition-colors">
+                <i class="fas fa-bars text-lg"></i>
+            </button>
+
+            <div class="hidden lg:flex items-center space-x-4 rtl:space-x-reverse">
+                <div class="flex items-center space-x-2 px-3 py-1 bg-success-50 dark:bg-success-900/20 rounded-full">
+                    <div class="w-2 h-2 bg-success-500 rounded-full pulse-dot relative"></div>
+                    <span class="text-sm text-success-700 dark:text-success-300 font-medium">Mainnet</span>
+                </div>
+
+                <button class="p-2 text-neutral-70 hover:text-gray-500 hover:bg-surface-muted dark:hover:bg-surface-muted rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500">
+                    <i class="fas fa-gear text-lg"></i>
+                </button>
+
+                <button id="theme-toggle" class="p-2 text-neutral-70 hover:text-gray-500 hover:bg-surface-muted dark:hover:bg-surface-muted rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500">
+                    <i class="fas fa-moon text-lg dark:hidden"></i>
+                    <i class="fas fa-sun text-lg hidden dark:inline"></i>
+                </button>
+
+                <div id="account-zone" class="flex items-center space-x-3 px-4 py-2 bg-surface-muted dark:bg-surface-muted rounded-xl">
+                    <div class="w-8 h-8 bg-gradient-to-br from-primary-500 to-accent-500 rounded-full flex items-center justify-center">
+                        <i class="fas fa-wallet text-white text-sm"></i>
+                    </div>
+                    <div class="hidden xl:block">
+                        <p class="text-sm font-medium text-gray-900 dark:text-white">Not Connected</p>
+                        <p class="text-xs text-neutral-70 dark:text-neutral-70">Click to connect</p>
+                    </div>
+                    <button class="px-3 py-1 bg-primary-600 text-white text-sm rounded-lg hover:bg-primary-700 transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500">
+                        Connect
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</header>
+
+<div class="flex">
+    <aside id="sidebar" class="hidden lg:flex lg:flex-shrink-0">
+        <div class="flex flex-col w-64 bg-white dark:bg-surface border-r border-neutral-20 dark:border-neutral-70 transition-colors duration-300">
+            <div class="flex-1 flex flex-col pt-5 pb-4 overflow-y-auto">
+                <nav class="mt-5 flex-1 px-2 space-y-1">
+                    <span class="bg-primary-50 dark:bg-primary-900/20 text-primary-700 dark:text-primary-300 group flex items-center px-2 py-2 text-sm font-medium rounded-md cursor-pointer">
+                        <i class="fas fa-gauge-high text-primary-500 mr-3 text-sm"></i>
+                        Dashboard
+                    </span>
+                </nav>
+
+                <div class="flex-shrink-0 px-2 py-4 border-t border-neutral-20 dark:border-neutral-70">
+                    <div class="flex items-center">
+                        <img src="https://verana.io/logo.svg" alt="Verana Logo" class="w-6 h-6 mr-2">
+                        <div class="flex-1 min-w-0">
+                            <p class="text-sm font-medium text-gray-900 dark:text-white truncate">Verana Network</p>
+                            <p class="text-xs text-neutral-70 dark:text-neutral-70">v2.4.1</p>
+                        </div>
+                    </div>
+                    <div class="mt-3 flex space-x-2">
+                        <span class="text-neutral-70 hover:text-gray-500 dark:hover:text-gray-300 cursor-pointer">
+                            <i class="fab fa-github text-sm"></i>
+                        </span>
+                        <span class="text-neutral-70 hover:text-gray-500 dark:hover:text-gray-300 cursor-pointer">
+                            <i class="fas fa-book text-sm"></i>
+                        </span>
+                        <span class="text-neutral-70 hover:text-gray-500 dark:hover:text-gray-300 cursor-pointer">
+                            <i class="fas fa-circle-question text-sm"></i>
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </aside>
+
+    <div id="mobile-sidebar-overlay" class="fixed inset-0 flex z-40 lg:hidden hidden">
+        <div class="fixed inset-0 bg-gray-600 bg-opacity-75" id="mobile-sidebar-backdrop"></div>
+        <div class="relative flex-1 flex flex-col max-w-xs w-full bg-white dark:bg-surface">
+            <div class="absolute top-0 right-0 -mr-12 pt-2">
+                <button id="mobile-sidebar-close" class="ml-1 flex items-center justify-center h-10 w-10 rounded-full focus:outline-none focus:ring-2 focus:ring-inset focus:ring-white">
+                    <i class="fas fa-xmark text-white text-lg"></i>
+                </button>
+            </div>
+            <div class="flex-1 h-0 pt-5 pb-4 overflow-y-auto">
+                <div class="flex-shrink-0 flex items-center px-4">
+                    <div class="w-8 h-8 bg-gradient-to-br from-primary-600 to-primary-700 rounded-lg flex items-center justify-center mr-3">
+                        <i class="fas fa-cube text-white text-sm"></i>
+                    </div>
+                    <h1 class="text-xl font-bold text-gray-900 dark:text-white">Veranito</h1>
+                </div>
+                <nav class="mt-5 px-2 space-y-1">
+                    <span class="bg-primary-50 dark:bg-primary-900/20 text-primary-700 dark:text-primary-300 group flex items-center px-2 py-2 text-base font-medium rounded-md cursor-pointer">
+                        <i class="fas fa-gauge-high text-primary-500 mr-4"></i>
+                        Dashboard
+                    </span>
+                </nav>
+            </div>
+        </div>
+    </div>
+
+    <div class="flex-1 overflow-auto">
+        <main id="main-content" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+            
+            <section id="page-header" class="mb-8">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <h1 class="text-3xl font-bold text-gray-900 dark:text-white">Dashboard</h1>
+                        <p class="mt-2 text-sm text-neutral-70 dark:text-neutral-70">Monitor network status and manage your Verana Network interactions</p>
+                    </div>
+                </div>
+            </section>
+
+            <section id="network-status-cards" class="mb-8">
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                    <div class="bg-white dark:bg-surface overflow-hidden shadow-sm rounded-xl border border-neutral-20 dark:border-neutral-70">
+                        <div class="p-6">
+                            <div class="flex items-center">
+                                <div class="flex-shrink-0">
+                                    <div class="w-12 h-12 bg-accent-100 dark:bg-accent-900/20 rounded-xl flex items-center justify-center">
+                                        <i class="fas fa-cubes text-accent-600 dark:text-accent-400 text-xl"></i>
+                                    </div>
+                                </div>
+                                <div class="ml-4 flex-1 min-w-0">
+                                    <p class="text-sm font-medium text-neutral-70 dark:text-neutral-70">Block Height</p>
+                                    <p class="text-2xl font-bold text-gray-900 dark:text-white font-mono">2,847,391</p>
+                                    <p class="text-sm text-success-600 dark:text-success-400">+1 new block</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bg-white dark:bg-surface overflow-hidden shadow-sm rounded-xl border border-neutral-20 dark:border-neutral-70">
+                        <div class="p-6">
+                            <div class="flex items-center">
+                                <div class="flex-shrink-0">
+                                    <div class="w-12 h-12 bg-primary-100 dark:bg-primary-900/20 rounded-xl flex items-center justify-center">
+                                        <i class="fas fa-id-card text-primary-600 dark:text-primary-400 text-xl"></i>
+                                    </div>
+                                </div>
+                                <div class="ml-4 flex-1 min-w-0">
+                                    <p class="text-sm font-medium text-neutral-70 dark:text-neutral-70">Total DIDs</p>
+                                    <p class="text-2xl font-bold text-gray-900 dark:text-white">124,857</p>
+                                    <p class="text-sm text-accent-600 dark:text-accent-400">+47 today</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bg-white dark:bg-surface overflow-hidden shadow-sm rounded-xl border border-neutral-20 dark:border-neutral-70">
+                        <div class="p-6">
+                            <div class="flex items-center">
+                                <div class="flex-shrink-0">
+                                    <div class="w-12 h-12 bg-blue-100 dark:bg-blue-900/20 rounded-xl flex items-center justify-center">
+                                        <i class="fas fa-shield-halved text-blue-600 dark:text-blue-400 text-xl"></i>
+                                    </div>
+                                </div>
+                                <div class="ml-4 flex-1 min-w-0">
+                                    <p class="text-sm font-medium text-neutral-70 dark:text-neutral-70">Trust Registries</p>
+                                    <p class="text-2xl font-bold text-gray-900 dark:text-white">2,341</p>
+                                    <p class="text-sm text-blue-600 dark:text-blue-400">+12 today</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bg-white dark:bg-surface overflow-hidden shadow-sm rounded-xl border border-neutral-20 dark:border-neutral-70">
+                        <div class="p-6">
+                            <div class="flex items-center">
+                                <div class="flex-shrink-0">
+                                    <div class="w-12 h-12 bg-purple-100 dark:bg-purple-900/20 rounded-xl flex items-center justify-center">
+                                        <i class="fas fa-users text-purple-600 dark:text-purple-400 text-xl"></i>
+                                    </div>
+                                </div>
+                                <div class="ml-4 flex-1 min-w-0">
+                                    <p class="text-sm font-medium text-neutral-70 dark:text-neutral-70">Participants</p>
+                                    <p class="text-2xl font-bold text-gray-900 dark:text-white">8,192</p>
+                                    <p class="text-sm text-primary-600 dark:text-primary-400">+25 today</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bg-white dark:bg-surface overflow-hidden shadow-sm rounded-xl border border-neutral-20 dark:border-neutral-70">
+                        <div class="p-6">
+                            <div class="flex items-center">
+                                <div class="flex-shrink-0">
+                                    <div class="w-12 h-12 bg-orange-100 dark:bg-orange-900/20 rounded-xl flex items-center justify-center">
+                                        <i class="fas fa-chart-line text-orange-600 dark:text-orange-400 text-xl"></i>
+                                    </div>
+                                </div>
+                                <div class="ml-4 flex-1 min-w-0">
+                                    <p class="text-sm font-medium text-neutral-70 dark:text-neutral-70">Sessions</p>
+                                    <p class="text-2xl font-bold text-gray-900 dark:text-white">156,789</p>
+                                    <p class="text-sm text-success-600 dark:text-success-400">+1,250 today</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bg-white dark:bg-surface overflow-hidden shadow-sm rounded-xl border border-neutral-20 dark:border-neutral-70">
+                        <div class="p-6">
+                            <div class="flex items-center">
+                                <div class="flex-shrink-0">
+                                    <div class="w-12 h-12 bg-green-100 dark:bg-green-900/20 rounded-xl flex items-center justify-center">
+                                        <i class="fas fa-coins text-green-600 dark:text-green-400 text-xl"></i>
+                                    </div>
+                                </div>
+                                <div class="ml-4 flex-1 min-w-0">
+                                    <p class="text-sm font-medium text-neutral-70 dark:text-neutral-70">Total Deposit Value</p>
+                                    <p class="text-2xl font-bold text-gray-900 dark:text-white">34,495,324 VNA</p>
+                                    <p class="text-sm text-green-600 dark:text-green-400">+23,000 today</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section id="software-version" class="mb-8">
+                <div class="bg-white dark:bg-surface rounded-xl border border-neutral-20 dark:border-neutral-70 overflow-hidden">
+                    <div class="px-6 py-4 border-b border-neutral-20 dark:border-neutral-70">
+                        <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Software Version</h3>
+                    </div>
+                    <div class="p-6">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div class="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
+                                <div class="flex items-center space-x-3">
+                                    <div class="w-10 h-10 bg-primary-100 dark:bg-primary-900/20 rounded-lg flex items-center justify-center">
+                                        <i class="fas fa-database text-primary-600 dark:text-primary-400"></i>
+                                    </div>
+                                    <div>
+                                        <p class="text-sm font-medium text-gray-900 dark:text-white">Ledger</p>
+                                        <p class="text-xs text-neutral-70 dark:text-neutral-70 font-mono">v0.9.4-dev1</p>
+                                    </div>
+                                </div>
+                                <div class="text-right">
+                                    <p class="text-xs text-neutral-70 dark:text-neutral-70">Block Height: 1234</p>
+                                    <div class="flex items-center justify-end mt-1">
+                                        <div class="w-2 h-2 bg-success-500 rounded-full mr-1"></div>
+                                        <span class="text-xs text-success-600 dark:text-success-400 font-medium">online</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
+                                <div class="flex items-center space-x-3">
+                                    <div class="w-10 h-10 bg-accent-100 dark:bg-accent-900/20 rounded-lg flex items-center justify-center">
+                                        <i class="fas fa-search text-accent-600 dark:text-accent-400"></i>
+                                    </div>
+                                    <div>
+                                        <p class="text-sm font-medium text-gray-900 dark:text-white">Indexer</p>
+                                        <p class="text-xs text-neutral-70 dark:text-neutral-70 font-mono">v1.0.0-dev1</p>
+                                    </div>
+                                </div>
+                                <div class="text-right">
+                                    <p class="text-xs text-neutral-70 dark:text-neutral-70">Last Processed Block: 1234</p>
+                                    <div class="flex items-center justify-end mt-1">
+                                        <div class="w-2 h-2 bg-success-500 rounded-full mr-1"></div>
+                                        <span class="text-xs text-success-600 dark:text-success-400 font-medium">online</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
+                                <div class="flex items-center space-x-3">
+                                    <div class="w-10 h-10 bg-blue-100 dark:bg-blue-900/20 rounded-lg flex items-center justify-center">
+                                        <i class="fas fa-network-wired text-blue-600 dark:text-blue-400"></i>
+                                    </div>
+                                    <div>
+                                        <p class="text-sm font-medium text-gray-900 dark:text-white">Resolver</p>
+                                        <p class="text-xs text-neutral-70 dark:text-neutral-70 font-mono">v1.0.0-dev1</p>
+                                    </div>
+                                </div>
+                                <div class="text-right">
+                                    <p class="text-xs text-neutral-70 dark:text-neutral-70">Last Processed Block: 1234</p>
+                                    <div class="flex items-center justify-end mt-1">
+                                        <div class="w-2 h-2 bg-success-500 rounded-full mr-1"></div>
+                                        <span class="text-xs text-success-600 dark:text-success-400 font-medium">online</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
+                                <div class="flex items-center space-x-3">
+                                    <div class="w-10 h-10 bg-purple-100 dark:bg-purple-900/20 rounded-lg flex items-center justify-center">
+                                        <i class="fas fa-desktop text-purple-600 dark:text-purple-400"></i>
+                                    </div>
+                                    <div>
+                                        <p class="text-sm font-medium text-gray-900 dark:text-white">Front-end</p>
+                                        <p class="text-xs text-neutral-70 dark:text-neutral-70 font-mono">v1.0.0-dev3</p>
+                                    </div>
+                                </div>
+                                <div class="text-right">
+                                    <div class="flex items-center justify-end">
+                                        <div class="w-2 h-2 bg-success-500 rounded-full mr-1"></div>
+                                        <span class="text-xs text-success-600 dark:text-success-400 font-medium">online</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section id="wallet-connection-cta" class="mb-8">
+                <div class="bg-gradient-to-r from-primary-600 to-primary-500 rounded-2xl shadow-xl overflow-hidden">
+                    <div class="px-6 py-8 sm:px-8 sm:py-12">
+                        <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
+                            <div class="flex-1 min-w-0">
+                                <h2 class="text-2xl font-bold text-white mb-2">Connect Your Wallet</h2>
+                                <p class="text-primary-100 text-lg mb-4">Access your account, manage DIDs, create and join ecosystem Trust Registries.</p>
+                            </div>
+                            <div class="flex-shrink-0">
+                                <button class="inline-flex items-center px-8 py-4 bg-white text-primary-700 text-lg font-semibold rounded-xl hover:bg-gray-50 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-1 focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-2 focus:ring-offset-primary-600">
+                                    <i class="fas fa-wallet mr-3"></i>
+                                    Connect Wallet
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section id="network-activity" class="mb-8">
+                <div class="bg-white dark:bg-surface shadow-sm rounded-xl border border-neutral-20 dark:border-neutral-70">
+                    <div class="px-6 py-4 border-b border-neutral-20 dark:border-neutral-70">
+                        <div class="flex items-center justify-between">
+                            <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Recent Network Activity</h3>
+                            <div class="flex items-center space-x-2">
+                                <button class="p-2 text-neutral-70 hover:text-gray-500 dark:hover:text-gray-300 rounded-lg hover:bg-surface-muted dark:hover:bg-surface-muted transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500">
+                                    <i class="fas fa-rotate text-sm"></i>
+                                </button>
+                                <button class="p-2 text-neutral-70 hover:text-gray-500 dark:hover:text-gray-300 rounded-lg hover:bg-surface-muted dark:hover:bg-surface-muted transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500">
+                                    <i class="fas fa-up-right-from-square text-sm"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="p-6">
+                        <div class="space-y-4">
+                            <div class="flex items-start space-x-4 p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
+                                <div class="flex-shrink-0">
+                                    <div class="w-8 h-8 bg-green-100 dark:bg-green-900/20 rounded-full flex items-center justify-center">
+                                        <i class="fas fa-plus text-green-600 dark:text-green-400 text-sm"></i>
+                                    </div>
+                                </div>
+                                <div class="flex-1 min-w-0">
+                                    <p class="text-sm font-medium text-gray-900 dark:text-white">New DID Created</p>
+                                    <p class="text-sm text-gray-500 dark:text-gray-400 font-mono">did:verana:mainnet:z6Mk...</p>
+                                    <p class="text-xs text-gray-400 dark:text-gray-500">2 minutes ago</p>
+                                </div>
+                                <div class="flex-shrink-0">
+                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 dark:bg-green-900/20 text-green-800 dark:text-green-300">
+                                        Success
+                                    </span>
+                                </div>
+                            </div>
+
+                            <div class="flex items-start space-x-4 p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
+                                <div class="flex-shrink-0">
+                                    <div class="w-8 h-8 bg-blue-100 dark:bg-blue-900/20 rounded-full flex items-center justify-center">
+                                        <i class="fas fa-shield-halved text-blue-600 dark:text-blue-400 text-sm"></i>
+                                    </div>
+                                </div>
+                                <div class="flex-1 min-w-0">
+                                    <p class="text-sm font-medium text-gray-900 dark:text-white">Trust Registry Updated</p>
+                                    <p class="text-sm text-gray-500 dark:text-gray-400">Healthcare Credentials v2.1</p>
+                                    <p class="text-xs text-gray-400 dark:text-gray-500">5 minutes ago</p>
+                                </div>
+                                <div class="flex-shrink-0">
+                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 dark:bg-blue-900/20 text-blue-800 dark:text-blue-300">
+                                        Updated
+                                    </span>
+                                </div>
+                            </div>
+
+                            <div class="flex items-start space-x-4 p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
+                                <div class="flex-shrink-0">
+                                    <div class="w-8 h-8 bg-purple-100 dark:bg-purple-900/20 rounded-full flex items-center justify-center">
+                                        <i class="fas fa-coins text-purple-600 dark:text-purple-400 text-sm"></i>
+                                    </div>
+                                </div>
+                                <div class="flex-1 min-w-0">
+                                    <p class="text-sm font-medium text-gray-900 dark:text-white">VNA Token Transfer</p>
+                                    <p class="text-sm text-gray-500 dark:text-gray-400">1,500 VNA deposited to trust account</p>
+                                    <p class="text-xs text-gray-400 dark:text-gray-500">8 minutes ago</p>
+                                </div>
+                                <div class="flex-shrink-0">
+                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 dark:bg-purple-900/20 text-purple-800 dark:text-purple-300">
+                                        Transfer
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="mt-6 text-center">
+                            <button class="inline-flex items-center px-4 py-2 text-sm font-medium text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300">
+                                View All Activity
+                                <i class="fas fa-arrow-right ml-2"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section id="featured-services" class="mb-8">
+                <h3 class="text-xl font-semibold text-gray-900 dark:text-white mb-6">Featured Services</h3>
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    <div class="bg-white dark:bg-surface rounded-xl border border-neutral-20 dark:border-neutral-70 overflow-hidden hover:shadow-lg transition-shadow duration-200">
+                        <div class="p-6">
+                            <div class="flex items-center mb-4">
+                                <div class="w-10 h-10 bg-gradient-to-br from-purple-500 to-purple-700 rounded-lg flex items-center justify-center mr-3">
+                                    <i class="fas fa-id-card text-white"></i>
+                                </div>
+                                <h4 class="text-lg font-semibold text-gray-900 dark:text-white">DID Management</h4>
+                            </div>
+                            <p class="text-gray-600 dark:text-gray-400 mb-4">Register your DIDs in Verana and make your verifiable service instantly discoverable.</p>
+                            <div class="flex items-center justify-between">
+                                <span class="text-sm text-neutral-70 dark:text-neutral-70">Connect wallet required</span>
+                                <button class="text-purple-600 dark:text-purple-400 hover:text-purple-700 dark:hover:text-purple-300 font-medium text-sm opacity-50 cursor-not-allowed">
+                                    Explore →
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bg-white dark:bg-surface rounded-xl border border-neutral-20 dark:border-neutral-70 overflow-hidden hover:shadow-lg transition-shadow duration-200">
+                        <div class="p-6">
+                            <div class="flex items-center mb-4">
+                                <div class="w-10 h-10 bg-gradient-to-br from-orange-500 to-orange-700 rounded-lg flex items-center justify-center mr-3">
+                                    <i class="fas fa-shield-halved text-white"></i>
+                                </div>
+                                <h4 class="text-lg font-semibold text-gray-900 dark:text-white">Trust Registries</h4>
+                            </div>
+                            <p class="text-gray-600 dark:text-gray-400 mb-4">Build your own ecosystem Trust Registries. Define credential schemas, onboard participants.</p>
+                            <div class="flex items-center justify-between">
+                                <span class="text-sm text-neutral-70 dark:text-neutral-70">Connect wallet required</span>
+                                <button class="text-orange-600 dark:text-orange-400 hover:text-orange-700 dark:hover:text-orange-300 font-medium text-sm opacity-50 cursor-not-allowed">
+                                    Explore →
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bg-white dark:bg-surface rounded-xl border border-neutral-20 dark:border-neutral-70 overflow-hidden hover:shadow-lg transition-shadow duration-200">
+                        <div class="p-6">
+                            <div class="flex items-center mb-4">
+                                <div class="w-10 h-10 bg-gradient-to-br from-blue-500 to-blue-700 rounded-lg flex items-center justify-center mr-3">
+                                    <i class="fas fa-magnifying-glass text-white"></i>
+                                </div>
+                                <h4 class="text-lg font-semibold text-gray-900 dark:text-white">Ecosystem Explorer</h4>
+                            </div>
+                            <p class="text-gray-600 dark:text-gray-400 mb-4">Explore, discover and join existing ecosystems.</p>
+                            <div class="flex items-center justify-between">
+                                <span class="text-sm text-success-600 dark:text-success-400">Available now</span>
+                                <button class="text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 font-medium text-sm">
+                                    Explore →
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section id="getting-started" class="mb-8">
+                <div class="bg-white dark:bg-surface rounded-xl border border-neutral-20 dark:border-neutral-70 overflow-hidden">
+                    <div class="px-6 py-4 border-b border-neutral-20 dark:border-neutral-70">
+                        <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Getting Started with Verana</h3>
+                    </div>
+                    <div class="p-6">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div class="space-y-4">
+                                <div class="flex items-start space-x-4">
+                                    <div class="flex-shrink-0 w-8 h-8 bg-primary-100 dark:bg-primary-900/20 rounded-full flex items-center justify-center">
+                                        <span class="text-sm font-semibold text-primary-600 dark:text-primary-400">1</span>
+                                    </div>
+                                    <div>
+                                        <h4 class="font-medium text-gray-900 dark:text-white mb-1">Connect Your Wallet</h4>
+                                        <p class="text-sm text-gray-600 dark:text-gray-400">Connect a compatible wallet to start interacting with the network.</p>
+                                    </div>
+                                </div>
+                                <div class="flex items-start space-x-4">
+                                    <div class="flex-shrink-0 w-8 h-8 bg-primary-100 dark:bg-primary-900/20 rounded-full flex items-center justify-center">
+                                        <span class="text-sm font-semibold text-primary-600 dark:text-primary-400">2</span>
+                                    </div>
+                                    <div>
+                                        <h4 class="font-medium text-gray-900 dark:text-white mb-1">Get VNA Tokens</h4>
+                                        <p class="text-sm text-gray-600 dark:text-gray-400">Acquire VNA tokens to pay for network transactions and deposits.</p>
+                                    </div>
+                                </div>
+                                <div class="flex items-start space-x-4">
+                                    <div class="flex-shrink-0 w-8 h-8 bg-primary-100 dark:bg-primary-900/20 rounded-full flex items-center justify-center">
+                                        <span class="text-sm font-semibold text-primary-600 dark:text-primary-400">3</span>
+                                    </div>
+                                    <div>
+                                        <h4 class="font-medium text-gray-900 dark:text-white mb-1">Create or Join Ecosystem Trust Registries</h4>
+                                        <p class="text-sm text-gray-600 dark:text-gray-400">Browse and join existing ecosystems, or create your own.</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="space-y-4">
+                                <div class="bg-gradient-to-br from-primary-50 to-primary-100 dark:from-primary-900/10 dark:to-primary-900/20 rounded-lg p-4">
+                                    <h4 class="font-medium text-gray-900 dark:text-white mb-2">Quick Links</h4>
+                                    <div class="space-y-2">
+                                        <span class="block text-sm text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 cursor-pointer">
+                                            <i class="fas fa-book mr-2"></i>Documentation
+                                        </span>
+                                        <span class="block text-sm text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 cursor-pointer">
+                                            <i class="fas fa-video mr-2"></i>Video Tutorials
+                                        </span>
+                                        <span class="block text-sm text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 cursor-pointer">
+                                            <i class="fas fa-comments mr-2"></i>Community Support
+                                        </span>
+                                        <span class="block text-sm text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 cursor-pointer">
+                                            <i class="fas fa-code mr-2"></i>API Reference
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section id="network-statistics" class="mb-8">
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <div class="bg-white dark:bg-surface rounded-xl border border-neutral-20 dark:border-neutral-70 p-6">
+                        <div class="flex items-center justify-between mb-4">
+                            <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Transaction Volume</h3>
+                            <div class="flex items-center space-x-2">
+                                <button class="px-3 py-1 text-xs font-medium bg-primary-100 dark:bg-primary-900/20 text-primary-700 dark:text-primary-300 rounded-full">24H</button>
+                                <button class="px-3 py-1 text-xs font-medium text-neutral-70 dark:text-neutral-70 hover:bg-surface-muted dark:hover:bg-surface-muted rounded-full">7D</button>
+                                <button class="px-3 py-1 text-xs font-medium text-neutral-70 dark:text-neutral-70 hover:bg-surface-muted dark:hover:bg-surface-muted rounded-full">30D</button>
+                            </div>
+                        </div>
+                        <div class="h-64 bg-gray-50 dark:bg-gray-700/50 rounded-lg flex items-center justify-center">
+                            <div class="text-center">
+                                <i class="fas fa-chart-line text-4xl text-gray-300 dark:text-gray-600 mb-3"></i>
+                                <p class="text-gray-500 dark:text-gray-400">Transaction volume chart</p>
+                                <p class="text-sm text-gray-400 dark:text-gray-500">Connect wallet to view detailed analytics</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bg-white dark:bg-surface rounded-xl border border-neutral-20 dark:border-neutral-70 p-6">
+                        <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Network Health</h3>
+                        <div class="space-y-4">
+                            <div class="flex items-center justify-between">
+                                <div class="flex items-center">
+                                    <div class="w-3 h-3 bg-success-500 rounded-full mr-3"></div>
+                                    <span class="text-sm text-gray-700 dark:text-gray-300">Consensus</span>
+                                </div>
+                                <span class="text-sm font-medium text-success-600 dark:text-success-400">99.9%</span>
+                            </div>
+                            <div class="flex items-center justify-between">
+                                <div class="flex items-center">
+                                    <div class="w-3 h-3 bg-success-500 rounded-full mr-3"></div>
+                                    <span class="text-sm text-gray-700 dark:text-gray-300">Node Uptime</span>
+                                </div>
+                                <span class="text-sm font-medium text-success-600 dark:text-success-400">99.7%</span>
+                            </div>
+                            <div class="flex items-center justify-between">
+                                <div class="flex items-center">
+                                    <div class="w-3 h-3 bg-yellow-500 rounded-full mr-3"></div>
+                                    <span class="text-sm text-gray-700 dark:text-gray-300">Network Load</span>
+                                </div>
+                                <span class="text-sm font-medium text-yellow-600 dark:text-yellow-400">67%</span>
+                            </div>
+                            <div class="flex items-center justify-between">
+                                <div class="flex items-center">
+                                    <div class="w-3 h-3 bg-success-500 rounded-full mr-3"></div>
+                                    <span class="text-sm text-gray-700 dark:text-gray-300">Transaction Success</span>
+                                </div>
+                                <span class="text-sm font-medium text-success-600 dark:text-success-400">99.2%</span>
+                            </div>
+                        </div>
+                        <div class="mt-6 pt-4 border-t border-neutral-20 dark:border-neutral-70">
+                            <div class="flex items-center justify-between text-sm">
+                                <span class="text-neutral-70 dark:text-neutral-70">Active Validators</span>
+                                <span class="font-medium text-gray-900 dark:text-white">127</span>
+                            </div>
+                            <div class="flex items-center justify-between text-sm mt-2">
+                                <span class="text-neutral-70 dark:text-neutral-70">Average Block Time</span>
+                                <span class="font-medium text-gray-900 dark:text-white">3.2s</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section id="news-updates" class="mb-8">
+                <div class="bg-white dark:bg-surface rounded-xl border border-neutral-20 dark:border-neutral-70">
+                    <div class="px-6 py-4 border-b border-neutral-20 dark:border-neutral-70">
+                        <div class="flex items-center justify-between">
+                            <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Latest News & Updates</h3>
+                            <span class="text-sm text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 font-medium cursor-pointer">
+                                View All
+                            </span>
+                        </div>
+                    </div>
+                    <div class="divide-y divide-neutral-20 dark:divide-neutral-70">
+                        <div class="p-6">
+                            <div class="flex items-start space-x-4">
+                                <div class="flex-shrink-0 w-2 h-2 bg-primary-600 rounded-full mt-2"></div>
+                                <div class="flex-1">
+                                    <h4 class="font-medium text-gray-900 dark:text-white mb-1">Verana Network v2.4.1 Release</h4>
+                                    <p class="text-sm text-gray-600 dark:text-gray-400 mb-2">Enhanced trust registry performance and new DID resolution features</p>
+                                    <p class="text-xs text-gray-400 dark:text-gray-500">2 hours ago</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="p-6">
+                            <div class="flex items-start space-x-4">
+                                <div class="flex-shrink-0 w-2 h-2 bg-success-500 rounded-full mt-2"></div>
+                                <div class="flex-1">
+                                    <h4 class="font-medium text-gray-900 dark:text-white mb-1">New Partnership Announcement</h4>
+                                    <p class="text-sm text-gray-600 dark:text-gray-400 mb-2">Collaboration with major healthcare providers for credential verification</p>
+                                    <p class="text-xs text-gray-400 dark:text-gray-500">1 day ago</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="p-6">
+                            <div class="flex items-start space-x-4">
+                                <div class="flex-shrink-0 w-2 h-2 bg-blue-500 rounded-full mt-2"></div>
+                                <div class="flex-1">
+                                    <h4 class="font-medium text-gray-900 dark:text-white mb-1">Developer Workshop Series</h4>
+                                    <p class="text-sm text-gray-600 dark:text-gray-400 mb-2">Join our upcoming workshops on building with Verana Network APIs</p>
+                                    <p class="text-xs text-gray-400 dark:text-gray-500">3 days ago</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <footer id="footer" class="border-t border-neutral-20 dark:border-neutral-70 pt-8">
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-8">
+                    <div class="col-span-1 md:col-span-2">
+                        <div class="flex items-center space-x-3 mb-4">
+                            <img src="https://verana.io/logo.svg" alt="Veranito Logo" class="w-8 h-8">
+                            <span class="text-xl font-bold text-gray-900 dark:text-white">Verana</span>
+                        </div>
+                        <p class="text-gray-600 dark:text-gray-400 mb-4 max-w-md">
+                            The open trust layer for the internet, enabling verifiable digital services and true digital sovereignty.
+                        </p>
+                        <div class="flex space-x-4">
+                            <span class="text-neutral-70 hover:text-gray-500 dark:hover:text-gray-300 cursor-pointer">
+                                <i class="fab fa-github text-lg"></i>
+                            </span>
+                            <span class="text-neutral-70 hover:text-gray-500 dark:hover:text-gray-300 cursor-pointer">
+                                <i class="fab fa-twitter text-lg"></i>
+                            </span>
+                            <span class="text-neutral-70 hover:text-gray-500 dark:hover:text-gray-300 cursor-pointer">
+                                <i class="fab fa-discord text-lg"></i>
+                            </span>
+                            <span class="text-neutral-70 hover:text-gray-500 dark:hover:text-gray-300 cursor-pointer">
+                                <i class="fas fa-envelope text-lg"></i>
+                            </span>
+                        </div>
+                    </div>
+                    <div>
+                        <h4 class="font-semibold text-gray-900 dark:text-white mb-4">Resources</h4>
+                        <ul class="space-y-2">
+                            <li><span class="text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white text-sm cursor-pointer">Documentation</span></li>
+                            <li><span class="text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white text-sm cursor-pointer">Github</span></li>
+                            <li><span class="text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white text-sm cursor-pointer">Tutorials</span></li>
+                            <li><span class="text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white text-sm cursor-pointer">Community</span></li>
+                        </ul>
+                    </div>
+                    <div>
+                        <h4 class="font-semibold text-gray-900 dark:text-white mb-4">Support</h4>
+                        <ul class="space-y-2">
+                            <li><span class="text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white text-sm cursor-pointer">Help Center</span></li>
+                            <li><span class="text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white text-sm cursor-pointer">Contact Us</span></li>
+                            <li><span class="text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white text-sm cursor-pointer">Bug Reports</span></li>
+                            <li><span class="text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white text-sm cursor-pointer">Feature Requests</span></li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="mt-8 pt-4 border-t border-neutral-20 dark:border-neutral-70 flex flex-col sm:flex-row justify-between items-center">
+                    <p class="text-sm text-neutral-70 dark:text-neutral-70">
+                        © 2025 Verana Foundation.</p>
+                    <div class="flex space-x-6 mt-4 sm:mt-0">
+                        <span class="text-sm text-neutral-70 dark:text-neutral-70 hover:text-gray-900 dark:hover:text-white cursor-pointer">Privacy</span>
+                        <span class="text-sm text-neutral-70 dark:text-neutral-70 hover:text-gray-900 dark:hover:text-white cursor-pointer">Terms</span>
+                        <span class="text-sm text-neutral-70 dark:text-neutral-70 hover:text-gray-900 dark:hover:text-white cursor-pointer">Security</span>
+                    </div>
+                </div>
+            </footer>
+
+        </main>
+    </div>
+</div>
+
+<script>
+    const themeToggle = document.getElementById('theme-toggle');
+    const html = document.documentElement;
+    
+    themeToggle.addEventListener('click', () => {
+        html.classList.toggle('dark');
+        localStorage.setItem('theme', html.classList.contains('dark') ? 'dark' : 'light');
+    });
+
+    if (localStorage.getItem('theme') === 'dark' || (!localStorage.getItem('theme') && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+        html.classList.add('dark');
+    }
+
+    const mobileMenuBtn = document.getElementById('mobile-menu-btn');
+    const mobileSidebarOverlay = document.getElementById('mobile-sidebar-overlay');
+    const mobileSidebarClose = document.getElementById('mobile-sidebar-close');
+    const mobileSidebarBackdrop = document.getElementById('mobile-sidebar-backdrop');
+
+    mobileMenuBtn.addEventListener('click', () => {
+        mobileSidebarOverlay.classList.remove('hidden');
+    });
+
+    mobileSidebarClose.addEventListener('click', () => {
+        mobileSidebarOverlay.classList.add('hidden');
+    });
+
+    mobileSidebarBackdrop.addEventListener('click', () => {
+        mobileSidebarOverlay.classList.add('hidden');
+    });
+
+    function updateBlockHeight() {
+        const blockElements = document.querySelectorAll('[data-block-height]');
+        blockElements.forEach(el => {
+            const current = parseInt(el.textContent.replace(/,/g, ''));
+            el.textContent = (current + 1).toLocaleString();
+        });
+    }
+
+    setInterval(updateBlockHeight, 30000);
+
+    const connectButtons = document.querySelectorAll('button');
+    connectButtons.forEach(button => {
+        if (button.textContent.includes('Connect')) {
+            button.addEventListener('click', () => {
+                button.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Connecting...';
+                button.disabled = true;
+                
+                setTimeout(() => {
+                    const accountZone = document.getElementById('account-zone');
+                    accountZone.innerHTML = `
+                        <div class="w-8 h-8 bg-gradient-to-br from-green-500 to-green-600 rounded-full flex items-center justify-center">
+                            <i class="fas fa-check text-white text-sm"></i>
+                        </div>
+                        <div class="hidden xl:block">
+                            <p class="text-sm font-medium text-gray-900 dark:text-white">0x1234...5678</p>
+                            <p class="text-xs text-gray-500 dark:text-gray-400">Connected</p>
+                        </div>
+                        <button class="px-3 py-1 bg-red-500 text-white text-sm rounded-lg hover:bg-red-600 transition-colors">
+                            Disconnect
+                        </button>
+                    `;
+                }, 2000);
+            });
+        }
+    });
+
+    if (document.documentElement.dir === 'rtl') {
+        document.body.classList.add('rtl');
+    }
+
+    const i18n = {
+        'dashboard_title': 'Dashboard',
+        'connect_wallet': 'Connect Wallet',
+        'network_status': 'Network Status',
+    };
+
+    function translateContent() {
+        document.querySelectorAll('[data-i18n]').forEach(el => {
+            const key = el.getAttribute('data-i18n');
+            if (i18n[key]) {
+                el.textContent = i18n[key];
+            }
+        });
+    }
+
+    translateContent();
+
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+            mobileSidebarOverlay.classList.add('hidden');
+        }
+        
+        if (e.ctrlKey && e.key === 'd') {
+            e.preventDefault();
+            themeToggle.click();
+        }
+    });
+
+    function showLoadingState(element, originalContent) {
+        element.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Loading...';
+        element.disabled = true;
+        
+        setTimeout(() => {
+            element.innerHTML = originalContent;
+            element.disabled = false;
+        }, 2000);
+    }
+
+    document.addEventListener('click', (e) => {
+        if (e.target.textContent === 'Export Data') {
+            showLoadingState(e.target, '<i class="fas fa-download mr-2"></i>Export Data');
+        }
+    });
+</script>
+
+</body>
+</html>

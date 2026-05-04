@@ -1,0 +1,31 @@
+create the Manage DIDs page.
+
+- Search by DID substring only; show saved autocomplete of previous successful searches.
+- Table with columns (desktop): DID, Controller, Created, Modified, Expire, Deposit.
+- Progressive column removal on narrow screens in this order: Created, Deposit, Controller, Modified (keep DID & Expire).
+- Client-side pagination & column sorting.
+- Use color label for expire date: red (expired), yellow (close to expire), green (far to expire)
+Row click -> DID Info.
+
+DID Info actions:
+- Renew (input number of years), Touch (no input), Remove (no input) (accordion per action)
+- Each action triggers Transaction Popup.
+- Above each action button, a message: You'll need approx. 5.900000 VNA to complete the transaction.
+Add DID screen:
+- input DID, number of years (1-10) with message: You'll need approx. 5.900000 VNA to complete the transaction, CANCEL/CONFIRM and success routing back to DID Info.
+States: success, error, pending (with Mintscan link).
+
+
+Create a reusable TransactionPopup component in 4 states:
+- Broadcasting: “Your transaction {description} is being broadcast to the network.”
+- Processing: “Your transaction {description} is being processed” with {tx_hash} link to explorer.
+- Success: green success with action details, disappear automatically after 5 seconds.
+- Error: red error with retry, must clear manually by hitting "X".
+
+Transaction Popup states:
+1) Broadcasting: "Your transaction {description} is being broadcast to the network."
+2) Processing: show tx hash and link to explorer.
+3) Success: green state with action summary.
+4) Error: red state with error text and retry/dismiss.
+
+Transaction popup must appear on the top right just below the header, when active it must always be shown including if I scroll.

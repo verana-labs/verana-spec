@@ -1,0 +1,1190 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script> window.FontAwesomeConfig = { autoReplaceSvg: 'nest'};</script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/js/all.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        ::-webkit-scrollbar { display: none;}
+        * { font-family: 'Inter', sans-serif; }
+        .dark { --tw-bg-opacity: 1; background-color: rgb(11 11 18 / var(--tw-bg-opacity)); }
+        .dark .dark\:bg-gray-800 { --tw-bg-opacity: 1; background-color: rgb(21 24 36 / var(--tw-bg-opacity)); }
+        .dark .dark\:text-white { --tw-text-opacity: 1; color: rgb(255 255 255 / var(--tw-text-opacity)); }
+        .dark .dark\:text-gray-300 { --tw-text-opacity: 1; color: rgb(139 148 165 / var(--tw-text-opacity)); }
+        .dark .dark\:border-gray-700 { --tw-border-opacity: 1; border-color: rgb(215 219 226 / var(--tw-border-opacity)); }
+        .dark .dark\:bg-gray-900 { --tw-bg-opacity: 1; background-color: rgb(11 11 18 / var(--tw-bg-opacity)); }
+        .crypto-gradient { background: linear-gradient(135deg, #763EF0 0%, #553C9A 100%); }
+        .trust-gradient { background: linear-gradient(135deg, #29C68C 0%, #2E6BE6 100%); }
+        .network-gradient { background: linear-gradient(135deg, #2E6BE6 0%, #29C68C 100%); }
+        .skeleton { animation: skeleton-loading 1s linear infinite alternate; }
+        @keyframes skeleton-loading { 0% { opacity: 1; } 100% { opacity: 0.4; } }
+        .rtl { direction: rtl; }
+        .rtl .rtl\:mr-4 { margin-right: 1rem; }
+        .rtl .rtl\:ml-0 { margin-left: 0; }
+        .glass-effect { backdrop-filter: blur(10px); background-color: rgba(255, 255, 255, 0.1); }
+        .pulse-dot::before { content: ''; position: absolute; top: 0; left: 0; right: 0; bottom: 0; border-radius: 50%; background: inherit; animation: pulse-ring 2s ease-out infinite; }
+        @keyframes pulse-ring { 0% { transform: scale(1); opacity: 1; } 100% { transform: scale(2); opacity: 0; } }
+        .sortable-header { cursor: pointer; user-select: none; }
+        .sortable-header:hover { background-color: rgba(0, 0, 0, 0.05); }
+        .dark .sortable-header:hover { background-color: rgba(255, 255, 255, 0.05); }
+    </style>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: { 
+                            50: '#f5f3ff', 
+                            100: '#ede9fe', 
+                            200: '#ddd6fe', 
+                            300: '#c4b5fd', 
+                            400: '#a78bfa', 
+                            500: '#9F7AEA', 
+                            600: '#763EF0', 
+                            700: '#553C9A', 
+                            800: '#4c1d95', 
+                            900: '#1e1b4b' 
+                        },
+                        accent: { 
+                            50: '#eff6ff', 
+                            100: '#dbeafe', 
+                            200: '#bfdbfe', 
+                            300: '#93c5fd', 
+                            400: '#60a5fa', 
+                            500: '#2E6BE6', 
+                            600: '#2563eb', 
+                            700: '#1d4ed8', 
+                            800: '#1e40af', 
+                            900: '#1e3a8a' 
+                        },
+                        success: { 
+                            50: '#ecfdf5', 
+                            100: '#d1fae5', 
+                            200: '#a7f3d0', 
+                            300: '#6ee7b7', 
+                            400: '#34d399', 
+                            500: '#29C68C', 
+                            600: '#059669', 
+                            700: '#047857', 
+                            800: '#065f46', 
+                            900: '#064e3b' 
+                        },
+                        neutral: {
+                            20: '#D7DBE2',
+                            70: '#8B94A5'
+                        },
+                        surface: {
+                            DEFAULT: '#f8fafc',
+                            muted: '#f1f5f9'
+                        },
+                        verana: { 50: '#f5f3ff', 100: '#ede9fe', 200: '#ddd6fe', 300: '#c4b5fd', 400: '#a78bfa', 500: '#9F7AEA', 600: '#763EF0', 700: '#553C9A', 800: '#4c1d95', 900: '#1e1b4b' }
+                    },
+                    fontFamily: { inter: ['Inter', 'sans-serif'] },
+                    spacing: { '18': '4.5rem', '88': '22rem', '128': '32rem' },
+                    borderRadius: {
+                        'lg': '16px',
+                        'md': '12px', 
+                        'sm': '8px'
+                    },
+                    boxShadow: {
+                        'focus': '0 0 0 3px rgba(118, 62, 240, 0.35)'
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-gray-50 dark:bg-gray-900 transition-colors duration-300">
+
+<!-- Transaction Popup -->
+<div id="transaction-popup" class="fixed top-20 right-4 w-96 z-50 hidden">
+    <div class="bg-white dark:bg-surface border border-neutral-20 dark:border-neutral-70 rounded-xl shadow-lg overflow-hidden">
+        <!-- Broadcasting State -->
+        <div id="tx-broadcasting" class="p-4 hidden">
+            <div class="flex items-start space-x-3">
+                <div class="w-8 h-8 bg-blue-100 dark:bg-blue-900/20 rounded-full flex items-center justify-center flex-shrink-0">
+                    <div class="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+                </div>
+                <div class="flex-1">
+                    <h4 class="text-sm font-semibold text-gray-900 dark:text-white">Broadcasting Transaction</h4>
+                    <p class="text-sm text-neutral-70 dark:text-neutral-70 mt-1" id="tx-description">Your transaction is being broadcast to the network.</p>
+                </div>
+                <button onclick="hideTransactionPopup()" class="text-neutral-70 hover:text-gray-500 dark:hover:text-gray-300">
+                    <i class="fas fa-xmark"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- Processing State -->
+        <div id="tx-processing" class="p-4 hidden">
+            <div class="flex items-start space-x-3">
+                <div class="w-8 h-8 bg-yellow-100 dark:bg-yellow-900/20 rounded-full flex items-center justify-center flex-shrink-0">
+                    <div class="w-4 h-4 border-2 border-yellow-600 border-t-transparent rounded-full animate-spin"></div>
+                </div>
+                <div class="flex-1">
+                    <h4 class="text-sm font-semibold text-gray-900 dark:text-white">Processing Transaction</h4>
+                    <p class="text-sm text-neutral-70 dark:text-neutral-70 mt-1" id="tx-processing-description">Your transaction is being processed.</p>
+                    <span class="text-sm text-primary-600 dark:text-primary-400 hover:underline mt-1 block font-mono cursor-pointer" id="tx-hash-link" target="_blank">
+                        View on Explorer
+                    </span>
+                </div>
+                <button onclick="hideTransactionPopup()" class="text-neutral-70 hover:text-gray-500 dark:hover:text-gray-300">
+                    <i class="fas fa-xmark"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- Success State -->
+        <div id="tx-success" class="p-4 hidden">
+            <div class="flex items-start space-x-3">
+                <div class="w-8 h-8 bg-success-100 dark:bg-success-900/20 rounded-full flex items-center justify-center flex-shrink-0">
+                    <i class="text-success-600 dark:text-success-400 fas fa-check"></i>
+                </div>
+                <div class="flex-1">
+                    <h4 class="text-sm font-semibold text-success-900 dark:text-success-100">Transaction Successful</h4>
+                    <p class="text-sm text-success-700 dark:text-success-300 mt-1" id="tx-success-description">Your transaction has been completed successfully.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Error State -->
+        <div id="tx-error" class="p-4 hidden">
+            <div class="flex items-start space-x-3">
+                <div class="w-8 h-8 bg-red-100 dark:bg-red-900/20 rounded-full flex items-center justify-center flex-shrink-0">
+                    <i class="text-red-600 dark:text-red-400 fas fa-triangle-exclamation"></i>
+                </div>
+                <div class="flex-1">
+                    <h4 class="text-sm font-semibold text-red-900 dark:text-red-100">Transaction Failed</h4>
+                    <p class="text-sm text-red-700 dark:text-red-300 mt-1" id="tx-error-description">Transaction failed due to an error.</p>
+                    <div class="flex space-x-2 mt-3">
+                        <button onclick="retryTransaction()" class="px-3 py-1 bg-red-600 text-white text-sm rounded-lg hover:bg-red-700 transition-colors">
+                            Retry
+                        </button>
+                        <button onclick="hideTransactionPopup()" class="px-3 py-1 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 text-sm rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors">
+                            Dismiss
+                        </button>
+                    </div>
+                </div>
+                <button onclick="hideTransactionPopup()" class="text-neutral-70 hover:text-gray-500 dark:hover:text-gray-300">
+                    <i class="fas fa-xmark"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Header -->
+<header id="header" class="bg-white dark:bg-surface border-b border-neutral-20 dark:border-neutral-70 sticky top-0 z-40 transition-colors duration-300">
+    <div class="px-4 sm:px-6 lg:px-8">
+        <div class="flex items-center justify-between h-16">
+            <!-- Left: Logo and App Name -->
+            <div class="flex items-center space-x-3 rtl:space-x-reverse">
+                <img src="https://verana.io/logo.svg" alt="Veranito Logo" class="w-8 h-8">
+                <h1 class="text-xl font-bold text-gray-900 dark:text-white hidden sm:block">Verana</h1>
+            </div>
+
+            <!-- Mobile Menu Button -->
+            <button id="mobile-menu-btn" class="lg:hidden p-2 rounded-md text-gray-400 hover:text-gray-500 hover:bg-surface-muted dark:hover:bg-surface-muted transition-colors">
+                <i class="text-lg fas fa-bars"></i>
+            </button>
+
+            <!-- Right: Actions -->
+            <div class="hidden lg:flex items-center space-x-4 rtl:space-x-reverse">
+                <!-- Network Status -->
+                <div class="flex items-center space-x-2 px-3 py-1 bg-success-50 dark:bg-success-900/20 rounded-full">
+                    <div class="w-2 h-2 bg-success-500 rounded-full pulse-dot relative"></div>
+                    <span class="text-sm text-success-700 dark:text-success-300 font-medium">Mainnet</span>
+                </div>
+
+                <!-- Settings -->
+                <button class="p-2 text-neutral-70 hover:text-gray-500 hover:bg-surface-muted dark:hover:bg-surface-muted rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500">
+                    <i class="text-lg fas fa-gear"></i>
+                </button>
+
+                <!-- Theme Toggle -->
+                <button id="theme-toggle" class="p-2 text-neutral-70 hover:text-gray-500 hover:bg-surface-muted dark:hover:bg-surface-muted rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500">
+                    <i class="text-lg dark:hidden fas fa-moon"></i>
+                    <i class="text-lg hidden dark:inline fas fa-sun"></i>
+                </button>
+
+                <!-- Account Zone -->
+                <div id="account-zone" class="flex items-center space-x-2 px-3 py-2 bg-surface-muted dark:bg-surface-muted rounded-xl">
+                    <div class="w-8 h-8 bg-gradient-to-br from-green-500 to-green-600 rounded-full flex items-center justify-center">
+                        <i class="text-white text-sm fas fa-check"></i>
+                    </div>
+                    <div class="hidden xl:block cursor-pointer" onclick="copyAddressFromHeader()">
+                        <p class="text-sm font-medium text-gray-900 dark:text-white">0x1234...5678</p>
+                        <p class="text-xs text-neutral-70 dark:text-neutral-70">Connected</p>
+                    </div>
+                    <div class="flex items-center space-x-1 ml-2">
+                        <!-- QR Code -->
+                        <button class="relative group p-2 text-neutral-70 hover:text-gray-500 hover:bg-surface-muted dark:hover:bg-surface-muted rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500" onclick="document.getElementById('qr-modal').classList.remove('hidden')">
+                            <i class="text-sm fas fa-qrcode"></i>
+                            <div class="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 bg-gray-900 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none">
+                                Show QR
+                            </div>
+                        </button>
+                        <!-- Explorer -->
+                        <button class="relative group p-2 text-neutral-70 hover:text-gray-500 hover:bg-surface-muted dark:hover:bg-surface-muted rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500" onclick="openExplorer()">
+                            <i class="text-sm fas fa-up-right-from-square"></i>
+                            <div class="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 bg-gray-900 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none">
+                                Explorer
+                            </div>
+                        </button>
+                        <!-- Disconnect -->
+                        <button class="relative group p-2 text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-red-500" id="header-disconnect-btn">
+                            <i class="text-sm fas fa-right-from-bracket"></i>
+                            <div class="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 bg-gray-900 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none">
+                                Disconnect
+                            </div>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</header>
+
+<!-- Main Container -->
+<div class="flex">
+    <!-- Sidebar -->
+    <aside id="sidebar" class="hidden lg:flex lg:flex-shrink-0">
+        <div class="flex flex-col w-64 bg-white dark:bg-surface border-r border-neutral-20 dark:border-neutral-70 transition-colors duration-300">
+            <div class="flex-1 flex flex-col pt-5 pb-4 overflow-y-auto">
+                <nav class="mt-5 flex-1 px-2 space-y-1">
+                    <!-- Dashboard -->
+                    <span class="text-gray-700 dark:text-gray-300 hover:bg-primary-50 dark:hover:bg-primary-900/20 hover:text-primary-700 dark:hover:text-primary-300 group flex items-center px-2 py-2 text-sm font-medium rounded-md cursor-pointer">
+                        <i class="text-gray-400 mr-3 text-sm fas fa-gauge-high"></i>
+                        Dashboard
+                    </span>
+
+                    <!-- Account -->
+                    <span class="text-gray-700 dark:text-gray-300 hover:bg-primary-50 dark:hover:bg-primary-900/20 hover:text-primary-700 dark:hover:text-primary-300 group flex items-center px-2 py-2 text-sm font-medium rounded-md cursor-pointer">
+                        <i class="text-gray-400 mr-3 text-sm fas fa-circle-user"></i>
+                        Account
+                    </span>
+
+                    <!-- DID Directory -->
+                    <span class="text-gray-700 dark:text-gray-300 hover:bg-primary-50 dark:hover:bg-primary-900/20 hover:text-primary-700 dark:hover:text-primary-300 group flex items-center px-2 py-2 text-sm font-medium rounded-md cursor-pointer">
+                        <i class="text-gray-400 mr-3 text-sm fas fa-id-card"></i>
+                        Manage DIDs
+                    </span>
+
+                    <!-- Trust Registries -->
+                    <span class="bg-primary-50 dark:bg-primary-900/20 text-primary-700 dark:text-primary-300 group flex items-center px-2 py-2 text-sm font-medium rounded-md cursor-pointer">
+                        <i class="text-primary-500 mr-3 text-sm fas fa-shield-halved"></i>
+                        My Ecosystems
+                    </span>
+
+                    <!-- Discover & Join Ecosystems -->
+                    <span class="text-gray-700 dark:text-gray-300 hover:bg-primary-50 dark:hover:bg-primary-900/20 hover:text-primary-700 dark:hover:text-primary-300 group flex items-center px-2 py-2 text-sm font-medium rounded-md cursor-pointer">
+                        <i class="text-gray-400 mr-3 text-sm fas fa-compass"></i>
+                        Discover & Join
+                    </span>
+
+                    <!-- Pending Tasks -->
+                    <span class="text-gray-700 dark:text-gray-300 hover:bg-primary-50 dark:hover:bg-primary-900/20 hover:text-primary-700 dark:hover:text-primary-300 group flex items-center px-2 py-2 text-sm font-medium rounded-md cursor-pointer">
+                        <div class="relative mr-3">
+                            <i class="text-gray-400 text-sm fas fa-list-check"></i>
+                            <div class="absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full flex items-center justify-center">
+                                <span class="text-white text-xs font-bold">3</span>
+                            </div>
+                        </div>
+                        Pending Tasks
+                    </span>
+                </nav>
+
+                <!-- Footer -->
+                <div class="flex-shrink-0 px-2 py-4 border-t border-neutral-20 dark:border-neutral-70">
+                    <div class="flex items-center">
+                        <img src="https://verana.io/logo.svg" alt="Verana Logo" class="w-6 h-6 mr-2">
+                        <div class="flex-1 min-w-0">
+                            <p class="text-sm font-medium text-gray-900 dark:text-white truncate">Verana Network</p>
+                            <p class="text-xs text-neutral-70 dark:text-neutral-70">v2.4.1</p>
+                        </div>
+                    </div>
+                    <div class="mt-3 flex space-x-2">
+                        <span class="text-neutral-70 hover:text-gray-500 dark:hover:text-gray-300 cursor-pointer">
+                            <i class="text-sm fab fa-github"></i>
+                        </span>
+                        <span class="text-neutral-70 hover:text-gray-500 dark:hover:text-gray-300 cursor-pointer">
+                            <i class="text-sm fas fa-book"></i>
+                        </span>
+                        <span class="text-neutral-70 hover:text-gray-500 dark:hover:text-gray-300 cursor-pointer">
+                            <i class="text-sm fas fa-circle-question"></i>
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </aside>
+
+    <!-- Mobile Sidebar Overlay -->
+    <div id="mobile-sidebar-overlay" class="fixed inset-0 flex z-40 lg:hidden hidden">
+        <div class="fixed inset-0 bg-gray-600 bg-opacity-75" id="mobile-sidebar-backdrop"></div>
+        <div class="relative flex-1 flex flex-col max-w-xs w-full bg-white dark:bg-surface">
+            <div class="absolute top-0 right-0 -mr-12 pt-2">
+                <button id="mobile-sidebar-close" class="ml-1 flex items-center justify-center h-10 w-10 rounded-full focus:outline-none focus:ring-2 focus:ring-inset focus:ring-white">
+                    <i class="text-white text-lg fas fa-xmark"></i>
+                </button>
+            </div>
+            <div class="flex-1 h-0 pt-5 pb-4 overflow-y-auto">
+                <div class="flex-shrink-0 flex items-center px-4">
+                    <img src="https://verana.io/logo.svg" alt="Veranito Logo" class="w-8 h-8 mr-3">
+                    <h1 class="text-xl font-bold text-gray-900 dark:text-white">Verana</h1>
+                </div>
+                <nav class="mt-5 px-2 space-y-1">
+                    <span class="text-gray-700 dark:text-gray-300 group flex items-center px-2 py-2 text-base font-medium rounded-md cursor-pointer">
+                        <i class="text-gray-400 mr-4 fas fa-gauge-high"></i>
+                        Dashboard
+                    </span>
+                    <span class="text-gray-700 dark:text-gray-300 group flex items-center px-2 py-2 text-base font-medium rounded-md cursor-pointer">
+                        <i class="text-gray-400 mr-4 fas fa-circle-user"></i>
+                        Account
+                    </span>
+                    <span class="text-gray-700 dark:text-gray-300 group flex items-center px-2 py-2 text-base font-medium rounded-md cursor-pointer">
+                        <i class="text-gray-400 mr-4 fas fa-id-card"></i>
+                        Manage DIDs
+                    </span>
+                    <span class="bg-primary-50 dark:bg-primary-900/20 text-primary-700 dark:text-primary-300 group flex items-center px-2 py-2 text-base font-medium rounded-md cursor-pointer">
+                        <i class="text-primary-500 mr-4 fas fa-shield-halved"></i>
+                        My Ecosystems
+                    </span>
+                    <span class="text-gray-700 dark:text-gray-300 group flex items-center px-2 py-2 text-base font-medium rounded-md cursor-pointer">
+                        <i class="text-gray-400 mr-4 fas fa-compass"></i>
+                        Discover & Join
+                    </span>
+                    <span class="text-gray-700 dark:text-gray-300 group flex items-center px-2 py-2 text-base font-medium rounded-md cursor-pointer">
+                        <div class="relative mr-4">
+                            <i class="text-gray-400 fas fa-list-check"></i>
+                            <div class="absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full flex items-center justify-center">
+                                <span class="text-white text-xs font-bold">3</span>
+                            </div>
+                        </div>
+                        Pending Tasks
+                    </span>
+                </nav>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="flex-1 overflow-auto">
+        <!-- Ecosystems List View -->
+        <main id="ecosystems-list-view" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+            
+            <!-- Page Header -->
+            <section id="page-header" class="mb-8">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between">
+                    <div>
+                        <h1 class="text-3xl font-bold text-gray-900 dark:text-white">My Ecosystems</h1>
+                        <p class="mt-2 text-sm text-neutral-70 dark:text-neutral-70">Manage your trust registries and credential schemas for your ecosystems.</p>
+                    </div>
+                    <div class="mt-4 sm:mt-0">
+                        <button id="create-ecosystem-btn" class="inline-flex items-center px-4 py-2 bg-primary-600 text-white rounded-lg text-sm font-medium hover:bg-primary-700 transition-colors">
+                            <i class="mr-2 fas fa-plus"></i>
+                            Create New Ecosystem
+                        </button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Ecosystems Table -->
+            <section id="ecosystems-table-section" class="mb-8">
+                <div class="bg-white dark:bg-surface rounded-xl border border-neutral-20 dark:border-neutral-70 overflow-hidden">
+                    <div class="px-6 py-4 border-b border-neutral-20 dark:border-neutral-70">
+                        <div class="flex items-center justify-between">
+                            <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Your Ecosystems</h3>
+                            <div class="text-sm text-neutral-70 dark:text-neutral-70">
+                                <span id="ecosystems-count">4 Ecosystems</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Desktop Table -->
+                    <div class="hidden md:block overflow-x-auto">
+                        <table class="w-full">
+                            <thead class="bg-gray-50 dark:bg-gray-700/50">
+                                <tr>
+                                    <th class="sortable-header px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider" data-sort="id">
+                                        ID
+                                        <i class="ml-1 fas fa-sort"></i>
+                                    </th>
+                                    <th class="sortable-header px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider" data-sort="did">
+                                        DID
+                                        <i class="ml-1 fas fa-sort"></i>
+                                    </th>
+                                </tr>
+                            </thead>
+                            <tbody id="ecosystems-table-body" class="bg-white dark:bg-surface divide-y divide-neutral-20 dark:divide-neutral-70">
+                                <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/50 cursor-pointer" onclick="openEcosystemInfo(1)">
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
+                                        1
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap">
+                                        <div class="text-sm font-mono text-gray-900 dark:text-white truncate max-w-xs">
+                                            did:verana:mainnet:z6MkhaXgBZDvotDkL5257faiztiGiC2QtKLGpbnnEGta2doK
+                                        </div>
+                                    </td>
+                                </tr>
+                                <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/50 cursor-pointer" onclick="openEcosystemInfo(2)">
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
+                                        2
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap">
+                                        <div class="text-sm font-mono text-gray-900 dark:text-white truncate max-w-xs">
+                                            did:verana:mainnet:z6MkpTHR8VNsBxYAAWHut2Geadd9jSwuBV8xRoAnwWsdvktH
+                                        </div>
+                                    </td>
+                                </tr>
+                                <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/50 cursor-pointer" onclick="openEcosystemInfo(3)">
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
+                                        3
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap">
+                                        <div class="text-sm font-mono text-gray-900 dark:text-white truncate max-w-xs">
+                                            did:verana:mainnet:z6MkecaLyHuYWkayBDDwTbgRvAmEi1UrXhQsr4AvHidTs8mL
+                                        </div>
+                                    </td>
+                                </tr>
+                                <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/50 cursor-pointer" onclick="openEcosystemInfo(4)">
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
+                                        4
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap">
+                                        <div class="text-sm font-mono text-gray-900 dark:text-white truncate max-w-xs">
+                                            did:verana:mainnet:z6MkfrQbzAFzMKqKVqFvXcb9jNkQzVrKCgKRhq1H5LjFKqVz
+                                        </div>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- Mobile Cards -->
+                    <div class="md:hidden divide-y divide-neutral-20 dark:divide-neutral-70" id="mobile-ecosystems-list">
+                        <div class="p-4 hover:bg-gray-50 dark:hover:bg-gray-700/50 cursor-pointer" onclick="openEcosystemInfo(1)">
+                            <div class="flex flex-col space-y-2">
+                                <div>
+                                    <label class="text-xs font-medium text-neutral-70 dark:text-neutral-70">ID</label>
+                                    <p class="text-sm font-medium text-gray-900 dark:text-white">1</p>
+                                </div>
+                                <div>
+                                    <label class="text-xs font-medium text-neutral-70 dark:text-neutral-70">DID</label>
+                                    <p class="text-sm font-mono text-gray-900 dark:text-white break-all">did:verana:mainnet:z6MkhaXgBZDvotDkL5257faiztiGiC2QtKLGpbnnEGta2doK</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="p-4 hover:bg-gray-50 dark:hover:bg-gray-700/50 cursor-pointer" onclick="openEcosystemInfo(2)">
+                            <div class="flex flex-col space-y-2">
+                                <div>
+                                    <label class="text-xs font-medium text-neutral-70 dark:text-neutral-70">ID</label>
+                                    <p class="text-sm font-medium text-gray-900 dark:text-white">2</p>
+                                </div>
+                                <div>
+                                    <label class="text-xs font-medium text-neutral-70 dark:text-neutral-70">DID</label>
+                                    <p class="text-sm font-mono text-gray-900 dark:text-white break-all">did:verana:mainnet:z6MkpTHR8VNsBxYAAWHut2Geadd9jSwuBV8xRoAnwWsdvktH</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="p-4 hover:bg-gray-50 dark:hover:bg-gray-700/50 cursor-pointer" onclick="openEcosystemInfo(3)">
+                            <div class="flex flex-col space-y-2">
+                                <div>
+                                    <label class="text-xs font-medium text-neutral-70 dark:text-neutral-70">ID</label>
+                                    <p class="text-sm font-medium text-gray-900 dark:text-white">3</p>
+                                </div>
+                                <div>
+                                    <label class="text-xs font-medium text-neutral-70 dark:text-neutral-70">DID</label>
+                                    <p class="text-sm font-mono text-gray-900 dark:text-white break-all">did:verana:mainnet:z6MkecaLyHuYWkayBDDwTbgRvAmEi1UrXhQsr4AvHidTs8mL</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="p-4 hover:bg-gray-50 dark:hover:bg-gray-700/50 cursor-pointer" onclick="openEcosystemInfo(4)">
+                            <div class="flex flex-col space-y-2">
+                                <div>
+                                    <label class="text-xs font-medium text-neutral-70 dark:text-neutral-70">ID</label>
+                                    <p class="text-sm font-medium text-gray-900 dark:text-white">4</p>
+                                </div>
+                                <div>
+                                    <label class="text-xs font-medium text-neutral-70 dark:text-neutral-70">DID</label>
+                                    <p class="text-sm font-mono text-gray-900 dark:text-white break-all">did:verana:mainnet:z6MkfrQbzAFzMKqKVqFvXcb9jNkQzVrKCgKRhq1H5LjFKqVz</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+        </main>
+
+        <!-- Ecosystem Info View -->
+        <main id="ecosystem-info-view" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 hidden">
+            
+            <!-- Page Header with Back Button -->
+            <section id="ecosystem-info-header" class="mb-8">
+                <div class="flex items-center mb-4">
+                    <button id="back-to-ecosystems" class="flex items-center text-primary-600 hover:text-primary-700 dark:text-primary-400 dark:hover:text-primary-300 transition-colors mr-4">
+                        <i class="mr-2 fas fa-arrow-left"></i>
+                        Back to Ecosystems
+                    </button>
+                </div>
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between">
+                    <div>
+                        <h1 class="text-3xl font-bold text-gray-900 dark:text-white" id="ecosystem-title">Ecosystem #1</h1>
+                        <p class="mt-2 text-sm text-neutral-70 dark:text-neutral-70 font-mono" id="ecosystem-did">did:verana:mainnet:z6MkhaXgBZDvotDkL5257faiztiGiC2QtKLGpbnnEGta2doK</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Credential Schemas Section -->
+            <section id="credential-schemas-section" class="mb-8">
+                <div class="bg-white dark:bg-surface rounded-xl border border-neutral-20 dark:border-neutral-70 overflow-hidden">
+                    <div class="px-6 py-4 border-b border-neutral-20 dark:border-neutral-70">
+                        <div class="flex items-center justify-between">
+                            <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Credential Schemas</h3>
+                            <button id="new-schema-btn" class="inline-flex items-center px-3 py-2 bg-primary-600 text-white rounded-lg text-sm font-medium hover:bg-primary-700 transition-colors">
+                                <i class="mr-2 fas fa-plus"></i>
+                                New Schema
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Desktop Table -->
+                    <div class="hidden md:block overflow-x-auto">
+                        <table class="w-full">
+                            <thead class="bg-gray-50 dark:bg-gray-700/50">
+                                <tr>
+                                    <th class="sortable-header px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider" data-sort="id">
+                                        ID
+                                        <i class="ml-1 fas fa-sort"></i>
+                                    </th>
+                                    <th class="sortable-header px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider" data-sort="title">
+                                        Title
+                                        <i class="ml-1 fas fa-sort"></i>
+                                    </th>
+                                    <th class="sortable-header px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider hidden lg:table-cell" data-sort="description">
+                                        Description
+                                        <i class="ml-1 fas fa-sort"></i>
+                                    </th>
+                                    <th class="sortable-header px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider hidden xl:table-cell" data-sort="created">
+                                        Created
+                                        <i class="ml-1 fas fa-sort"></i>
+                                    </th>
+                                    <th class="sortable-header px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider hidden lg:table-cell" data-sort="modified">
+                                        Modified
+                                        <i class="ml-1 fas fa-sort"></i>
+                                    </th>
+                                </tr>
+                            </thead>
+                            <tbody id="schemas-table-body" class="bg-white dark:bg-surface divide-y divide-neutral-20 dark:divide-neutral-70">
+                                <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/50 cursor-pointer" onclick="viewSchema(1)">
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
+                                        1
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
+                                        Identity Verification
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white hidden lg:table-cell">
+                                        <div class="truncate max-w-xs">Basic identity verification schema for KYC processes</div>
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white hidden xl:table-cell">
+                                        2024-01-15
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white hidden lg:table-cell">
+                                        2024-03-10
+                                    </td>
+                                </tr>
+                                <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/50 cursor-pointer" onclick="viewSchema(2)">
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
+                                        2
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
+                                        Educational Credentials
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white hidden lg:table-cell">
+                                        <div class="truncate max-w-xs">Schema for academic degrees and certifications</div>
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white hidden xl:table-cell">
+                                        2024-02-20
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white hidden lg:table-cell">
+                                        2024-02-20
+                                    </td>
+                                </tr>
+                                <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/50 cursor-pointer" onclick="viewSchema(3)">
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
+                                        3
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
+                                        Professional License
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white hidden lg:table-cell">
+                                        <div class="truncate max-w-xs">Professional licensing and certification schema</div>
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white hidden xl:table-cell">
+                                        2024-03-01
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white hidden lg:table-cell">
+                                        2024-03-15
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- Mobile Cards -->
+                    <div class="md:hidden divide-y divide-neutral-20 dark:divide-neutral-70" id="mobile-schemas-list">
+                        <div class="p-4 hover:bg-gray-50 dark:hover:bg-gray-700/50 cursor-pointer" onclick="viewSchema(1)">
+                            <div class="flex flex-col space-y-2">
+                                <div class="flex justify-between items-start">
+                                    <div>
+                                        <label class="text-xs font-medium text-neutral-70 dark:text-neutral-70">ID</label>
+                                        <p class="text-sm font-medium text-gray-900 dark:text-white">1</p>
+                                    </div>
+                                    <div class="text-right">
+                                        <label class="text-xs font-medium text-neutral-70 dark:text-neutral-70">Created</label>
+                                        <p class="text-sm text-gray-900 dark:text-white">2024-01-15</p>
+                                    </div>
+                                </div>
+                                <div>
+                                    <label class="text-xs font-medium text-neutral-70 dark:text-neutral-70">Title</label>
+                                    <p class="text-sm font-medium text-gray-900 dark:text-white">Identity Verification</p>
+                                </div>
+                                <div>
+                                    <label class="text-xs font-medium text-neutral-70 dark:text-neutral-70">Description</label>
+                                    <p class="text-sm text-gray-900 dark:text-white">Basic identity verification schema for KYC processes</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="p-4 hover:bg-gray-50 dark:hover:bg-gray-700/50 cursor-pointer" onclick="viewSchema(2)">
+                            <div class="flex flex-col space-y-2">
+                                <div class="flex justify-between items-start">
+                                    <div>
+                                        <label class="text-xs font-medium text-neutral-70 dark:text-neutral-70">ID</label>
+                                        <p class="text-sm font-medium text-gray-900 dark:text-white">2</p>
+                                    </div>
+                                    <div class="text-right">
+                                        <label class="text-xs font-medium text-neutral-70 dark:text-neutral-70">Created</label>
+                                        <p class="text-sm text-gray-900 dark:text-white">2024-02-20</p>
+                                    </div>
+                                </div>
+                                <div>
+                                    <label class="text-xs font-medium text-neutral-70 dark:text-neutral-70">Title</label>
+                                    <p class="text-sm font-medium text-gray-900 dark:text-white">Educational Credentials</p>
+                                </div>
+                                <div>
+                                    <label class="text-xs font-medium text-neutral-70 dark:text-neutral-70">Description</label>
+                                    <p class="text-sm text-gray-900 dark:text-white">Schema for academic degrees and certifications</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="p-4 hover:bg-gray-50 dark:hover:bg-gray-700/50 cursor-pointer" onclick="viewSchema(3)">
+                            <div class="flex flex-col space-y-2">
+                                <div class="flex justify-between items-start">
+                                    <div>
+                                        <label class="text-xs font-medium text-neutral-70 dark:text-neutral-70">ID</label>
+                                        <p class="text-sm font-medium text-gray-900 dark:text-white">3</p>
+                                    </div>
+                                    <div class="text-right">
+                                        <label class="text-xs font-medium text-neutral-70 dark:text-neutral-70">Created</label>
+                                        <p class="text-sm text-gray-900 dark:text-white">2024-03-01</p>
+                                    </div>
+                                </div>
+                                <div>
+                                    <label class="text-xs font-medium text-neutral-70 dark:text-neutral-70">Title</label>
+                                    <p class="text-sm font-medium text-gray-900 dark:text-white">Professional License</p>
+                                </div>
+                                <div>
+                                    <label class="text-xs font-medium text-neutral-70 dark:text-neutral-70">Description</label>
+                                    <p class="text-sm text-gray-900 dark:text-white">Professional licensing and certification schema</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+        </main>
+    </div>
+</div>
+
+<!-- Create New Ecosystem Modal -->
+<div id="create-ecosystem-modal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full hidden z-50">
+    <div class="relative top-20 mx-auto p-5 border w-full max-w-2xl shadow-lg rounded-xl bg-white dark:bg-surface">
+        <div class="flex items-center justify-between mb-6">
+            <h3 class="text-xl font-semibold text-gray-900 dark:text-white">Create New Ecosystem Trust Registry</h3>
+            <button onclick="closeCreateEcosystemModal()" class="text-neutral-70 hover:text-gray-500 dark:hover:text-gray-300">
+                <i class="text-lg fas fa-xmark"></i>
+            </button>
+        </div>
+
+        <div class="space-y-6">
+            <div class="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4">
+                <p class="text-sm text-blue-700 dark:text-blue-300">You'll need approx. 5.900000 VNA to complete the transaction.</p>
+            </div>
+
+            <div>
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">DID</label>
+                <input type="text" id="ecosystem-did-input" placeholder="did:verana:mainnet:z6MkhaXgBZDvotDkL5257faiztiGiC2QtKLGpbnnEGta2doK" class="w-full px-4 py-2 border border-neutral-20 dark:border-neutral-70 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent bg-white dark:bg-surface text-gray-900 dark:text-white">
+                <p class="text-xs text-neutral-70 dark:text-neutral-70 mt-1">The DID that will control this ecosystem trust registry</p>
+            </div>
+
+            <div>
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">AKA (Also Known As)</label>
+                <input type="text" id="ecosystem-aka-input" placeholder="Healthcare Ecosystem" class="w-full px-4 py-2 border border-neutral-20 dark:border-neutral-70 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent bg-white dark:bg-surface text-gray-900 dark:text-white">
+                <p class="text-xs text-neutral-70 dark:text-neutral-70 mt-1">A human-readable name for your ecosystem</p>
+            </div>
+
+            <div>
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Primary Governance Framework Language</label>
+                <select id="governance-language-select" class="w-full px-4 py-2 border border-neutral-20 dark:border-neutral-70 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent bg-white dark:bg-surface text-gray-900 dark:text-white">
+                    <option value="en">English</option>
+                    <option value="es">Spanish</option>
+                    <option value="fr">French</option>
+                    <option value="de">German</option>
+                    <option value="it">Italian</option>
+                    <option value="pt">Portuguese</option>
+                    <option value="zh">Chinese</option>
+                    <option value="ja">Japanese</option>
+                </select>
+            </div>
+
+            <div>
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Governance Framework Document URL</label>
+                <input type="url" id="governance-doc-url-input" placeholder="https://example.com/governance-framework.pdf" class="w-full px-4 py-2 border border-neutral-20 dark:border-neutral-70 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent bg-white dark:bg-surface text-gray-900 dark:text-white">
+                <p class="text-xs text-neutral-70 dark:text-neutral-70 mt-1">URL to the governance framework document for this ecosystem</p>
+            </div>
+
+            <div class="flex space-x-3 pt-4">
+                <button onclick="closeCreateEcosystemModal()" class="flex-1 px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors">
+                    Cancel
+                </button>
+                <button onclick="createNewEcosystem()" class="flex-1 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors">
+                    Create Ecosystem
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Create New Credential Schema Modal -->
+<div id="create-schema-modal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full hidden z-50">
+    <div class="relative top-10 mx-auto p-5 border w-full max-w-4xl shadow-lg rounded-xl bg-white dark:bg-surface">
+        <div class="flex items-center justify-between mb-6">
+            <h3 class="text-xl font-semibold text-gray-900 dark:text-white">Create New Credential Schema</h3>
+            <button onclick="closeCreateSchemaModal()" class="text-neutral-70 hover:text-gray-500 dark:hover:text-gray-300">
+                <i class="text-lg fas fa-xmark"></i>
+            </button>
+        </div>
+
+        <div class="space-y-6">
+            <div class="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4">
+                <p class="text-sm text-blue-700 dark:text-blue-300">You'll need approx. 5.900000 VNA to complete the transaction.</p>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Issuer Permission Management Mode</label>
+                    <select id="issuer-permission-mode" class="w-full px-4 py-2 border border-neutral-20 dark:border-neutral-70 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent bg-white dark:bg-surface text-gray-900 dark:text-white">
+                        <option value="open">Open</option>
+                        <option value="restricted">Restricted</option>
+                        <option value="whitelist">Whitelist</option>
+                        <option value="governance">Governance</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Verifier Permission Management Mode</label>
+                    <select id="verifier-permission-mode" class="w-full px-4 py-2 border border-neutral-20 dark:border-neutral-70 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent bg-white dark:bg-surface text-gray-900 dark:text-white">
+                        <option value="open">Open</option>
+                        <option value="restricted">Restricted</option>
+                        <option value="whitelist">Whitelist</option>
+                        <option value="governance">Governance</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Issuer Grantor Validation Validity Period (days)</label>
+                    <input type="number" id="issuer-grantor-validity" placeholder="365" class="w-full px-4 py-2 border border-neutral-20 dark:border-neutral-70 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent bg-white dark:bg-surface text-gray-900 dark:text-white">
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Verifier Grantor Validation Validity Period (days)</label>
+                    <input type="number" id="verifier-grantor-validity" placeholder="365" class="w-full px-4 py-2 border border-neutral-20 dark:border-neutral-70 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent bg-white dark:bg-surface text-gray-900 dark:text-white">
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Issuer Validation Validity Period (days)</label>
+                    <input type="number" id="issuer-validity" placeholder="30" class="w-full px-4 py-2 border border-neutral-20 dark:border-neutral-70 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent bg-white dark:bg-surface text-gray-900 dark:text-white">
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Verifier Validation Validity Period (days)</label>
+                    <input type="number" id="verifier-validity" placeholder="30" class="w-full px-4 py-2 border border-neutral-20 dark:border-neutral-70 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent bg-white dark:bg-surface text-gray-900 dark:text-white">
+                </div>
+
+                <div class="md:col-span-2">
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Holder Validation Validity Period (days)</label>
+                    <input type="number" id="holder-validity" placeholder="90" class="w-full px-4 py-2 border border-neutral-20 dark:border-neutral-70 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent bg-white dark:bg-surface text-gray-900 dark:text-white">
+                </div>
+            </div>
+
+            <div>
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">JSON Schema</label>
+                <textarea id="json-schema-input" rows="8" placeholder='{\n  "type": "object",\n  "properties": {\n    "name": {\n      "type": "string"\n    },\n    "email": {\n      "type": "string",\n      "format": "email"\n    }\n  },\n  "required": ["name", "email"]\n}' class="w-full px-4 py-2 border border-neutral-20 dark:border-neutral-70 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent bg-white dark:bg-surface text-gray-900 dark:text-white font-mono text-sm"></textarea>
+                <p class="text-xs text-neutral-70 dark:text-neutral-70 mt-1">JSON Schema definition for the credential structure</p>
+            </div>
+
+            <div class="flex space-x-3 pt-4">
+                <button onclick="closeCreateSchemaModal()" class="flex-1 px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors">
+                    Cancel
+                </button>
+                <button onclick="createNewSchema()" class="flex-1 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors">
+                    Create Schema
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- QR Code Modal -->
+<div id="qr-modal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full hidden z-50">
+    <div class="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-xl bg-white dark:bg-surface">
+        <div class="mt-3 text-center">
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Account QR Code</h3>
+                <button onclick="document.getElementById('qr-modal').classList.add('hidden')" class="text-neutral-70 hover:text-gray-500 dark:hover:text-gray-300">
+                    <i class="text-lg fas fa-xmark"></i>
+                </button>
+            </div>
+            <div class="w-48 h-48 mx-auto mb-4 bg-white rounded-lg p-4 shadow-sm border border-neutral-20 dark:border-neutral-70">
+                <div class="w-full h-full bg-gray-200 dark:bg-gray-600 rounded flex items-center justify-center">
+                    <i class="text-6xl text-gray-400 fas fa-qrcode"></i>
+                </div>
+            </div>
+            <p class="text-sm text-neutral-70 dark:text-neutral-70 mb-4">Scan to copy wallet address</p>
+            <div class="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-3 mb-4">
+                <code class="text-xs font-mono text-gray-900 dark:text-white break-all">0x1234567890abcdef1234567890abcdef12345678</code>
+            </div>
+            <button class="w-full px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors">
+                Copy Address
+            </button>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Sample ecosystems data
+    const ecosystemsData = [
+        {
+            id: 1,
+            did: 'did:verana:mainnet:z6MkhaXgBZDvotDkL5257faiztiGiC2QtKLGpbnnEGta2doK'
+        },
+        {
+            id: 2,
+            did: 'did:verana:mainnet:z6MkpTHR8VNsBxYAAWHut2Geadd9jSwuBV8xRoAnwWsdvktH'
+        },
+        {
+            id: 3,
+            did: 'did:verana:mainnet:z6MkecaLyHuYWkayBDDwTbgRvAmEi1UrXhQsr4AvHidTs8mL'
+        },
+        {
+            id: 4,
+            did: 'did:verana:mainnet:z6MkfrQbzAFzMKqKVqFvXcb9jNkQzVrKCgKRhq1H5LjFKqVz'
+        }
+    ];
+
+    // Sample schemas data
+    const schemasData = [
+        {
+            id: 1,
+            title: 'Identity Verification',
+            description: 'Basic identity verification schema for KYC processes',
+            created: '2024-01-15',
+            modified: '2024-03-10'
+        },
+        {
+            id: 2,
+            title: 'Educational Credentials',
+            description: 'Schema for academic degrees and certifications',
+            created: '2024-02-20',
+            modified: '2024-02-20'
+        },
+        {
+            id: 3,
+            title: 'Professional License',
+            description: 'Professional licensing and certification schema',
+            created: '2024-03-01',
+            modified: '2024-03-15'
+        }
+    ];
+
+    let currentEcosystem = null;
+
+    // Theme toggle functionality
+    const themeToggle = document.getElementById('theme-toggle');
+    const html = document.documentElement;
+    
+    themeToggle.addEventListener('click', () => {
+        html.classList.toggle('dark');
+        localStorage.setItem('theme', html.classList.contains('dark') ? 'dark' : 'light');
+    });
+
+    // Load saved theme
+    if (localStorage.getItem('theme') === 'dark' || (!localStorage.getItem('theme') && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+        html.classList.add('dark');
+    }
+
+    // Mobile menu functionality
+    const mobileMenuBtn = document.getElementById('mobile-menu-btn');
+    const mobileSidebarOverlay = document.getElementById('mobile-sidebar-overlay');
+    const mobileSidebarClose = document.getElementById('mobile-sidebar-close');
+    const mobileSidebarBackdrop = document.getElementById('mobile-sidebar-backdrop');
+
+    mobileMenuBtn.addEventListener('click', () => {
+        mobileSidebarOverlay.classList.remove('hidden');
+    });
+
+    mobileSidebarClose.addEventListener('click', () => {
+        mobileSidebarOverlay.classList.add('hidden');
+    });
+
+    mobileSidebarBackdrop.addEventListener('click', () => {
+        mobileSidebarOverlay.classList.add('hidden');
+    });
+
+    // Navigation functions
+    function openEcosystemInfo(ecosystemId) {
+        currentEcosystem = ecosystemsData.find(e => e.id === ecosystemId);
+        if (!currentEcosystem) return;
+        
+        document.getElementById('ecosystems-list-view').classList.add('hidden');
+        document.getElementById('ecosystem-info-view').classList.remove('hidden');
+        
+        // Update ecosystem info
+        document.getElementById('ecosystem-title').textContent = `Ecosystem #${currentEcosystem.id}`;
+        document.getElementById('ecosystem-did').textContent = currentEcosystem.did;
+    }
+
+    function backToEcosystems() {
+        document.getElementById('ecosystem-info-view').classList.add('hidden');
+        document.getElementById('ecosystems-list-view').classList.remove('hidden');
+        currentEcosystem = null;
+    }
+
+    // Event listeners
+    document.getElementById('back-to-ecosystems').addEventListener('click', backToEcosystems);
+
+    // Create Ecosystem Modal
+    document.getElementById('create-ecosystem-btn').addEventListener('click', () => {
+        document.getElementById('create-ecosystem-modal').classList.remove('hidden');
+    });
+
+    function closeCreateEcosystemModal() {
+        document.getElementById('create-ecosystem-modal').classList.add('hidden');
+        // Reset form
+        document.getElementById('ecosystem-did-input').value = '';
+        document.getElementById('ecosystem-aka-input').value = '';
+        document.getElementById('governance-language-select').value = 'en';
+        document.getElementById('governance-doc-url-input').value = '';
+    }
+
+    function createNewEcosystem() {
+        const did = document.getElementById('ecosystem-did-input').value.trim();
+        const aka = document.getElementById('ecosystem-aka-input').value.trim();
+        const language = document.getElementById('governance-language-select').value;
+        const docUrl = document.getElementById('governance-doc-url-input').value.trim();
+        
+        if (!did || !aka || !docUrl) {
+            alert('Please fill in all required fields');
+            return;
+        }
+        
+        closeCreateEcosystemModal();
+        showTransactionPopup('broadcasting', 'Creating new ecosystem trust registry');
+        
+        setTimeout(() => {
+            showTransactionPopup('processing', 'Creating new ecosystem trust registry', 'tx123456789abcdef');
+        }, 2000);
+        
+        setTimeout(() => {
+            showTransactionPopup('success', 'Ecosystem trust registry created successfully');
+            // Add to ecosystems data and navigate to ecosystem info
+            const newEcosystem = {
+                id: ecosystemsData.length + 1,
+                did: did
+            };
+            ecosystemsData.push(newEcosystem);
+            setTimeout(() => {
+                openEcosystemInfo(newEcosystem.id);
+            }, 1000);
+        }, 4000);
+    }
+
+    // Create Schema Modal
+    document.getElementById('new-schema-btn').addEventListener('click', () => {
+        document.getElementById('create-schema-modal').classList.remove('hidden');
+    });
+
+    function closeCreateSchemaModal() {
+        document.getElementById('create-schema-modal').classList.add('hidden');
+        // Reset form
+        document.getElementById('issuer-permission-mode').value = 'open';
+        document.getElementById('verifier-permission-mode').value = 'open';
+        document.getElementById('issuer-grantor-validity').value = '';
+        document.getElementById('verifier-grantor-validity').value = '';
+        document.getElementById('issuer-validity').value = '';
+        document.getElementById('verifier-validity').value = '';
+        document.getElementById('holder-validity').value = '';
+        document.getElementById('json-schema-input').value = '';
+    }
+
+    function createNewSchema() {
+        const issuerMode = document.getElementById('issuer-permission-mode').value;
+        const verifierMode = document.getElementById('verifier-permission-mode').value;
+        const issuerGrantorValidity = document.getElementById('issuer-grantor-validity').value;
+        const verifierGrantorValidity = document.getElementById('verifier-grantor-validity').value;
+        const issuerValidity = document.getElementById('issuer-validity').value;
+        const verifierValidity = document.getElementById('verifier-validity').value;
+        const holderValidity = document.getElementById('holder-validity').value;
+        const jsonSchema = document.getElementById('json-schema-input').value.trim();
+        
+        if (!issuerGrantorValidity || !verifierGrantorValidity || !issuerValidity || !verifierValidity || !holderValidity || !jsonSchema) {
+            alert('Please fill in all required fields');
+            return;
+        }
+        
+        try {
+            JSON.parse(jsonSchema);
+        } catch (e) {
+            alert('Invalid JSON Schema format');
+            return;
+        }
+        
+        closeCreateSchemaModal();
+        showTransactionPopup('broadcasting', 'Creating new credential schema');
+        
+        setTimeout(() => {
+            showTransactionPopup('processing', 'Creating new credential schema', 'tx987654321fedcba');
+        }, 2000);
+        
+        setTimeout(() => {
+            showTransactionPopup('success', 'Credential schema created successfully');
+            // Add to schemas data and refresh the schemas table
+            const newSchema = {
+                id: schemasData.length + 1,
+                title: 'New Schema',
+                description: 'Newly created schema',
+                created: new Date().toISOString().split('T')[0],
+                modified: new Date().toISOString().split('T')[0]
+            };
+            schemasData.push(newSchema);
+        }, 4000);
+    }
+
+    // View Schema function
+    function viewSchema(schemaId) {
+        const schema = schemasData.find(s => s.id === schemaId);
+        if (!schema) return;
+        
+        // For now, just show an alert. In a real app, this would open a schema view modal
+        alert(`Viewing schema: ${schema.title}\n\nDescription: ${schema.description}\nCreated: ${schema.created}\nModified: ${schema.modified}`);
+    }
+
+    // Transaction Popup functions
+    function showTransactionPopup(state, description, txHash = null) {
+        const popup = document.getElementById('transaction-popup');
+        const states = ['tx-broadcasting', 'tx-processing', 'tx-success', 'tx-error'];
+        
+        // Hide all states
+        states.forEach(s => document.getElementById(s).classList.add('hidden'));
+        
+        // Show popup
+        popup.classList.remove('hidden');
+        
+        // Show specific state
+        document.getElementById(`tx-${state}`).classList.remove('hidden');
+        
+        // Update content
+        if (state === 'broadcasting') {
+            document.getElementById('tx-description').textContent = description;
+        } else if (state === 'processing') {
+            document.getElementById('tx-processing-description').textContent = description;
+            if (txHash) {
+                const link = document.getElementById('tx-hash-link');
+                link.textContent = `${txHash.substring(0, 10)}...${txHash.substring(txHash.length - 10)}`;
+                link.href = `https://explorer.verana.io/tx/${txHash}`;
+            }
+        } else if (state === 'success') {
+            document.getElementById('tx-success-description').textContent = description;
+            // Auto-hide success after 5 seconds
+            setTimeout(() => {
+                hideTransactionPopup();
+            }, 5000);
+        } else if (state === 'error') {
+            document.getElementById('tx-error-description').textContent = description;
+        }
+    }
+
+    function hideTransactionPopup() {
+        document.getElementById('transaction-popup').classList.add('hidden');
+    }
+
+    function retryTransaction() {
+        showTransactionPopup('broadcasting', 'Retrying transaction');
+    }
+
+    // Copy address functionality
+    function copyAddressFromHeader() {
+        const address = '0x1234567890abcdef1234567890abcdef12345678';
+        navigator.clipboard.writeText(address).then(() => {
+            const element = event.target.closest('div');
+            const originalText = element.querySelector('p').textContent;
+            element.querySelector('p').textContent = 'Copied!';
+            
+            setTimeout(() => {
+                element.querySelector('p').textContent = originalText;
+            }, 2000);
+        });
+    }
+
+    // Explorer functionality
+    function openExplorer() {
+        window.open('https://explorer.verana.io/address/0x1234567890abcdef1234567890abcdef12345678', '_blank');
+    }
+
+    // Close modals on escape key
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+            closeCreateEcosystemModal();
+            closeCreateSchemaModal();
+            document.getElementById('qr-modal').classList.add('hidden');
+            mobileSidebarOverlay.classList.add('hidden');
+        }
+    });
+
+    // Close modals on backdrop click
+    document.getElementById('create-ecosystem-modal').addEventListener('click', (e) => {
+        if (e.target === e.currentTarget) {
+            closeCreateEcosystemModal();
+        }
+    });
+
+    document.getElementById('create-schema-modal').addEventListener('click', (e) => {
+        if (e.target === e.currentTarget) {
+            closeCreateSchemaModal();
+        }
+    });
+
+    document.getElementById('qr-modal').addEventListener('click', (e) => {
+        if (e.target === e.currentTarget) {
+            document.getElementById('qr-modal').classList.add('hidden');
+        }
+    });
+</script>
+
+</body>
+</html>

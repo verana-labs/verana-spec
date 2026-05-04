@@ -1,0 +1,1090 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ecosystems</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script> window.FontAwesomeConfig = { autoReplaceSvg: 'nest'};</script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/js/all.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        ::-webkit-scrollbar { display: none;}
+        * { font-family: 'Inter', sans-serif; }
+        .dark { --tw-bg-opacity: 1; background-color: rgb(11 11 18 / var(--tw-bg-opacity)); }
+        .dark .dark\:bg-gray-800 { --tw-bg-opacity: 1; background-color: rgb(21 24 36 / var(--tw-bg-opacity)); }
+        .dark .dark\:text-white { --tw-text-opacity: 1; color: rgb(255 255 255 / var(--tw-text-opacity)); }
+        .dark .dark\:text-gray-300 { --tw-text-opacity: 1; color: rgb(139 148 165 / var(--tw-text-opacity)); }
+        .dark .dark\:border-gray-700 { --tw-border-opacity: 1; border-color: rgb(215 219 226 / var(--tw-border-opacity)); }
+        .dark .dark\:bg-gray-900 { --tw-bg-opacity: 1; background-color: rgb(11 11 18 / var(--tw-bg-opacity)); }
+        .crypto-gradient { background: linear-gradient(135deg, #763EF0 0%, #553C9A 100%); }
+        .trust-gradient { background: linear-gradient(135deg, #29C68C 0%, #2E6BE6 100%); }
+        .network-gradient { background: linear-gradient(135deg, #2E6BE6 0%, #29C68C 100%); }
+        .skeleton { animation: skeleton-loading 1s linear infinite alternate; }
+        @keyframes skeleton-loading { 0% { opacity: 1; } 100% { opacity: 0.4; } }
+        .rtl { direction: rtl; }
+        .rtl .rtl\:mr-4 { margin-right: 1rem; }
+        .rtl .rtl\:ml-0 { margin-left: 0; }
+        .glass-effect { backdrop-filter: blur(10px); background-color: rgba(255, 255, 255, 0.1); }
+        .pulse-dot::before { content: ''; position: absolute; top: 0; left: 0; right: 0; bottom: 0; border-radius: 50%; background: inherit; animation: pulse-ring 2s ease-out infinite; }
+        @keyframes pulse-ring { 0% { transform: scale(1); opacity: 1; } 100% { transform: scale(2); opacity: 0; } }
+        .archived-watermark {
+            position: relative;
+            overflow: hidden;
+        }
+        .archived-watermark::after {
+            content: 'ARCHIVED';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) rotate(-45deg);
+            font-size: 2.5rem;
+            font-weight: 900;
+            color: rgba(239, 68, 68, 0.15);
+            pointer-events: none;
+            white-space: nowrap;
+            letter-spacing: 0.1em;
+            z-index: 10;
+        }
+        .dark .archived-watermark::after {
+            color: rgba(239, 68, 68, 0.25);
+        }
+        .archived-watermark .archived-bg {
+            background-color: rgba(0, 0, 0, 0.02);
+        }
+        .dark .archived-watermark .archived-bg {
+            background-color: rgba(0, 0, 0, 0.3);
+        }
+    </style>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: { 
+                            50: '#f5f3ff', 
+                            100: '#ede9fe', 
+                            200: '#ddd6fe', 
+                            300: '#c4b5fd', 
+                            400: '#a78bfa', 
+                            500: '#9F7AEA', 
+                            600: '#763EF0', 
+                            700: '#553C9A', 
+                            800: '#4c1d95', 
+                            900: '#1e1b4b' 
+                        },
+                        accent: { 
+                            50: '#eff6ff', 
+                            100: '#dbeafe', 
+                            200: '#bfdbfe', 
+                            300: '#93c5fd', 
+                            400: '#60a5fa', 
+                            500: '#2E6BE6', 
+                            600: '#2563eb', 
+                            700: '#1d4ed8', 
+                            800: '#1e40af', 
+                            900: '#1e3a8a' 
+                        },
+                        success: { 
+                            50: '#ecfdf5', 
+                            100: '#d1fae5', 
+                            200: '#a7f3d0', 
+                            300: '#6ee7b7', 
+                            400: '#34d399', 
+                            500: '#29C68C', 
+                            600: '#059669', 
+                            700: '#047857', 
+                            800: '#065f46', 
+                            900: '#064e3b' 
+                        },
+                        neutral: {
+                            20: '#D7DBE2',
+                            70: '#8B94A5'
+                        },
+                        surface: {
+                            DEFAULT: '#f8fafc',
+                            muted: '#f1f5f9'
+                        },
+                        verana: { 50: '#f5f3ff', 100: '#ede9fe', 200: '#ddd6fe', 300: '#c4b5fd', 400: '#a78bfa', 500: '#9F7AEA', 600: '#763EF0', 700: '#553C9A', 800: '#4c1d95', 900: '#1e1b4b' }
+                    },
+                    fontFamily: { inter: ['Inter', 'sans-serif'] },
+                    spacing: { '18': '4.5rem', '88': '22rem', '128': '32rem' },
+                    borderRadius: {
+                        'lg': '16px',
+                        'md': '12px', 
+                        'sm': '8px'
+                    },
+                    boxShadow: {
+                        'focus': '0 0 0 3px rgba(118, 62, 240, 0.35)'
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-gray-50 dark:bg-gray-900 transition-colors duration-300">
+
+<header id="header" class="bg-white dark:bg-surface border-b border-neutral-20 dark:border-neutral-70 sticky top-0 z-40 transition-colors duration-300">
+    <div class="px-4 sm:px-6 lg:px-8">
+        <div class="flex items-center justify-between h-16">
+            <div class="flex items-center space-x-3 rtl:space-x-reverse">
+                <img src="https://verana.io/logo.svg" alt="Veranito Logo" class="w-8 h-8">
+                <h1 class="text-xl font-bold text-gray-900 dark:text-white hidden sm:block">Verana</h1>
+            </div>
+
+            <button id="mobile-menu-btn" class="lg:hidden p-2 rounded-md text-gray-400 hover:text-gray-500 hover:bg-surface-muted dark:hover:bg-surface-muted transition-colors">
+                <i class="text-lg fas fa-bars"></i>
+            </button>
+
+            <div class="hidden lg:flex items-center space-x-4 rtl:space-x-reverse">
+                <div class="flex items-center space-x-2 px-3 py-1 bg-success-50 dark:bg-success-900/20 rounded-full">
+                    <div class="w-2 h-2 bg-success-500 rounded-full pulse-dot relative"></div>
+                    <span class="text-sm text-success-700 dark:text-success-300 font-medium">Mainnet</span>
+                </div>
+
+                <button class="p-2 text-neutral-70 hover:text-gray-500 hover:bg-surface-muted dark:hover:bg-surface-muted rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500">
+                    <i class="text-lg fas fa-gear"></i>
+                </button>
+
+                <button id="theme-toggle" class="p-2 text-neutral-70 hover:text-gray-500 hover:bg-surface-muted dark:hover:bg-surface-muted rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500">
+                    <i class="text-lg dark:hidden fas fa-moon"></i>
+                    <i class="text-lg hidden dark:inline fas fa-sun"></i>
+                </button>
+
+                <div id="account-zone" class="flex items-center space-x-2 px-3 py-2 bg-surface-muted dark:bg-surface-muted rounded-xl">
+                    <div class="w-8 h-8 bg-gradient-to-br from-green-500 to-green-600 rounded-full flex items-center justify-center">
+                        <i class="text-white text-sm fas fa-check"></i>
+                    </div>
+                    <div class="hidden xl:block cursor-pointer" onclick="copyAddressFromHeader()">
+                        <p class="text-sm font-medium text-gray-900 dark:text-white">0x1234...5678</p>
+                        <p class="text-xs text-neutral-70 dark:text-neutral-70">Connected</p>
+                    </div>
+                    <div class="flex items-center space-x-1 ml-2">
+                        <button class="relative group p-2 text-neutral-70 hover:text-gray-500 hover:bg-surface-muted dark:hover:bg-surface-muted rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500" onclick="document.getElementById('qr-modal').classList.remove('hidden')">
+                            <i class="text-sm fas fa-qrcode"></i>
+                            <div class="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 bg-gray-900 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none">
+                                Show QR
+                            </div>
+                        </button>
+                        <button class="relative group p-2 text-neutral-70 hover:text-gray-500 hover:bg-surface-muted dark:hover:bg-surface-muted rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500" onclick="openExplorer()">
+                            <i class="text-sm fas fa-up-right-from-square"></i>
+                            <div class="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 bg-gray-900 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none">
+                                Explorer
+                            </div>
+                        </button>
+                        <button class="relative group p-2 text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-red-500" id="header-disconnect-btn">
+                            <i class="text-sm fas fa-right-from-bracket"></i>
+                            <div class="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 bg-gray-900 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none">
+                                Disconnect
+                            </div>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</header>
+
+<div class="flex">
+    <aside id="sidebar" class="hidden lg:flex lg:flex-shrink-0">
+        <div class="flex flex-col w-64 bg-white dark:bg-surface border-r border-neutral-20 dark:border-neutral-70 transition-colors duration-300">
+            <div class="flex-1 flex flex-col pt-5 pb-4 overflow-y-auto">
+                <nav class="mt-5 flex-1 px-2 space-y-1">
+                    <span class="text-gray-700 dark:text-gray-300 hover:bg-primary-50 dark:hover:bg-primary-900/20 hover:text-primary-700 dark:hover:text-primary-300 group flex items-center px-2 py-2 text-sm font-medium rounded-md cursor-pointer">
+                        <i class="text-gray-400 mr-3 text-sm fas fa-gauge-high"></i>
+                        Dashboard
+                    </span>
+
+                    <span class="text-gray-700 dark:text-gray-300 hover:bg-primary-50 dark:hover:bg-primary-900/20 hover:text-primary-700 dark:hover:text-primary-300 group flex items-center px-2 py-2 text-sm font-medium rounded-md cursor-pointer">
+                        <i class="text-gray-400 mr-3 text-sm fas fa-circle-user"></i>
+                        Account
+                    </span>
+
+                    <span class="text-gray-700 dark:text-gray-300 hover:bg-primary-50 dark:hover:bg-primary-900/20 hover:text-primary-700 dark:hover:text-primary-300 group flex items-center px-2 py-2 text-sm font-medium rounded-md cursor-pointer">
+                        <i class="text-gray-400 mr-3 text-sm fas fa-id-card"></i>
+                        Manage DIDs
+                    </span>
+
+                    <span class="bg-primary-50 dark:bg-primary-900/20 text-primary-700 dark:text-primary-300 group flex items-center px-2 py-2 text-sm font-medium rounded-md cursor-pointer">
+                        <i class="text-primary-500 mr-3 text-sm fas fa-shield-halved"></i>
+                        My Ecosystems
+                    </span>
+
+                    <span class="text-gray-700 dark:text-gray-300 hover:bg-primary-50 dark:hover:bg-primary-900/20 hover:text-primary-700 dark:hover:text-primary-300 group flex items-center px-2 py-2 text-sm font-medium rounded-md cursor-pointer">
+                        <i class="text-gray-400 mr-3 text-sm fas fa-compass"></i>
+                        Discover & Join
+                    </span>
+
+                    <span class="text-gray-700 dark:text-gray-300 hover:bg-primary-50 dark:hover:bg-primary-900/20 hover:text-primary-700 dark:hover:text-primary-300 group flex items-center px-2 py-2 text-sm font-medium rounded-md cursor-pointer">
+                        <div class="relative mr-3">
+                            <i class="text-gray-400 text-sm fas fa-list-check"></i>
+                            <div class="absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full flex items-center justify-center">
+                                <span class="text-white text-xs font-bold">3</span>
+                            </div>
+                        </div>
+                        Pending Tasks
+                    </span>
+                </nav>
+
+                <div class="flex-shrink-0 px-2 py-4 border-t border-neutral-20 dark:border-neutral-70">
+                    <div class="flex items-center">
+                        <img src="https://verana.io/logo.svg" alt="Verana Logo" class="w-6 h-6 mr-2">
+                        <div class="flex-1 min-w-0">
+                            <p class="text-sm font-medium text-gray-900 dark:text-white truncate">Verana Network</p>
+                            <p class="text-xs text-neutral-70 dark:text-neutral-70">v2.4.1</p>
+                        </div>
+                    </div>
+                    <div class="mt-3 flex space-x-2">
+                        <span class="text-neutral-70 hover:text-gray-500 dark:hover:text-gray-300 cursor-pointer">
+                            <i class="text-sm fab fa-github"></i>
+                        </span>
+                        <span class="text-neutral-70 hover:text-gray-500 dark:hover:text-gray-300 cursor-pointer">
+                            <i class="text-sm fas fa-book"></i>
+                        </span>
+                        <span class="text-neutral-70 hover:text-gray-500 dark:hover:text-gray-300 cursor-pointer">
+                            <i class="text-sm fas fa-circle-question"></i>
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </aside>
+
+    <div id="mobile-sidebar-overlay" class="fixed inset-0 flex z-40 lg:hidden hidden">
+        <div class="fixed inset-0 bg-gray-600 bg-opacity-75" id="mobile-sidebar-backdrop"></div>
+        <div class="relative flex-1 flex flex-col max-w-xs w-full bg-white dark:bg-surface">
+            <div class="absolute top-0 right-0 -mr-12 pt-2">
+                <button id="mobile-sidebar-close" class="ml-1 flex items-center justify-center h-10 w-10 rounded-full focus:outline-none focus:ring-2 focus:ring-inset focus:ring-white">
+                    <i class="text-white text-lg fas fa-xmark"></i>
+                </button>
+            </div>
+            <div class="flex-1 h-0 pt-5 pb-4 overflow-y-auto">
+                <div class="flex-shrink-0 flex items-center px-4">
+                    <img src="https://verana.io/logo.svg" alt="Veranito Logo" class="w-8 h-8 mr-3">
+                    <h1 class="text-xl font-bold text-gray-900 dark:text-white">Verana</h1>
+                </div>
+                <nav class="mt-5 px-2 space-y-1">
+                    <span class="text-gray-700 dark:text-gray-300 group flex items-center px-2 py-2 text-base font-medium rounded-md cursor-pointer">
+                        <i class="text-gray-400 mr-4 fas fa-gauge-high"></i>
+                        Dashboard
+                    </span>
+                    <span class="text-gray-700 dark:text-gray-300 group flex items-center px-2 py-2 text-base font-medium rounded-md cursor-pointer">
+                        <i class="text-gray-400 mr-4 fas fa-circle-user"></i>
+                        Account
+                    </span>
+                    <span class="text-gray-700 dark:text-gray-300 group flex items-center px-2 py-2 text-base font-medium rounded-md cursor-pointer">
+                        <i class="text-gray-400 mr-4 fas fa-id-card"></i>
+                        Manage DIDs
+                    </span>
+                    <span class="bg-primary-50 dark:bg-primary-900/20 text-primary-700 dark:text-primary-300 group flex items-center px-2 py-2 text-base font-medium rounded-md cursor-pointer">
+                        <i class="text-primary-500 mr-4 fas fa-shield-halved"></i>
+                        My Ecosystems
+                    </span>
+                    <span class="text-gray-700 dark:text-gray-300 group flex items-center px-2 py-2 text-base font-medium rounded-md cursor-pointer">
+                        <i class="text-gray-400 mr-4 fas fa-compass"></i>
+                        Discover & Join
+                    </span>
+                    <span class="text-gray-700 dark:text-gray-300 group flex items-center px-2 py-2 text-base font-medium rounded-md cursor-pointer">
+                        <div class="relative mr-4">
+                            <i class="text-gray-400 fas fa-list-check"></i>
+                            <div class="absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full flex items-center justify-center">
+                                <span class="text-white text-xs font-bold">3</span>
+                            </div>
+                        </div>
+                        Pending Tasks
+                    </span>
+                </nav>
+            </div>
+        </div>
+    </div>
+
+    <div class="flex-1 overflow-auto">
+        <main id="main-content" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+            
+            <section id="page-header" class="mb-8">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <div>
+                        <h1 class="text-3xl font-bold text-gray-900 dark:text-white">Ecosystems</h1>
+                        <p class="mt-2 text-sm text-neutral-70 dark:text-neutral-70">Ecosystems you own and ecosystems you joined.</p>
+                    </div>
+                    <div class="flex-shrink-0">
+                        <button id="create-ecosystem-btn" class="inline-flex items-center px-4 py-2 bg-primary-600 text-white rounded-lg text-sm font-medium hover:bg-primary-700 transition-colors">
+                            <i class="mr-2 fas fa-plus"></i>
+                            Create Ecosystem
+                        </button>
+                    </div>
+                </div>
+            </section>
+
+            <section id="search-filters" class="mb-6">
+                <div class="bg-white dark:bg-surface rounded-xl border border-neutral-20 dark:border-neutral-70 p-4 sm:p-6">
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Search Ecosystems</label>
+                            <div class="relative">
+                                <input type="text" id="ecosystem-search" placeholder="Search by organization name, trust registry, or other attributes..." class="w-full px-4 py-2.5 pr-10 border border-neutral-20 dark:border-neutral-70 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent bg-white dark:bg-surface text-gray-900 dark:text-white">
+                                <div class="absolute inset-y-0 right-0 flex items-center pr-3">
+                                    <i class="text-neutral-70 dark:text-neutral-70 fas fa-magnifying-glass"></i>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                            <label class="flex items-center space-x-2 cursor-pointer">
+                                <input type="checkbox" id="show-archived" class="w-4 h-4 text-primary-600 border-neutral-20 dark:border-neutral-70 rounded focus:ring-2 focus:ring-primary-500">
+                                <span class="text-sm text-gray-700 dark:text-gray-300">Show archived</span>
+                            </label>
+
+                            <label class="flex items-center space-x-2 cursor-pointer">
+                                <input type="checkbox" id="hide-owned" class="w-4 h-4 text-primary-600 border-neutral-20 dark:border-neutral-70 rounded focus:ring-2 focus:ring-primary-500">
+                                <span class="text-sm text-gray-700 dark:text-gray-300">Hide owned ecosystems</span>
+                            </label>
+
+                            <label class="flex items-center space-x-2 cursor-pointer">
+                                <input type="checkbox" id="hide-participant" class="w-4 h-4 text-primary-600 border-neutral-20 dark:border-neutral-70 rounded focus:ring-2 focus:ring-primary-500">
+                                <span class="text-sm text-gray-700 dark:text-gray-300">Hide participant ecosystems</span>
+                            </label>
+
+                            <label class="flex items-center space-x-2 cursor-pointer">
+                                <input type="checkbox" id="show-untrusted" class="w-4 h-4 text-primary-600 border-neutral-20 dark:border-neutral-70 rounded focus:ring-2 focus:ring-primary-500">
+                                <span class="text-sm text-gray-700 dark:text-gray-300">Show untrusted ecosystems</span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section id="ecosystems-grid" class="mb-8">
+                <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-6">
+                    
+                    <div id="ecosystem-card-1" class="bg-white dark:bg-surface rounded-xl border border-neutral-20 dark:border-neutral-70 overflow-hidden hover:shadow-lg transition-shadow cursor-pointer">
+                        <div class="p-4 sm:p-6">
+                            <div class="flex items-start space-x-3 mb-4">
+                                <img src="https://api.dicebear.com/7.x/identicon/svg?seed=trustregistry1" alt="Trust Registry Icon" class="w-12 h-12 rounded-lg flex-shrink-0">
+                                <div class="flex-1 min-w-0">
+                                    <div class="flex items-start justify-between">
+                                        <h3 class="text-base font-semibold text-gray-900 dark:text-white">Healthcare Trust Registry</h3>
+                                        <i class="fas fa-certificate text-xl text-green-500 flex-shrink-0 ml-2" title="Trusted"></i>
+                                    </div>
+                                    <p class="text-xs text-neutral-70 dark:text-neutral-70 mt-1 line-clamp-2">Comprehensive trust registry for healthcare credentials and digital identity verification</p>
+                                </div>
+                            </div>
+
+                            <div class="flex items-start space-x-2 mb-4">
+                                <img src="https://api.dicebear.com/7.x/shapes/svg?seed=healthcare" alt="Organization Icon" class="w-8 h-8 rounded flex-shrink-0">
+                                <div class="flex-1 min-w-0">
+                                    <h4 class="text-sm font-medium text-gray-900 dark:text-white">Global Health Alliance</h4>
+                                    <div class="flex items-center space-x-2 mt-1 flex-wrap">
+                                        <span class="text-lg">🇺🇸</span>
+                                        <a href="#" target="_blank" rel="noopener noreferrer" class="text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 text-xs font-medium flex items-center space-x-1">
+                                            <span>EGF</span>
+                                            <i class="fas fa-external-link-alt text-xs"></i>
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="flex flex-wrap gap-2 mb-4">
+                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800 dark:bg-purple-900/20 dark:text-purple-400">
+                                    ECOSYSTEM
+                                </span>
+                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-400">
+                                    ISSUER_GRANTOR
+                                </span>
+                            </div>
+
+                            <div class="space-y-2 text-sm">
+                                <div class="flex justify-between">
+                                    <span class="text-neutral-70 dark:text-neutral-70">Active Schemas:</span>
+                                    <span class="font-medium text-gray-900 dark:text-white">12</span>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span class="text-neutral-70 dark:text-neutral-70">Participants:</span>
+                                    <span class="font-medium text-gray-900 dark:text-white">348</span>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span class="text-neutral-70 dark:text-neutral-70">Trust Value:</span>
+                                    <span class="font-medium font-mono text-gray-900 dark:text-white">125,000.00 VNA</span>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span class="text-neutral-70 dark:text-neutral-70">Issued Credentials:</span>
+                                    <span class="font-medium text-gray-900 dark:text-white">5,247</span>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span class="text-neutral-70 dark:text-neutral-70">Verified Credentials:</span>
+                                    <span class="font-medium text-gray-900 dark:text-white">12,893</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="ecosystem-card-2" class="bg-white dark:bg-surface rounded-xl border border-neutral-20 dark:border-neutral-70 overflow-hidden hover:shadow-lg transition-shadow cursor-pointer">
+                        <div class="p-4 sm:p-6">
+                            <div class="flex items-start space-x-3 mb-4">
+                                <img src="https://api.dicebear.com/7.x/identicon/svg?seed=trustregistry2" alt="Trust Registry Icon" class="w-12 h-12 rounded-lg flex-shrink-0">
+                                <div class="flex-1 min-w-0">
+                                    <div class="flex items-start justify-between">
+                                        <h3 class="text-base font-semibold text-gray-900 dark:text-white">Education Trust Registry</h3>
+                                        <i class="fas fa-triangle-exclamation text-xl text-orange-500 flex-shrink-0 ml-2" title="Credential Expired"></i>
+                                    </div>
+                                    <p class="text-xs text-neutral-70 dark:text-neutral-70 mt-1 line-clamp-2">Academic credentials verification system for educational institutions worldwide</p>
+                                </div>
+                            </div>
+
+                            <div class="flex items-start space-x-2 mb-4">
+                                <img src="https://api.dicebear.com/7.x/shapes/svg?seed=education" alt="Organization Icon" class="w-8 h-8 rounded flex-shrink-0">
+                                <div class="flex-1 min-w-0">
+                                    <h4 class="text-sm font-medium text-gray-900 dark:text-white">Academic Credentials Network</h4>
+                                    <div class="flex items-center space-x-2 mt-1 flex-wrap">
+                                        <span class="text-lg">🇬🇧</span>
+                                        <a href="#" target="_blank" rel="noopener noreferrer" class="text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 text-xs font-medium flex items-center space-x-1">
+                                            <span>EGF</span>
+                                            <i class="fas fa-external-link-alt text-xs"></i>
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="flex flex-wrap gap-2 mb-4">
+                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400">
+                                    ISSUER
+                                </span>
+                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-orange-100 text-orange-800 dark:bg-orange-900/20 dark:text-orange-400">
+                                    VERIFIER
+                                </span>
+                            </div>
+
+                            <div class="space-y-2 text-sm">
+                                <div class="flex justify-between">
+                                    <span class="text-neutral-70 dark:text-neutral-70">Active Schemas:</span>
+                                    <span class="font-medium text-gray-900 dark:text-white">8</span>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span class="text-neutral-70 dark:text-neutral-70">Participants:</span>
+                                    <span class="font-medium text-gray-900 dark:text-white">156</span>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span class="text-neutral-70 dark:text-neutral-70">Trust Value:</span>
+                                    <span class="font-medium font-mono text-gray-900 dark:text-white">89,500.00 VNA</span>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span class="text-neutral-70 dark:text-neutral-70">Issued Credentials:</span>
+                                    <span class="font-medium text-gray-900 dark:text-white">2,184</span>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span class="text-neutral-70 dark:text-neutral-70">Verified Credentials:</span>
+                                    <span class="font-medium text-gray-900 dark:text-white">8,921</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="ecosystem-card-3" class="bg-white dark:bg-surface rounded-xl border border-neutral-20 dark:border-neutral-70 overflow-hidden hover:shadow-lg transition-shadow cursor-pointer archived-watermark">
+                        <div class="p-4 sm:p-6 archived-bg">
+                            <div class="flex items-start space-x-3 mb-4">
+                                <img src="https://api.dicebear.com/7.x/identicon/svg?seed=trustregistry3" alt="Trust Registry Icon" class="w-12 h-12 rounded-lg flex-shrink-0">
+                                <div class="flex-1 min-w-0">
+                                    <div class="flex items-start justify-between">
+                                        <h3 class="text-base font-semibold text-gray-900 dark:text-white">Finance Trust Registry</h3>
+                                        <i class="fas fa-certificate text-xl text-green-500 flex-shrink-0 ml-2" title="Trusted"></i>
+                                    </div>
+                                    <p class="text-xs text-neutral-70 dark:text-neutral-70 mt-1 line-clamp-2">Financial services credential verification and compliance management system</p>
+                                </div>
+                            </div>
+
+                            <div class="flex items-start space-x-2 mb-4">
+                                <img src="https://api.dicebear.com/7.x/shapes/svg?seed=finance" alt="Organization Icon" class="w-8 h-8 rounded flex-shrink-0">
+                                <div class="flex-1 min-w-0">
+                                    <h4 class="text-sm font-medium text-gray-900 dark:text-white">Financial Services Consortium</h4>
+                                    <div class="flex items-center space-x-2 mt-1 flex-wrap">
+                                        <span class="text-lg">🇨🇭</span>
+                                        <a href="#" target="_blank" rel="noopener noreferrer" class="text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 text-xs font-medium flex items-center space-x-1">
+                                            <span>EGF</span>
+                                            <i class="fas fa-external-link-alt text-xs"></i>
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="flex flex-wrap gap-2 mb-4">
+                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-slate-800 dark:bg-slate-900/20 dark:text-slate-400">
+                                    VERIFIER_GRANTOR
+                                </span>
+                            </div>
+
+                            <div class="space-y-2 text-sm">
+                                <div class="flex justify-between">
+                                    <span class="text-neutral-70 dark:text-neutral-70">Active Schemas:</span>
+                                    <span class="font-medium text-gray-900 dark:text-white">15</span>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span class="text-neutral-70 dark:text-neutral-70">Participants:</span>
+                                    <span class="font-medium text-gray-900 dark:text-white">892</span>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span class="text-neutral-70 dark:text-neutral-70">Trust Value:</span>
+                                    <span class="font-medium font-mono text-gray-900 dark:text-white">245,750.00 VNA</span>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span class="text-neutral-70 dark:text-neutral-70">Issued Credentials:</span>
+                                    <span class="font-medium text-gray-900 dark:text-white">18,942</span>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span class="text-neutral-70 dark:text-neutral-70">Verified Credentials:</span>
+                                    <span class="font-medium text-gray-900 dark:text-white">45,621</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="ecosystem-card-4" class="bg-white dark:bg-surface rounded-xl border border-neutral-20 dark:border-neutral-70 overflow-hidden hover:shadow-lg transition-shadow cursor-pointer">
+                        <div class="p-4 sm:p-6">
+                            <div class="flex items-start space-x-3 mb-4">
+                                <img src="https://api.dicebear.com/7.x/identicon/svg?seed=trustregistry4" alt="Trust Registry Icon" class="w-12 h-12 rounded-lg flex-shrink-0">
+                                <div class="flex-1 min-w-0">
+                                    <div class="flex items-start justify-between">
+                                        <h3 class="text-base font-semibold text-gray-900 dark:text-white">Supply Chain Trust Registry</h3>
+                                        <i class="fas fa-triangle-exclamation text-xl text-red-500 flex-shrink-0 ml-2" title="Untrusted"></i>
+                                    </div>
+                                    <p class="text-xs text-neutral-70 dark:text-neutral-70 mt-1 line-clamp-2">Supply chain transparency and product authenticity verification platform</p>
+                                </div>
+                            </div>
+
+                            <div class="flex items-start space-x-2 mb-4">
+                                <img src="https://api.dicebear.com/7.x/shapes/svg?seed=supply" alt="Organization Icon" class="w-8 h-8 rounded flex-shrink-0">
+                                <div class="flex-1 min-w-0">
+                                    <h4 class="text-sm font-medium text-gray-900 dark:text-white">Supply Chain Alliance</h4>
+                                    <div class="flex items-center space-x-2 mt-1 flex-wrap">
+                                        <span class="text-lg">🇩🇪</span>
+                                        <a href="#" target="_blank" rel="noopener noreferrer" class="text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 text-xs font-medium flex items-center space-x-1">
+                                            <span>EGF</span>
+                                            <i class="fas fa-external-link-alt text-xs"></i>
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="flex flex-wrap gap-2 mb-4">
+                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-pink-100 text-pink-800 dark:bg-pink-900/20 dark:text-pink-400">
+                                    HOLDER
+                                </span>
+                            </div>
+
+                            <div class="space-y-2 text-sm">
+                                <div class="flex justify-between">
+                                    <span class="text-neutral-70 dark:text-neutral-70">Active Schemas:</span>
+                                    <span class="font-medium text-gray-900 dark:text-white">6</span>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span class="text-neutral-70 dark:text-neutral-70">Participants:</span>
+                                    <span class="font-medium text-gray-900 dark:text-white">523</span>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span class="text-neutral-70 dark:text-neutral-70">Trust Value:</span>
+                                    <span class="font-medium font-mono text-gray-900 dark:text-white">67,800.00 VNA</span>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span class="text-neutral-70 dark:text-neutral-70">Issued Credentials:</span>
+                                    <span class="font-medium text-gray-900 dark:text-white">3,456</span>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span class="text-neutral-70 dark:text-neutral-70">Verified Credentials:</span>
+                                    <span class="font-medium text-gray-900 dark:text-white">15,234</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="ecosystem-card-5" class="bg-white dark:bg-surface rounded-xl border border-neutral-20 dark:border-neutral-70 overflow-hidden hover:shadow-lg transition-shadow cursor-pointer">
+                        <div class="p-4 sm:p-6">
+                            <div class="flex items-start space-x-3 mb-4">
+                                <img src="https://api.dicebear.com/7.x/identicon/svg?seed=trustregistry5" alt="Trust Registry Icon" class="w-12 h-12 rounded-lg flex-shrink-0">
+                                <div class="flex-1 min-w-0">
+                                    <div class="flex items-start justify-between">
+                                        <h3 class="text-base font-semibold text-gray-900 dark:text-white">Identity Trust Registry</h3>
+                                        <i class="fas fa-certificate text-xl text-green-500 flex-shrink-0 ml-2" title="Trusted"></i>
+                                    </div>
+                                    <p class="text-xs text-neutral-70 dark:text-neutral-70 mt-1 line-clamp-2">Digital identity verification and authentication services for global users</p>
+                                </div>
+                            </div>
+
+                            <div class="flex items-start space-x-2 mb-4">
+                                <img src="https://api.dicebear.com/7.x/shapes/svg?seed=identity" alt="Organization Icon" class="w-8 h-8 rounded flex-shrink-0">
+                                <div class="flex-1 min-w-0">
+                                    <h4 class="text-sm font-medium text-gray-900 dark:text-white">Digital Identity Foundation</h4>
+                                    <div class="flex items-center space-x-2 mt-1 flex-wrap">
+                                        <span class="text-lg">🇯🇵</span>
+                                        <a href="#" target="_blank" rel="noopener noreferrer" class="text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 text-xs font-medium flex items-center space-x-1">
+                                            <span>EGF</span>
+                                            <i class="fas fa-external-link-alt text-xs"></i>
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="flex flex-wrap gap-2 mb-4">
+                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800 dark:bg-purple-900/20 dark:text-purple-400">
+                                    ECOSYSTEM
+                                </span>
+                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400">
+                                    ISSUER
+                                </span>
+                            </div>
+
+                            <div class="space-y-2 text-sm">
+                                <div class="flex justify-between">
+                                    <span class="text-neutral-70 dark:text-neutral-70">Active Schemas:</span>
+                                    <span class="font-medium text-gray-900 dark:text-white">20</span>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span class="text-neutral-70 dark:text-neutral-70">Participants:</span>
+                                    <span class="font-medium text-gray-900 dark:text-white">1,247</span>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span class="text-neutral-70 dark:text-neutral-70">Trust Value:</span>
+                                    <span class="font-medium font-mono text-gray-900 dark:text-white">312,450.00 VNA</span>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span class="text-neutral-70 dark:text-neutral-70">Issued Credentials:</span>
+                                    <span class="font-medium text-gray-900 dark:text-white">28,591</span>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span class="text-neutral-70 dark:text-neutral-70">Verified Credentials:</span>
+                                    <span class="font-medium text-gray-900 dark:text-white">67,432</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="ecosystem-card-6" class="bg-white dark:bg-surface rounded-xl border border-neutral-20 dark:border-neutral-70 overflow-hidden hover:shadow-lg transition-shadow cursor-pointer">
+                        <div class="p-4 sm:p-6">
+                            <div class="flex items-start space-x-3 mb-4">
+                                <img src="https://api.dicebear.com/7.x/identicon/svg?seed=trustregistry6" alt="Trust Registry Icon" class="w-12 h-12 rounded-lg flex-shrink-0">
+                                <div class="flex-1 min-w-0">
+                                    <div class="flex items-start justify-between">
+                                        <h3 class="text-base font-semibold text-gray-900 dark:text-white">Travel Trust Registry</h3>
+                                        <i class="fas fa-certificate text-xl text-green-500 flex-shrink-0 ml-2" title="Trusted"></i>
+                                    </div>
+                                    <p class="text-xs text-neutral-70 dark:text-neutral-70 mt-1 line-clamp-2">International travel document verification and border control credentials</p>
+                                </div>
+                            </div>
+
+                            <div class="flex items-start space-x-2 mb-4">
+                                <img src="https://api.dicebear.com/7.x/shapes/svg?seed=travel" alt="Organization Icon" class="w-8 h-8 rounded flex-shrink-0">
+                                <div class="flex-1 min-w-0">
+                                    <h4 class="text-sm font-medium text-gray-900 dark:text-white">International Travel Network</h4>
+                                    <div class="flex items-center space-x-2 mt-1 flex-wrap">
+                                        <span class="text-lg">🇫🇷</span>
+                                        <a href="#" target="_blank" rel="noopener noreferrer" class="text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 text-xs font-medium flex items-center space-x-1">
+                                            <span>EGF</span>
+                                            <i class="fas fa-external-link-alt text-xs"></i>
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="flex flex-wrap gap-2 mb-4">
+                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-orange-100 text-orange-800 dark:bg-orange-900/20 dark:text-orange-400">
+                                    VERIFIER
+                                </span>
+                            </div>
+
+                            <div class="space-y-2 text-sm">
+                                <div class="flex justify-between">
+                                    <span class="text-neutral-70 dark:text-neutral-70">Active Schemas:</span>
+                                    <span class="font-medium text-gray-900 dark:text-white">9</span>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span class="text-neutral-70 dark:text-neutral-70">Participants:</span>
+                                    <span class="font-medium text-gray-900 dark:text-white">674</span>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span class="text-neutral-70 dark:text-neutral-70">Trust Value:</span>
+                                    <span class="font-medium font-mono text-gray-900 dark:text-white">156,200.00 VNA</span>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span class="text-neutral-70 dark:text-neutral-70">Issued Credentials:</span>
+                                    <span class="font-medium text-gray-900 dark:text-white">9,823</span>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span class="text-neutral-70 dark:text-neutral-70">Verified Credentials:</span>
+                                    <span class="font-medium text-gray-900 dark:text-white">34,567</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="ecosystem-card-7" class="bg-white dark:bg-surface rounded-xl border border-neutral-20 dark:border-neutral-70 overflow-hidden hover:shadow-lg transition-shadow cursor-pointer">
+                        <div class="p-4 sm:p-6">
+                            <div class="flex items-start space-x-3 mb-4">
+                                <img src="https://api.dicebear.com/7.x/identicon/svg?seed=trustregistry7" alt="Trust Registry Icon" class="w-12 h-12 rounded-lg flex-shrink-0">
+                                <div class="flex-1 min-w-0">
+                                    <div class="flex items-start justify-between">
+                                        <h3 class="text-base font-semibold text-gray-900 dark:text-white">Energy Trust Registry</h3>
+                                        <i class="fas fa-triangle-exclamation text-xl text-orange-500 flex-shrink-0 ml-2" title="Credential Expired"></i>
+                                    </div>
+                                    <p class="text-xs text-neutral-70 dark:text-neutral-70 mt-1 line-clamp-2">Renewable energy certification and carbon credit verification system</p>
+                                </div>
+                            </div>
+
+                            <div class="flex items-start space-x-2 mb-4">
+                                <img src="https://api.dicebear.com/7.x/shapes/svg?seed=energy" alt="Organization Icon" class="w-8 h-8 rounded flex-shrink-0">
+                                <div class="flex-1 min-w-0">
+                                    <h4 class="text-sm font-medium text-gray-900 dark:text-white">Renewable Energy Consortium</h4>
+                                    <div class="flex items-center space-x-2 mt-1 flex-wrap">
+                                        <span class="text-lg">🇳🇱</span>
+                                        <a href="#" target="_blank" rel="noopener noreferrer" class="text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 text-xs font-medium flex items-center space-x-1">
+                                            <span>EGF</span>
+                                            <i class="fas fa-external-link-alt text-xs"></i>
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="flex flex-wrap gap-2 mb-4">
+                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-400">
+                                    ISSUER_GRANTOR
+                                </span>
+                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-orange-100 text-orange-800 dark:bg-orange-900/20 dark:text-orange-400">
+                                    VERIFIER
+                                </span>
+                            </div>
+
+                            <div class="space-y-2 text-sm">
+                                <div class="flex justify-between">
+                                    <span class="text-neutral-70 dark:text-neutral-70">Active Schemas:</span>
+                                    <span class="font-medium text-gray-900 dark:text-white">11</span>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span class="text-neutral-70 dark:text-neutral-70">Participants:</span>
+                                    <span class="font-medium text-gray-900 dark:text-white">432</span>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span class="text-neutral-70 dark:text-neutral-70">Trust Value:</span>
+                                    <span class="font-medium font-mono text-gray-900 dark:text-white">198,300.00 VNA</span>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span class="text-neutral-70 dark:text-neutral-70">Issued Credentials:</span>
+                                    <span class="font-medium text-gray-900 dark:text-white">7,654</span>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span class="text-neutral-70 dark:text-neutral-70">Verified Credentials:</span>
+                                    <span class="font-medium text-gray-900 dark:text-white">21,987</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="ecosystem-card-8" class="bg-white dark:bg-surface rounded-xl border border-neutral-20 dark:border-neutral-70 overflow-hidden hover:shadow-lg transition-shadow cursor-pointer">
+                        <div class="p-4 sm:p-6">
+                            <div class="flex items-start space-x-3 mb-4">
+                                <img src="https://api.dicebear.com/7.x/identicon/svg?seed=trustregistry8" alt="Trust Registry Icon" class="w-12 h-12 rounded-lg flex-shrink-0">
+                                <div class="flex-1 min-w-0">
+                                    <div class="flex items-start justify-between">
+                                        <h3 class="text-base font-semibold text-gray-900 dark:text-white">Legal Trust Registry</h3>
+                                        <i class="fas fa-certificate text-xl text-green-500 flex-shrink-0 ml-2" title="Trusted"></i>
+                                    </div>
+                                    <p class="text-xs text-neutral-70 dark:text-neutral-70 mt-1 line-clamp-2">Legal professional credentials and bar association verification platform</p>
+                                </div>
+                            </div>
+
+                            <div class="flex items-start space-x-2 mb-4">
+                                <img src="https://api.dicebear.com/7.x/shapes/svg?seed=legal" alt="Organization Icon" class="w-8 h-8 rounded flex-shrink-0">
+                                <div class="flex-1 min-w-0">
+                                    <h4 class="text-sm font-medium text-gray-900 dark:text-white">Legal Services Network</h4>
+                                    <div class="flex items-center space-x-2 mt-1 flex-wrap">
+                                        <span class="text-lg">🇸🇬</span>
+                                        <a href="#" target="_blank" rel="noopener noreferrer" class="text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 text-xs font-medium flex items-center space-x-1">
+                                            <span>EGF</span>
+                                            <i class="fas fa-external-link-alt text-xs"></i>
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="flex flex-wrap gap-2 mb-4">
+                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800 dark:bg-purple-900/20 dark:text-purple-400">
+                                    ECOSYSTEM
+                                </span>
+                            </div>
+
+                            <div class="space-y-2 text-sm">
+                                <div class="flex justify-between">
+                                    <span class="text-neutral-70 dark:text-neutral-70">Active Schemas:</span>
+                                    <span class="font-medium text-gray-900 dark:text-white">14</span>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span class="text-neutral-70 dark:text-neutral-70">Participants:</span>
+                                    <span class="font-medium text-gray-900 dark:text-white">765</span>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span class="text-neutral-70 dark:text-neutral-70">Trust Value:</span>
+                                    <span class="font-medium font-mono text-gray-900 dark:text-white">287,600.00 VNA</span>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span class="text-neutral-70 dark:text-neutral-70">Issued Credentials:</span>
+                                    <span class="font-medium text-gray-900 dark:text-white">15,432</span>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span class="text-neutral-70 dark:text-neutral-70">Verified Credentials:</span>
+                                    <span class="font-medium text-gray-900 dark:text-white">38,765</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="ecosystem-card-9" class="bg-white dark:bg-surface rounded-xl border border-neutral-20 dark:border-neutral-70 overflow-hidden hover:shadow-lg transition-shadow cursor-pointer">
+                        <div class="p-4 sm:p-6">
+                            <div class="flex items-start space-x-3 mb-4">
+                                <img src="https://api.dicebear.com/7.x/identicon/svg?seed=trustregistry9" alt="Trust Registry Icon" class="w-12 h-12 rounded-lg flex-shrink-0">
+                                <div class="flex-1 min-w-0">
+                                    <div class="flex items-start justify-between">
+                                        <h3 class="text-base font-semibold text-gray-900 dark:text-white">Tech Trust Registry</h3>
+                                        <i class="fas fa-certificate text-xl text-green-500 flex-shrink-0 ml-2" title="Trusted"></i>
+                                    </div>
+                                    <p class="text-xs text-neutral-70 dark:text-neutral-70 mt-1 line-clamp-2">Technology certifications and professional development credentials platform</p>
+                                </div>
+                            </div>
+
+                            <div class="flex items-start space-x-2 mb-4">
+                                <img src="https://api.dicebear.com/7.x/shapes/svg?seed=tech" alt="Organization Icon" class="w-8 h-8 rounded flex-shrink-0">
+                                <div class="flex-1 min-w-0">
+                                    <h4 class="text-sm font-medium text-gray-900 dark:text-white">Tech Innovation Alliance</h4>
+                                    <div class="flex items-center space-x-2 mt-1 flex-wrap">
+                                        <span class="text-lg">🇰🇷</span>
+                                        <a href="#" target="_blank" rel="noopener noreferrer" class="text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 text-xs font-medium flex items-center space-x-1">
+                                            <span>EGF</span>
+                                            <i class="fas fa-external-link-alt text-xs"></i>
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="flex flex-wrap gap-2 mb-4">
+                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400">
+                                    ISSUER
+                                </span>
+                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-pink-100 text-pink-800 dark:bg-pink-900/20 dark:text-pink-400">
+                                    HOLDER
+                                </span>
+                            </div>
+
+                            <div class="space-y-2 text-sm">
+                                <div class="flex justify-between">
+                                    <span class="text-neutral-70 dark:text-neutral-70">Active Schemas:</span>
+                                    <span class="font-medium text-gray-900 dark:text-white">18</span>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span class="text-neutral-70 dark:text-neutral-70">Participants:</span>
+                                    <span class="font-medium text-gray-900 dark:text-white">1,543</span>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span class="text-neutral-70 dark:text-neutral-70">Trust Value:</span>
+                                    <span class="font-medium font-mono text-gray-900 dark:text-white">421,900.00 VNA</span>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span class="text-neutral-70 dark:text-neutral-70">Issued Credentials:</span>
+                                    <span class="font-medium text-gray-900 dark:text-white">32,876</span>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span class="text-neutral-70 dark:text-neutral-70">Verified Credentials:</span>
+                                    <span class="font-medium text-gray-900 dark:text-white">76,543</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+
+                <div class="mt-6 flex flex-col sm:flex-row items-center justify-between gap-4">
+                    <div class="text-sm text-neutral-70 dark:text-neutral-70">
+                        Showing <span id="results-showing">9</span> of <span id="results-total">142</span> ecosystems
+                    </div>
+                    <div class="flex items-center space-x-2">
+                        <button id="prev-page" class="px-3 py-1 border border-neutral-20 dark:border-neutral-70 rounded-lg text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors" disabled>
+                            <i class="fas fa-chevron-left text-xs"></i>
+                        </button>
+                        <div class="flex flex-wrap gap-1 justify-center">
+                            <button class="px-3 py-1 text-sm rounded-lg bg-primary-600 text-white">1</button>
+                            <button class="px-3 py-1 text-sm rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700">2</button>
+                            <button class="px-3 py-1 text-sm rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700">3</button>
+                            <button class="px-3 py-1 text-sm rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700">4</button>
+                            <button class="px-3 py-1 text-sm rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700">5</button>
+                            <span class="px-2 py-1 text-sm text-gray-500">...</span>
+                            <button class="px-3 py-1 text-sm rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700">13</button>
+                            <button class="px-3 py-1 text-sm rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700">14</button>
+                            <button class="px-3 py-1 text-sm rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700">15</button>
+                            <button class="px-3 py-1 text-sm rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700">16</button>
+                        </div>
+                        <button id="next-page" class="px-3 py-1 border border-neutral-20 dark:border-neutral-70 rounded-lg text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+                            <i class="fas fa-chevron-right text-xs"></i>
+                        </button>
+                    </div>
+                </div>
+            </section>
+
+        </main>
+    </div>
+</div>
+
+<div id="create-ecosystem-modal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full hidden z-50">
+    <div class="relative top-20 mx-auto p-5 border w-full max-w-2xl shadow-lg rounded-xl bg-white dark:bg-surface">
+        <div class="flex items-center justify-between mb-6">
+            <h3 class="text-xl font-semibold text-gray-900 dark:text-white">Create New Ecosystem Trust Registry</h3>
+            <button onclick="closeCreateEcosystemModal()" class="text-neutral-70 hover:text-gray-500 dark:hover:text-gray-300">
+                <i class="text-lg fas fa-xmark"></i>
+            </button>
+        </div>
+
+        <div class="space-y-6">
+            <div class="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4">
+                <p class="text-sm text-blue-700 dark:text-blue-300">You'll need approx. 5.900000 VNA to complete the transaction.</p>
+            </div>
+
+            <div>
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Organization Name</label>
+                <input type="text" id="new-ecosystem-name" placeholder="Healthcare Credentials Ecosystem" class="w-full px-4 py-2 border border-neutral-20 dark:border-neutral-70 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent bg-white dark:bg-surface text-gray-900 dark:text-white">
+            </div>
+
+            <div>
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Trust Registry Service Name</label>
+                <input type="text" id="new-ecosystem-registry" placeholder="Healthcare Trust Registry" class="w-full px-4 py-2 border border-neutral-20 dark:border-neutral-70 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent bg-white dark:bg-surface text-gray-900 dark:text-white">
+            </div>
+
+            <div>
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Primary Governance Framework Language</label>
+                <select id="new-ecosystem-language" class="w-full px-4 py-2 border border-neutral-20 dark:border-neutral-70 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent bg-white dark:bg-surface text-gray-900 dark:text-white">
+                    <option value="">Select language...</option>
+                    <option value="en">English</option>
+                    <option value="es">Spanish</option>
+                    <option value="fr">French</option>
+                    <option value="de">German</option>
+                    <option value="it">Italian</option>
+                    <option value="pt">Portuguese</option>
+                    <option value="zh">Chinese</option>
+                    <option value="ja">Japanese</option>
+                </select>
+            </div>
+
+            <div>
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Governance Framework Document URL</label>
+                <input type="url" id="new-ecosystem-url" placeholder="https://example.com/governance-framework.pdf" class="w-full px-4 py-2 border border-neutral-20 dark:border-neutral-70 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent bg-white dark:bg-surface text-gray-900 dark:text-white">
+            </div>
+
+            <div class="flex space-x-3 pt-4">
+                <button onclick="closeCreateEcosystemModal()" class="flex-1 px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors">
+                    Cancel
+                </button>
+                <button onclick="createNewEcosystem()" class="flex-1 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors">
+                    Confirm
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div id="qr-modal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full hidden z-50">
+    <div class="relative top-20 mx-auto p-5 border w-full max-w-md shadow-lg rounded-xl bg-white dark:bg-surface">
+        <div class="flex items-center justify-between mb-6">
+            <h3 class="text-xl font-semibold text-gray-900 dark:text-white">Account QR Code</h3>
+            <button onclick="document.getElementById('qr-modal').classList.add('hidden')" class="text-neutral-70 hover:text-gray-500 dark:hover:text-gray-300">
+                <i class="text-lg fas fa-xmark"></i>
+            </button>
+        </div>
+        <div class="flex flex-col items-center space-y-4">
+            <div class="w-64 h-64 bg-white p-4 rounded-lg border-2 border-neutral-20">
+                <svg viewBox="0 0 100 100" class="w-full h-full">
+                    <rect width="100" height="100" fill="white"/>
+                    <rect x="10" y="10" width="10" height="10" fill="black"/>
+                    <rect x="30" y="10" width="10" height="10" fill="black"/>
+                    <rect x="50" y="10" width="10" height="10" fill="black"/>
+                    <rect x="70" y="10" width="10" height="10" fill="black"/>
+                    <rect x="10" y="30" width="10" height="10" fill="black"/>
+                    <rect x="50" y="30" width="10" height="10" fill="black"/>
+                    <rect x="70" y="30" width="10" height="10" fill="black"/>
+                    <rect x="10" y="50" width="10" height="10" fill="black"/>
+                    <rect x="30" y="50" width="10" height="10" fill="black"/>
+                    <rect x="70" y="50" width="10" height="10" fill="black"/>
+                    <rect x="10" y="70" width="10" height="10" fill="black"/>
+                    <rect x="30" y="70" width="10" height="10" fill="black"/>
+                    <rect x="50" y="70" width="10" height="10" fill="black"/>
+                    <rect x="70" y="70" width="10" height="10" fill="black"/>
+                </svg>
+            </div>
+            <div class="text-center">
+                <p class="text-sm font-mono text-gray-900 dark:text-white">0x1234...5678</p>
+                <p class="text-xs text-neutral-70 dark:text-neutral-70 mt-1">Scan to connect</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    const themeToggle = document.getElementById('theme-toggle');
+    const htmlElement = document.documentElement;
+
+    themeToggle.addEventListener('click', () => {
+        htmlElement.classList.toggle('dark');
+        localStorage.setItem('theme', htmlElement.classList.contains('dark') ? 'dark' : 'light');
+    });
+
+    if (localStorage.getItem('theme') === 'dark') {
+        htmlElement.classList.add('dark');
+    }
+
+    const mobileMenuBtn = document.getElementById('mobile-menu-btn');
+    const mobileSidebarOverlay = document.getElementById('mobile-sidebar-overlay');
+    const mobileSidebarClose = document.getElementById('mobile-sidebar-close');
+    const mobileSidebarBackdrop = document.getElementById('mobile-sidebar-backdrop');
+
+    mobileMenuBtn.addEventListener('click', () => {
+        mobileSidebarOverlay.classList.remove('hidden');
+    });
+
+    mobileSidebarClose.addEventListener('click', () => {
+        mobileSidebarOverlay.classList.add('hidden');
+    });
+
+    mobileSidebarBackdrop.addEventListener('click', () => {
+        mobileSidebarOverlay.classList.add('hidden');
+    });
+
+    function copyAddressFromHeader() {
+        const address = '0x1234567890abcdef1234567890abcdef12345678';
+        navigator.clipboard.writeText(address);
+        
+        const accountZone = document.getElementById('account-zone');
+        const originalHTML = accountZone.innerHTML;
+        
+        accountZone.innerHTML = `
+            <div class="flex items-center space-x-2 px-3 py-2">
+                <i class="text-success-500 fas fa-check"></i>
+                <span class="text-sm text-success-700 dark:text-success-300">Address copied!</span>
+            </div>
+        `;
+        
+        setTimeout(() => {
+            accountZone.innerHTML = originalHTML;
+        }, 2000);
+    }
+
+    function openExplorer() {
+        const address = '0x1234567890abcdef1234567890abcdef12345678';
+    }
+
+    document.getElementById('create-ecosystem-btn').addEventListener('click', () => {
+        document.getElementById('create-ecosystem-modal').classList.remove('hidden');
+    });
+
+    function closeCreateEcosystemModal() {
+        document.getElementById('create-ecosystem-modal').classList.add('hidden');
+    }
+
+    function createNewEcosystem() {
+        closeCreateEcosystemModal();
+    }
+</script>
+
+</body>
+</html>
