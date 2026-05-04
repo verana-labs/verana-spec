@@ -197,7 +197,6 @@ These notifications are emitted whenever an authorization or fee grant whose `op
 
 | VPR Transaction | Description | Default Handler Implementation |
 | --- | --- | --- |
-
 | `GrantVSOperatorAuthorization` [MOD-DE-MSG-5] | The corporation has granted the agent's `vs_account` a `VSOperatorAuthorization` for one or more permissions. | Refresh the cached `VSOperatorAuthorization`; `CreateOrUpdatePermissionSession` and `TriggerResolver` MAY now be signed for the newly authorized permissions. |
 | `RevokeVSOperatorAuthorization` [MOD-DE-MSG-6] | The agent's `VSOperatorAuthorization` has been revoked. | Invalidate the cached `VSOperatorAuthorization`. Stop signing `CreateOrUpdatePermissionSession` and `TriggerResolver` for the affected permissions until a new authorization is granted. |
 
@@ -304,7 +303,7 @@ In all flows below, actors represented as Applicant and Validator can be: an age
 
 > Applicant is always the peer that initiates a connection to a Validator.
 
-#### Validation Processes
+#### [VSA-VTI-FLOW-VP] Validation Processes
 
 Possible Applicant/Validator combinations:
 
@@ -342,6 +341,7 @@ sequenceDiagram
     Applicant->>Validator: 10. Accept Credential
     Note over Applicant: 11. Store credential
     Note over Applicant: 12. (optional) VP in DID Doc
+    Applicant->>VPR: 13. (optional) TriggerResolver
 ```
 
 **Step-by-step**:
@@ -647,9 +647,9 @@ sequenceDiagram
 
 > Permission Self Creation does not open a DIDComm session, does not create any Flow State entry, and does not involve a Validator. The corporation MUST nevertheless ensure that its self-created permission complies with the ecosystem's EGF — an OPEN-mode permission CAN still be revoked or slashed by ecosystem governance (see [Revoke Permission / Slash Permission Trust Deposit](#vsa-vti-flow-vp-revoke-revoke-permission--slash-permission-trust-deposit)).
 
-#### [VSA-VTI-FLOW-DIDCOMM] DIDComm Message Summary for `vt_flow`
+#### [VSA-VTI-FLOW-DIDCOMM] DIDComm Message Summary
 
-The following table lists all DIDComm message types exchanged within a `vt_flow` session:
+The following table lists all DIDComm message types exchanged:
 
 | Type | Name | Sender | Description |
 | --- | --- | --- | --- |
@@ -739,7 +739,7 @@ stateDiagram-v2
 
 ## Administration API
 
-The VS Agent MUST expose a secure Administration API that allows authorized members of the agent's Corporation to remotely query and manage the agent's state — for example, from the Verana frontend, or from a backend container connected to agent.
+The VS Agent MUST expose a secure Administration API that allows authorized members of the agent's Corporation to remotely query and manage the agent's state: for example, from the Verana frontend, or from a backend container connected to agent.
 
 For each API method, one or several access mode can be configured:
 
