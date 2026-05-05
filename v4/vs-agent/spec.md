@@ -908,16 +908,16 @@ Revokes a previously issued credential for a given flow. The agent MUST notify t
 
 > Applicant-side methods — requiring `OperatorAuthorization` with msgType = `StartPermissionVP` and msgType = `RenewPermissionVP` — are to be specified.
 
-### Service Endpoint Management
+### [VSA-ADM-SE] Service Endpoint Management
 
 The following methods manage the **additional consumable** service entries declared in the agent's DID Document — i.e., the entries added under [[VS-SVC-3]](https://verana-labs.github.io/verifiable-trust-spec/#vs-svc-service-declaration), such as `MCP`, `A2A`, `LinkedDomains`, or any other ecosystem-defined consumable type.
 
 | Module | Method Name | Relative REST API path | Type | Requirements | Authz |
 | --- | --- | --- | --- | --- | --- |
-| Service Endpoint Management | `listServiceEndpoints` | | Query | | INTERNAL |
-| Service Endpoint Management | `deleteServiceEndpoint` | | Action | | INTERNAL |
-| Service Endpoint Management | `addServiceEndpoint` | | Action | | INTERNAL |
-| Service Endpoint Management | `updateServiceEndpoint` | | Action | | INTERNAL |
+| Service Endpoint Management | `listServiceEndpoints` | /se/v1/list | Query | [see](#vsa-adm-se-list-listserviceendpoints) | INTERNAL |
+| Service Endpoint Management | `deleteServiceEndpoint` | /se/v1/delete | Action | [see](#vsa-adm-se-delete-deleteserviceendpoint) | INTERNAL |
+| Service Endpoint Management | `addServiceEndpoint` | /se/v1/add | Action | [see](#vsa-adm-se-add-addserviceendpoint) | INTERNAL |
+| Service Endpoint Management | `updateServiceEndpoint` | /se/v1/update | Action | [see](#vsa-adm-se-update-updateserviceendpoint) | INTERNAL |
 
 These methods MUST NOT be used to manipulate:
 
@@ -929,7 +929,7 @@ For every successful mutation (`addServiceEndpoint`, `updateServiceEndpoint`, `d
 - the agent MUST publish the updated DID Document;
 - the agent SHOULD call `TriggerResolver` on-chain so the agent's trust-resolution state reflects the change.
 
-#### listServiceEndpoints
+#### [VSA-ADM-SE-LIST] listServiceEndpoints
 
 Returns every consumable service entry currently declared in the agent's DID Document.
 
@@ -946,7 +946,7 @@ Returns every consumable service entry currently declared in the agent's DID Doc
 - MUST exclude entries whose `type` is `DIDCommMessaging` or `LinkedVerifiablePresentation` (managed automatically by the agent — see preamble).
 - MUST reflect the currently published DID Document.
 
-#### deleteServiceEndpoint
+#### [VSA-ADM-SE-DELETE] deleteServiceEndpoint
 
 Removes a consumable service entry from the agent's DID Document.
 
@@ -966,7 +966,7 @@ Removes a consumable service entry from the agent's DID Document.
 - `DIDCOMM_ENTRY` — `id` refers to a `DIDCommMessaging` entry.
 - `LINKED_VP_ENTRY` — `id` refers to a `LinkedVerifiablePresentation` entry.
 
-#### addServiceEndpoint
+#### [VSA-ADM-SE-ADD] addServiceEndpoint
 
 Adds a new consumable service entry to the agent's DID Document.
 
@@ -991,7 +991,7 @@ Adds a new consumable service entry to the agent's DID Document.
 - `DIDCOMM_ENTRY` — caller attempted to add a `DIDCommMessaging` entry.
 - `LINKED_VP_ENTRY` — caller attempted to add a `LinkedVerifiablePresentation` entry.
 
-#### updateServiceEndpoint
+#### [VSA-ADM-SE-UPDATE] updateServiceEndpoint
 
 Updates the `type` and/or `serviceEndpoint` of an existing consumable service entry in the agent's DID Document.
 
