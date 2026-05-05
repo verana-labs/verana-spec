@@ -393,8 +393,6 @@ This flow is used when the Applicant wants to extend the validity of an existing
 
 ```mermaid
 sequenceDiagram
-    participant Applicant Operator as Operator (Applicant)
-    participant Applicant Agent as Agent (Applicant)
     participant VPR as VPR (Chain)
     participant Validator as Agent (Validator)
 
@@ -442,8 +440,6 @@ This flow describes what happens when the Applicant cancels the in-flight Valida
 
 ```mermaid
 sequenceDiagram
-    participant Applicant Operator as Operator (Applicant)
-    participant Applicant Agent as Agent (Applicant)
     participant VPR as VPR (Chain)
     participant Validator as Agent (Validator)
 
@@ -510,24 +506,24 @@ When `p1` is revoked or slashed, an indexer notification (see [Permission Notifi
 
 ```mermaid
 sequenceDiagram
-    participant Initiator Operator as Operator (Initiator)<br/>(any authorized party)
+    participant Initiator Operator as Operator (Initiator) (any authorized party)
     participant VPR as VPR (Chain)
     participant Validator as Agent (Validator of p1)
     participant Applicant as Agent (Applicant of p1)
     participant Downstream as Agent (Downstream Applicant)
 
-    Initiator Operator->>VPR: 1. revoke-permission(p1) OR<br/>slash-permission-trust-deposit(p1, amt)
+    Initiator Operator->>VPR: 1. revoke-permission(p1) OR slash-permission-trust-deposit(p1, amt)
     Note over VPR: p1 marked revoked / slashed
     VPR->>Validator: 2. Revoke / Slash notification (via Indexer)
     VPR->>Applicant: 2. Revoke / Slash notification (via Indexer)
 
     alt p1 is a HOLDER permission
         Validator-->>Applicant: 3. CRED_STATE_CHANGE over DIDComm
-        Note over Applicant: Remove credential's linked-vp (if any)<br/>and delete credential from store
+        Note over Applicant: Remove credential's linked-vp (if any) and delete credential from store
     else p1 is NOT a HOLDER permission
-        Note over Applicant: For each in-flight flow where Applicant of p1<br/>acts as Validator (validator_perm_id == p1):
-        Applicant-->>Downstream: 3. ERROR over DIDComm<br/>(validator permission revoked)
-        Note over Applicant: Terminate flow:<br/>Connection State = TERMINATED<br/>Flow State = PERM_REVOKED / PERM_SLASHED
+        Note over Applicant: For each in-flight flow where Applicant of p1 acts as Validator (validator_perm_id == p1):
+        Applicant-->>Downstream: 3. ERROR over DIDComm (validator permission revoked)
+        Note over Applicant: Terminate flow: Connection State = TERMINATED Flow State = PERM_REVOKED / PERM_SLASHED
     end
 ```
 
