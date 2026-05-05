@@ -636,8 +636,6 @@ Possible cases:
 
 ```mermaid
 sequenceDiagram
-    participant Applicant Operator as Operator (Applicant)
-    participant Applicant Agent as Agent (Applicant)
     participant VPR as VPR (Chain)
 
     Applicant Operator->>VPR: 1. self-create-permission<br/>(schema_id, type, ...)
