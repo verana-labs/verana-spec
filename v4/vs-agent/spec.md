@@ -113,6 +113,8 @@ recommended:
   - If `vs_operator_authz_with_feegrant` is `true` on the relevant permission, the corporation's account covers transaction fees and the agent account does not need to be independently funded.
   - If `vs_operator_authz_with_feegrant` is `false`, the agent account MUST have sufficient balance to pay transaction fees.
 
+> If no `VSOperatorAuthorization` is granted, VS Agent MUST have VNA balance in its account to cover transaction and trust fees.
+
 ### [VSA-VTI-CFG] Configuration
 
 #### [VSA-VTI-CFG-ENV] Container Environment Variables
@@ -321,27 +323,28 @@ Possible Applicant/Validator combinations:
 
 ```mermaid
 sequenceDiagram
-    participant Applicant as Agent (Applicant)
+    participant Applicant Operator as Operator (Applicant)
+    participant Applicant Agent as Agent (Applicant)
     participant VPR as VPR (Chain)
     participant Validator as Agent (Validator)
 
-    Applicant->>VPR: 1. start-perm-vp
-    VPR-->>Applicant: perm_id (vp_state=PENDING)
-    Applicant->>Validator: 2. DIDComm connect
-    Applicant->>Validator: 3. VR: perm_id, session_uuid,<br/>cred. claims, proofs, ...
-    Validator-->>Applicant: 4. (optional) out-of-band info collection
+    Applicant Operator->>VPR: 1. start-perm-vp
+    VPR-->>Applicant Agent: perm_id (vp_state=PENDING)
+    Applicant Agent->>Validator: 2. DIDComm connect
+    Applicant Agent->>Validator: 3. VR: perm_id, session_uuid,<br/>cred. claims, proofs, ...
+    Validator-->>Applicant Agent: 4. (optional) out-of-band info collection
     Validator->>VPR: 5. set-perm-vp-validated
 
-    Note over Applicant,Validator: All steps below are optional
+    Note over Applicant Agent,Validator: All steps below are optional
 
     Note over Validator: 6. Generate credential<br/>(sign + compute digest)
     Validator->>VPR: 7. createOrUpdatePermissionSession
-    Validator->>Applicant: 8. Credential offer
-    Applicant->>VPR: 9. Verify validator + digest
-    Applicant->>Validator: 10. Accept Credential
-    Note over Applicant: 11. Store credential
-    Note over Applicant: 12. (optional) VP in DID Doc
-    Applicant->>VPR: 13. (optional) TriggerResolver
+    Validator->>Applicant Agent: 8. Credential offer
+    Applicant Agent->>VPR: 9. Verify validator + digest
+    Applicant Agent->>Validator: 10. Accept Credential
+    Note over Applicant Agent: 11. Store credential
+    Note over Applicant Agent: 12. (optional) VP in DID Doc
+    Applicant Agent->>VPR: 13. (optional) TriggerResolver
 ```
 
 **Step-by-step**:
@@ -391,19 +394,20 @@ This flow is used when the Applicant wants to extend the validity of an existing
 
 ```mermaid
 sequenceDiagram
-    participant Applicant as Agent (Applicant)
+    participant Applicant Operator as Operator (Applicant)
+    participant Applicant Agent as Agent (Applicant)
     participant VPR as VPR (Chain)
     participant Validator as Agent (Validator)
 
-    Applicant->>VPR: 1. renew-perm-vp(perm_id)
-    VPR-->>Applicant: vp_state=PENDING
-    Applicant->>Validator: 2. DIDComm (re)connect
-    Applicant->>Validator: 3. VR: perm_id, session_uuid,<br/>updated claims, proofs
-    Validator-->>Applicant: 4. (optional) out-of-band info collection
+    Applicant Operator->>VPR: 1. renew-perm-vp(perm_id)
+    VPR-->>Applicant Agent: vp_state=PENDING
+    Applicant Agent->>Validator: 2. DIDComm (re)connect
+    Applicant Agent->>Validator: 3. VR: perm_id, session_uuid,<br/>updated claims, proofs
+    Validator-->>Applicant Agent: 4. (optional) out-of-band info collection
     Validator->>VPR: 5. set-perm-vp-validated
     Note over VPR: vp_exp += validity_period
 
-    Note over Applicant,Validator: ... credential offer / accept / store / update VP ...<br/>(same as New Validation Process steps 6–12)
+    Note over Applicant Agent,Validator: ... credential offer / accept / store / update VP ...<br/>(same as New Validation Process steps 6–12)
 ```
 
 **Preconditions**:
@@ -439,16 +443,17 @@ This flow describes what happens when the Applicant cancels the in-flight Valida
 
 ```mermaid
 sequenceDiagram
-    participant Applicant as Agent (Applicant)
+    participant Applicant Operator as Operator (Applicant)
+    participant Applicant Agent as Agent (Applicant)
     participant VPR as VPR (Chain)
     participant Validator as Agent (Validator)
 
-    Applicant->>VPR: 1. cancel-perm-vp-last-request(perm_id)
+    Applicant Operator->>VPR: 1. cancel-perm-vp-last-request(perm_id)
     Note over VPR: vp_current_fees refunded<br/>vp_current_deposit released<br/>vp_state = TERMINATED<br/>(or VALIDATED if vp_exp != null)
     VPR->>Validator: 2. CancelPermissionVPLastRequest event (via Indexer)
-    VPR->>Applicant: 3. own-tx confirmation (via Indexer)
-    Applicant-->>Validator: 4. (optional) informational message over DIDComm
-    Applicant-->>Validator: 5. (if TERMINATED) close DIDComm session
+    VPR->>Applicant Agent: 3. own-tx confirmation (via Indexer)
+    Applicant Agent-->>Validator: 4. (optional) informational message over DIDComm
+    Applicant Agent-->>Validator: 5. (if TERMINATED) close DIDComm session
 ```
 
 **Preconditions**:
@@ -488,53 +493,59 @@ sequenceDiagram
 
 Possible Applicant/Validator combinations: All.
 
-`RevokePermission` ([MOD-PERM-MSG-9](https://verana-labs.github.io/verifiable-trust-vpr-spec/#mod-perm-msg-9-revoke-permission)) and `SlashPermissionTrustDeposit` ([MOD-PERM-MSG-12](https://verana-labs.github.io/verifiable-trust-vpr-spec/#mod-perm-msg-12-slash-permission-trust-deposit)) cause an existing Permission to become permanently unusable. From the perspective of VS Agents, both messages are handled in the same way: the affected Permission can no longer be used as the basis for any flow, and any credential that was issued under it MUST be treated as revoked.
+`RevokePermission` ([MOD-PERM-MSG-9](https://verana-labs.github.io/verifiable-trust-vpr-spec/#mod-perm-msg-9-revoke-permission)) and `SlashPermissionTrustDeposit` ([MOD-PERM-MSG-12](https://verana-labs.github.io/verifiable-trust-vpr-spec/#mod-perm-msg-12-slash-permission-trust-deposit)) cause an existing Permission `p1` to become permanently unusable. Both messages are handled identically by VS Agents — `p1` can no longer be used as the basis for any flow, and any in-flight flow that depends on `p1` MUST be terminated.
 
 The two messages differ only on-chain:
 
 | Aspect | RevokePermission | SlashPermissionTrustDeposit |
 | --- | --- | --- |
-| On-chain state change | `applicant_perm.revoked = now` | `applicant_perm.slashed = now`; `slashed_deposit += amount`; trust deposit burned |
+| On-chain state change | `p1.revoked = now` | `p1.slashed = now`; `slashed_deposit += amount`; trust deposit burned |
 | Authorized initiators | ancestor validator, grantee `corporation`, or Trust Registry controller | ancestor validator or Trust Registry controller (NOT the grantee) |
 | Permission must be active | yes | no — MAY be applied to expired or revoked permissions |
 | VS Operator Authorization (ISSUER / VERIFIER only) | revoked | revoked |
 
-Either message produces an indexer notification (see [Permission Notifications](#vsa-vti-notif-perm-permission-notifications)) delivered to every VS Agent whose DID is implicated in the permission tree:
+When `p1` is revoked or slashed, an indexer notification (see [Permission Notifications](#vsa-vti-notif-perm-permission-notifications)) is delivered to:
 
-- The grantee (Applicant) of the affected Permission.
-- Each ancestor Validator in the permission chain (including the Trust Registry controller).
+- the **Applicant of `p1`** (the grantee whose permission has been revoked); and
+- the **Validator of `p1`** (the validator that originally issued `p1`, plus every ancestor validator and the Trust Registry controller).
 
 ```mermaid
 sequenceDiagram
-    participant Initiator as Initiator<br/>(any authorized party)
+    participant Initiator Operator as Operator (Initiator)<br/>(any authorized party)
     participant VPR as VPR (Chain)
-    participant Others as Other VS Agents in the<br/>permission chain
+    participant Validator as Agent (Validator of p1)
+    participant Applicant as Agent (Applicant of p1)
+    participant Downstream as Agent (Downstream Applicant)
 
-    Initiator->>VPR: 1. revoke-permission(id) OR<br/>slash-permission-trust-deposit(id, amt)
-    Note over VPR: perm marked revoked / slashed<br/>VS Operator Authz revoked<br/>(ISSUER/VERIFIER)
-    VPR->>Others: 2. Revoke / Slash notification (via Indexer)
-    Initiator-->>Others: 3. (optional, validator-initiated)<br/>inform peer via DIDComm<br/>(CRED_STATE_CHANGE)
+    Initiator Operator->>VPR: 1. revoke-permission(p1) OR<br/>slash-permission-trust-deposit(p1, amt)
+    Note over VPR: p1 marked revoked / slashed
+    VPR->>Validator: 2. Revoke / Slash notification (via Indexer)
+    VPR->>Applicant: 2. Revoke / Slash notification (via Indexer)
+
+    alt p1 is a HOLDER permission
+        Validator-->>Applicant: 3. CRED_STATE_CHANGE over DIDComm
+        Note over Applicant: Remove credential's linked-vp (if any)<br/>and delete credential from store
+    else p1 is NOT a HOLDER permission
+        Note over Applicant: For each in-flight flow where Applicant of p1<br/>acts as Validator (validator_perm_id == p1):
+        Applicant-->>Downstream: 3. ERROR over DIDComm<br/>(validator permission revoked)
+        Note over Applicant: Terminate flow:<br/>Connection State = TERMINATED<br/>Flow State = PERM_REVOKED / PERM_SLASHED
+    end
 ```
 
-**Applicant (grantee) behaviour** — when the affected Permission is one held by the agent's `corporation`:
+**Behaviour by permission type**:
 
-1. The Applicant receives the `RevokePermission` / `SlashPermissionTrustDeposit` notification from the indexer.
-2. The Applicant MUST mark the affected Permission as no longer usable:
-   - **HOLDER permission**: treat the corresponding credential as revoked. Remove (or update) the `LinkedVerifiablePresentation` entry that wraps that credential in the agent's DID Document, then call `TriggerResolver` so the resolver pipeline re-resolves the agent's trust state.
-   - **ISSUER / VERIFIER permission**: stop offering the corresponding service immediately. The on-chain VS Operator Authorization for this Permission has been revoked, so any subsequent transaction the agent attempts to sign on its behalf will be rejected by the chain.
-3. For each in-flight or completed flow tied to the affected Permission:
-   - Set Connection State to `TERMINATED` and Flow State to `PERM_REVOKED` (after `RevokePermission`) or `PERM_SLASHED` (after `SlashPermissionTrustDeposit`).
-   - The agent MAY send an `ERROR` (or, for credential-issuance flows, `CRED_STATE_CHANGE`) message to each affected peer over DIDComm before closing the session.
-4. **Slash only**: the agent MUST track that the corporation's `slashed_deposit` for this Permission is outstanding. Until [`RepayPermissionSlashedTrustDeposit`](https://verana-labs.github.io/verifiable-trust-vpr-spec/#mod-perm-msg-13-repay-permission-slashed-trust-deposit) is executed, the corporation cannot obtain new permissions in the same ecosystem.
+- **If `p1` is a HOLDER permission** (the credential issued under `p1` is held by the Applicant of `p1`):
+  - The **Validator of `p1`** SHOULD send a `CRED_STATE_CHANGE` message to the Applicant of `p1` over the existing DIDComm session.
+  - The **Applicant of `p1`** MUST:
+    - remove the corresponding `LinkedVerifiablePresentation` entry from its DID Document if the credential was published as a linked VP;
+    - delete the credential from its credential store;
 
-**Validator behaviour** — when the affected Permission is the Applicant-side of a flow where the agent acted as Validator (or as an ancestor in the permission chain):
-
-1. The Validator receives the `RevokePermission` / `SlashPermissionTrustDeposit` notification from the indexer for an `applicant_perm_id` matching one of its flows (active or completed).
-2. If the Validator is itself the Initiator (e.g., it has just submitted `revoke-permission` against an Applicant whose credential it had previously issued), it SHOULD send a `CRED_STATE_CHANGE` message to the Applicant over the existing DIDComm session before (or immediately after) the on-chain transaction, so the Applicant can clean up locally without waiting for the indexer notification.
-3. Update local Flow State for the affected flow:
-   - Connection State: `TERMINATED`.
-   - Flow State: `PERM_REVOKED` or `PERM_SLASHED`.
-4. Discard any pending out-of-band resources for this flow (`OOB_LINK` URLs, draft credentials, etc.).
+- **If `p1` is NOT a HOLDER permission** (i.e., `p1` is an ISSUER, VERIFIER, or other permission type):
+  - The **Applicant of `p1`** MUST terminate every in-flight flow in which it acts as Validator under `p1` — i.e., every flow whose `validator_perm_id == p1` and whose Flow State is not `COMPLETED`. For each such flow, the Applicant of `p1` MUST:
+    - send an `ERROR` DIDComm message to the downstream Applicant indicating that the validator permission has been revoked and the flow cannot continue;
+    - set Connection State to `TERMINATED` and Flow State to `PERM_REVOKED` (after `RevokePermission`) or `PERM_SLASHED` (after `SlashPermissionTrustDeposit`);
+    - discard any pending out-of-band resources for the flow (`OOB_LINK` URLs, draft credentials, etc.).
+  - The Applicant of `p1` MUST NOT cascade-revoke any permissions or credentials it had previously issued under `p1`. Credentials delivered before the revocation remain valid; their lifecycle is governed independently.
 
 > Revocation and slashing are irreversible from the agent's perspective: a revoked or slashed Permission cannot be revived. To resume operating, the corporation MUST obtain a new Permission via a new validation process — and, for slashed permissions, MUST first repay the slashed trust deposit.
 
@@ -631,12 +642,13 @@ Possible cases:
 
 ```mermaid
 sequenceDiagram
-    participant Applicant as Agent (Applicant)
+    participant Applicant Operator as Operator (Applicant)
+    participant Applicant Agent as Agent (Applicant)
     participant VPR as VPR (Chain)
 
-    Applicant->>VPR: 1. self-create-permission<br/>(schema_id, type, ...)
-    VPR-->>Applicant: perm_id (active)
-    VPR->>Applicant: 2. SelfCreatePermission own-tx<br/>confirmation (via Indexer)
+    Applicant Operator->>VPR: 1. self-create-permission<br/>(schema_id, type, ...)
+    VPR-->>Applicant Operator: perm_id (active)
+    VPR->>Applicant Agent: 2. SelfCreatePermission own-tx<br/>confirmation (via Indexer)
 ```
 
 **Step-by-step**:
