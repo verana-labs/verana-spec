@@ -506,7 +506,6 @@ When `p1` is revoked or slashed, an indexer notification (see [Permission Notifi
 
 ```mermaid
 sequenceDiagram
-    participant Initiator Operator as Operator (Initiator) (any authorized party)
     participant VPR as VPR (Chain)
     participant Validator as Agent (Validator of p1)
     participant Applicant as Agent (Applicant of p1)
