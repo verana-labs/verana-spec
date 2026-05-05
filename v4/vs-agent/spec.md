@@ -323,8 +323,7 @@ Possible Applicant/Validator combinations:
 
 ```mermaid
 sequenceDiagram
-    participant Applicant Operator as Operator (Applicant)
-    participant Applicant Agent as Agent (Applicant)
+
     participant VPR as VPR (Chain)
     participant Validator as Agent (Validator)
 
