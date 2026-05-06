@@ -132,9 +132,6 @@ Given a DID and an optional point-in-time (ISO 8601 datetime or block height, de
         "urn:uuid:22222222-aaaa-bbbb-cccc-222222222222",
         "urn:uuid:33333333-aaaa-bbbb-cccc-333333333333"
       ],
-      "vtjscCredentialIds": [
-        "urn:uuid:77777777-aaaa-bbbb-cccc-777777777777"
-      ],
       "unresolvableCredentialIds": [
         "urn:uuid:44444444-aaaa-bbbb-cccc-444444444444"
       ],
