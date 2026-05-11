@@ -1,0 +1,132 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://verana.io/schemas/v4/resolver/request.schema.json",
+  "title": "ResolutionRequest",
+  "description": "Request payload for the verana indexer DID Resolver. Selectors with object form (`participations`, `presentations`, `ecosystems`) accept `false` to exclude, `true` for defaults, or an object of fine-grained options. See `### Example resolution request` in the indexer spec.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["did"],
+  "properties": {
+    "did": {
+      "type": "string",
+      "pattern": "^did:",
+      "description": "DID to resolve. Any DID method supported by the resolver."
+    },
+    "atTime": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO 8601 datetime of the point-in-time evaluation. Mutually exclusive with `atBlock`. Defaults to latest block when neither is provided."
+    },
+    "atBlock": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Block height of the point-in-time evaluation. Mutually exclusive with `atTime`. Defaults to latest block when neither is provided."
+    },
+
+    "corporation": {
+      "type": "boolean",
+      "default": false,
+      "description": "Include the `corporation` object (validator address, weight, slash history). Omit or `false` to exclude."
+    },
+    "ecsCredentials": {
+      "type": "boolean",
+      "default": false,
+      "description": "Include the full ECS credentials with subject claims. Omit or `false` to exclude."
+    },
+    "services": {
+      "type": "boolean",
+      "default": false,
+      "description": "Include `services[]` — non-LinkedVerifiablePresentation service entries from the DID Document (e.g. DIDComm, MCP, LinkedDomains). Omit or `false` to exclude."
+    },
+
+    "participations": {
+      "description": "Include `participations[]`. `false` to exclude; `true` is sugar for `{}` (defaults: states = [ACTIVE]); object form lets you filter by state.",
+      "oneOf": [
+        { "type": "boolean" },
+        { "$ref": "#/$defs/ParticipationsOptions" }
+      ]
+    },
+    "presentations": {
+      "description": "Include `presentations[]`. Each entry always carries `vtcCredentialIds[]`; the sub-flags additionally surface unresolvable / invalid credential IDs per VP.",
+      "oneOf": [
+        { "type": "boolean" },
+        { "$ref": "#/$defs/PresentationsOptions" }
+      ]
+    },
+    "ecosystems": {
+      "description": "Include `ecosystems[]`. Sub-flags control whether archived ecosystems (and their archived embedded schemas) are surfaced.",
+      "oneOf": [
+        { "type": "boolean" },
+        { "$ref": "#/$defs/EcosystemsOptions" }
+      ]
+    }
+  },
+
+  "not": {
+    "description": "`atTime` and `atBlock` are mutually exclusive.",
+    "required": ["atTime", "atBlock"]
+  },
+
+  "$defs": {
+    "ParticipationState": {
+      "enum": ["ACTIVE", "FUTURE", "INACTIVE", "EXPIRED", "REVOKED", "SLASHED", "REPAID"]
+    },
+    "ParticipationsOptions": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "states": {
+          "type": "array",
+          "uniqueItems": true,
+          "default": ["ACTIVE"],
+          "items": { "$ref": "#/$defs/ParticipationState" },
+          "description": "Filter participations by state. Defaults to [\"ACTIVE\"] when omitted."
+        }
+      }
+    },
+    "PresentationsOptions": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "unresolvableCredentialIds": {
+          "type": "boolean",
+          "default": false,
+          "description": "Add `unresolvableCredentialIds[]` to each presentation entry."
+        },
+        "invalidCredentialIds": {
+          "type": "boolean",
+          "default": false,
+          "description": "Add `invalidCredentialIds[]` to each presentation entry."
+        }
+      }
+    },
+    "EcosystemsOptions": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "includeArchived": {
+          "type": "boolean",
+          "default": false,
+          "description": "When true, also include archived ecosystems in the response."
+        },
+        "schemas": {
+          "description": "Embedded schemas selector. `false` (or omit) to suppress; `true` to include with defaults; object form for fine-grained control.",
+          "oneOf": [
+            { "type": "boolean" },
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "includeArchived": {
+                  "type": "boolean",
+                  "default": false,
+                  "description": "When true, also include archived schemas inside each ecosystem."
+                }
+              }
+            }
+          ]
+        }
+      }
+    }
+  }
+}

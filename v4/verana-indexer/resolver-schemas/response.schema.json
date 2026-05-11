@@ -1,0 +1,239 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://verana.io/schemas/v4/resolver/response.schema.json",
+  "title": "ResolutionResponse",
+  "description": "Response payload returned by the verana indexer DID Resolver. Optional sections (`corporation`, `participations`, `ecsCredentials`, `presentations`, `services`, `ecosystems`) are present only when the corresponding selector was set in the request. The core fields (`did`, `trusted`, `evaluatedAt`, `evaluatedAtBlock`, `expiresAt`, `vsOperator`) are always returned. See `### Example resolution response` in the indexer spec.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "did",
+    "trusted",
+    "evaluatedAt",
+    "evaluatedAtBlock",
+    "expiresAt",
+    "vsOperator"
+  ],
+  "properties": {
+    "did": {
+      "type": "string",
+      "pattern": "^did:",
+      "description": "Echo of the resolved DID."
+    },
+    "trusted": {
+      "type": "boolean",
+      "description": "Whether the DID qualifies as a Verifiable Service per [VS-REQ] at the evaluation point-in-time."
+    },
+    "evaluatedAt": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Wall-clock time of the evaluation."
+    },
+    "evaluatedAtBlock": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Block height of the evaluation."
+    },
+    "expiresAt": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Time after which this resolution result MUST be re-evaluated."
+    },
+    "vsOperator": {
+      "$ref": "#/$defs/Bech32Address",
+      "description": "On-chain operator account bound to the DID (the VS operator account)."
+    },
+
+    "corporation":     { "$ref": "#/$defs/Corporation" },
+    "participations":  { "type": "array", "items": { "$ref": "#/$defs/Participation" } },
+    "ecsCredentials":  { "type": "array", "items": { "$ref": "#/$defs/EcsCredential" } },
+    "presentations":   { "type": "array", "items": { "$ref": "#/$defs/Presentation" } },
+    "services":        { "type": "array", "items": { "$ref": "#/$defs/ServiceEndpoint" } },
+    "ecosystems":      { "type": "array", "items": { "$ref": "#/$defs/Ecosystem" } }
+  },
+
+  "$defs": {
+    "Bech32Address": {
+      "type": "string",
+      "pattern": "^verana1[a-z0-9]+$",
+      "description": "Cosmos bech32 address with the `verana` HRP."
+    },
+    "Coin": {
+      "type": "string",
+      "pattern": "^[0-9]+[a-z][a-z0-9]*$",
+      "description": "Cosmos coin amount-denom pair, e.g. `10000000uvna`."
+    },
+    "DigestSri": {
+      "type": "string",
+      "pattern": "^sha(256|384|512)-",
+      "description": "Subresource Integrity digest in the standard `algo-base64` form."
+    },
+    "DidString": {
+      "type": "string",
+      "pattern": "^did:"
+    },
+
+    "ParticipationState": {
+      "enum": ["ACTIVE", "FUTURE", "INACTIVE", "EXPIRED", "REVOKED", "SLASHED", "REPAID"]
+    },
+    "ParticipationRole": {
+      "enum": ["HOLDER", "ISSUER", "VERIFIER", "ISSUER_GRANTOR", "VERIFIER_GRANTOR", "ECOSYSTEM"]
+    },
+    "ParticipantsByRole": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Participant counts keyed by role. Roles with zero participants MAY be omitted.",
+      "properties": {
+        "HOLDER":           { "type": "integer", "minimum": 0 },
+        "ISSUER":           { "type": "integer", "minimum": 0 },
+        "VERIFIER":         { "type": "integer", "minimum": 0 },
+        "ISSUER_GRANTOR":   { "type": "integer", "minimum": 0 },
+        "VERIFIER_GRANTOR": { "type": "integer", "minimum": 0 },
+        "ECOSYSTEM":        { "type": "integer", "minimum": 0 }
+      }
+    },
+
+    "SchemaRef": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "type", "uri", "digestSRI"],
+      "description": "Reference to a credential schema published in a Verifiable Public Registry.",
+      "properties": {
+        "id":        { "type": "integer", "minimum": 0 },
+        "type":      { "const": "JsonSchema" },
+        "uri":       { "type": "string", "format": "uri-reference" },
+        "digestSRI": { "$ref": "#/$defs/DigestSri" }
+      }
+    },
+
+    "Corporation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["did", "controller", "deposit"],
+      "properties": {
+        "did":           { "$ref": "#/$defs/DidString", "description": "DID of the Corporation entry (mandatory in the VPR Corporation model)." },
+        "controller":    { "$ref": "#/$defs/Bech32Address", "description": "Cosmos SDK group policy address that controls the Corporation entry (1:1 with the underlying group)." },
+        "deposit":       { "$ref": "#/$defs/Coin", "description": "Trust deposit currently bonded by the Corporation." },
+        "lastSlashedAt": { "type": "string", "format": "date-time" },
+        "slashedEvents": { "type": "integer", "minimum": 0 },
+        "slashedValue":  { "$ref": "#/$defs/Coin" }
+      }
+    },
+
+    "Participation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["ecosystem", "role", "state", "schema", "weight"],
+      "properties": {
+        "ecosystem":           { "$ref": "#/$defs/DidString" },
+        "role":                { "$ref": "#/$defs/ParticipationRole" },
+        "state":               { "$ref": "#/$defs/ParticipationState" },
+        "schema":              { "$ref": "#/$defs/SchemaRef" },
+        "weight":              { "$ref": "#/$defs/Coin" },
+        "issuedCredentials":   { "type": "integer", "minimum": 0 },
+        "verifiedCredentials": { "type": "integer", "minimum": 0 },
+        "participants":        { "$ref": "#/$defs/ParticipantsByRole" }
+      }
+    },
+
+    "EcsCredential": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "ecsSchema",
+        "ecsSchemaVersion",
+        "issuer",
+        "ecosystem",
+        "validFrom",
+        "validUntil",
+        "credentialSubject"
+      ],
+      "description": "An ECS credential extracted from one of the DID's linked-VPs. The shape of `credentialSubject` is governed by the corresponding ECS schema (Service / Organization / Persona / UserAgent).",
+      "properties": {
+        "ecsSchema": {
+          "type": "string",
+          "enum": [
+            "ServiceCredential",
+            "OrganizationCredential",
+            "PersonaCredential",
+            "UserAgentCredential"
+          ]
+        },
+        "ecsSchemaVersion": { "type": "string" },
+        "issuer":           { "$ref": "#/$defs/DidString" },
+        "ecosystem":        { "$ref": "#/$defs/DidString" },
+        "id":               { "type": "string" },
+        "validFrom":        { "type": "string", "format": "date-time" },
+        "validUntil":       { "type": "string", "format": "date-time" },
+        "credentialSubject": {
+          "type": "object",
+          "description": "ECS-schema-specific subject claims. Always includes `id`."
+        }
+      }
+    },
+
+    "Presentation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "vtcCredentialIds", "serviceId"],
+      "description": "Per-LinkedVerifiablePresentation outcome. `unresolvableCredentialIds` and `invalidCredentialIds` appear only when the corresponding request flags are set.",
+      "properties": {
+        "id":                        { "type": "string", "format": "uri" },
+        "serviceId":                 { "$ref": "#/$defs/DidString" },
+        "vtcCredentialIds":          { "type": "array", "items": { "type": "string" } },
+        "unresolvableCredentialIds": { "type": "array", "items": { "type": "string" } },
+        "invalidCredentialIds":      { "type": "array", "items": { "type": "string" } }
+      }
+    },
+
+    "ServiceEndpoint": {
+      "type": "object",
+      "required": ["id", "type", "serviceEndpoint"],
+      "description": "Non-LinkedVerifiablePresentation service entry from the DID Document, surfaced verbatim. The `serviceEndpoint` MAY be a string (simple URI) or an object (DIDComm composite shape, etc.). `accept` is included for service types that declare it (e.g. DIDComm).",
+      "properties": {
+        "id":   { "$ref": "#/$defs/DidString" },
+        "type": { "type": "string" },
+        "serviceEndpoint": {
+          "anyOf": [
+            { "type": "string", "format": "uri" },
+            { "type": "object" }
+          ]
+        },
+        "accept": {
+          "type": "array",
+          "items": { "type": "string" }
+        }
+      }
+    },
+
+    "Ecosystem": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "archived"],
+      "description": "Aggregate metrics for an ecosystem (and its underlying trust registry) the DID participates in.",
+      "properties": {
+        "id":                  { "type": "integer", "minimum": 0 },
+        "archived":            { "type": "boolean" },
+        "schemas":             { "type": "array", "items": { "$ref": "#/$defs/EcosystemSchema" } },
+        "participants":        { "$ref": "#/$defs/ParticipantsByRole" },
+        "issuedCredentials":   { "type": "integer", "minimum": 0 },
+        "verifiedCredentials": { "type": "integer", "minimum": 0 }
+      }
+    },
+
+    "EcosystemSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "type", "uri", "digestSRI", "archived"],
+      "properties": {
+        "id":                  { "type": "integer", "minimum": 0 },
+        "type":                { "const": "JsonSchema" },
+        "uri":                 { "type": "string", "format": "uri-reference" },
+        "digestSRI":           { "$ref": "#/$defs/DigestSri" },
+        "archived":            { "type": "boolean" },
+        "participants":        { "$ref": "#/$defs/ParticipantsByRole" },
+        "issuedCredentials":   { "type": "integer", "minimum": 0 },
+        "verifiedCredentials": { "type": "integer", "minimum": 0 }
+      }
+    }
+  }
+}
