@@ -61,7 +61,7 @@ The point-in-time is controlled by `atTime` (ISO 8601 datetime) or `atBlock` (bl
 
 | Module | Method Name | Relative REST API path | Type | Requirements | Authz |
 | --- | --- | --- | --- | --- | --- |
-| DID Resolver | `resolveDid` | `/dr/v1/resolve` | Query | [[VS-REQ-2]], [[VS-REQ-3]], [[VS-REQ-4]] | PUBLIC |
+| DID Resolver | `resolveDid` | `/resolver/v1/resolve` | Query | [[VS-REQ-2]], [[VS-REQ-3]], [[VS-REQ-4]] | PUBLIC |
 
 #### Resolution request schema
 
