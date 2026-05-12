@@ -65,11 +65,11 @@ The point-in-time is controlled by `atTime` (ISO 8601 datetime) or `atBlock` (bl
 
 #### Resolution request schema
 
-The normative JSON Schema for the resolution request is published alongside this document at [`resolver-schemas/request.schema.json`](./resolver-schemas/request.schema.json). It defines the `did` parameter, the optional point-in-time selectors (`atTime` / `atBlock`, mutually exclusive), and the response-shaping selectors (`corporation`, `participations`, `ecsCredentials`, `services`, `presentations`, `ecosystems`).
+The normative JSON Schema for the resolution request is published alongside this document at [`schemas/v4/resolver/request.schema.json`](./schemas/v4/resolver/request.schema.json). It defines the `did` parameter, the optional point-in-time selectors (`atTime` / `atBlock`, mutually exclusive), and the response-shaping selectors (`corporation`, `participations`, `ecsCredentials`, `services`, `presentations`, `ecosystems`).
 
 #### Resolution response schema
 
-The normative JSON Schema for the resolution response is published alongside this document at [`resolver-schemas/response.schema.json`](./resolver-schemas/response.schema.json). It defines the always-present core fields (`did`, `trusted`, `evaluatedAt`, `evaluatedAtBlock`, `expiresAt`, `vsOperator`) and every optional section returned when the corresponding request selector is set.
+The normative JSON Schema for the resolution response is published alongside this document at [`schemas/v4/resolver/response.schema.json`](./schemas/v4/resolver/response.schema.json). It defines the always-present core fields (`did`, `trusted`, `evaluatedAt`, `evaluatedAtBlock`, `expiresAt`, `vsOperator`) and every optional section returned when the corresponding request selector is set.
 
 #### Example resolution request
 
@@ -329,12 +329,12 @@ The Verana profile of TRQP v2 is identified by the profile version `verana-trqp/
 
 Request and response payloads use the upstream ToIP TSWG schemas verbatim (see the per-direction subsections below for the canonical URLs). The Verana profile narrows their *interpretation*: it freezes `action` to a closed enum, `resource` to the VPR schema URI grammar, and constrains `authority_id` / `entity_id` to Verana corporation or ecosystem DIDs (see scope rules per endpoint). It also registers `context.session_id` (string) as a profile extension permitted by the upstream `context.additionalProperties` clause, and reserves a top-level `verana` object on responses for VPR-state breadcrumbs (opaque to non-Verana consumers; conformant because upstream does not set `additionalProperties: false`).
 
-The full machine-readable Verana TRQP profile descriptor — including the action → `Participant.role` map, regex patterns, trigger semantics, scope rules, error messages, and discovery URLs — is published at [`trqp-profile.json`](./trqp-profile.json) (`$id`: `https://verana.io/schemas/v4/trqp/profile.json`).
+The full machine-readable Verana TRQP profile descriptor — including the action → `Participant.role` map, regex patterns, trigger semantics, scope rules, error messages, and discovery URLs — is published at [`schemas/v4/resolver/trqp-profile.json`](./schemas/v4/resolver/trqp-profile.json) (`$id`: `https://verana.io/schemas/v4/trqp/profile.json`).
 
 Profile discovery. TRQP v2.0 does not standardise a profile-discovery mechanism, but per TRQP v2.0 §Identifiers/`authority_id` and §Conformance the **ecosystem governance framework** — of which this profile forms part — MUST be discoverable via the authority's identifier. Verana implements that requirement as follows:
 
 - A Verana corporation or ecosystem MAY advertise a `TRQPEndpoint` service entry in its DID Document, pointing at the indexer's `/trqp/v2/` base path.
-- The indexer MUST serve the profile descriptor at `/trqp/v2/profile` with `Content-Type: application/json`; the body is byte-identical to [`trqp-profile.json`](./trqp-profile.json).
+- The indexer MUST serve the profile descriptor at `/trqp/v2/profile` with `Content-Type: application/json`; the body is byte-identical to [`schemas/v4/resolver/trqp-profile.json`](./schemas/v4/resolver/trqp-profile.json).
 - The action vocabulary, resource grammar, trigger semantics, and scope rules in the descriptor MUST match the table above; the descriptor is the canonical machine-readable form, this table is its prose summary.
 
 #### Authorization
@@ -367,11 +367,11 @@ For a query (authority=E, entity=V, action=A, resource=R, time=T):
 
 ##### Authorization request schema
 
-Authorization requests use the upstream ToIP TSWG schema [`trqp_authorization_request.schema.json`](https://trustoverip.github.io/tswg-trust-registry-protocol/approved/schema/trqp_authorization_request.schema.json) (`$id`: `trqp-authorization-request`) verbatim. Verana-specific narrowing of `action`, `resource`, `authority_id`, `entity_id`, and `context` is described by the [Verana TRQP profile descriptor](./trqp-profile.json).
+Authorization requests use the upstream ToIP TSWG schema [`trqp_authorization_request.schema.json`](https://trustoverip.github.io/tswg-trust-registry-protocol/approved/schema/trqp_authorization_request.schema.json) (`$id`: `trqp-authorization-request`) verbatim. Verana-specific narrowing of `action`, `resource`, `authority_id`, `entity_id`, and `context` is described by the [Verana TRQP profile descriptor](./schemas/v4/resolver/trqp-profile.json).
 
 ##### Authorization response schema
 
-Authorization responses use the upstream ToIP TSWG schema [`trqp_authorization_response.schema.json`](https://trustoverip.github.io/tswg-trust-registry-protocol/approved/schema/trqp_authorization_response.schema.json) (`$id`: `trqp-authorization-response`) verbatim. The Verana profile additionally permits a top-level `verana` object whose shape is described by the [Verana TRQP profile descriptor](./trqp-profile.json); the upstream schema does not set `additionalProperties: false`, so this extension is conformant.
+Authorization responses use the upstream ToIP TSWG schema [`trqp_authorization_response.schema.json`](https://trustoverip.github.io/tswg-trust-registry-protocol/approved/schema/trqp_authorization_response.schema.json) (`$id`: `trqp-authorization-response`) verbatim. The Verana profile additionally permits a top-level `verana` object whose shape is described by the [Verana TRQP profile descriptor](./schemas/v4/resolver/trqp-profile.json); the upstream schema does not set `additionalProperties: false`, so this extension is conformant.
 
 ##### Example authorization request
 
@@ -435,11 +435,11 @@ In words: V recognizes E for resource R iff (a) V is the corporation that contro
 
 ##### Recognition request schema
 
-Recognition requests use the upstream ToIP TSWG schema [`trqp_recognition_request.schema.json`](https://trustoverip.github.io/tswg-trust-registry-protocol/approved/schema/trqp_recognition_request.schema.json) (`$id`: `trqp-recognition-request`) verbatim. Verana-specific narrowing is described by the [Verana TRQP profile descriptor](./trqp-profile.json).
+Recognition requests use the upstream ToIP TSWG schema [`trqp_recognition_request.schema.json`](https://trustoverip.github.io/tswg-trust-registry-protocol/approved/schema/trqp_recognition_request.schema.json) (`$id`: `trqp-recognition-request`) verbatim. Verana-specific narrowing is described by the [Verana TRQP profile descriptor](./schemas/v4/resolver/trqp-profile.json).
 
 ##### Recognition response schema
 
-Recognition responses use the upstream ToIP TSWG schema [`trqp_recognition_response.schema.json`](https://trustoverip.github.io/tswg-trust-registry-protocol/approved/schema/trqp_recognition_response.schema.json) (`$id`: `trqp-recognition-response`) verbatim. The Verana profile additionally permits a top-level `verana` object whose shape is described by the [Verana TRQP profile descriptor](./trqp-profile.json).
+Recognition responses use the upstream ToIP TSWG schema [`trqp_recognition_response.schema.json`](https://trustoverip.github.io/tswg-trust-registry-protocol/approved/schema/trqp_recognition_response.schema.json) (`$id`: `trqp-recognition-response`) verbatim. The Verana profile additionally permits a top-level `verana` object whose shape is described by the [Verana TRQP profile descriptor](./schemas/v4/resolver/trqp-profile.json).
 
 ##### Example recognition request
 
@@ -502,3 +502,270 @@ Both endpoints accept an optional `context.session_id` extension to bind the ans
 
 When `session_id` is omitted, the answer is point-in-time per the standard `time` argument; if both are omitted, the answer is computed against the latest block.
 
+### Websocket Subscriptions
+
+The DID Resolver also exposes a real-time event stream so that clients can keep an indexer-backed mirror in sync without polling `/resolver/v1/resolve` for every DID on every block.
+
+The stream is organised around three coordinated endpoints. Together they cover live updates (`subscribeChanges`), catch-up after a disconnection (`listChanges`), and bootstrap from an empty mirror (`listIndexedDids`).
+
+| Module | Method Name | Relative REST API path | Type | Requirements | Authz |
+| --- | --- | --- | --- | --- | --- |
+| DID Resolver | `subscribeChanges` | `/resolver/v1/subscribe` | Subscription (WebSocket) | — | PUBLIC |
+| DID Resolver | `listChanges` | `/resolver/v1/changes` | Query | — | PUBLIC |
+| DID Resolver | `listIndexedDids` | `/resolver/v1/dids` | Query | — | PUBLIC |
+
+The unit of notification is **(DID, block)**: each time the indexer processes a new block, it re-evaluates trust for every DID whose state may have changed and emits **at most one change envelope per DID per block**, restricted to the channels the subscriber selected.
+
+The normative JSON Schemas for this stream are published alongside this document:
+
+- [`schemas/v4/resolver/subscribe.schema.json`](./schemas/v4/resolver/subscribe.schema.json) — client → server WebSocket control messages (`subscribe`, `unsubscribe`), including the channel selectors and sub-flags described in the [Channels](#channels) section below.
+- [`schemas/v4/resolver/changes.schema.json`](./schemas/v4/resolver/changes.schema.json) — server-side payloads: the WS `ready` message, the WS `block` message, and the `listChanges` REST response, all sharing the common `ChangeEnvelope` shape.
+
+#### Channels
+
+A subscription selects a set of channels. Each channel narrows what counts as a "change" for the subscribed DID:
+
+| Channel | Triggers a notification when … |
+| --- | --- |
+| `trust` | Any of the trust-core fields (`trusted`, `evaluatedAt`, `evaluatedAtBlock`, `expiresAt`, `vsOperator`) change. The new values are delivered inline. |
+| `corporation` | The Corporation entry bound to the DID has a structural change (controller change, slash event). `deposit` fluctuations alone are gated by the `includeDepositChanges` sub-flag below. |
+| `participations` | A `Participation` entry the DID is part of is created or transitions state. `weight` fluctuations alone are gated by the `includeWeightChanges` sub-flag below. |
+| `ecsCredentials` | An ECS credential issued to or by the DID is added, replaced, or invalidated. |
+| `presentations` | A `LinkedVerifiablePresentation` referenced by the DID Document is added or removed, or its `vtcCredentialIds[]` set changes. Changes confined to `unresolvableCredentialIds[]` or `invalidCredentialIds[]` are **not** notified. |
+| `services` | A non-`LinkedVerifiablePresentation` service entry in the DID Document changes (DIDComm, MCP, A2A, LinkedDomains, …). |
+| `ecosystems` | An `Ecosystem` entry the DID represents is created, archived, or its embedded schemas change. |
+
+Channels that carry Coin-amount fields (`weight`, `deposit`) or high-frequency aggregate counters (`participants[role]`, `issuedCredentials`, `verifiedCredentials`) expose opt-in sub-flags so subscribers can choose whether routine fluctuations of those values trigger notifications:
+
+| Channel | Sub-flag | Effect when `true` |
+| --- | --- | --- |
+| `corporation` | `includeDepositChanges` | Changes in the Corporation's `deposit` Coin amount trigger a notification (independent of slash events, which always trigger). |
+| `participations` | `includeWeightChanges` | Changes in a Participation's `weight` Coin amount trigger a notification. |
+| `participations` | `includeParticipantCounts` | Changes in `participants[role]` counters trigger a notification. |
+| `participations` | `includeIssuedCredentials` | Changes in the `issuedCredentials` counter trigger a notification. |
+| `participations` | `includeVerifiedCredentials` | Changes in the `verifiedCredentials` counter trigger a notification. |
+| `ecosystems` | `includeParticipantCounts` | Changes in ecosystem-level `participants[role]` counters trigger a notification. |
+| `ecosystems` | `includeIssuedCredentials` | Changes in the ecosystem-level `issuedCredentials` counter trigger a notification. |
+| `ecosystems` | `includeVerifiedCredentials` | Changes in the ecosystem-level `verifiedCredentials` counter trigger a notification. |
+
+All sub-flags default to `false`. The Coin-amount flags (`includeDepositChanges`, `includeWeightChanges`) and the counter flags (`includeParticipantCounts`, `includeIssuedCredentials`, `includeVerifiedCredentials`) gate fields that can tick on routine transactions and would otherwise dominate the stream.
+
+Channel flags carry **change signals**, not full new values — except for `trust`, which is delivered inline because it is small, fixed-shape, and the most frequently consumed. To obtain the new state for any other changed channel, the client calls `/resolver/v1/resolve` at `atBlock = <block of the change envelope>`.
+
+#### `subscribeChanges` — WebSocket subscription
+
+The subscriber opens a WebSocket connection to `/resolver/v1/subscribe` and sends one or more JSON control messages. The first control message MUST be a `subscribe`.
+
+##### Connect / ready
+
+Immediately after a successful WebSocket upgrade, before any `subscribe` is processed, the server sends a `ready` message:
+
+```json
+{
+   "type": "ready",
+   "block": 1500005,
+   "blockTime": "2026-05-11T13:00:05Z"
+}
+```
+
+`block` is the height of the **next** block that the server will deliver via this WebSocket (i.e. `latestProcessedBlock + 1` at connect time). Clients use `block - 1` as the bootstrap snapshot point — see [Bootstrap pattern](#bootstrap-pattern).
+
+##### Subscribe control message
+
+```json
+{
+   "action": "subscribe",
+   "dids": [
+      "did:webvh:QmRhJBzLMF6L3REha9xFpLgxui9X5tFm4TDxHoEHpA8Kpr:organization.vs.hologram.zone"
+   ],
+   "channels": {
+      "trust":          true,
+      "ecsCredentials": true,
+      "presentations":  true,
+      "services":       true,
+      "corporation": {
+         "includeDepositChanges":            false
+      },
+      "participations": {
+         "includeWeightChanges":       false,
+         "includeParticipantCounts":   false,
+         "includeIssuedCredentials":   false,
+         "includeVerifiedCredentials": false
+      },
+      "ecosystems": {
+         "includeParticipantCounts":   false,
+         "includeIssuedCredentials":   false,
+         "includeVerifiedCredentials": false
+      }
+   }
+}
+```
+
+- `dids[]` — DIDs to subscribe to. **Omit** to subscribe to every DID indexed by this resolver.
+- `channels` — Map from channel name to either a boolean (use defaults) or a sub-options object. Channels not listed in the map are excluded from the stream.
+
+A subsequent `subscribe` message replaces the active subscription on the same connection. To stop receiving notifications entirely, send `{ "action": "unsubscribe" }` or close the socket.
+
+##### Block message (server → client)
+
+After the first `subscribe` is acknowledged, the server sends one **block message** per processed block, in strictly increasing order of `block`:
+
+```json
+{
+   "type": "block",
+   "block": 1500005,
+   "blockTime": "2026-05-11T13:00:05Z",
+   "changes": [
+      {
+         "did": "did:webvh:QmRhJBzLMF6L3REha9xFpLgxui9X5tFm4TDxHoEHpA8Kpr:organization.vs.hologram.zone",
+         "trust": {
+            "trusted":          true,
+            "evaluatedAt":      "2026-05-11T13:00:05Z",
+            "evaluatedAtBlock": 1500005,
+            "expiresAt":        "2026-05-12T13:00:05Z",
+            "vsOperator":       "verana19kpereglz3jw690kjys3lnulx2r06p99l5u6sz"
+         },
+         "corporation":    true,
+         "participations": true,
+         "ecsCredentials": true,
+         "presentations":  false,
+         "services":       false,
+         "ecosystems":     true
+      }
+   ]
+}
+```
+
+Semantics:
+
+- `block` — Height of the just-processed block.
+- `blockTime` — Wall-clock time the block was committed (ISO 8601).
+- `changes[]` — One entry per DID whose subscribed-to state changed at this block. Empty when no subscribed change occurred — the message still acts as a heartbeat.
+- `changes[].did` — The DID this envelope refers to.
+- `changes[].trust` — Present iff `trust` is in the subscription **and** any trust-core field changed at this block. Carries the new core values inline, with the same shape as the trust-core fields in the [resolution response schema](#resolution-response-schema).
+- `changes[].<channel>` — `true` iff the channel is in the subscription **and** changed at this block; `false` otherwise. Clients fetch the new state by calling `/resolver/v1/resolve` at `atBlock = block`.
+
+##### Block production as ping
+
+Block messages are emitted **for every processed block**, even when `changes[]` is empty. Block production is the heartbeat: a connection that does not deliver a block message within the expected block-time window is presumed broken, and the client SHOULD reconnect and catch up via [`listChanges`](#listchanges--catch-up-over-a-block-range).
+
+A subscriber detects a connection-level loss by observing a gap (`block > previousBlock + 1`) in the sequence of received block messages.
+
+##### Backpressure
+
+A subscriber that fails to drain its receive buffer within an indexer-defined window MAY have its connection closed with WebSocket close code `1011` (server error / overloaded). The client SHOULD reconnect and resume via `listChanges`.
+
+#### `listChanges` — catch-up over a block range
+
+After a disconnection — or whenever the subscriber detects a gap in the WebSocket sequence — `listChanges` returns the same change envelopes as the WebSocket but compressed: it skips blocks with no subscribed changes, so the client never has to walk every block height.
+
+Request:
+
+```http
+GET /resolver/v1/changes
+  ?fromBlock=<int>
+  [&dids=<comma-separated DIDs>]
+  [&channels=<comma-separated channel names>]
+  [&includeParticipantCounts=true|false]
+  [&includeIssuedCredentials=true|false]
+  [&includeVerifiedCredentials=true|false]
+  [&limit=<int>]
+```
+
+`limit` defaults to `100` and MUST NOT exceed `1000`. When `dids` is omitted, the call subscribes-by-query to every indexed DID (same wildcard semantics as the WS `subscribe` with no `dids[]`).
+
+Response:
+
+```json
+{
+   "currentBlock":   1500300,
+   "fromBlock":      1500005,
+   "blocks": [
+      {
+         "block":     1500005,
+         "blockTime": "2026-05-11T13:00:05Z",
+         "changes":   [ /* same shape as `changes[]` in WS block messages */ ]
+      },
+      {
+         "block":     1500012,
+         "blockTime": "2026-05-11T13:01:05Z",
+         "changes":   [ /* … */ ]
+      }
+   ],
+   "nextFromBlock":  1500050
+}
+```
+
+- `currentBlock` — Latest block the indexer has processed at the time of the response.
+- `blocks[]` — Up to `limit` consecutive blocks in increasing order that contain at least one change matching the filters. **Blocks with no subscribed changes are omitted entirely.**
+- `nextFromBlock` — Smallest block height strictly greater than the last returned block (or strictly greater than `fromBlock` if `blocks` is empty) for which the indexer **knows** further changes exist. `null` when the response has reached `currentBlock`.
+
+Catch-up loop:
+
+```
+last_seen = client_last_seen_block
+while true:
+  r = GET /resolver/v1/changes?fromBlock=last_seen+1&...
+  apply(r.blocks)
+  if r.blocks:
+    last_seen = r.blocks[-1].block
+  if r.nextFromBlock is null:
+    break
+  last_seen = max(last_seen, r.nextFromBlock - 1)
+```
+
+The `nextFromBlock` cursor lets the client jump over arbitrarily long change-free ranges without making one HTTP call per block.
+
+#### `listIndexedDids` — bootstrap snapshot
+
+A client that starts with an empty mirror needs a way to enumerate the universe of DIDs the indexer tracks at a frozen snapshot block, then resolve each via `/resolver/v1/resolve` to populate its initial state.
+
+Request:
+
+```http
+GET /resolver/v1/dids
+  ?atBlock=<int>
+  [&cursor=<opaque string>]
+  [&limit=<int>]
+```
+
+`limit` defaults to `1000` and MUST NOT exceed `10000`.
+
+Response:
+
+```json
+{
+   "atBlock": 1500004,
+   "dids": [
+      "did:webvh:QmRhJBzLMF6L3REha9xFpLgxui9X5tFm4TDxHoEHpA8Kpr:organization.vs.hologram.zone",
+      "did:webvh:QmZ8Y3xRkH2pV4qTw9nL7sFmJg6cN5dB1aWxKvE3uPyT8r:corp.acme.example",
+      "did:web:ecosystem.eu-passport.example"
+   ],
+   "nextCursor": "eyJvZmZzZXQiOjEwMDB9"
+}
+```
+
+- `atBlock` — Echo of the requested snapshot block. The "DID universe" at block `B` is the set of DIDs the indexer can resolve at `B`: every Corporation `did`, every Ecosystem `did`, the corporation-side DID of every Participant entry that is in scope (per the resolver's [participation states](#example-resolution-response)), and any DID previously evaluated by the resolver that the indexer is still tracking.
+- `dids[]` — Page of indexed DIDs in stable sort order across pages.
+- `nextCursor` — Opaque pagination cursor; `null` (or absent) on the last page.
+
+#### Bootstrap pattern
+
+The recommended initial-sync sequence for a client with an empty mirror:
+
+1. **Connect** to `WS /resolver/v1/subscribe`. Read the `ready` message and capture `B = ready.block`.
+2. **Subscribe** with the desired `dids` / `channels`. Buffer all incoming block messages **without applying them** until step 5.
+3. **Enumerate** the DID universe at block `B - 1` by calling `GET /resolver/v1/dids?atBlock=B-1` and paginating through `nextCursor`.
+4. **Resolve** each enumerated DID by calling `POST /resolver/v1/resolve` with `atBlock: B - 1` and the response selectors the client cares about. Persist the resulting state as the snapshot at block `B - 1`.
+5. **Apply** the buffered WebSocket block messages in order (starting at block `B`), then continue applying live block messages as they arrive.
+
+Because the snapshot is taken at the immutable past block `B - 1` and the WebSocket delivers from `B` onwards, no events are lost or double-counted.
+
+#### Resume pattern
+
+After a temporary disconnection, a client with a non-empty mirror resumes by:
+
+1. Recording `last_seen_block` of the most recently applied WebSocket block message.
+2. Reconnecting to `WS /resolver/v1/subscribe` and re-subscribing as before. Buffer incoming block messages.
+3. Running the [`listChanges`](#listchanges--catch-up-over-a-block-range) catch-up loop from `fromBlock = last_seen_block + 1` until either `nextFromBlock` is `null` or it has reached the smallest block held in the WebSocket buffer.
+4. Applying the buffered WebSocket block messages in order, deduplicated by `block` against anything already applied from `listChanges`.
