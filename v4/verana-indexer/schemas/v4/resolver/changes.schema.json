@@ -126,14 +126,14 @@
     "TrustChange": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["trusted", "evaluatedAt", "evaluatedAtBlock", "expiresAt", "vsOperator"],
-      "description": "Inline new values of the trust-core fields at the block of the change envelope. Same shape as the trust-core fields in `schemas/v4/resolver/response.schema.json`.",
+      "required": ["trusted", "evaluatedAt", "evaluatedAtBlock", "expiresAt", "corporationId"],
+      "description": "Inline new values of the trust-core fields at the block of the change envelope. Same shape as the trust-core fields in `schemas/v4/resolver/response.schema.json`. The `corporationId` carries any DID-to-Corp re-binding that occurred at this block; the per-Participation `vsOperator` accounts (which live on `Participation` entries, not at envelope level) are signalled via the `participations` channel, not here.",
       "properties": {
         "trusted":          { "type": "boolean" },
         "evaluatedAt":      { "type": "string", "format": "date-time" },
         "evaluatedAtBlock": { "type": "integer", "minimum": 0 },
         "expiresAt":        { "type": "string", "format": "date-time" },
-        "vsOperator":       { "$ref": "#/$defs/Bech32Address" }
+        "corporationId":    { "$ref": "#/$defs/Bech32Address" }
       }
     }
   }

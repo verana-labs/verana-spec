@@ -50,21 +50,21 @@
         "trust": {
           "type": "boolean",
           "default": false,
-          "description": "Trigger on any change to the trust-core fields (`trusted`, `evaluatedAt`, `evaluatedAtBlock`, `expiresAt`, `vsOperator`). The new values are delivered inline (see `changes.schema.json` `#/$defs/TrustChange`)."
+          "description": "Trigger on any change to the trust-core fields (`trusted`, `evaluatedAt`, `evaluatedAtBlock`, `expiresAt`, `corporationId`). The new values are delivered inline (see `changes.schema.json` `#/$defs/TrustChange`). The top-level `corporationId` rotation (DID re-binding to a different Corporation) is signalled here."
         },
         "corporation": {
           "oneOf": [
             { "type": "boolean" },
             { "$ref": "#/$defs/CorporationOptions" }
           ],
-          "description": "Trigger on structural changes (controller change, slash event) of the Corporation entry bound to the DID. Sub-flag `includeDepositChanges` adds notifications for plain `deposit` Coin-amount fluctuations."
+          "description": "Trigger on creation, removal, or any structural change (Cosmos group rotation, slash event, CGF rotation, or CGF document change) of the singular `corporation` object the DID represents. Per VPR's per-Corporation `did` uniqueness invariant, a DID is the `did` of at most one Corporation. The top-level `corporationId` scalar itself (the binding \"this DID is operated by *that* Corp\") is part of the `trust` channel and is not gated separately. Sub-flag `includeDepositChanges` adds notifications for plain `deposit` Coin-amount fluctuations on the represented Corporation."
         },
         "participations": {
           "oneOf": [
             { "type": "boolean" },
             { "$ref": "#/$defs/ParticipationsOptions" }
           ],
-          "description": "Trigger on Participation entries being created or transitioning state. Sub-flags add notifications for `weight` fluctuations and high-frequency counter changes."
+          "description": "Trigger on Participation entries being created or transitioning state, OR on a Participation's `vsOperator` rotating (the controlling Corp re-authorising a different operator account for that specific Participant). Sub-flags add notifications for `weight` fluctuations and high-frequency counter changes."
         },
         "ecsCredentials": {
           "type": "boolean",
@@ -98,7 +98,7 @@
         "includeDepositChanges": {
           "type": "boolean",
           "default": false,
-          "description": "When true, changes in the Corporation's `deposit` Coin amount trigger a notification (independent of slash events, which always trigger)."
+          "description": "When true, changes in the represented Corporation's `deposit` Coin amount trigger a notification (independent of slash events, which always trigger)."
         }
       }
     },

@@ -62,8 +62,8 @@
   },
 
   "triggers": {
-    "authorization": "An active Participant entry exists where ecosystem = authority_id, corporation = entity_id, role = action_role_map[action], schema.uri = resource, and state = ACTIVE at evaluation time.",
-    "recognition":   "An Ecosystem entry exists where did = entity_id, corporation.did = authority_id, and archived IS NULL at evaluation time, AND a CredentialSchema entry exists where uri = resource and ecosystem = that ecosystem at evaluation time."
+    "authorization": "An active Participant entry exists where the Participant's schema is owned by the Ecosystem whose did = authority_id, the Participant's corporationId references the Corporation whose did = entity_id, role = action_role_map[action], the schema's URI form (`vpr:verana:<network>/cs/v1/js/<id>`, deterministic from the schema's stable ledger id) equals resource, and state = ACTIVE at evaluation time. The indexer translates the URI form to the schema's stable id internally; the wire format remains URI-based.",
+    "recognition":   "An Ecosystem entry exists where did = entity_id, its corporationId references the Corporation whose did = authority_id, and archived IS NULL at evaluation time, AND a CredentialSchema entry exists whose URI form (`vpr:verana:<network>/cs/v1/js/<id>`, deterministic from the schema's stable ledger id) equals resource and is owned by that ecosystem at evaluation time. The indexer translates the URI form to the schema's stable id internally; the wire format remains URI-based."
   },
 
   "active_states": ["ACTIVE"],
@@ -107,7 +107,7 @@
         "controlling_since": {
           "type": "string",
           "format": "date-time",
-          "description": "Block time at which `authority_id` (the corporation) became the controller of `entity_id` (the ecosystem)."
+          "description": "Block time at which `authority_id` (the corporation, identified by its stable bech32 group `id`) became the controlling Corporation of `entity_id` (the ecosystem)."
         }
       }
     }

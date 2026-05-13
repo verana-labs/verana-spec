@@ -26,7 +26,7 @@
     "corporation": {
       "type": "boolean",
       "default": false,
-      "description": "Include the `corporation` object (validator address, weight, slash history). Omit or `false` to exclude."
+      "description": "Include the `corporation` object (the unique Corporation whose `did` equals the resolved DID; carries `id`, `deposit`, slash history, and `cgf`). Per VPR a DID is the `did` of at most one Corporation, so this is a singular object rather than an array. Omit or `false` to exclude. The top-level `corporationId` scalar (which equals `corporation.id` whenever the Corporation exists — by VPR's per-Corporation `did` uniqueness invariant they are necessarily the same) is part of the trust-core fields and is always returned regardless of this selector; this selector only controls whether the full Corporation object (`deposit`, slash history, CGF) is also surfaced inline."
     },
     "ecsCredentials": {
       "type": "boolean",
