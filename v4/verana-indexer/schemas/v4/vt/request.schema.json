@@ -1,0 +1,137 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://verana.io/schemas/v4/vt/request.schema.json",
+  "title": "ResolutionRequest",
+  "description": "Request payload for the verana indexer DID Resolver. Selectors with object form (`participations`, `presentations`, `ecosystems`) accept `false` to exclude, `true` for defaults, or an object of fine-grained options. See `### Example resolution request` in the indexer spec.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["did"],
+  "properties": {
+    "did": {
+      "type": "string",
+      "pattern": "^did:",
+      "description": "DID to resolve. Any DID method supported by the resolver."
+    },
+    "atTime": {
+      "$ref": "#/$defs/Iso8601DateTime",
+      "description": "ISO 8601 datetime of the point-in-time evaluation. Mutually exclusive with `atBlock`. Defaults to latest block when neither is provided."
+    },
+    "atBlock": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Block height of the point-in-time evaluation. Mutually exclusive with `atTime`. Defaults to latest block when neither is provided."
+    },
+
+    "corporation": {
+      "type": "boolean",
+      "default": false,
+      "description": "Include the `corporation` object (the unique Corporation whose `did` equals the resolved DID; carries `id`, `deposit`, slash history, and `cgf`). Per VPR a DID is the `did` of at most one Corporation, so this is a singular object rather than an array. Omit or `false` to exclude. The top-level `corporationId` scalar (which equals `corporation.id` whenever the Corporation exists — by VPR's per-Corporation `did` uniqueness invariant they are necessarily the same) is part of the trust-core fields and is always returned regardless of this selector; this selector only controls whether the full Corporation object (`deposit`, slash history, CGF) is also surfaced inline."
+    },
+    "ecsCredentials": {
+      "type": "boolean",
+      "default": false,
+      "description": "Include the full ECS credentials with subject claims. Omit or `false` to exclude."
+    },
+    "services": {
+      "type": "boolean",
+      "default": false,
+      "description": "Include `services[]` — non-LinkedVerifiablePresentation service entries from the DID Document (e.g. DIDComm, MCP, LinkedDomains). Omit or `false` to exclude."
+    },
+
+    "participations": {
+      "description": "Include `participations[]`. `false` to exclude; `true` is sugar for `{}` (defaults: states = [ACTIVE]); object form lets you filter by state.",
+      "oneOf": [
+        { "type": "boolean" },
+        { "$ref": "#/$defs/ParticipationsOptions" }
+      ]
+    },
+    "presentations": {
+      "description": "Include `presentations[]`. Each entry always carries `vtcCredentialIds[]`; the sub-flags additionally surface unresolvable / invalid credential IDs per VP.",
+      "oneOf": [
+        { "type": "boolean" },
+        { "$ref": "#/$defs/PresentationsOptions" }
+      ]
+    },
+    "ecosystems": {
+      "description": "Include `ecosystems[]`. Sub-flags control whether archived ecosystems (and their archived embedded schemas) are surfaced.",
+      "oneOf": [
+        { "type": "boolean" },
+        { "$ref": "#/$defs/EcosystemsOptions" }
+      ]
+    }
+  },
+
+  "not": {
+    "description": "`atTime` and `atBlock` are mutually exclusive.",
+    "required": ["atTime", "atBlock"]
+  },
+
+  "$defs": {
+    "Iso8601DateTime": {
+      "type": "string",
+      "format": "date-time",
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(\\.[0-9]+)?Z$",
+      "description": "ISO 8601 / RFC 3339 datetime string in UTC. MUST include the date, the time (with seconds), and the trailing `Z` UTC designator. Fractional seconds are OPTIONAL. Local times, non-UTC offsets (e.g. `+02:00`), date-only values, and timezone-less times are NOT permitted."
+    },
+    "ParticipationState": {
+      "enum": ["ACTIVE", "FUTURE", "INACTIVE", "EXPIRED", "REVOKED", "SLASHED", "REPAID"]
+    },
+    "ParticipationsOptions": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "states": {
+          "type": "array",
+          "uniqueItems": true,
+          "default": ["ACTIVE"],
+          "items": { "$ref": "#/$defs/ParticipationState" },
+          "description": "Filter participations by state. Defaults to [\"ACTIVE\"] when omitted."
+        }
+      }
+    },
+    "PresentationsOptions": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "unresolvableCredentialIds": {
+          "type": "boolean",
+          "default": false,
+          "description": "Add `unresolvableCredentialIds[]` to each presentation entry."
+        },
+        "invalidCredentialIds": {
+          "type": "boolean",
+          "default": false,
+          "description": "Add `invalidCredentialIds[]` to each presentation entry."
+        }
+      }
+    },
+    "EcosystemsOptions": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "includeArchived": {
+          "type": "boolean",
+          "default": false,
+          "description": "When true, also include archived ecosystems in the response."
+        },
+        "credentialSchemas": {
+          "description": "Embedded Credential Schemas selector. `false` (or omit) to suppress; `true` to include with defaults; object form for fine-grained control.",
+          "oneOf": [
+            { "type": "boolean" },
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "includeArchived": {
+                  "type": "boolean",
+                  "default": false,
+                  "description": "When true, also include archived Credential Schemas inside each ecosystem."
+                }
+              }
+            }
+          ]
+        }
+      }
+    }
+  }
+}
