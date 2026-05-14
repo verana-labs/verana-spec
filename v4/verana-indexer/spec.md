@@ -16,7 +16,7 @@ The key words MAY, MUST, MUST NOT, OPTIONAL, RECOMMENDED, REQUIRED, SHOULD, and 
 
 ### Datetime encoding
 
-Every datetime value defined or surfaced by this specification — including but not limited to `atTime`, `evaluatedAtTime`, `expiresAtTime`, `validFrom`, `validUntil`, `lastSlashedAt`, `activeSince`, `blockTime`, the TRQP `time` / `time_requested` / `time_evaluated` / `since` / `controlling_since` fields, and any future datetime field added in a backwards-compatible revision — MUST be encoded as an ISO 8601 / RFC 3339 datetime string **in UTC**. Each value MUST include the date, the time (with seconds), and the trailing `Z` UTC designator. Fractional seconds are OPTIONAL. Local times, non-UTC offsets (e.g. `+02:00`), date-only values, and timezone-less times MUST NOT be used. Producers that hold non-UTC times MUST convert them to UTC before serialising. The normative regular expression is:
+Every datetime value defined or surfaced by this specification — including but not limited to `atTime`, `evaluatedAtTime`, `expiresAtTime`, `validFrom`, `validUntil`, `lastSlashedAtTime`, `activeSince`, `blockTime`, the TRQP `time` / `time_requested` / `time_evaluated` / `since` / `controlling_since` fields, and any future datetime field added in a backwards-compatible revision — MUST be encoded as an ISO 8601 / RFC 3339 datetime string **in UTC**. Each value MUST include the date, the time (with seconds), and the trailing `Z` UTC designator. Fractional seconds are OPTIONAL. Local times, non-UTC offsets (e.g. `+02:00`), date-only values, and timezone-less times MUST NOT be used. Producers that hold non-UTC times MUST convert them to UTC before serialising. The normative regular expression is:
 
 ```regex
 ^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(\.[0-9]+)?Z$
@@ -134,7 +134,7 @@ participation roles: HOLDER, ISSUER, VERIFIER, ISSUER_GRANTOR, VERIFIER_GRANTOR,
    "corporation":{
       "id":"verana1rw7w9hm0zd7e4jcxsm955nu8l5ju0wtkpssxe5",
       "deposit":"40000000uvna",
-      "lastSlashedAt":"2026-01-01T03:00:00.000Z",
+      "lastSlashedAtTime":"2026-01-01T03:00:00.000Z",
       "slashedEvents":1,
       "slashedValue":"1000000uvna",
       "cgf":{

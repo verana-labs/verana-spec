@@ -104,7 +104,7 @@
       "properties": {
         "id":            { "$ref": "#/$defs/Bech32Address", "description": "Stable identifier of the Corporation entry: the bech32 address of the underlying Cosmos SDK group (1:1 with the group). Per VPR a Corporation has no uint64 id of its own; the group address serves as the stable primary key." },
         "deposit":       { "$ref": "#/$defs/Coin", "description": "Trust deposit currently bonded by the Corporation." },
-        "lastSlashedAt": { "$ref": "#/$defs/Iso8601DateTime", "description": "Wall-clock time of the most recent slash event affecting this Corporation." },
+        "lastSlashedAtTime": { "$ref": "#/$defs/Iso8601DateTime", "description": "Wall-clock time of the most recent slash event affecting this Corporation." },
         "slashedEvents": { "type": "integer", "minimum": 0 },
         "slashedValue":  { "$ref": "#/$defs/Coin" },
         "cgf":           { "$ref": "#/$defs/GovernanceFramework", "description": "Active Corporation Governance Framework. Mirrors the active `GovernanceFrameworkVersion` of this Corporation per the VPR data model. Omitted only when the Corporation has not yet published any GF." }
