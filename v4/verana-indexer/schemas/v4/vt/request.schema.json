@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://verana.io/schemas/v4/resolver/request.schema.json",
+  "$id": "https://verana.io/schemas/v4/vt/request.schema.json",
   "title": "ResolutionRequest",
   "description": "Request payload for the verana indexer DID Resolver. Selectors with object form (`participations`, `presentations`, `ecosystems`) accept `false` to exclude, `true` for defaults, or an object of fine-grained options. See `### Example resolution request` in the indexer spec.",
   "type": "object",
@@ -13,8 +13,7 @@
       "description": "DID to resolve. Any DID method supported by the resolver."
     },
     "atTime": {
-      "type": "string",
-      "format": "date-time",
+      "$ref": "#/$defs/Iso8601DateTime",
       "description": "ISO 8601 datetime of the point-in-time evaluation. Mutually exclusive with `atBlock`. Defaults to latest block when neither is provided."
     },
     "atBlock": {
@@ -68,6 +67,12 @@
   },
 
   "$defs": {
+    "Iso8601DateTime": {
+      "type": "string",
+      "format": "date-time",
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(\\.[0-9]+)?Z$",
+      "description": "ISO 8601 / RFC 3339 datetime string in UTC. MUST include the date, the time (with seconds), and the trailing `Z` UTC designator. Fractional seconds are OPTIONAL. Local times, non-UTC offsets (e.g. `+02:00`), date-only values, and timezone-less times are NOT permitted."
+    },
     "ParticipationState": {
       "enum": ["ACTIVE", "FUTURE", "INACTIVE", "EXPIRED", "REVOKED", "SLASHED", "REPAID"]
     },
@@ -109,8 +114,8 @@
           "default": false,
           "description": "When true, also include archived ecosystems in the response."
         },
-        "schemas": {
-          "description": "Embedded schemas selector. `false` (or omit) to suppress; `true` to include with defaults; object form for fine-grained control.",
+        "credentialSchemas": {
+          "description": "Embedded Credential Schemas selector. `false` (or omit) to suppress; `true` to include with defaults; object form for fine-grained control.",
           "oneOf": [
             { "type": "boolean" },
             {
@@ -120,7 +125,7 @@
                 "includeArchived": {
                   "type": "boolean",
                   "default": false,
-                  "description": "When true, also include archived schemas inside each ecosystem."
+                  "description": "When true, also include archived Credential Schemas inside each ecosystem."
                 }
               }
             }

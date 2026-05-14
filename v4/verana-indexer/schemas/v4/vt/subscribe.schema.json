@@ -1,8 +1,8 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://verana.io/schemas/v4/resolver/subscribe.schema.json",
+  "$id": "https://verana.io/schemas/v4/vt/subscribe.schema.json",
   "title": "WebSocketControlMessage",
-  "description": "Control messages sent by the client to the server over a `/resolver/v1/subscribe` WebSocket connection. The first control message MUST be a `subscribe`; a subsequent `subscribe` replaces the active subscription; an `unsubscribe` (or socket close) stops notifications. See `### Websocket Subscriptions` in the indexer spec.",
+  "description": "Control messages sent by the client to the server over a `/vt/v1/subscribe` WebSocket connection. The first control message MUST be a `subscribe`; a subsequent `subscribe` replaces the active subscription; an `unsubscribe` (or socket close) stops notifications. See `### Websocket Subscriptions` in the indexer spec.",
 
   "oneOf": [
     { "$ref": "#/$defs/Subscribe" },
@@ -50,7 +50,7 @@
         "trust": {
           "type": "boolean",
           "default": false,
-          "description": "Trigger on any change to the trust-core fields (`trusted`, `evaluatedAt`, `evaluatedAtBlock`, `expiresAt`, `corporationId`). The new values are delivered inline (see `changes.schema.json` `#/$defs/TrustChange`). The top-level `corporationId` rotation (DID re-binding to a different Corporation) is signalled here."
+          "description": "Trigger on any change to the trust-core fields (`trusted`, `evaluatedAtTime`, `evaluatedAtBlock`, `expiresAtTime`, `corporationId`). The new values are delivered inline (see `changes.schema.json` `#/$defs/TrustChange`). The top-level `corporationId` rotation (DID re-binding to a different Corporation) is signalled here."
         },
         "corporation": {
           "oneOf": [

@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://verana.io/schemas/v4/resolver/changes.schema.json",
+  "$id": "https://verana.io/schemas/v4/vt/changes.schema.json",
   "title": "ChangeStreamMessage",
   "description": "Server-side change-stream payloads: the WS `ready` message, the WS `block` message, and the `listChanges` REST response. All three carry per-DID change envelopes (`$defs/ChangeEnvelope`). See `### Websocket Subscriptions` in the indexer spec.",
 
@@ -11,6 +11,12 @@
   ],
 
   "$defs": {
+    "Iso8601DateTime": {
+      "type": "string",
+      "format": "date-time",
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(\\.[0-9]+)?Z$",
+      "description": "ISO 8601 / RFC 3339 datetime string in UTC. MUST include the date, the time (with seconds), and the trailing `Z` UTC designator. Fractional seconds are OPTIONAL. Local times, non-UTC offsets (e.g. `+02:00`), date-only values, and timezone-less times are NOT permitted."
+    },
     "DidString": {
       "type": "string",
       "pattern": "^did:"
@@ -34,8 +40,8 @@
           "description": "Height of the next block the server will deliver via this WebSocket (i.e. `latestProcessedBlock + 1` at connect time). Clients use `block - 1` as the bootstrap snapshot point."
         },
         "blockTime": {
-          "type": "string",
-          "format": "date-time"
+          "$ref": "#/$defs/Iso8601DateTime",
+          "description": "Wall-clock time at which `block` was committed."
         }
       }
     },
@@ -48,7 +54,7 @@
       "properties": {
         "type":      { "const": "block" },
         "block":     { "type": "integer", "minimum": 0 },
-        "blockTime": { "type": "string", "format": "date-time" },
+        "blockTime": { "$ref": "#/$defs/Iso8601DateTime", "description": "Wall-clock time at which `block` was committed." },
         "changes": {
           "type": "array",
           "items": { "$ref": "#/$defs/ChangeEnvelope" }
@@ -63,7 +69,7 @@
       "description": "A single block inside a `listChanges` response. Shape mirrors `BlockMessage` minus the `type` discriminator.",
       "properties": {
         "block":     { "type": "integer", "minimum": 0 },
-        "blockTime": { "type": "string", "format": "date-time" },
+        "blockTime": { "$ref": "#/$defs/Iso8601DateTime", "description": "Wall-clock time at which `block` was committed." },
         "changes": {
           "type": "array",
           "items": { "$ref": "#/$defs/ChangeEnvelope" }
@@ -75,7 +81,7 @@
       "type": "object",
       "additionalProperties": false,
       "required": ["currentBlock", "fromBlock", "blocks"],
-      "description": "Response shape for `GET /resolver/v1/changes`. Returns up to `limit` blocks that contain at least one change matching the request filters; change-free blocks are omitted entirely. `nextFromBlock` lets the client jump over arbitrarily long change-free ranges in one hop.",
+      "description": "Response shape for `GET /vt/v1/changes`. Returns up to `limit` blocks that contain at least one change matching the request filters; change-free blocks are omitted entirely. `nextFromBlock` lets the client jump over arbitrarily long change-free ranges in one hop.",
       "properties": {
         "currentBlock": {
           "type": "integer",
@@ -126,13 +132,13 @@
     "TrustChange": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["trusted", "evaluatedAt", "evaluatedAtBlock", "expiresAt", "corporationId"],
-      "description": "Inline new values of the trust-core fields at the block of the change envelope. Same shape as the trust-core fields in `schemas/v4/resolver/response.schema.json`. The `corporationId` carries any DID-to-Corp re-binding that occurred at this block; the per-Participation `vsOperator` accounts (which live on `Participation` entries, not at envelope level) are signalled via the `participations` channel, not here.",
+      "required": ["trusted", "evaluatedAtTime", "evaluatedAtBlock", "expiresAtTime", "corporationId"],
+      "description": "Inline new values of the trust-core fields at the block of the change envelope. Same shape as the trust-core fields in `schemas/v4/vt/response.schema.json`. The `corporationId` carries any DID-to-Corp re-binding that occurred at this block; the per-Participation `vsOperator` accounts (which live on `Participation` entries, not at envelope level) are signalled via the `participations` channel, not here.",
       "properties": {
         "trusted":          { "type": "boolean" },
-        "evaluatedAt":      { "type": "string", "format": "date-time" },
+        "evaluatedAtTime":  { "$ref": "#/$defs/Iso8601DateTime" },
         "evaluatedAtBlock": { "type": "integer", "minimum": 0 },
-        "expiresAt":        { "type": "string", "format": "date-time" },
+        "expiresAtTime":    { "$ref": "#/$defs/Iso8601DateTime" },
         "corporationId":    { "$ref": "#/$defs/Bech32Address" }
       }
     }

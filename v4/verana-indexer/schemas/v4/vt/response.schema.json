@@ -1,16 +1,16 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://verana.io/schemas/v4/resolver/response.schema.json",
+  "$id": "https://verana.io/schemas/v4/vt/response.schema.json",
   "title": "ResolutionResponse",
-  "description": "Response payload returned by the verana indexer DID Resolver. Optional sections (`corporation`, `participations`, `ecsCredentials`, `presentations`, `services`, `ecosystems`) are present only when the corresponding selector was set in the request. The core fields (`did`, `trusted`, `evaluatedAt`, `evaluatedAtBlock`, `expiresAt`, `corporationId`) are always returned. The `vsOperator` account is surfaced **per Participation** (not at envelope level) because each `Participant` entry carries its own VS Operator Authorization grant. See `### Example resolution response` in the indexer spec.",
+  "description": "Response payload returned by the verana indexer DID Resolver. Optional sections (`corporation`, `participations`, `ecsCredentials`, `presentations`, `services`, `ecosystems`) are present only when the corresponding selector was set in the request. The core fields (`did`, `trusted`, `evaluatedAtTime`, `evaluatedAtBlock`, `expiresAtTime`, `corporationId`) are always returned. The `vsOperator` account is surfaced **per Participation** (not at envelope level) because each `Participant` entry carries its own VS Operator Authorization grant. All datetime values are ISO 8601 / RFC 3339 UTC strings (see `#/$defs/Iso8601DateTime`). See `### Example resolution response` in the indexer spec.",
   "type": "object",
   "additionalProperties": false,
   "required": [
     "did",
     "trusted",
-    "evaluatedAt",
+    "evaluatedAtTime",
     "evaluatedAtBlock",
-    "expiresAt",
+    "expiresAtTime",
     "corporationId"
   ],
   "properties": {
@@ -23,9 +23,8 @@
       "type": "boolean",
       "description": "Whether the DID qualifies as a Verifiable Service per [VS-REQ] at the evaluation point-in-time."
     },
-    "evaluatedAt": {
-      "type": "string",
-      "format": "date-time",
+    "evaluatedAtTime": {
+      "$ref": "#/$defs/Iso8601DateTime",
       "description": "Wall-clock time of the evaluation."
     },
     "evaluatedAtBlock": {
@@ -33,9 +32,8 @@
       "minimum": 0,
       "description": "Block height of the evaluation."
     },
-    "expiresAt": {
-      "type": "string",
-      "format": "date-time",
+    "expiresAtTime": {
+      "$ref": "#/$defs/Iso8601DateTime",
       "description": "Time after which this resolution result MUST be re-evaluated."
     },
     "corporationId": {
@@ -52,6 +50,12 @@
   },
 
   "$defs": {
+    "Iso8601DateTime": {
+      "type": "string",
+      "format": "date-time",
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(\\.[0-9]+)?Z$",
+      "description": "ISO 8601 / RFC 3339 datetime string in UTC. MUST include the date, the time (with seconds), and the trailing `Z` UTC designator. Fractional seconds are OPTIONAL. Local times, non-UTC offsets (e.g. `+02:00`), date-only values, and timezone-less times are NOT permitted."
+    },
     "Bech32Address": {
       "type": "string",
       "pattern": "^verana1[a-z0-9]+$",
@@ -100,7 +104,7 @@
       "properties": {
         "id":            { "$ref": "#/$defs/Bech32Address", "description": "Stable identifier of the Corporation entry: the bech32 address of the underlying Cosmos SDK group (1:1 with the group). Per VPR a Corporation has no uint64 id of its own; the group address serves as the stable primary key." },
         "deposit":       { "$ref": "#/$defs/Coin", "description": "Trust deposit currently bonded by the Corporation." },
-        "lastSlashedAt": { "type": "string", "format": "date-time" },
+        "lastSlashedAt": { "$ref": "#/$defs/Iso8601DateTime", "description": "Wall-clock time of the most recent slash event affecting this Corporation." },
         "slashedEvents": { "type": "integer", "minimum": 0 },
         "slashedValue":  { "$ref": "#/$defs/Coin" },
         "cgf":           { "$ref": "#/$defs/GovernanceFramework", "description": "Active Corporation Governance Framework. Mirrors the active `GovernanceFrameworkVersion` of this Corporation per the VPR data model. Omitted only when the Corporation has not yet published any GF." }
@@ -110,15 +114,15 @@
     "Participation": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["id", "vsOperator", "role", "state", "schemaId", "ecosystemId", "weight"],
-      "description": "A VPR `Participant` entry surfaced under the resolve response's `participations[]`. Every entry's `Participant.did` equals the envelope's resolved `did` (that is how the entry came to be included in this DID's participations[]); the `did` is therefore not repeated per entry, mirroring how the `corporation` object and `ecosystems[]` entries omit the envelope-shared `did`. The Corporation backing this Participant is also envelope-derived: per VPR's per-Participant `(did, corporation)` consistency invariant, every Participation of a given DID shares the same controlling Corporation, which is surfaced as the envelope-level `corporationId` scalar; it is therefore not repeated per entry. The `vsOperator` account, by contrast, **is** surfaced per entry because each Participant's VS Operator Authorization grant is a distinct on-chain object — the controlling Corp's group MAY authorise different operator accounts for different Participants. The graph keys this record by `id` (the stable VPR ledger id) rather than by a composite key. DID-less VPR Participant entries (`Participant.did = null`) exist on-chain but are not surfaced in any DID's participations[] (there is no DID under which to surface them); they fall outside the graph's DID-centric view. The referenced schema is surfaced as `schemaId` only — not as a full schema block — because by the time a Participation is reconciled, the corresponding `CredentialSchema` record has necessarily already been persisted by the graph from the controlling Ecosystem's own resolve. `ecosystemId` is a denormalisation provided for direct access; it is deterministically derivable from `schemaId` (every CredentialSchema is owned by exactly one Ecosystem).",
+      "required": ["id", "vsOperator", "role", "state", "credentialSchemaId", "ecosystemId", "weight"],
+      "description": "A VPR `Participant` entry surfaced under the resolve response's `participations[]`. Every entry's `Participant.did` equals the envelope's resolved `did` (that is how the entry came to be included in this DID's participations[]); the `did` is therefore not repeated per entry, mirroring how the `corporation` object and `ecosystems[]` entries omit the envelope-shared `did`. The Corporation backing this Participant is also envelope-derived: per VPR's per-Participant `(did, corporation)` consistency invariant, every Participation of a given DID shares the same controlling Corporation, which is surfaced as the envelope-level `corporationId` scalar; it is therefore not repeated per entry. The `vsOperator` account, by contrast, **is** surfaced per entry because each Participant's VS Operator Authorization grant is a distinct on-chain object — the controlling Corp's group MAY authorise different operator accounts for different Participants. The graph keys this record by `id` (the stable VPR ledger id) rather than by a composite key. DID-less VPR Participant entries (`Participant.did = null`) exist on-chain but are not surfaced in any DID's participations[] (there is no DID under which to surface them); they fall outside the graph's DID-centric view. The referenced schema is surfaced as `credentialSchemaId` only — not as a full schema block — because by the time a Participation is reconciled, the corresponding `CredentialSchema` record has necessarily already been persisted by the graph from the controlling Ecosystem's own resolve. `ecosystemId` is a denormalisation provided for direct access; it is deterministically derivable from `credentialSchemaId` (every CredentialSchema is owned by exactly one Ecosystem).",
       "properties": {
         "id":                    { "type": "integer", "minimum": 0, "description": "VPR `Participant.id` — stable ledger primary key. Used as the graph's `Participation` record identity." },
         "vsOperator":            { "$ref": "#/$defs/Bech32Address", "description": "Cosmos account address authorised (via VS Operator Authorization granted by the controlling Corporation's group) to act as the VS operator for this specific Participant entry. Different Participants under the same Corporation MAY carry different `vsOperator` accounts." },
         "role":                  { "$ref": "#/$defs/ParticipationRole" },
         "state":                 { "$ref": "#/$defs/ParticipationState" },
-        "schemaId":              { "type": "integer", "minimum": 0, "description": "Stable VPR id of the referenced `CredentialSchema`. Anchors the `FOR_SCHEMA: Participation → CredentialSchema` edge." },
-        "ecosystemId":           { "type": "integer", "minimum": 0, "description": "Stable VPR id of the Ecosystem that owns the referenced schema. Denormalisation for query convenience; derivable from `schemaId` via the `CredentialSchema ← Ecosystem` ownership 1:1." },
+        "credentialSchemaId":              { "type": "integer", "minimum": 0, "description": "Stable VPR id of the referenced `CredentialSchema`. Anchors the `FOR_SCHEMA: Participation → CredentialSchema` edge." },
+        "ecosystemId":           { "type": "integer", "minimum": 0, "description": "Stable VPR id of the Ecosystem that owns the referenced schema. Denormalisation for query convenience; derivable from `credentialSchemaId` via the `CredentialSchema ← Ecosystem` ownership 1:1." },
         "weight":                { "$ref": "#/$defs/Coin" },
         "issuedCredentials":     { "type": "integer", "minimum": 0 },
         "verifiedCredentials":   { "type": "integer", "minimum": 0 },
@@ -132,7 +136,7 @@
       "required": [
         "ecsSchema",
         "ecsSchemaVersion",
-        "schemaId",
+        "credentialSchemaId",
         "issuerParticipantId",
         "ecosystemId",
         "participantId",
@@ -140,7 +144,7 @@
         "validUntil",
         "credentialSubject"
       ],
-      "description": "An ECS credential extracted from one of the DID's linked-VPs. The shape of `credentialSubject` is governed by the corresponding ECS schema (Service / Organization / Persona / UserAgent). `ecosystemId` (uint64) is the indexer's stable-identifier reference to the issuing ecosystem and is what the graph uses as the `GOVERNED_BY` edge anchor; the VC body's `ecosystem` DID claim is NOT surfaced inline (consumers needing it can fetch the VC body via the VP). `schemaId` (uint64) is the stable VPR id of the ECS schema; the (ecsSchema, ecsSchemaVersion) enum-pair is retained for type-based query. `participantId` (uint64) is the stable VPR id of the HOLDER `Participant` entry that tracks this credential's lifecycle; surfacing it inline lets consumers anchor a direct `HELD_AS: EcsCredential → Participation` edge without any JOIN. `issuerParticipantId` (uint64) is the stable VPR id of the ISSUER `Participant` entry under whose authority this credential was issued; surfacing it inline lets consumers anchor a direct `ISSUED_BY: EcsCredential → Participation` edge — the issuer's DID is recoverable as `Participation.did` of the referenced Participant entry, so the VC body's `issuer` DID claim is NOT surfaced inline.",
+      "description": "An ECS credential extracted from one of the DID's linked-VPs. The shape of `credentialSubject` is governed by the corresponding ECS schema (Service / Organization / Persona / UserAgent). `ecosystemId` (uint64) is the indexer's stable-identifier reference to the issuing ecosystem and is what the graph uses as the `GOVERNED_BY` edge anchor; the VC body's `ecosystem` DID claim is NOT surfaced inline (consumers needing it can fetch the VC body via the VP). `credentialSchemaId` (uint64) is the stable VPR id of the ECS schema; the (ecsSchema, ecsSchemaVersion) enum-pair is retained for type-based query. `participantId` (uint64) is the stable VPR id of the HOLDER `Participant` entry that tracks this credential's lifecycle; surfacing it inline lets consumers anchor a direct `HELD_AS: EcsCredential → Participation` edge without any JOIN. `issuerParticipantId` (uint64) is the stable VPR id of the ISSUER `Participant` entry under whose authority this credential was issued; surfacing it inline lets consumers anchor a direct `ISSUED_BY: EcsCredential → Participation` edge — the issuer's DID is recoverable as `Participation.did` of the referenced Participant entry, so the VC body's `issuer` DID claim is NOT surfaced inline.",
       "properties": {
         "ecsSchema": {
           "type": "string",
@@ -152,13 +156,13 @@
           ]
         },
         "ecsSchemaVersion": { "type": "string" },
-        "schemaId":         { "type": "integer", "minimum": 0, "description": "Stable VPR id of the `CredentialSchema` (ECS schema) that defines this credential's shape. Anchors the `BASED_ON_SCHEMA: EcsCredential → CredentialSchema` edge." },
-        "issuerParticipantId": { "type": "integer", "minimum": 0, "description": "Stable VPR id of the ISSUER `Participant` entry that issued this credential (role = ISSUER, schemaId = this credential's schemaId, did = issuer DID). Anchors the `ISSUED_BY: EcsCredential → Participation` edge by stable id; the issuer's DID is recoverable as `Participation.did` of that entry." },
+        "credentialSchemaId":         { "type": "integer", "minimum": 0, "description": "Stable VPR id of the `CredentialSchema` (ECS schema) that defines this credential's shape. Anchors the `BASED_ON_SCHEMA: EcsCredential → CredentialSchema` edge." },
+        "issuerParticipantId": { "type": "integer", "minimum": 0, "description": "Stable VPR id of the ISSUER `Participant` entry that issued this credential (role = ISSUER, credentialSchemaId = this credential's credentialSchemaId, did = issuer DID). Anchors the `ISSUED_BY: EcsCredential → Participation` edge by stable id; the issuer's DID is recoverable as `Participation.did` of that entry." },
         "ecosystemId":      { "type": "integer", "minimum": 0, "description": "Stable VPR ledger id of the issuing ecosystem. Anchors the `GOVERNED_BY: EcsCredential → Ecosystem` edge. The VC body's `ecosystem` DID claim is not surfaced inline (the stable id is sufficient for graph linking; consumers needing the original DID claim can fetch the VC body via the VP)." },
-        "participantId":    { "type": "integer", "minimum": 0, "description": "Stable VPR id of the HOLDER `Participant` entry that tracks this credential's lifecycle (issuance, validity, revocation, expiration). Anchors the `HELD_AS: EcsCredential → Participation` edge so consumers can resolve the participation directly without joining on (holder DID, schemaId, role=HOLDER)." },
+        "participantId":    { "type": "integer", "minimum": 0, "description": "Stable VPR id of the HOLDER `Participant` entry that tracks this credential's lifecycle (issuance, validity, revocation, expiration). Anchors the `HELD_AS: EcsCredential → Participation` edge so consumers can resolve the participation directly without joining on (holder DID, credentialSchemaId, role=HOLDER)." },
         "id":               { "type": "string" },
-        "validFrom":        { "type": "string", "format": "date-time" },
-        "validUntil":       { "type": "string", "format": "date-time" },
+        "validFrom":        { "$ref": "#/$defs/Iso8601DateTime", "description": "Start of the credential's validity window (mirrors the VC body's `validFrom`)." },
+        "validUntil":       { "$ref": "#/$defs/Iso8601DateTime", "description": "End of the credential's validity window (mirrors the VC body's `validUntil`)." },
         "credentialSubject": {
           "type": "object",
           "description": "ECS-schema-specific subject claims. Always includes `id`."
@@ -180,12 +184,12 @@
           "items": {
             "type": "object",
             "additionalProperties": false,
-            "required": ["id", "schemaId", "ecosystemId", "participantId", "issuerParticipantId"],
+            "required": ["id", "credentialSchemaId", "ecosystemId", "participantId", "issuerParticipantId"],
             "properties": {
               "id":                  { "type": "string", "description": "The VTC's `id` (URN, did-URL fragment, or other credential identifier as carried by the VC body)." },
-              "schemaId":            { "type": "integer", "minimum": 0, "description": "Stable VPR id of the `CredentialSchema` that defines the credential's shape. Anchors a `BASED_ON_SCHEMA` edge." },
+              "credentialSchemaId":            { "type": "integer", "minimum": 0, "description": "Stable VPR id of the `CredentialSchema` that defines the credential's shape. Anchors a `BASED_ON_SCHEMA` edge." },
               "ecosystemId":         { "type": "integer", "minimum": 0, "description": "Stable VPR id of the Ecosystem under which the credential was issued. Anchors a `GOVERNED_BY` edge." },
-              "participantId":       { "type": "integer", "minimum": 0, "description": "Stable VPR id of the HOLDER `Participant` entry that tracks this VTC's lifecycle. Anchors a `HELD_AS: Vtc → Participation` edge so consumers can resolve the participation directly without joining on (holder DID, schemaId, role=HOLDER)." },
+              "participantId":       { "type": "integer", "minimum": 0, "description": "Stable VPR id of the HOLDER `Participant` entry that tracks this VTC's lifecycle. Anchors a `HELD_AS: Vtc → Participation` edge so consumers can resolve the participation directly without joining on (holder DID, credentialSchemaId, role=HOLDER)." },
               "issuerParticipantId": { "type": "integer", "minimum": 0, "description": "Stable VPR id of the ISSUER `Participant` entry that issued this VTC. Anchors a `ISSUED_BY: Vtc → Participation` edge; the issuer's DID is recoverable as `Participation.did` of that entry." }
             }
           }
@@ -225,7 +229,7 @@
         "corporationId":       { "$ref": "#/$defs/Bech32Address", "description": "Stable id (bech32 group address) of the Corporation that controls this Ecosystem. Anchors the `CONTROLS: Corporation → Ecosystem` edge; the controlling Corporation's DID is recoverable by resolving its `did` separately if needed." },
         "archived":            { "type": "boolean" },
         "egf":                 { "$ref": "#/$defs/GovernanceFramework", "description": "Active Ecosystem Governance Framework. Mirrors the active `GovernanceFrameworkVersion` of this Ecosystem per the VPR data model. Omitted only when the Ecosystem has not yet published any GF." },
-        "schemas":             { "type": "array", "items": { "$ref": "#/$defs/EcosystemSchema" } },
+        "credentialSchemas":   { "type": "array", "items": { "$ref": "#/$defs/EcosystemSchema" } },
         "participants":        { "$ref": "#/$defs/ParticipantsByRole" },
         "issuedCredentials":   { "type": "integer", "minimum": 0 },
         "verifiedCredentials": { "type": "integer", "minimum": 0 }
@@ -236,7 +240,7 @@
       "type": "object",
       "additionalProperties": false,
       "required": ["id", "type", "digestSRI", "archived"],
-      "description": "A schema embedded in an Ecosystem's `schemas[]` array. Identified by its stable VPR id (`id`); the URI form (`vpr:verana:<network>/cs/v1/js/<id>`) is deterministic from `(network, id)` and is not repeated inline. The schema body is loaded out-of-band via the indexer's resource-load API by `id`.",
+      "description": "A schema embedded in an Ecosystem's `credentialSchemas[]` array. Identified by its stable VPR id (`id`); the URI form (`vpr:verana:<network>/cs/v1/js/<id>`) is deterministic from `(network, id)` and is not repeated inline. The schema body is loaded out-of-band via the indexer's resource-load API by `id`.",
       "properties": {
         "id":                  { "type": "integer", "minimum": 0, "description": "Stable VPR ledger id of the schema. The sole identity used by the graph and by the indexer's schema-load API. Anchors `BASED_ON_SCHEMA`, `FOR_SCHEMA`, and `OWNS_SCHEMA` edges." },
         "type":                { "const": "JsonSchema" },
@@ -260,8 +264,7 @@
           "description": "Currently active GF version number (mirrors `Corporation.active_version` / `Ecosystem.active_version` in VPR; MUST start with 1)."
         },
         "activeSince": {
-          "type": "string",
-          "format": "date-time",
+          "$ref": "#/$defs/Iso8601DateTime",
           "description": "Time at which this version became active (mirrors `GovernanceFrameworkVersion.active_since`). Optional but RECOMMENDED."
         },
         "documents": {

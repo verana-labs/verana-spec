@@ -90,7 +90,8 @@
         "since": {
           "type": "string",
           "format": "date-time",
-          "description": "Block time at which the matching Participant row entered its current state."
+          "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(\\.[0-9]+)?Z$",
+          "description": "Block time at which the matching Participant row entered its current state. ISO 8601 / RFC 3339 datetime in UTC, terminated by `Z`."
         },
         "deposit": {
           "type": "string",
@@ -107,7 +108,8 @@
         "controlling_since": {
           "type": "string",
           "format": "date-time",
-          "description": "Block time at which `authority_id` (the corporation, identified by its stable bech32 group `id`) became the controlling Corporation of `entity_id` (the ecosystem)."
+          "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(\\.[0-9]+)?Z$",
+          "description": "Block time at which `authority_id` (the corporation, identified by its stable bech32 group `id`) became the controlling Corporation of `entity_id` (the ecosystem). ISO 8601 / RFC 3339 datetime in UTC, terminated by `Z`."
         }
       }
     }
