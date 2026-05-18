@@ -168,6 +168,8 @@ A single `resolve` call per `(did, block)` is REQUIRED regardless of how many ch
 
 [TG-INGEST-5] On a detected gap in the WebSocket sequence (`block > previousBlock + 1`) or following a connection drop, the graph MUST resume via the Indexer's `listChanges` from `fromBlock = lastAppliedBlock + 1` until either `nextFromBlock` is `null` or it overlaps the smallest block held in the resume buffer. Each `listChanges` entry MUST be applied as in [[TG-INGEST-4]] using `atBlock = entry.block`, then the buffered WebSocket messages are replayed with deduplication by `(did, block)`. For gaps larger than an implementation-defined threshold, an implementation MAY coalesce the per-`(did, block)` resolves into a single resolve per unique DID at `atBlock = lastBlockInGap`, since [[TG-ACT-1]] makes the graph's terminal state independent of the intermediate transitions; the buffered WebSocket replay still uses per-block `atBlock`.
 
+[TG-INGEST-6] **Indexer integrity guarantee for surfaced credentials.** Every `EcsCredential` and `Vtc` record persisted by the graph has had its issuance pre-validated by the upstream Indexer at the credential's `validFrom`: the Indexer admits a credential to the resolve response (or marks it as valid within `presentations[]`, i.e. its id appears in neither `unresolvableCredentialIds` nor `invalidCredentialIds`) only after confirming that the issuer held an `ACTIVE` Participation with a permissions grant authorising the issuance at that instant. The graph inherits this property transitively — **graph presence of a credential record IS the historical-issuance-authorisation assurance** — and MUST NOT re-validate it. Implementations MAY surface this assurance as an explicit attribute on credential records returned by [[TG-QRY-3]] or [Faceted-search Queries](#faceted-search-queries).
+
 ### Resource dereferencing
 
 A resolve response carries three classes of reference, treated differently by the graph:
@@ -456,3 +458,471 @@ This invariant does NOT extend to `EcsCredential` or `Vtc`. For both, the `crede
 - `EcsCredential.OrganizationCredential.{countryCode, legalJurisdiction, organizationKind, lei, registryId}`
 - `EcsCredential.ServiceCredential.{type, name}`
 - Free-text indexes on every textual `name`, `description`, `address` field across the catalogue, plus full-text indexes on `Corporation.cgf` and `Ecosystem.egf` document content.
+
+## Graph-traversal Queries
+
+The graph exposes a fixed, normative set of canonical traversal queries that turn an entity identifier into a structured, multi-hop result shape. Together with [Faceted-search Queries](#faceted-search-queries), these are the only normative read surfaces of the graph. The wire protocol — GraphQL, REST, raw Cypher / Gremlin / GQL pass-through, or any combination — is implementation-defined; what every conforming implementation MUST do is honour the input/output contract of each query in [[TG-QRY-3]].
+
+[TG-QRY-1] **Current-state semantics; verification out of scope.** Every traversal query MUST evaluate against the **current persisted state** of the graph at call time. Per [[TG-ACT-1]] the graph hard-deletes Participations the moment they leave `ACTIVE` and orphan VTCs the moment their parent VPs no longer reference them; once removed, the graph cannot reconstruct prior states.
+
+The graph's traversal surface is for **browsing, discovery, and audit retrospectives**, not for credential verification or single-DID trust checks. Historical-instant questions — *"was this Participation in `ACTIVE` state at block B?"*, *"was the issuer authorised at the credential's `validFrom`?"*, *"is the verifier currently authorised to request this presentation?"* — and verification of credentials presented out-of-band (DIDComm, OID4VP, or any channel other than a Linked Verifiable Presentation referenced from the holder's DID Document) MUST be delegated to the upstream Indexer's TRQP endpoint with `atBlock` / `atTime` set explicitly. Out-of-band-presented credentials are by definition not visible to the graph: per [[TG-INGEST-6]] the graph admits only ECS credentials and Vtcs surfaced via Linked Verifiable Presentations from the holder's DID Document, and those have already been pre-validated by the Indexer for issuance authorisation at admission. Likewise, *current-state* trust checks against a single known DID ("is `did:example:...` currently trusted?") are answered more directly by the Indexer's `POST /vt/v1/resolve` than by the graph.
+
+[TG-QRY-2] **Visibility gates on traversal vs. listing.** ID-based GETs (every query in [[TG-QRY-3]]) MUST resolve the input entity regardless of its trust-expiry / archival state — these are referential lookups, and the input's status is conveyed in the response via per-node visibility flags (`isTrustExpired` for `Did` per [[TG-ACT-3]], `archived` for `Ecosystem` / `CredentialSchema` per [[TG-ACT-2]]). Traversal results MUST include trust-expired and archived nodes when reached by walking edges; that is exactly why [[TG-ACT-2]] and [[TG-ACT-3]] retain those records. The direct-trust-surface gate of [[TG-ACT-3]] applies only to [Faceted-search Queries](#faceted-search-queries) list results, not to the shape-fixed traversals defined here.
+
+[TG-QRY-3] **Canonical query set.** Implementations MUST answer each of the queries in the tables below correctly, given the documented input shape, with a result conforming to the documented output shape. Implementations MAY expose additional traversals beyond this set; they MUST NOT omit any. Every entity reference returned in any of these queries MUST carry, at minimum, its primary key, its `lastObservedAtTime`, and the visibility flags applicable to its type. Whether the full record contents are inlined or returned as references resolved within the same API call boundary is implementation-defined.
+
+### A. DID-rooted
+
+| #      | Name                          | Input                              | Output (shape)                                                                                              | Walk                                                                                                                                                                                                          |
+| ---    | ---                           | ---                                | ---                                                                                                         | ---                                                                                                                                                                                                           |
+| **A1** | Trust summary                 | `did`                              | `{ did, trusted, evaluatedAtTime, evaluatedAtBlock, expiresAtTime, pattern, isTrustExpired, corporationId }` | `Did` record only (no edge walk)                                                                                                                                                                              |
+| **A2** | Governing chain               | `did`                              | `{ corporation, ecosystems[] }` (deduplicated)                                                              | `Did —OPERATED_BY→ Corporation`; `Did —PARTICIPATES_IN→ Participation —FOR_SCHEMA→ CredentialSchema ←OWNS_SCHEMA— Ecosystem`                                                                                  |
+| **A3** | Service endpoints             | `did`                              | `ServiceEndpoint[]`                                                                                         | `Did —EXPOSES_SERVICE→ ServiceEndpoint[]`                                                                                                                                                                     |
+| **A4** | Linked VPs and contained VTCs | `did`                              | `LinkedVerifiablePresentation[] { vtcs: Vtc[] }`                                                            | `Did —REFERENCES_VP→ LinkedVerifiablePresentation —CONTAINS_VTC→ Vtc[]`                                                                                                                                       |
+| **A5** | Held credentials (subject of) | `did`, optional `ecsSchema` filter | `EcsCredential[] { issuerDid, issuerParticipation, schema, ecosystem }`                                      | `Did ←SUBJECT_OF_CREDENTIAL— EcsCredential —ISSUED_BY→ Participation —PARTICIPATES_IN← Did_issuer`; plus `EcsCredential —BASED_ON_SCHEMA→ CredentialSchema` and `—GOVERNED_BY→ Ecosystem`                       |
+| **A6** | Issued credentials            | `did`, optional `ecsSchema` filter | `{ EcsCredential[], Vtc[] }` each `{ subjectDid, schema, ecosystem }`                                       | `Did —PARTICIPATES_IN→ Participation(role=ISSUER) ←ISSUED_BY— { EcsCredential \| Vtc }`                                                                                                                        |
+| **A7** | Participations by role        | `did`, optional `role` filter      | `Participation[] { schema, ecosystem, role, state, weight }`                                                | `Did —PARTICIPATES_IN→ Participation[]` then `—FOR_SCHEMA→ CredentialSchema ←OWNS_SCHEMA— Ecosystem`                                                                                                          |
+
+### B. Credential-rooted
+
+| #      | Name              | Input                                              | Output                                                              | Walk                                                                                                                                                       |
+| ---    | ---               | ---                                                | ---                                                                 | ---                                                                                                                                                        |
+| **B1** | Issuer recovery   | `credentialId` (`EcsCredential.id` or `Vtc.id`)    | `{ credential, issuerDid, issuerParticipation, schema, ecosystem }` | `{ EcsCredential \| Vtc } —ISSUED_BY→ Participation —PARTICIPATES_IN← Did_issuer`; plus `—BASED_ON_SCHEMA→ CredentialSchema` and `—GOVERNED_BY→ Ecosystem`  |
+| **B2** | Holder recovery   | `credentialId`                                     | `{ credential, subjectDid, holderParticipation }`                   | `{ EcsCredential \| Vtc } —HELD_AS→ Participation`; for `EcsCredential` the subject DID is also `EcsCredential.subjectDid`                                  |
+
+> **Note.** `B1` / `B2` return **current-state** issuer / holder context for credentials surfaced into the graph — i.e. ECS credentials and Vtcs admitted via Linked Verifiable Presentations from the holder's DID Document (per [[TG-INGEST-6]]). They are intended for **browsing, discovery, and audit retrospectives**. Credentials presented out-of-band (DIDComm, OID4VP) are not visible to the graph; verifying such credentials — including *"was the issuer authorised at `validFrom`?"* and *"is the verifier currently authorised to request this presentation?"* — uses the upstream Indexer's TRQP per [[TG-QRY-1]], not the graph.
+
+### C. Ecosystem-rooted
+
+| #      | Name                       | Input                                                         | Output                                                                                            | Walk                                                                                                                          |
+| ---    | ---                        | ---                                                           | ---                                                                                               | ---                                                                                                                           |
+| **C1** | Owned schemas              | `ecosystemId`                                                 | `CredentialSchema[]`                                                                              | `Ecosystem —OWNS_SCHEMA→ CredentialSchema[]`                                                                                  |
+| **C2** | Participating DIDs by role | `ecosystemId`, optional `role`, optional `credentialSchemaId` | `{ role → Did[] }` (each accompanied by its `Participation`)                                      | `Ecosystem —OWNS_SCHEMA→ CredentialSchema ←FOR_SCHEMA— Participation —PARTICIPATES_IN← Did`                                   |
+| **C3** | Governance documents       | `ecosystemId`                                                 | `egf` summary `{ version, activeSince, documents[] }`; document bodies if locally fetched         | record only                                                                                                                   |
+
+> The "all VSs governed by Ecosystem E" use case reads as `C2` with `role = HOLDER` and `credentialSchemaId` constrained to E's ECS-SERVICE schema (when E is the ECS Trust Registry). E's owned schemas are themselves enumerated by `C1`.
+
+### D. Schema-rooted
+
+| #      | Name                        | Input                                | Output                                                       | Walk                                                                |
+| ---    | ---                         | ---                                  | ---                                                          | ---                                                                 |
+| **D1** | Credentials based on schema | `credentialSchemaId`                 | `{ EcsCredential[], Vtc[] }`                                 | `CredentialSchema ←BASED_ON_SCHEMA— { EcsCredential \| Vtc }`       |
+| **D2** | Participants by role        | `credentialSchemaId`, optional `role` | `{ role → Did[] }` (each accompanied by its `Participation`) | `CredentialSchema ←FOR_SCHEMA— Participation —PARTICIPATES_IN← Did` |
+
+### E. Corporation-rooted
+
+| #      | Name                  | Input           | Output                                                                                    | Walk                                              |
+| ---    | ---                   | ---             | ---                                                                                       | ---                                               |
+| **E1** | Owned DIDs            | `corporationId` | `Did[]`                                                                                   | `Corporation ←OPERATED_BY— Did[]`                 |
+| **E2** | Controlled Ecosystems | `corporationId` | `Ecosystem[]`                                                                             | `Corporation —CONTROLS→ Ecosystem[]`              |
+| **E3** | Governance documents  | `corporationId` | `cgf` summary `{ version, activeSince, documents[] }`; document bodies if locally fetched | record only                                       |
+
+### F. Path queries (SHOULD)
+
+| #      | Name                | Input                          | Output                             | Notes                                                                                       |
+| ---    | ---                 | ---                            | ---                                | ---                                                                                         |
+| **F1** | Shortest trust path | `(idA, typeA)`, `(idB, typeB)` | ordered `(node, edge)[]` or `null` | Variable-length path. SHOULD because not always required by directory or browsing surfaces |
+
+[TG-QRY-4] **Composition over single-shot.** The user-visible interactions of the graph (faceted-search-result enrichment, detail pages, directory browsing, audit packs) are typically composed of one [Faceted-search Queries](#faceted-search-queries) call followed by 2–6 traversal calls per result. Implementations MAY expose composite façades that batch these into a single request (e.g. a GraphQL gateway that resolves a `did(id: ...)` field into A1 + A2 + A3 + A5 + A7 in one round-trip), but the underlying contract — the per-query input/output shapes of [[TG-QRY-3]] — remains the unit of conformance.
+
+### Traversal REST binding
+
+[TG-QRY-5] **Default REST binding.** Implementations claiming **REST binding conformance** MUST expose the canonical traversal query set of [[TG-QRY-3]] over the single endpoint defined below; the request and response payloads MUST validate against the JSON Schemas referenced. Implementations MAY additionally or alternatively expose the same contract over GraphQL or direct query-language pass-through, in which case only the per-query input/output contracts of [[TG-QRY-3]] apply.
+
+| Module       | Method Name | Relative REST API path | Type  | Requirements | Authz  |
+| ---          | ---         | ---                    | ---   | ---          | ---    |
+| Verana Graph | `traverse`  | `/graph/v1/traverse`   | Query | [[TG-QRY-3]] | PUBLIC |
+
+#### Traversal request schema
+
+The normative JSON Schema for the traversal request is published alongside this document at [`schemas/v4/graph/traverse/request.schema.json`](./schemas/v4/graph/traverse/request.schema.json). It defines the `query` selector (one of `A1`–`A7`, `B1`–`B2`, `C1`–`C3`, `D1`–`D2`, `E1`–`E3`, `F1` per [[TG-QRY-3]]), and the per-query `input` object whose shape depends on the selected query (for example `{ did }` for A1–A7, `{ credentialId }` for B1–B2, `{ ecosystemId }` for C1–C3, `{ credentialSchemaId }` for D1–D2, `{ corporationId }` for E1–E3, `{ from: { id, type }, to: { id, type } }` for F1). Optional per-query filters (`ecsSchema` on A5/A6, `role` on A7/C2/D2, `credentialSchemaId` on C2) are carried inside `input`.
+
+#### Traversal response schema
+
+The normative JSON Schema for the traversal response is published alongside this document at [`schemas/v4/graph/traverse/response.schema.json`](./schemas/v4/graph/traverse/response.schema.json). It defines the envelope fields (`query` echo, `evaluatedAtTime`, `output`) and the per-query `output` shape, which mirrors the **Output (shape)** column of [[TG-QRY-3]] tables. Every entity reference in `output` MUST carry the entity's primary key, its `lastObservedAtTime`, and the visibility flags applicable to its type (`isTrustExpired` for `Did`, `archived` for `Ecosystem` / `CredentialSchema`).
+
+#### Example traversal request
+
+A1 (trust summary) on a single DID:
+
+```json
+{
+  "query": "A1",
+  "input": {
+    "did": "did:webvh:QmRhJBzLMF6L3REha9xFpLgxui9X5tFm4TDxHoEHpA8Kpr:organization.vs.hologram.zone"
+  }
+}
+```
+
+#### Example traversal response
+
+```json
+{
+  "query": "A1",
+  "evaluatedAtTime": "2026-05-17T21:28:00.000Z",
+  "output": {
+    "did": "did:webvh:QmRhJBzLMF6L3REha9xFpLgxui9X5tFm4TDxHoEHpA8Kpr:organization.vs.hologram.zone",
+    "trusted": true,
+    "evaluatedAtTime": "2026-05-17T21:00:00.000Z",
+    "evaluatedAtBlock": 1500000,
+    "expiresAtTime": "2026-05-18T21:00:00.000Z",
+    "pattern": "B",
+    "isTrustExpired": false,
+    "corporationId": "verana1rw7w9hm0zd7e4jcxsm955nu8l5ju0wtkpssxe5",
+    "lastObservedAtTime": "2026-05-17T20:55:12.000Z"
+  }
+}
+```
+
+### Traversal examples
+
+*This section is non-normative.*
+
+The compositions below illustrate how the [[TG-QRY-3]] queries combine at use sites. They are illustrative; conformance is defined by the per-query input/output contracts above, not by these compositions.
+
+#### Discovery UI: search hit → detail page
+
+*This section is non-normative.*
+
+A user types `"bank in france"` into a discovery UI. The faceted-search call ([Faceted-search Queries](#faceted-search-queries)) returns a `Did` hit, "Banque ABC", which the user clicks. The detail page composes:
+
+```text
+A1 (banqueABC.did)  → trust summary card (trusted, expiresAtTime, pattern)
+A2 (banqueABC.did)  → governance chain: Banque ABC SAS Corp → EU Banking Trust Registry
+A3 (banqueABC.did)  → service-endpoints panel (DIDComm + MCP + HTTPS)
+A5 (banqueABC.did)  → held credentials (ServiceCredential, OrganizationCredential, PSD2 VTC, ISO27001 VTC) with issuer DID resolved per row
+A7 (banqueABC.did)  → participations grouped by role
+```
+
+The user clicks "issued by Banque de France" on the PSD2 row:
+
+```text
+B1 (psd2Credential.id)  → { issuerDid, issuerParticipation, schema, ecosystem }
+                          navigate to issuerDid detail page (repeats A1 / A2 / …)
+```
+
+#### Compliance / audit pack
+
+*This section is non-normative.*
+
+A regulator wants "all VSs operating in CO under Ecosystem E". A faceted-search call (`Did` surface, filters `Participation.ecosystemId = E`, `OrganizationCredential.countryCode = CO`) returns N hits. Per hit:
+
+```text
+A2  → governance chain (ownership + governance trail)
+A5  → held credentials (ECS + domain VTCs)
+A6  → outflow: credentials this VS issues
+A7  → role footprint across every ecosystem the VS participates in
+C3 (ecosystemId)  → applicable governance framework version + documents
+```
+
+Per-VS pack: 5 traversal calls. Total: 1 search + N × 5 traversals.
+
+## Faceted-search Queries
+
+The graph's discovery surface is a **hybrid faceted-search** API: structured filters intersect free-text scoring; ranking signals weighted by trust health produce the order; facet aggregations come back alongside hits; cursor-based pagination preserves stability across the live ingestion stream. Unlike the shape-fixed [Graph-traversal Queries](#graph-traversal-queries), faceted search returns ranked lists of entities matched against a free-form query. The wire protocol — Elasticsearch / OpenSearch / Meilisearch / Typesense / Postgres FTS / a bespoke gateway over any of these — is implementation-defined; the contract below is normative.
+
+[TG-FCT-1] **Searchable result surfaces.** A faceted-search query MUST target exactly one of the following entity surfaces: `Did` (the Verifiable Service surface), `Ecosystem`, `Corporation`, `CredentialSchema`, `ServiceEndpoint`. `EcsCredential`, `Vtc`, `Participation`, and `LinkedVerifiablePresentation` MUST NOT appear as direct hits — they enrich a hit's result card via [Graph-traversal Queries](#graph-traversal-queries) from the parent entity. The `Did` surface is the dominant one (it is the surface most discovery UIs and AI agents query first); the other four serve registry-, governance-, and schema-discovery flows.
+
+[TG-FCT-2] **Default visibility gates.** Every faceted-search query MUST apply the following gates by default. Each gate is annotated with whether the caller MAY override it.
+
+- `Did.trusted = true` — overridable via explicit `includeUntrusted = true` flag.
+- `Did.expiresAtTime >= now` — **NOT overridable** ([[TG-ACT-3]]).
+- `Ecosystem.archived = false` — overridable via `includeArchived = true` ([[TG-ACT-2]]).
+- `CredentialSchema.archived = false` — overridable via `includeArchived = true` ([[TG-ACT-2]]).
+- `Did`, `Corporation`, `Ecosystem` hits whose current controlling DID is trust-expired: hidden — **NOT overridable** ([[TG-ACT-3]]).
+
+[TG-FCT-3] **Required filter fields per surface.** Implementations MUST honour the operators listed for each field on the corresponding surface. Implementations MAY expose additional filters; they MUST NOT omit any.
+
+### `Did` surface filters
+
+| Field                                                | Operators              | Notes                                                                                                                                                                                                                       |
+| ---                                                  | ---                    | ---                                                                                                                                                                                                                         |
+| `Did.trusted`                                        | eq                     | default hard `= true` per [[TG-FCT-2]]                                                                                                                                                                                       |
+| `Did.pattern`                                        | eq, in                 | `A` \| `B`                                                                                                                                                                                                                  |
+| `Did.serviceTypes`                                   | contains, contains-any | DID Document `service[].type` set                                                                                                                                                                                            |
+| `Did.corporationId`                                  | eq                     | "all VSs of this Corp"                                                                                                                                                                                                       |
+| `Did.operatorKind`                                   | eq, in                 | derived facet ∈ `{ Organization, Persona }`, materialised at ingestion from the operative ORG-or-PERSONA credential the VS's trust chain rests on (Pattern A: self; Pattern B: issuer). Lets queries say "personal" / "corporate" structurally |
+| `EcsCredential.ServiceCredential.type`               | eq, in                 | high-value facet — the VS-level service category                                                                                                                                                                              |
+| `EcsCredential.ServiceCredential.minimumAgeRequired` | range                  | "kids ≤ 8" → `<= 7`                                                                                                                                                                                                          |
+| `OrganizationCredential.countryCode`                 | eq, in                 | from operative Org cred (Pattern A: self; B: issuer)                                                                                                                                                                          |
+| `OrganizationCredential.legalJurisdiction`           | eq, in, prefix         | sub-national (e.g. `CO-DC`); `^[A-Z]{2}(-[A-Z0-9]{1,3})?$`                                                                                                                                                                   |
+| `OrganizationCredential.organizationKind`            | eq, in                 |                                                                                                                                                                                                                              |
+| `OrganizationCredential.lei`                         | eq                     |                                                                                                                                                                                                                              |
+| `OrganizationCredential.registryId`                  | eq                     |                                                                                                                                                                                                                              |
+| `PersonaCredential.controllerCountryCode`            | eq, in                 | from operative Persona cred (Pattern A: self; B: issuer)                                                                                                                                                                      |
+| `PersonaCredential.controllerJurisdiction`           | eq, in, prefix         | sub-national                                                                                                                                                                                                                  |
+| `Participation.ecosystemId`                          | eq, in                 | "VS participating in Ecosystem X"                                                                                                                                                                                             |
+| `Participation.credentialSchemaId`                   | eq, in                 | "VS holding/issuing under Schema Y"                                                                                                                                                                                           |
+| `Participation.role`                                 | eq, in                 | `HOLDER` \| `ISSUER` \| `VERIFIER` \| `ISSUER_GRANTOR` \| `VERIFIER_GRANTOR` \| `ECOSYSTEM`. Composes with `credentialSchemaId` and `ecosystemId` to answer "*X-credential* issuers / holders / verifiers"                  |
+
+### `Ecosystem` surface filters
+
+| Field                  | Operators | Notes                            |
+| ---                    | ---       | ---                              |
+| `archived`             | eq        | default `false` per [[TG-FCT-2]] |
+| `issuedCredentials`    | range     |                                  |
+| `verifiedCredentials`  | range     |                                  |
+| `participants[<role>]` | range     |                                  |
+| `corporationId`        | eq        |                                  |
+
+### `Corporation` surface filters
+
+| Field               | Operators | Notes                                            |
+| ---                 | ---       | ---                                              |
+| `deposit`           | range     | numeric ranking signal                           |
+| `slashedEvents`     | range     | typical default constraint: `= 0` ("untainted") |
+| `lastSlashedAtTime` | range     |                                                  |
+
+### `CredentialSchema` surface filters
+
+| Field                 | Operators | Notes                            |
+| ---                   | ---       | ---                              |
+| `archived`            | eq        | default `false` per [[TG-FCT-2]] |
+| `ecosystemId`         | eq, in    |                                  |
+| `issuedCredentials`   | range     |                                  |
+| `verifiedCredentials` | range     |                                  |
+
+### `ServiceEndpoint` surface filters
+
+| Field  | Operators | Notes |
+| ---    | ---       | ---   |
+| `type` | eq, in    |       |
+
+[TG-FCT-4] **Required free-text fields and content denormalisation.** The free-text scorer MUST consider the following fields with the indicative weights below. Implementations MAY tune absolute weights but MUST preserve the relative ordering — high > medium > low.
+
+| Field                                                                                | Weight     | Notes                                                                                                                                                                                                                                                                                              |
+| ---                                                                                  | ---        | ---                                                                                                                                                                                                                                                                                                |
+| `EcsCredential.ServiceCredential.{name, description}`                                | high       | the VS-level marketing copy                                                                                                                                                                                                                                                                         |
+| `EcsCredential.OrganizationCredential.{name, address}`                               | medium     | "in Bogotá" type queries land on `address` when no city-level structured facet exists                                                                                                                                                                                                              |
+| `EcsCredential.PersonaCredential.{name, description}`                                | medium     |                                                                                                                                                                                                                                                                                                    |
+| `Ecosystem.egf.documents[].body` (when fetched per [[TG-DEREF-2a]])                  | low        |                                                                                                                                                                                                                                                                                                    |
+| `Corporation.cgf.documents[].body` (when fetched per [[TG-DEREF-2b]])                | low        |                                                                                                                                                                                                                                                                                                    |
+| `CredentialSchema.{title, description}` from the loaded schema body                  | low        | enables "iso 27001 certification" type queries on the `CredentialSchema` surface                                                                                                                                                                                                                    |
+| `{title, description}` of any `CredentialSchema` the `Did` has a `Participation` for | low–medium | **denormalised onto the `Did` doc at index time.** Per-role weighting (e.g. higher weight for ISSUER Participations) is implementation-defined. Enables one-shot "*plumber issuers*" queries on the `Did` surface — no two-step search-the-schema-then-search-the-DIDs flow                          |
+| `{textual fields}` of `credentialSubject` of any non-ECS `Vtc` the `Did` holds       | medium     | **denormalised onto the `Did` doc at index time. MUST.** Domain-credential discovery — *"baby shoes in Bogotá"*, *"streaming video for kids"* — relies on free-text matching content authored on non-ECS VTCs. Requires VP body fetches per [[TG-DEREF-3]]; if a VP body is not fetched, only schema-level text contributes |
+
+[TG-FCT-5] **Ranking signals.** Beyond the visibility gates of [[TG-FCT-2]] and the lexical score from the free-text fields of [[TG-FCT-4]], the final ranking score MUST incorporate the trust signals below. **Direction** of each signal is normative; absolute **weights** are implementation-defined.
+
+| Signal                                                          | Direction          | Notes                                                                       |
+| ---                                                             | ---                | ---                                                                         |
+| `Corporation.deposit`                                           | boost              | sub-linear (log / sqrt) to avoid runaway from any single high-deposit Corp |
+| `Corporation.slashedEvents`                                     | penalty            | monotonic decreasing                                                        |
+| `Ecosystem.verifiedCredentials` / `Ecosystem.issuedCredentials` | popularity boost   | sub-linear                                                                  |
+| `lastObservedAtTime`                                            | mild recency boost | optional                                                                    |
+
+[TG-FCT-6] **Result envelope.** Every faceted-search response MUST conform to the following shape (field names are normative; structural ordering is illustrative):
+
+```json
+{
+  "query": { "...echo of the request, including filters and free-text..." },
+  "totalCount": 123,
+  "hits": [
+    {
+      "type": "Did | Ecosystem | Corporation | CredentialSchema | ServiceEndpoint",
+      "id": "...",
+      "score": 12.34,
+      "snippet": { "...per-type fields suitable for a result card..." },
+      "highlights": [ "...matched terms in context..." ]
+    }
+  ],
+  "facets": {
+    "countryCode":      [ { "value": "FR", "count": 42 } ],
+    "organizationKind": [ "..." ],
+    "serviceTypes":     [ "..." ],
+    "ecosystemId":      [ "..." ]
+  },
+  "cursor": "opaque-pagination-token-or-null"
+}
+```
+
+The `facets` object MUST contain aggregations for at least every `eq` / `in` filter field declared on the queried surface in [[TG-FCT-3]]. Each `hit.snippet` MUST carry the entity's primary key, `lastObservedAtTime`, and the visibility flags applicable to the surface (`isTrustExpired` for `Did`, `archived` for `Ecosystem` / `CredentialSchema`).
+
+[TG-FCT-7] **Pagination.** Implementations MUST use **cursor-based** pagination — the `cursor` returned in one response is opaque to the client and is the only way to fetch subsequent pages. Offset-based pagination (`?offset=...&limit=...`) MUST NOT be used because it is unstable under the live ingestion stream: records appear and disappear from the result set as upstream block events flow in, and offset-based pagination silently skips or duplicates rows under concurrent writes. A cursor MAY become invalid (e.g. its anchor record left the result set); responses to invalid cursors MUST return an explicit error rather than silently re-anchoring.
+
+[TG-FCT-8] **Composition with traversal.** Faceted-search returns ranked hits with the minimum data needed for a result card; deep enrichment (full governance chain, all held credentials, etc.) is the job of [Graph-traversal Queries](#graph-traversal-queries) from the hit's id. Implementations MAY expose composite façades that fold both layers into a single request (e.g. "search returning top-N hits plus A1 + A2 inlined per hit"), but the contract — [[TG-FCT-1]] through [[TG-FCT-7]] plus the [[TG-QRY-3]] traversal contracts — remains the unit of conformance.
+
+### Search REST binding
+
+[TG-FCT-9] **Default REST binding.** Implementations claiming **REST binding conformance** MUST expose the faceted-search contract of [[TG-FCT-1]] through [[TG-FCT-7]] over the single endpoint defined below; the request and response payloads MUST validate against the JSON Schemas referenced. Implementations MAY additionally or alternatively expose the same contract over GraphQL or any other wire protocol, in which case only the abstract contract of [[TG-FCT-1]]–[[TG-FCT-7]] applies.
+
+| Module       | Method Name | Relative REST API path | Type  | Requirements              | Authz  |
+| ---          | ---         | ---                    | ---   | ---                       | ---    |
+| Verana Graph | `search`    | `/graph/v1/search`     | Query | [[TG-FCT-1]]–[[TG-FCT-7]] | PUBLIC |
+
+#### Search request schema
+
+The normative JSON Schema for the faceted-search request is published alongside this document at [`schemas/v4/graph/search/request.schema.json`](./schemas/v4/graph/search/request.schema.json). It defines the `surface` selector (per [[TG-FCT-1]]), the `filters` object (per [[TG-FCT-3]], using the dotted field-name form), the `freeText` string (per [[TG-FCT-4]]), the `limit` integer, the opaque `cursor` (per [[TG-FCT-7]]), and the visibility-gate overrides `includeUntrusted` and `includeArchived` (per [[TG-FCT-2]]).
+
+#### Search response schema
+
+The normative JSON Schema for the faceted-search response is published alongside this document at [`schemas/v4/graph/search/response.schema.json`](./schemas/v4/graph/search/response.schema.json). It defines the result envelope fixed by [[TG-FCT-6]] (`query`, `totalCount`, `hits[]`, `facets`, `cursor`); each `hit.snippet` MUST carry the entity's primary key, `lastObservedAtTime`, and the visibility flags applicable to the surface.
+
+#### Example search request
+
+```json
+{
+  "surface": "Did",
+  "filters": {
+    "EcsCredential.ServiceCredential.type": "AIAgent",
+    "Did.operatorKind":                     "Persona"
+  },
+  "freeText": "fabrice",
+  "limit":    20
+}
+```
+
+#### Example search response
+
+```json
+{
+  "query": {
+    "surface":  "Did",
+    "filters":  {
+      "EcsCredential.ServiceCredential.type": "AIAgent",
+      "Did.operatorKind":                     "Persona"
+    },
+    "freeText": "fabrice",
+    "limit":    20
+  },
+  "totalCount": 2,
+  "hits": [
+    {
+      "type":  "Did",
+      "id":    "did:webvh:Qm...:fabrice.agents.example",
+      "score": 18.42,
+      "snippet": {
+        "did":                "did:webvh:Qm...:fabrice.agents.example",
+        "lastObservedAtTime": "2026-05-17T20:51:07.000Z",
+        "isTrustExpired":     false,
+        "pattern":            "B",
+        "operatorKind":       "Persona",
+        "serviceType":        "AIAgent",
+        "personaName":        "@fabrice"
+      },
+      "highlights": [
+        "PersonaCredential.name: <em>fabrice</em>"
+      ]
+    },
+    {
+      "type":  "Did",
+      "id":    "did:webvh:Qm...:fabrice-bot.agents.example",
+      "score": 11.07,
+      "snippet": {
+        "did":                "did:webvh:Qm...:fabrice-bot.agents.example",
+        "lastObservedAtTime": "2026-05-17T20:42:13.000Z",
+        "isTrustExpired":     false,
+        "pattern":            "B",
+        "operatorKind":       "Persona",
+        "serviceType":        "AIAgent",
+        "personaName":        "@fabrice-bot"
+      },
+      "highlights": [
+        "PersonaCredential.name: <em>fabrice</em>-bot"
+      ]
+    }
+  ],
+  "facets": {
+    "Did.operatorKind":                       [ { "value": "Persona", "count": 2 } ],
+    "EcsCredential.ServiceCredential.type":   [ { "value": "AIAgent", "count": 2 } ],
+    "Did.pattern":                            [ { "value": "B",       "count": 2 } ]
+  },
+  "cursor": null
+}
+```
+
+### Search examples
+
+*This section is non normative.*
+
+The queries below illustrate how the contract of [[TG-FCT-1]] through [[TG-FCT-7]] composes against realistic discovery questions. They are illustrative; conformance is defined by the per-clause requirements above, not by these compositions. Field names use the dotted form from [[TG-FCT-3]] / [[TG-FCT-4]]; the wire format is implementation-defined.
+
+**Query understanding is out of scope of this specification.** The contract above defines a **structured wire format**: a search backend receives `{ surface, filters: {...}, freeText: "..." }` and returns ranked hits. Translating a natural-language phrase like *"baby shoes in Bogotá"* or *"personal AI agent of @fabrice"* into that payload — deciding, for instance, that *"Bogotá"* populates `OrganizationCredential.legalJurisdiction = { prefix: "CO-DC" }`, that *"baby shoes"* lands on the `Vtc.credentialSubject` denormalisation slot as free-text, that *"personal AI agent"* maps to `Did.operatorKind = Persona` ∧ `EcsCredential.ServiceCredential.type = AIAgent` — is the job of an upstream **query-understanding layer**, not the search backend. That layer typically takes one of two forms:
+
+- **Form-driven UI** — the frontend exposes structured controls (dropdowns, chips, multi-selects) the user fills in explicitly, leaving only a free-text box; the frontend assembles the structured payload deterministically.
+- **Natural-language adapter** — a parser (rule-based, LLM-based, or hybrid) turns a single free-form phrase into a structured payload using domain rules — e.g. *"Bogotá"* → `CO-DC`, *"kids ≤ 8"* → `minimumAgeRequired <= 7`, *"plumber"* → schema-text-denorm match.
+
+The example payloads below show the **structured output** of either layer. Two different query-understanding stacks may emit different payloads for the same natural-language input, and both can be conformant; the spec defines only what a backend MUST do given a structured payload.
+
+#### "iso 27001 certification" — schema discovery
+
+*This section is non normative.*
+
+The user wants the schemas (and owning Ecosystems) under which ISO 27001 attestations are issued. Surface: `CredentialSchema`.
+
+```json
+{
+  "surface":  "CredentialSchema",
+  "filters":  { "archived": false },
+  "freeText": "iso 27001 certification"
+}
+```
+
+Free-text matches `CredentialSchema.{title, description}` of loaded schema bodies (per [[TG-FCT-4]]). Each hit carries `ecosystemId` (1:1 schema → ecosystem per [[TG-EDGE-3]]); the result card surfaces both the schema and its owning Ecosystem from a single search call.
+
+#### "baby shoes in Bogotá" — VS with a domain credential
+
+*This section is non normative.*
+
+The user wants Verifiable Services selling baby shoes, in Bogotá. Surface: `Did`.
+
+```json
+{
+  "surface":  "Did",
+  "filters":  {
+    "OrganizationCredential.countryCode":       "CO",
+    "OrganizationCredential.legalJurisdiction": { "prefix": "CO-DC" }
+  },
+  "freeText": "baby shoes"
+}
+```
+
+`"baby shoes"` matches `Vtc.credentialSubject.{textual fields}` on a domain VTC such as an EcommerceCertification carrying `productCategories: ["baby-shoes"]`, denormalised onto the `Did` doc per [[TG-FCT-4]]. The structured country / jurisdiction filters narrow the result to Bogotá.
+
+#### "plumber credential issuers" — role-scoped within a credential class
+
+*This section is non normative.*
+
+The user wants the DIDs that issue plumber credentials. Two equivalent flows.
+
+**Two-step.** Search the `CredentialSchema` surface with free-text `"plumber"` to obtain one or more `credentialSchemaId`s, then search the `Did` surface:
+
+```json
+{
+  "surface":  "Did",
+  "filters":  {
+    "Participation.credentialSchemaId": { "in": [/* ids from step 1 */] },
+    "Participation.role":               "ISSUER"
+  }
+}
+```
+
+**One-shot** (when the implementation has the schema-text denormalisation slot of [[TG-FCT-4]]):
+
+```json
+{
+  "surface":  "Did",
+  "filters":  { "Participation.role": "ISSUER" },
+  "freeText": "plumber"
+}
+```
+
+The free-text query lands on the schema-text denormalisation slot on the `Did` doc, which carries the `{title, description}` of every `CredentialSchema` the DID has a `Participation` for.
+
+#### "personal AI agent of @fabrice"
+
+*This section is non normative.*
+
+The user wants AI-agent VSs operated by a Persona named "@fabrice". Surface: `Did`.
+
+```json
+{
+  "surface":  "Did",
+  "filters":  {
+    "EcsCredential.ServiceCredential.type": "AIAgent",
+    "Did.operatorKind":                     "Persona"
+  },
+  "freeText": "fabrice"
+}
+```
+
+`EcsCredential.ServiceCredential.type` is the **declared service category** of the VS — the authoritative ECS-level *"what does this service do?"* facet. The closely-related `Did.serviceTypes` is the DID-Document-level **protocol surface** (e.g. `{ containsAny: ["MCP", "DIDComm"] }` — *"which protocols can I talk to it with?"*) and MAY substitute or supplement `ServiceCredential.type` when the query is phrased in protocol terms rather than service-category terms. The derived `Did.operatorKind` facet (per [[TG-FCT-3]]) splits **personal** (Persona-operated) from **corporate** (Organization-operated) without any traversal at the caller. Free-text `"fabrice"` lands on `PersonaCredential.name` (medium weight, [[TG-FCT-4]]).
