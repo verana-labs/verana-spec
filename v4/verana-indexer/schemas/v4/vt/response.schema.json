@@ -37,8 +37,9 @@
       "description": "Time after which this resolution result MUST be re-evaluated."
     },
     "corporationId": {
-      "$ref": "#/$defs/Bech32Address",
-      "description": "Stable id (bech32 group address) of the Corporation that owns this DID — the unique Corporation whose `did` equals the resolved DID, which is also (by VPR's per-Corporation `did` uniqueness invariant and the per-Participant `(did, corporation)` consistency invariant) the **operating** Corporation that authorises every Participation's `vsOperator` account. Always surfaced as part of the trust-core fields (not gated by any selector). Equals `corporation.id` whenever the `corporation` object is included."
+      "type": "integer",
+      "minimum": 0,
+      "description": "Stable `uint64` id of the Corporation that owns this DID — the unique Corporation whose `did` equals the resolved DID, well-defined by VPR's per-Corporation `did` uniqueness invariant (at most one Corporation has any given DID). Always surfaced as part of the trust-core fields (not gated by any selector). Equals `corporation.id` whenever the `corporation` object is included."
     },
 
     "corporation":     { "$ref": "#/$defs/Corporation", "description": "The Corporation the DID *represents* (whose `did` equals the resolved DID). Singular per VPR's per-Corporation `did` uniqueness invariant. The Corporation's `did` is not repeated on the object (it is the envelope's resolved `did`). Omitted when the resolved DID is not the `did` of any Corporation." },
@@ -99,10 +100,11 @@
     "Corporation": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["id", "deposit"],
-      "description": "The response's `corporation` object: the unique Corporation whose `did` equals the resolved DID (per VPR's per-Corporation `did` uniqueness invariant). The `did` field is not repeated on the object (it is the envelope's resolved `did`). The Corporation's underlying Cosmos SDK group address serves as its stable primary key `id`.",
+      "required": ["id", "policyAddress", "deposit"],
+      "description": "The response's `corporation` object: the unique Corporation whose `did` equals the resolved DID (per VPR's per-Corporation `did` uniqueness invariant). The `did` field is not repeated on the object (it is the envelope's resolved `did`). The Corporation's stable primary key is its `uint64` `id`; the on-chain account that signs on its behalf is surfaced separately as `policyAddress`.",
       "properties": {
-        "id":            { "$ref": "#/$defs/Bech32Address", "description": "Stable identifier of the Corporation entry: the bech32 address of the underlying Cosmos SDK group (1:1 with the group). Per VPR a Corporation has no uint64 id of its own; the group address serves as the stable primary key." },
+        "id":            { "type": "integer", "minimum": 0, "description": "Stable `uint64` primary key of the Corporation entry (mirrors VPR `Corporation.id`)." },
+        "policyAddress": { "$ref": "#/$defs/Bech32Address", "description": "On-chain account that signs on behalf of this Corporation (mirrors VPR `Corporation.policy_address`). MUST be globally unique across all Corporation entries. MAY be backed by any signing primitive (single key, multisig, Cosmos SDK group policy, …)." },
         "deposit":       { "$ref": "#/$defs/Coin", "description": "Trust deposit currently bonded by the Corporation." },
         "lastSlashedAt": { "$ref": "#/$defs/Iso8601DateTime", "description": "Wall-clock time of the most recent slash event affecting this Corporation." },
         "slashedEvents": { "type": "integer", "minimum": 0 },
@@ -115,10 +117,10 @@
       "type": "object",
       "additionalProperties": false,
       "required": ["id", "vsOperator", "role", "state", "credentialSchemaId", "ecosystemId", "weight"],
-      "description": "A VPR `Participant` entry surfaced under the resolve response's `participations[]`. Every entry's `Participant.did` equals the envelope's resolved `did` (that is how the entry came to be included in this DID's participations[]); the `did` is therefore not repeated per entry, mirroring how the `corporation` object and `ecosystems[]` entries omit the envelope-shared `did`. The Corporation backing this Participant is also envelope-derived: per VPR's per-Participant `(did, corporation)` consistency invariant, every Participation of a given DID shares the same controlling Corporation, which is surfaced as the envelope-level `corporationId` scalar; it is therefore not repeated per entry. The `vsOperator` account, by contrast, **is** surfaced per entry because each Participant's VS Operator Authorization grant is a distinct on-chain object — the controlling Corp's group MAY authorise different operator accounts for different Participants. The graph keys this record by `id` (the stable VPR ledger id) rather than by a composite key. DID-less VPR Participant entries (`Participant.did = null`) exist on-chain but are not surfaced in any DID's participations[] (there is no DID under which to surface them); they fall outside the graph's DID-centric view. The referenced schema is surfaced as `credentialSchemaId` only — not as a full schema block — because by the time a Participation is reconciled, the corresponding `CredentialSchema` record has necessarily already been persisted by the graph from the controlling Ecosystem's own resolve. `ecosystemId` is a denormalisation provided for direct access; it is deterministically derivable from `credentialSchemaId` (every CredentialSchema is owned by exactly one Ecosystem).",
+      "description": "A VPR `Participant` entry surfaced under the resolve response's `participations[]`. Every entry's `Participant.did` equals the envelope's resolved `did` (that is how the entry came to be included in this DID's participations[]); the `did` is therefore not repeated per entry, mirroring how the `corporation` object and `ecosystems[]` entries omit the envelope-shared `did`. The Corporation backing this Participant is envelope-derived: per VPR's per-Participant `(did, corporation_id)` consistency invariant, every Participation of a given DID shares the same controlling `corporation_id`; it is therefore not repeated per entry. The `vsOperator` account, by contrast, **is** surfaced per entry because each Participant's VS Operator Authorization grant is a distinct on-chain object — the controlling Corporation MAY authorise different operator accounts for different Participants. The graph keys this record by `id` (the stable VPR ledger id) rather than by a composite key. The referenced schema is surfaced as `credentialSchemaId` only — not as a full schema block — because by the time a Participation is reconciled, the corresponding `CredentialSchema` record has necessarily already been persisted by the graph from the controlling Ecosystem's own resolve. `ecosystemId` is a denormalisation provided for direct access; it is deterministically derivable from `credentialSchemaId` (every CredentialSchema is owned by exactly one Ecosystem).",
       "properties": {
         "id":                    { "type": "integer", "minimum": 0, "description": "VPR `Participant.id` — stable ledger primary key. Used as the graph's `Participation` record identity." },
-        "vsOperator":            { "$ref": "#/$defs/Bech32Address", "description": "Cosmos account address authorised (via VS Operator Authorization granted by the controlling Corporation's group) to act as the VS operator for this specific Participant entry. Different Participants under the same Corporation MAY carry different `vsOperator` accounts." },
+        "vsOperator":            { "$ref": "#/$defs/Bech32Address", "description": "Cosmos account address authorised (via VS Operator Authorization granted by the controlling Corporation — `Participant.corporation_id`) to act as the VS operator for this specific Participant entry. Different Participants under the same Corporation MAY carry different `vsOperator` accounts. Set at Participant creation and immutable thereafter." },
         "role":                  { "$ref": "#/$defs/ParticipationRole" },
         "state":                 { "$ref": "#/$defs/ParticipationState" },
         "credentialSchemaId":              { "type": "integer", "minimum": 0, "description": "Stable VPR id of the referenced `CredentialSchema`. Anchors the `FOR_SCHEMA: Participation → CredentialSchema` edge." },
@@ -223,10 +225,10 @@
       "type": "object",
       "additionalProperties": false,
       "required": ["id", "corporationId", "archived"],
-      "description": "Aggregate metrics for an ecosystem (and its underlying trust registry) the DID represents (`Ecosystem.did` equals the resolved DID, by the indexer's channel rule). The `did` field is not repeated per entry (envelope-derived from the response's resolved `did`). `corporationId` identifies the controlling Corporation per entry; per VPR's per-Ecosystem `(did, corporation)` consistency invariant, every Ecosystem with a given `did` is controlled by the same Corporation, so all `ecosystems[i].corporationId` values within any single resolve response are necessarily equal. Surfaced per entry anyway for self-description and because the controlling Corporation MAY differ from the envelope-level `corporationId` (which identifies the Corporation that *owns* the DID per VPR's per-Corporation `did` uniqueness invariant) — the Corp owning a DID and the Corp controlling Ecosystems claiming that DID need not coincide.",
+      "description": "Aggregate metrics for an ecosystem the DID represents (`Ecosystem.did` equals the resolved DID, by the indexer's channel rule). The `did` field is not repeated per entry (envelope-derived from the response's resolved `did`). `corporationId` identifies the controlling Corporation per entry; per VPR's per-Ecosystem `(did, corporation_id)` consistency invariant, every Ecosystem with a given `did` shares the same controlling `corporation_id`, so all `ecosystems[i].corporationId` values within any single resolve response are necessarily equal. Surfaced per entry anyway for self-description and because the controlling Corporation MAY differ from the envelope-level `corporationId` (which identifies the Corporation that *owns* the DID per VPR's per-Corporation `did` uniqueness invariant) — the Corp owning a DID and the Corp controlling Ecosystems claiming that DID are not unified by any VPR invariant.",
       "properties": {
         "id":                  { "type": "integer", "minimum": 0 },
-        "corporationId":       { "$ref": "#/$defs/Bech32Address", "description": "Stable id (bech32 group address) of the Corporation that controls this Ecosystem. Anchors the `CONTROLS: Corporation → Ecosystem` edge; the controlling Corporation's DID is recoverable by resolving its `did` separately if needed." },
+        "corporationId":       { "type": "integer", "minimum": 0, "description": "Stable `uint64` id of the Corporation that controls this Ecosystem (mirrors VPR `Ecosystem.corporation_id`). Anchors the `CONTROLS: Corporation → Ecosystem` edge." },
         "archived":            { "type": "boolean" },
         "egf":                 { "$ref": "#/$defs/GovernanceFramework", "description": "Active Ecosystem Governance Framework. Mirrors the active `GovernanceFrameworkVersion` of this Ecosystem per the VPR data model. Omitted only when the Ecosystem has not yet published any GF." },
         "credentialSchemas":   { "type": "array", "items": { "$ref": "#/$defs/EcosystemSchema" } },
@@ -239,12 +241,12 @@
     "EcosystemSchema": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["id", "type", "digestSRI", "archived"],
+      "required": ["id", "type", "digestSri", "archived"],
       "description": "A schema embedded in an Ecosystem's `credentialSchemas[]` array. Identified by its stable VPR id (`id`); the URI form (`vpr:verana:<network>/cs/v1/js/<id>`) is deterministic from `(network, id)` and is not repeated inline. The schema body is loaded out-of-band via the indexer's resource-load API by `id`.",
       "properties": {
         "id":                  { "type": "integer", "minimum": 0, "description": "Stable VPR ledger id of the schema. The sole identity used by the graph and by the indexer's schema-load API. Anchors `BASED_ON_SCHEMA`, `FOR_SCHEMA`, and `OWNS_SCHEMA` edges." },
         "type":                { "const": "JsonSchema" },
-        "digestSRI":           { "$ref": "#/$defs/DigestSri" },
+        "digestSri":           { "$ref": "#/$defs/DigestSri" },
         "archived":            { "type": "boolean" },
         "participants":        { "$ref": "#/$defs/ParticipantsByRole" },
         "issuedCredentials":   { "type": "integer", "minimum": 0 },
@@ -256,7 +258,7 @@
       "type": "object",
       "additionalProperties": false,
       "required": ["version", "documents"],
-      "description": "Active Governance Framework (CGF on a Corporation, EGF on an Ecosystem). Flattens the active `GovernanceFrameworkVersion` from the VPR data model: one entry per published language for the active version, each pointing at the canonical document URL with a `digestSRI` for relying-party integrity verification.",
+      "description": "Active Governance Framework (CGF on a Corporation, EGF on an Ecosystem). Flattens the active `GovernanceFrameworkVersion` from the VPR data model: one entry per published language for the active version, each pointing at the canonical document URL with a `digestSri` for relying-party integrity verification.",
       "properties": {
         "version": {
           "type": "integer",
@@ -274,7 +276,7 @@
           "items": {
             "type": "object",
             "additionalProperties": false,
-            "required": ["language", "url", "digestSRI"],
+            "required": ["language", "url", "digestSri"],
             "properties": {
               "language": {
                 "type": "string",
@@ -285,7 +287,7 @@
                 "format": "uri",
                 "description": "Canonical publication URL of the document."
               },
-              "digestSRI": {
+              "digestSri": {
                 "$ref": "#/$defs/DigestSri",
                 "description": "Subresource Integrity digest of the canonical document body, for integrity verification by relying parties."
               }

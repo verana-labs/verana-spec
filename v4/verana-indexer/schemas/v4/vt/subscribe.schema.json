@@ -57,14 +57,14 @@
             { "type": "boolean" },
             { "$ref": "#/$defs/CorporationOptions" }
           ],
-          "description": "Trigger on creation, removal, or any structural change (Cosmos group rotation, slash event, CGF rotation, or CGF document change) of the singular `corporation` object the DID represents. Per VPR's per-Corporation `did` uniqueness invariant, a DID is the `did` of at most one Corporation. The top-level `corporationId` scalar itself (the binding \"this DID is operated by *that* Corp\") is part of the `trust` channel and is not gated separately. Sub-flag `includeDepositChanges` adds notifications for plain `deposit` Coin-amount fluctuations on the represented Corporation."
+          "description": "Trigger on creation or removal (the DID is bound to a Corporation, or that binding ends — e.g. a `Corporation.did` rotation away from this DID), a slash event, CGF rotation, or any CGF document change of the singular `corporation` object the DID represents. Per VPR's per-Corporation `did` uniqueness invariant, a DID is the `did` of at most one Corporation. The top-level `corporationId` scalar itself (the binding \"this DID is operated by *that* Corp\") is part of the `trust` channel and is not gated separately. Sub-flag `includeDepositChanges` adds notifications for plain `deposit` Coin-amount fluctuations on the represented Corporation."
         },
         "participations": {
           "oneOf": [
             { "type": "boolean" },
             { "$ref": "#/$defs/ParticipationsOptions" }
           ],
-          "description": "Trigger on Participation entries being created or transitioning state, OR on a Participation's `vsOperator` rotating (the controlling Corp re-authorising a different operator account for that specific Participant). Sub-flags add notifications for `weight` fluctuations and high-frequency counter changes."
+          "description": "Trigger on Participation entries being created or transitioning state. Sub-flags add notifications for `weight` fluctuations and high-frequency counter changes."
         },
         "ecsCredentials": {
           "type": "boolean",
