@@ -614,11 +614,13 @@ Immediately after a successful WebSocket upgrade, before any `subscribe` is proc
 {
    "type": "ready",
    "block": 1500005,
-   "blockTime": "2026-05-11T13:00:05Z"
+   "blockTime": "2026-05-11T13:00:05Z",
+   "blockIntervalMs": 5000
 }
 ```
 
-`block` is the height of the **next** block that the server will deliver via this WebSocket (i.e. `latestProcessedBlock + 1` at connect time). Clients use `block - 1` as the bootstrap snapshot point — see [Bootstrap pattern](#bootstrap-pattern).
+- `block` — The height of the **next** block that the server will deliver via this WebSocket (i.e. `latestProcessedBlock + 1` at connect time). Clients use `block - 1` as the bootstrap snapshot point — see [Bootstrap pattern](#bootstrap-pattern).
+- `blockIntervalMs` — The expected block production interval in milliseconds. Clients SHOULD treat `2 × blockIntervalMs` as the liveness timeout: if no `block` message arrives within that window after sending a `subscribe`, the subscription was not established and the client SHOULD reconnect. The same timeout applies to ongoing heartbeat detection (see [Block production as ping](#block-production-as-ping)).
 
 ##### Subscribe control message
 
@@ -694,6 +696,15 @@ Semantics:
 - `changes[].did` — The DID this envelope refers to.
 - `changes[].trust` — Present iff `trust` is in the subscription **and** any trust-core field changed at this block. Carries the new core values inline, with the same shape as the trust-core fields in the [resolution response schema](#resolution-response-schema).
 - `changes[].<channel>` — `true` iff the channel is in the subscription **and** changed at this block; `false` otherwise. Clients fetch the new state by calling `/vt/v1/resolve` at `atBlock = block`.
+
+> **Why signal-only?** All channels except `trust` carry change signals (`true`/`false`) rather than inline payloads. This is by design:
+>
+> - **`trust` is the exception** — it is small, fixed-shape, and the most frequently consumed channel. Clients that subscribe only to `trust` receive everything they need inline and never have to call `/vt/v1/resolve`.
+> - **Other channels have variable, potentially large payloads** — a DID may have hundreds of participations or ecosystem entries. Inlining them in every WebSocket frame would bloat the stream even for clients that only need a narrow slice of the data.
+> - **Resolve gives response-shaping control** — the `/vt/v1/resolve` call lets the client select exactly which sections and sub-flags it needs; a fat WebSocket payload cannot offer that flexibility.
+> - **Server fan-out stays cheap** — computing and serialising full per-subscriber per-DID payloads on every block would multiply the indexer's CPU and memory cost by the number of concurrent subscribers.
+>
+> In practice, most blocks produce zero or very few changes for a given subscriber's DID set, so the number of follow-up resolve calls per block is low. Clients that need state for multiple DIDs that changed in the same block can batch their resolve calls.
 
 ##### Block production as ping
 
