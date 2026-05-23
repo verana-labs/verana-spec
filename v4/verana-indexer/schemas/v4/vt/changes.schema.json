@@ -30,7 +30,7 @@
     "ReadyMessage": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["type", "block", "blockTime"],
+      "required": ["type", "block", "blockTime", "blockIntervalMs"],
       "description": "Sent once on WebSocket upgrade, before any `subscribe` is processed.",
       "properties": {
         "type": { "const": "ready" },
@@ -42,6 +42,11 @@
         "blockTime": {
           "$ref": "#/$defs/Iso8601DateTime",
           "description": "Wall-clock time at which `block` was committed."
+        },
+        "blockIntervalMs": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Expected block production interval in milliseconds. Clients SHOULD treat 2× this value as the liveness timeout for both subscription confirmation and ongoing heartbeat detection."
         }
       }
     },
@@ -133,13 +138,13 @@
       "type": "object",
       "additionalProperties": false,
       "required": ["trusted", "evaluatedAtTime", "evaluatedAtBlock", "expiresAtTime", "corporationId"],
-      "description": "Inline new values of the trust-core fields at the block of the change envelope. Same shape as the trust-core fields in `schemas/v4/vt/response.schema.json`. The `corporationId` carries any DID-to-Corp re-binding that occurred at this block; the per-Participation `vsOperator` accounts (which live on `Participation` entries, not at envelope level) are signalled via the `participations` channel, not here.",
+      "description": "Inline new values of the trust-core fields at the block of the change envelope. Same shape as the trust-core fields in `schemas/v4/vt/response.schema.json`. The `corporationId` carries any DID-to-Corp re-binding that occurred at this block.",
       "properties": {
         "trusted":          { "type": "boolean" },
         "evaluatedAtTime":  { "$ref": "#/$defs/Iso8601DateTime" },
         "evaluatedAtBlock": { "type": "integer", "minimum": 0 },
         "expiresAtTime":    { "$ref": "#/$defs/Iso8601DateTime" },
-        "corporationId":    { "$ref": "#/$defs/Bech32Address" }
+        "corporationId":    { "type": "integer", "minimum": 0, "description": "Stable `uint64` id of the Corporation that owns the resolved DID (the unique Corporation whose `did` equals the resolved DID, per VPR's per-Corporation `did` uniqueness invariant)." }
       }
     }
   }
