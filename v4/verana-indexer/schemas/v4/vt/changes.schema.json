@@ -30,7 +30,7 @@
     "ReadyMessage": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["type", "block", "blockTime"],
+      "required": ["type", "block", "blockTime", "blockIntervalMs"],
       "description": "Sent once on WebSocket upgrade, before any `subscribe` is processed.",
       "properties": {
         "type": { "const": "ready" },
@@ -42,6 +42,11 @@
         "blockTime": {
           "$ref": "#/$defs/Iso8601DateTime",
           "description": "Wall-clock time at which `block` was committed."
+        },
+        "blockIntervalMs": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Expected block production interval in milliseconds. Clients SHOULD treat 2× this value as the liveness timeout for both subscription confirmation and ongoing heartbeat detection."
         }
       }
     },
