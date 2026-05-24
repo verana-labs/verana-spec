@@ -31,12 +31,13 @@
     { "if": { "properties": { "query": { "const": "E1" } } }, "then": { "properties": { "input": { "$ref": "#/$defs/CorporationIdInput" } } } },
     { "if": { "properties": { "query": { "const": "E2" } } }, "then": { "properties": { "input": { "$ref": "#/$defs/CorporationIdInput" } } } },
     { "if": { "properties": { "query": { "const": "E3" } } }, "then": { "properties": { "input": { "$ref": "#/$defs/CorporationIdInput" } } } },
-    { "if": { "properties": { "query": { "const": "F1" } } }, "then": { "properties": { "input": { "$ref": "#/$defs/PathInput" } } } }
+    { "if": { "properties": { "query": { "const": "F1" } } }, "then": { "properties": { "input": { "$ref": "#/$defs/PathInput" } } } },
+    { "if": { "properties": { "query": { "const": "G1" } } }, "then": { "properties": { "input": { "$ref": "#/$defs/ParticipantIdInput" } } } }
   ],
   "$defs": {
     "TraversalQueryId": {
-      "enum": ["A1", "A2", "A3", "A4", "A5", "A6", "A7", "B1", "B2", "C1", "C2", "C3", "D1", "D2", "E1", "E2", "E3", "F1"],
-      "description": "Canonical traversal query id from [TG-QRY-3]. A1\u2013A7 DID-rooted, B1\u2013B2 credential-rooted, C1\u2013C3 ecosystem-rooted, D1\u2013D2 schema-rooted, E1\u2013E3 corporation-rooted, F1 path (SHOULD)."
+      "enum": ["A1", "A2", "A3", "A4", "A5", "A6", "A7", "B1", "B2", "C1", "C2", "C3", "D1", "D2", "E1", "E2", "E3", "F1", "G1"],
+      "description": "Canonical traversal query id from [TG-QRY-3]. A1\u2013A7 DID-rooted, B1\u2013B2 credential-rooted, C1\u2013C3 ecosystem-rooted, D1\u2013D2 schema-rooted, E1\u2013E3 corporation-rooted, F1 path (SHOULD), G1 Participant-rooted (validator chain)."
     },
     "DidString": {
       "type": "string",
@@ -46,17 +47,17 @@
     "Bech32Address": {
       "type": "string",
       "pattern": "^verana1[a-z0-9]+$",
-      "description": "Cosmos bech32 address with the `verana` HRP. Used for `Corporation.id`."
+      "description": "Cosmos bech32 address with the `verana` HRP. Used for the per-Participant `vsOperator` account and for `Corporation.policyAddress`."
     },
     "EcsSchemaName": {
       "enum": ["ServiceCredential", "OrganizationCredential", "PersonaCredential", "UserAgentCredential"],
       "description": "ECS schema discriminator."
     },
-    "ParticipationRole": {
+    "ParticipantRole": {
       "enum": ["HOLDER", "ISSUER", "VERIFIER", "ISSUER_GRANTOR", "VERIFIER_GRANTOR", "ECOSYSTEM"]
     },
     "EntityType": {
-      "enum": ["Did", "Corporation", "Ecosystem", "CredentialSchema", "Participation", "EcsCredential", "Vtc", "LinkedVerifiablePresentation", "ServiceEndpoint"],
+      "enum": ["Did", "Corporation", "Ecosystem", "CredentialSchema", "Participant", "EcsCredential", "Vtc", "LinkedVerifiablePresentation", "ServiceEndpoint"],
       "description": "Graph entity type discriminator."
     },
     "DidInput": {
@@ -82,7 +83,7 @@
       "required": ["did"],
       "properties": {
         "did": { "$ref": "#/$defs/DidString" },
-        "role": { "$ref": "#/$defs/ParticipationRole", "description": "Optional role filter (A7 only)." }
+        "role": { "$ref": "#/$defs/ParticipantRole", "description": "Optional role filter (A7 only)." }
       }
     },
     "CredentialIdInput": {
@@ -110,7 +111,7 @@
       "required": ["ecosystemId"],
       "properties": {
         "ecosystemId": { "type": "integer", "minimum": 0 },
-        "role": { "$ref": "#/$defs/ParticipationRole", "description": "Optional role filter (C2 only)." },
+        "role": { "$ref": "#/$defs/ParticipantRole", "description": "Optional role filter (C2 only)." },
         "credentialSchemaId": { "type": "integer", "minimum": 0, "description": "Optional schema filter to scope to one of the Ecosystem's owned schemas (C2 only)." }
       }
     },
@@ -128,7 +129,7 @@
       "required": ["credentialSchemaId"],
       "properties": {
         "credentialSchemaId": { "type": "integer", "minimum": 0 },
-        "role": { "$ref": "#/$defs/ParticipationRole", "description": "Optional role filter (D2 only)." }
+        "role": { "$ref": "#/$defs/ParticipantRole", "description": "Optional role filter (D2 only)." }
       }
     },
     "CorporationIdInput": {
@@ -136,7 +137,7 @@
       "additionalProperties": false,
       "required": ["corporationId"],
       "properties": {
-        "corporationId": { "$ref": "#/$defs/Bech32Address", "description": "Stable id (bech32 group address) of the Corporation." }
+        "corporationId": { "type": "integer", "minimum": 0, "description": "Stable `uint64` id of the Corporation (mirrors VPR `Corporation.id`)." }
       }
     },
     "PathInput": {
@@ -159,8 +160,16 @@
             { "type": "string" },
             { "type": "integer", "minimum": 0 }
           ],
-          "description": "Primary key of the referenced entity. DID for `type = Did`, bech32 group address for `type = Corporation`, integer VPR id for the rest."
+          "description": "Primary key of the referenced entity. DID for `type = Did`, integer VPR id for `Corporation` / `Ecosystem` / `CredentialSchema` / `Participant`, string id for `EcsCredential` / `Vtc` / `LinkedVerifiablePresentation` / `ServiceEndpoint`."
         }
+      }
+    },
+    "ParticipantIdInput": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["participantId"],
+      "properties": {
+        "participantId": { "type": "integer", "minimum": 0, "description": "Stable VPR id of the leaf `Participant` from which to walk the validator chain upward to the `ECOSYSTEM`-role root (mirrors VPR `Participant.id`). G1 only." }
       }
     }
   }

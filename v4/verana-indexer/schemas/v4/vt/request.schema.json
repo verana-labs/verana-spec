@@ -53,7 +53,7 @@
   },
 
   "$defs": {
-    "ParticipationState": {
+    "ParticipantState": {
       "enum": ["ACTIVE", "FUTURE", "INACTIVE", "EXPIRED", "REVOKED", "SLASHED", "REPAID"]
     },
     "ParticipationsOptions": {
@@ -64,7 +64,7 @@
           "type": "array",
           "uniqueItems": true,
           "default": ["ACTIVE"],
-          "items": { "$ref": "#/$defs/ParticipationState" },
+          "items": { "$ref": "#/$defs/ParticipantState" },
           "description": "Filter participations by state. Defaults to [\"ACTIVE\"] when omitted."
         }
       }

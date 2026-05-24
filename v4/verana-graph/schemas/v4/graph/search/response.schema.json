@@ -40,7 +40,8 @@
     },
     "Bech32Address": {
       "type": "string",
-      "pattern": "^verana1[a-z0-9]+$"
+      "pattern": "^verana1[a-z0-9]+$",
+      "description": "Cosmos bech32 address with the `verana` HRP. Used for `Corporation.policyAddress` and for the per-Participant `vsOperator` account; NOT used as a primary key."
     },
     "DigestSri": {
       "type": "string",
@@ -65,7 +66,7 @@
             { "type": "string" },
             { "type": "integer", "minimum": 0 }
           ],
-          "description": "Primary key of the hit. DID for `type = Did`, bech32 group address for `type = Corporation`, integer VPR id for the rest."
+          "description": "Primary key of the hit. DID for `type = Did`, integer VPR id for `Corporation` / `Ecosystem` / `CredentialSchema`, string id for `ServiceEndpoint`."
         },
         "score": {
           "type": "number",
@@ -102,7 +103,7 @@
         "trusted": { "type": "boolean" },
         "pattern": { "enum": ["A", "B"] },
         "operatorKind": { "enum": ["Organization", "Persona"] },
-        "corporationId": { "$ref": "#/$defs/Bech32Address" }
+        "corporationId": { "type": "integer", "minimum": 0, "description": "Stable `uint64` id of the Corporation that owns this DID (mirrors VPR `Corporation.id`)." }
       }
     },
     "EcosystemSnippet": {
@@ -112,7 +113,7 @@
       "properties": {
         "id": { "type": "integer", "minimum": 0 },
         "archived": { "type": "boolean" },
-        "corporationId": { "$ref": "#/$defs/Bech32Address" },
+        "corporationId": { "type": "integer", "minimum": 0, "description": "Stable `uint64` id of the controlling Corporation (mirrors VPR `Ecosystem.corporation_id`)." },
         "lastObservedAtTime": { "$ref": "#/$defs/Iso8601DateTime" }
       }
     },
@@ -121,7 +122,8 @@
       "additionalProperties": true,
       "required": ["id", "lastObservedAtTime"],
       "properties": {
-        "id": { "$ref": "#/$defs/Bech32Address" },
+        "id": { "type": "integer", "minimum": 0, "description": "Stable `uint64` primary key of the Corporation (mirrors VPR `Corporation.id`)." },
+        "policyAddress": { "$ref": "#/$defs/Bech32Address", "description": "On-chain account that signs on behalf of this Corporation (mirrors VPR `Corporation.policy_address`)." },
         "deposit": { "type": "string" },
         "slashedEvents": { "type": "integer", "minimum": 0 },
         "lastObservedAtTime": { "$ref": "#/$defs/Iso8601DateTime" }
@@ -134,7 +136,7 @@
       "properties": {
         "id": { "type": "integer", "minimum": 0 },
         "type": { "const": "JsonSchema" },
-        "digestSRI": { "$ref": "#/$defs/DigestSri" },
+        "digestSri": { "$ref": "#/$defs/DigestSri" },
         "archived": { "type": "boolean" },
         "ecosystemId": { "type": "integer", "minimum": 0 },
         "title": { "type": "string" },

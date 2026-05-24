@@ -64,7 +64,7 @@
             { "type": "boolean" },
             { "$ref": "#/$defs/ParticipationsOptions" }
           ],
-          "description": "Trigger on Participation entries being created or transitioning state. Sub-flags add notifications for `weight` fluctuations and high-frequency counter changes."
+          "description": "Trigger on Participant entries being created or transitioning state. Sub-flags add notifications for `weight` fluctuations and high-frequency counter changes."
         },
         "ecsCredentials": {
           "type": "boolean",
@@ -110,7 +110,7 @@
         "includeWeightChanges": {
           "type": "boolean",
           "default": false,
-          "description": "When true, changes in a Participation's `weight` Coin amount trigger a notification."
+          "description": "When true, changes in a Participant's `weight` Coin amount trigger a notification."
         },
         "includeParticipantCounts": {
           "type": "boolean",

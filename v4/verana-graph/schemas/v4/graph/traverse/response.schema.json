@@ -46,7 +46,7 @@
     "Bech32Address": {
       "type": "string",
       "pattern": "^verana1[a-z0-9]+$",
-      "description": "Cosmos bech32 address with the `verana` HRP."
+      "description": "Cosmos bech32 address with the `verana` HRP. Used for the per-Participant `vsOperator` account and for `Corporation.policyAddress`; NOT used as a primary key (Corporation, Ecosystem, CredentialSchema, and Participant primary keys are all `uint64` VPR ledger ids)."
     },
     "Coin": {
       "type": "string",
@@ -66,17 +66,17 @@
       "enum": ["A", "B"],
       "description": "Architecture pattern per VS-REQ-3 / VS-REQ-4 (A: self-issued; B: delegated)."
     },
-    "ParticipationState": {
+    "ParticipantState": {
       "enum": ["ACTIVE", "FUTURE", "INACTIVE", "EXPIRED", "REVOKED", "SLASHED", "REPAID"]
     },
-    "ParticipationRole": {
+    "ParticipantRole": {
       "enum": ["HOLDER", "ISSUER", "VERIFIER", "ISSUER_GRANTOR", "VERIFIER_GRANTOR", "ECOSYSTEM"]
     },
     "EcsSchemaName": {
       "enum": ["ServiceCredential", "OrganizationCredential", "PersonaCredential", "UserAgentCredential"]
     },
     "EntityType": {
-      "enum": ["Did", "Corporation", "Ecosystem", "CredentialSchema", "Participation", "EcsCredential", "Vtc", "LinkedVerifiablePresentation", "ServiceEndpoint"]
+      "enum": ["Did", "Corporation", "Ecosystem", "CredentialSchema", "Participant", "EcsCredential", "Vtc", "LinkedVerifiablePresentation", "ServiceEndpoint"]
     },
     "EntityRef": {
       "type": "object",
@@ -106,11 +106,11 @@
           "items": {
             "type": "object",
             "additionalProperties": false,
-            "required": ["language", "url", "digestSRI"],
+            "required": ["language", "url", "digestSri"],
             "properties": {
               "language": { "type": "string", "description": "BCP 47 language tag." },
               "url": { "type": "string", "format": "uri" },
-              "digestSRI": { "$ref": "#/$defs/DigestSri" }
+              "digestSri": { "$ref": "#/$defs/DigestSri" }
             }
           }
         }
@@ -127,7 +127,7 @@
         "isTrustExpired": { "type": "boolean" },
         "pattern": { "$ref": "#/$defs/Pattern" },
         "trusted": { "type": "boolean" },
-        "corporationId": { "$ref": "#/$defs/Bech32Address" }
+        "corporationId": { "type": "integer", "minimum": 0, "description": "Stable `uint64` id of the Corporation that owns this DID (mirrors VPR `Corporation.id`)." }
       }
     },
     "CorporationRef": {
@@ -135,7 +135,8 @@
       "additionalProperties": false,
       "required": ["id", "lastObservedAtTime"],
       "properties": {
-        "id": { "$ref": "#/$defs/Bech32Address" },
+        "id": { "type": "integer", "minimum": 0, "description": "Stable `uint64` primary key of the Corporation (mirrors VPR `Corporation.id`)." },
+        "policyAddress": { "$ref": "#/$defs/Bech32Address", "description": "On-chain account that signs on behalf of this Corporation (mirrors VPR `Corporation.policy_address`). Globally unique across all Corporation entries. MAY be backed by any signing primitive (single key, multisig, Cosmos SDK group policy, …)." },
         "lastObservedAtTime": { "$ref": "#/$defs/Iso8601DateTime" },
         "deposit": { "$ref": "#/$defs/Coin" },
         "lastSlashedAtTime": { "$ref": "#/$defs/Iso8601DateTime" },
@@ -150,7 +151,7 @@
       "required": ["id", "corporationId", "archived", "lastObservedAtTime"],
       "properties": {
         "id": { "type": "integer", "minimum": 0 },
-        "corporationId": { "$ref": "#/$defs/Bech32Address" },
+        "corporationId": { "type": "integer", "minimum": 0, "description": "Stable `uint64` id of the Corporation that controls this Ecosystem (mirrors VPR `Ecosystem.corporation_id`)." },
         "archived": { "type": "boolean" },
         "lastObservedAtTime": { "$ref": "#/$defs/Iso8601DateTime" },
         "egf": { "$ref": "#/$defs/GovernanceFramework" },
@@ -161,11 +162,11 @@
     "CredentialSchemaRef": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["id", "type", "digestSRI", "archived", "lastObservedAtTime"],
+      "required": ["id", "type", "digestSri", "archived", "lastObservedAtTime"],
       "properties": {
         "id": { "type": "integer", "minimum": 0 },
         "type": { "const": "JsonSchema" },
-        "digestSRI": { "$ref": "#/$defs/DigestSri" },
+        "digestSri": { "$ref": "#/$defs/DigestSri" },
         "archived": { "type": "boolean" },
         "ecosystemId": { "type": "integer", "minimum": 0 },
         "title": { "type": "string" },
@@ -173,21 +174,22 @@
         "lastObservedAtTime": { "$ref": "#/$defs/Iso8601DateTime" }
       }
     },
-    "ParticipationRef": {
+    "ParticipantRef": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["id", "role", "state", "credentialSchemaId", "ecosystemId", "lastObservedAtTime"],
-      "description": "Minimal Participation reference. Per [[TG-ACT-1]] only `state = ACTIVE` records are persisted; non-ACTIVE values MUST NOT appear here.",
+      "required": ["id", "role", "state", "credentialSchemaId", "ecosystemId", "validatorParticipantId", "lastObservedAtTime"],
+      "description": "Minimal Participant reference. Per [[TG-ACT-1]] only `state = ACTIVE` records are persisted; non-ACTIVE values MUST NOT appear here. `validatorParticipantId` anchors the `VALIDATED_BY: Participant → Participant` edge (the parent node in the permission tree); it is `null` if and only if `role = ECOSYSTEM` (the chain root, per [[TG-EDGE-4]]).",
       "properties": {
         "id": { "type": "integer", "minimum": 0 },
         "vsOperator": { "$ref": "#/$defs/Bech32Address" },
-        "role": { "$ref": "#/$defs/ParticipationRole" },
-        "state": { "$ref": "#/$defs/ParticipationState" },
+        "role": { "$ref": "#/$defs/ParticipantRole" },
+        "state": { "$ref": "#/$defs/ParticipantState" },
         "credentialSchemaId": { "type": "integer", "minimum": 0 },
         "ecosystemId": { "type": "integer", "minimum": 0 },
         "weight": { "$ref": "#/$defs/Coin" },
         "issuedCredentials": { "type": "integer", "minimum": 0 },
         "verifiedCredentials": { "type": "integer", "minimum": 0 },
+        "validatorParticipantId": { "type": ["integer", "null"], "minimum": 0, "description": "Stable VPR id of the validator Participant (parent in the permission tree). `null` iff `role = ECOSYSTEM`; non-negative integer otherwise. The graph persists the value as received from the indexer; the role-conditional rule is enforced upstream at the indexer's ingress." },
         "lastObservedAtTime": { "$ref": "#/$defs/Iso8601DateTime" }
       }
     },
@@ -270,7 +272,7 @@
         "expiresAtTime": { "$ref": "#/$defs/Iso8601DateTime" },
         "pattern": { "$ref": "#/$defs/Pattern" },
         "isTrustExpired": { "type": "boolean" },
-        "corporationId": { "$ref": "#/$defs/Bech32Address" },
+        "corporationId": { "type": "integer", "minimum": 0, "description": "Stable `uint64` id of the Corporation that owns this DID (mirrors VPR `Corporation.id`)." },
         "lastObservedAtTime": { "$ref": "#/$defs/Iso8601DateTime" }
       }
     },
@@ -304,7 +306,7 @@
         "properties": {
           "credential": { "$ref": "#/$defs/EcsCredentialRef" },
           "issuerDid": { "$ref": "#/$defs/DidString" },
-          "issuerParticipation": { "$ref": "#/$defs/ParticipationRef" },
+          "issuerParticipant": { "$ref": "#/$defs/ParticipantRef" },
           "schema": { "$ref": "#/$defs/CredentialSchemaRef" },
           "ecosystem": { "$ref": "#/$defs/EcosystemRef" }
         }
@@ -348,13 +350,13 @@
     },
     "A7Output": {
       "type": "array",
-      "description": "A7 \u2014 Participations by role, each accompanied by its schema and ecosystem context.",
+      "description": "A7 \u2014 Participants by role, each accompanied by its schema and ecosystem context.",
       "items": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["participation", "schema", "ecosystem"],
+        "required": ["participant", "schema", "ecosystem"],
         "properties": {
-          "participation": { "$ref": "#/$defs/ParticipationRef" },
+          "participant": { "$ref": "#/$defs/ParticipantRef" },
           "schema": { "$ref": "#/$defs/CredentialSchemaRef" },
           "ecosystem": { "$ref": "#/$defs/EcosystemRef" }
         }
@@ -363,12 +365,12 @@
     "B1Output": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["credential", "issuerDid", "issuerParticipation", "schema", "ecosystem"],
+      "required": ["credential", "issuerDid", "issuerParticipant", "schema", "ecosystem"],
       "description": "B1 \u2014 Issuer recovery for a credential surfaced in the graph (per [[TG-INGEST-6]]).",
       "properties": {
         "credential": { "$ref": "#/$defs/CredentialAnyRef" },
         "issuerDid": { "$ref": "#/$defs/DidString" },
-        "issuerParticipation": { "$ref": "#/$defs/ParticipationRef" },
+        "issuerParticipant": { "$ref": "#/$defs/ParticipantRef" },
         "schema": { "$ref": "#/$defs/CredentialSchemaRef" },
         "ecosystem": { "$ref": "#/$defs/EcosystemRef" }
       }
@@ -376,12 +378,12 @@
     "B2Output": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["credential", "subjectDid", "holderParticipation"],
+      "required": ["credential", "subjectDid", "holderParticipant"],
       "description": "B2 \u2014 Holder recovery for a credential surfaced in the graph.",
       "properties": {
         "credential": { "$ref": "#/$defs/CredentialAnyRef" },
         "subjectDid": { "$ref": "#/$defs/DidString" },
-        "holderParticipation": { "$ref": "#/$defs/ParticipationRef" }
+        "holderParticipant": { "$ref": "#/$defs/ParticipantRef" }
       }
     },
     "C1Output": {
@@ -407,10 +409,10 @@
       "items": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["did", "participation"],
+        "required": ["did", "participant"],
         "properties": {
           "did": { "$ref": "#/$defs/DidRef" },
-          "participation": { "$ref": "#/$defs/ParticipationRef" }
+          "participant": { "$ref": "#/$defs/ParticipantRef" }
         }
       }
     },
@@ -469,6 +471,12 @@
         },
         { "type": "null", "description": "No path exists between `from` and `to` in the current graph." }
       ]
+    },
+    "G1Output": {
+      "type": "array",
+      "description": "G1 — Validator chain. Ordered `ParticipantRef[]` from **root to leaf inclusive**: the first element has `role = ECOSYSTEM` and `validatorParticipantId = null` (the permission-tree root for the input Participant's Ecosystem; see [[TG-EDGE-4]]); the last element is the input Participant itself. Every element's `ecosystemId` MUST be identical (a validator chain never crosses Ecosystem boundaries). If the input Participant is itself the ECOSYSTEM root, this is a 1-element array containing only the input.",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/ParticipantRef" }
     }
   }
 }

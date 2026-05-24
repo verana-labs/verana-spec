@@ -14,7 +14,7 @@
     "filters": {
       "type": "object",
       "additionalProperties": { "$ref": "#/$defs/FilterValue" },
-      "description": "Structured filters keyed by dotted field names from [TG-FCT-3] (e.g. `Did.operatorKind`, `OrganizationCredential.legalJurisdiction`, `Participation.role`). Each value MUST validate against `#/$defs/FilterValue`. Free-form because field names span multiple ECS schemas; per-surface field-name validity is documented in the spec, not enforced by this schema."
+      "description": "Structured filters keyed by dotted field names from [TG-FCT-3] (e.g. `Did.operatorKind`, `OrganizationCredential.legalJurisdiction`, `Participant.role`). Each value MUST validate against `#/$defs/FilterValue`. Free-form because field names span multiple ECS schemas; per-surface field-name validity is documented in the spec, not enforced by this schema."
     },
     "freeText": {
       "type": "string",
