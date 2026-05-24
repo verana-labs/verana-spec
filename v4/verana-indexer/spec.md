@@ -1228,7 +1228,7 @@ The Verifiable Trust Resolver answers two complementary questions about a DID at
    - **`presentations`** — Per-VP credential summaries (`vtcCredentials[]`, each entry `{id, credentialSchemaId, ecosystemId}`); sub-flags additionally surface unresolvable and invalid credential IDs per VP.
    - **`ecosystems`** — Aggregate metrics for the Ecosystems (and their underlying Credential Schemas and active Ecosystem Governance Frameworks) **the DID is the controller of** (the Ecosystems whose `did` equals the resolved DID). Sub-flags control whether archived Ecosystems (and their archived embedded Credential Schemas) are included.
 
-The response always carries the core fields (`did`, `trusted`, `evaluatedAtTime`, `evaluatedAtBlock`, `expiresAtTime`, `corporationId`); every other section is gated by its selector. The `vsOperator` account, in contrast, is surfaced **per Participation** (not at envelope level) because each `Participant` entry carries its own VS Operator Authorization grant from its controlling Corporation (`Participant.corporation_id`). The full payload contract is normatively defined by the [Resolution request schema](#resolution-request-schema) and [Resolution response schema](#resolution-response-schema) below.
+The response always carries the core fields (`did`, `trusted`, `evaluatedAtTime`, `evaluatedAtBlock`, `expiresAtTime`, `corporationId`); every other section is gated by its selector. The `vsOperator` account, in contrast, is surfaced **per Participant** (not at envelope level) because each `Participant` entry carries its own VS Operator Authorization grant from its controlling Corporation (`Participant.corporation_id`). The full payload contract is normatively defined by the [Resolution request schema](#resolution-request-schema) and [Resolution response schema](#resolution-response-schema) below.
 
 The point-in-time is controlled by the `At-Block-Height` HTTP request header per [Conventions](#at-block-height-header); when omitted, the resolver evaluates against the latest indexed block. The resolved block is echoed back as `evaluatedAtBlock` (with `evaluatedAtTime` as its wall-clock equivalent) in the response.
 
@@ -1287,6 +1287,7 @@ Selector semantics:
 
 participation states: REPAID, SLASHED, REVOKED, EXPIRED, ACTIVE, FUTURE, INACTIVE
 participation roles: HOLDER, ISSUER, VERIFIER, ISSUER_GRANTOR, VERIFIER_GRANTOR, ECOSYSTEM
+validatorParticipantId: non-null `uint64` pointer to the parent `Participant` in the permission tree for every role except `ECOSYSTEM`; explicitly `null` only when `role = ECOSYSTEM` (the chain root). This example resolves an organization DID, so every surfaced Participant is non-ECOSYSTEM — the `null` case is visible only when resolving a trust-registry-controller DID.
 
 ```json
 {
@@ -1332,7 +1333,8 @@ participation roles: HOLDER, ISSUER, VERIFIER, ISSUER_GRANTOR, VERIFIER_GRANTOR,
          "issuedCredentials":2345,
          "participants":{
             "HOLDER":75
-         }
+         },
+         "validatorParticipantId":401
       },
       {
          "id":502,
@@ -1342,7 +1344,8 @@ participation roles: HOLDER, ISSUER, VERIFIER, ISSUER_GRANTOR, VERIFIER_GRANTOR,
          "credentialSchemaId":5678,
          "ecosystemId":9877,
          "weight":"5000000uvna",
-         "verifiedCredentials":500
+         "verifiedCredentials":500,
+         "validatorParticipantId":402
       },
       {
          "id":503,
@@ -1356,7 +1359,8 @@ participation roles: HOLDER, ISSUER, VERIFIER, ISSUER_GRANTOR, VERIFIER_GRANTOR,
             "ISSUER":7,
             "HOLDER":1250
          },
-         "verifiedCredentials":500
+         "verifiedCredentials":500,
+         "validatorParticipantId":403
       }
    ],
    "ecsCredentials":[
@@ -1376,11 +1380,11 @@ participation roles: HOLDER, ISSUER, VERIFIER, ISSUER_GRANTOR, VERIFIER_GRANTOR,
             "type":"MCPService",
             "description":"AI tooling backend for Acme partners.",
             "minimumAgeRequired":0,
-            "termsAndConditions":"https://acme-vs.example.com/terms",
+            "termsAndConditionsUri":"https://acme-vs.example.com/terms",
             "termsAndConditionsDigestSri":"sha384-…",
-            "privacyPolicy":"https://acme-vs.example.com/privacy",
+            "privacyPolicyUri":"https://acme-vs.example.com/privacy",
             "privacyPolicyDigestSri":"sha384-…",
-            "logo":"https://acme-vs.example.com/logo",
+            "logoUri":"https://acme-vs.example.com/logo.png",
             "logoDigestSri":"sha384-…"
          }
       },
@@ -1403,7 +1407,7 @@ participation roles: HOLDER, ISSUER, VERIFIER, ISSUER_GRANTOR, VERIFIER_GRANTOR,
             "legalJurisdiction":"BE",
             "lei":"529900T8BM49AURSDO55",
             "organizationKind":"PRIVATE",
-            "logo":"https://acme-vs.example.com/logo",
+            "logoUri":"https://acme-vs.example.com/logo.png",
             "logoDigestSri":"sha384-…"
          }
       }
@@ -1525,7 +1529,7 @@ A subscription selects a set of channels. Each channel narrows what counts as a 
 | --- | --- |
 | `trust` | Any of the trust-core fields (`trusted`, `evaluatedAtTime`, `evaluatedAtBlock`, `expiresAtTime`, `corporationId`) change. The new values are delivered inline. The top-level `corporationId` rotation (DID re-binding to a different Corporation, e.g. as part of an ownership transfer) is signalled here. |
 | `corporation` | The `corporation` object (the singular Corporation whose `did` equals the resolved DID) is created or removed (i.e. the DID is bound to a Corporation, or that binding ends — e.g. a `Corporation.did` rotation away from this DID); **or** experiences a slash event; **or** its active CGF rotates (`active_version` advances) or any document of the active CGF version changes (URL or `digestSri`). The top-level `corporationId` scalar itself (the binding "this DID is operated by *that* Corp") is part of the `trust` channel above and is not gated separately. `deposit` fluctuations alone are gated by the `includeDepositChanges` sub-flag below. |
-| `participations` | A `Participation` entry the DID is part of is created or transitions state. `weight` fluctuations alone are gated by the `includeWeightChanges` sub-flag below. |
+| `participations` | A `Participant` entry the DID is part of is created or transitions state. `weight` fluctuations alone are gated by the `includeWeightChanges` sub-flag below. |
 | `ecsCredentials` | An ECS credential issued to or by the DID is added, replaced, or invalidated. |
 | `presentations` | A `LinkedVerifiablePresentation` referenced by the DID Document is added or removed, or its `vtcCredentials[]` set changes (entry added/removed, or any entry's `credentialSchemaId` / `ecosystemId` / `participantId` / `issuerParticipantId` changes). Changes confined to `unresolvableCredentialIds[]` or `invalidCredentialIds[]` are **not** notified. |
 | `services` | A non-`LinkedVerifiablePresentation` service entry in the DID Document changes (DIDComm, MCP, A2A, LinkedDomains, …). |
@@ -1536,7 +1540,7 @@ Channels that carry Coin-amount fields (`weight`, `deposit`) or high-frequency a
 | Channel | Sub-flag | Effect when `true` |
 | --- | --- | --- |
 | `corporation` | `includeDepositChanges` | Changes in the `corporation` object's `deposit` Coin amount trigger a notification (independent of slash events, which always trigger). |
-| `participations` | `includeWeightChanges` | Changes in a Participation's `weight` Coin amount trigger a notification. |
+| `participations` | `includeWeightChanges` | Changes in a Participant's `weight` Coin amount trigger a notification. |
 | `participations` | `includeParticipantCounts` | Changes in `participants[role]` counters trigger a notification. |
 | `participations` | `includeIssuedCredentials` | Changes in the `issuedCredentials` counter trigger a notification. |
 | `participations` | `includeVerifiedCredentials` | Changes in the `verifiedCredentials` counter trigger a notification. |
