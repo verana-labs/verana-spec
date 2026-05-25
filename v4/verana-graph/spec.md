@@ -1,5 +1,7 @@
 # Verana Graph spec
 
+**Latest Draft:** spec v4-draft1
+
 ## Abstract
 
 The Verifiable Trust ecosystem publishes its trust topology across many places: DID Documents expose Linked Verifiable Presentations, a Verifiable Public Registry (VPR) records permissions and credential schemas, and trust-resolution clients (such as [verana-indexer](https://github.com/verana-labs/verana-indexer)) compute and cache per-DID `TrustResult`s on demand. Each of these systems answers a narrow question: *"is this specific DID trusted right now?"* None of them answers *"show me every trusted service operated by organization X"* or *"list every Verifiable Service in country DE that exposes an MCP endpoint."*
