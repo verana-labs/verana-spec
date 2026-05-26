@@ -11,7 +11,7 @@ A Verana MCP Server bundles, in a single deployable unit:
 - a Cosmos SDK **operator account** (derived from a BIP-39 mnemonic) bound to exactly one **Corporation** in a Verana network, acting under [`OperatorAuthorization`](https://verana-labs.github.io/verifiable-trust-vpr-spec/#operatorauthorization) grants from that Corporation;
 - a **ledger client** that builds, signs, and broadcasts VPR transactions;
 - an **indexer client** that issues read queries against a conformant [Verana Indexer v4](../verana-indexer/spec.md);
-- a **graph client** that issues named GraphQL queries against a conformant [Verana Graph](../verana-graph/spec.md);
+- a **graph client** that issues named queries against a conformant [Verana Graph](../verana-graph/spec.md) (REST traversal endpoint per [[TG-QRY-5]](../verana-graph/spec.md#traversal-rest-binding); GraphQL or query-language pass-through MAY be used when the implementation exposes them) and a block-progress WebSocket subscriber per [[TG-BPS-1]](../verana-graph/spec.md#block-progress-subscription);
 - a **VS-agent client** that authenticates with and drives the [Administration API](../vs-agent/spec.md#administration-api) of **every** [Verana VS Agent](../vs-agent/spec.md) operated by the bound Corporation. The set of reachable agents is enumerated dynamically from on-chain `VSOperatorAuthorization` entries owned by the bound Corporation, and each agent's Admin API origin is discovered from its DID Document per [[VSA-VTI-DIDDOC]](../vs-agent/spec.md#vsa-vti-diddoc-did-document-required-service-entries). One MCP server can drive any number of VS Agents simultaneously.
 
 This specification defines the normative behavior of a Verana MCP Server implementation: its container configuration, its on-chain and off-chain authorization model, its transaction-confirmation contract, its transport layer, and the catalog of MCP **tools** and **resources** it exposes.
@@ -66,7 +66,7 @@ flowchart LR
     SRV["Verana MCP Server<br/>(this spec)"]
     RPC["Verana RPC<br/>(CometBFT + WS)"]
     IDX["Verana Indexer<br/>(REST + WS)"]
-    GRAPH["Verana Graph<br/>(GraphQL)"]
+    GRAPH["Verana Graph<br/>(REST + WS)"]
     VSA1["VS Agent #1<br/>(Admin API)"]
     VSA2["VS Agent #2<br/>(Admin API)"]
     VSAN["VS Agent #N<br/>(Admin API)"]
@@ -75,7 +75,7 @@ flowchart LR
     CLIENT -- "MCP / HTTP or stdio" --> SRV
     SRV -- "tx broadcast<br/>WS subscribe" --> RPC
     SRV -- "REST queries<br/>WS subscribe" --> IDX
-    SRV -- "GraphQL queries" --> GRAPH
+    SRV -- "REST queries<br/>WS subscribe" --> GRAPH
     SRV -- "Admin API<br/>(ADR-036 auth)" --> VSA1
     SRV -- "Admin API<br/>(ADR-036 auth)" --> VSA2
     SRV -- "Admin API<br/>(ADR-036 auth)" --> VSAN
@@ -556,11 +556,11 @@ Indexer tools issue HTTP GET requests against the configured `VERANA_INDEXER` en
 | `verana.idx.trqp.authorize` | [`IDX-TRQP-QRY-1`](../verana-indexer/spec.md#idx-trqp-qry-1-trqp-authorize) | `GET /trqp/v2/authorization` — TRQP authorization decision. |
 | `verana.idx.trqp.recognize` | [`IDX-TRQP-QRY-2`](../verana-indexer/spec.md#idx-trqp-qry-2-trqp-recognize) | `GET /trqp/v2/recognition` — TRQP recognition decision. |
 
-> Indexer WebSocket subscriptions (`IDX-INDEXER-SUB-1`, `IDX-VT-SUB-1`) are NOT exposed as MCP tools. The MCP server consumes them internally for cache-refresh and the indexer barrier; live event delivery to MCP clients is out of scope for this revision.
+> Indexer WebSocket subscriptions (`IDX-INDEXER-SUB-1`, `IDX-VT-SUB-1`) are NOT exposed as MCP tools. The MCP server consumes `IDX-INDEXER-SUB-1` internally for cache-refresh and the read-after-write barrier per [[VMS-TX-WS]](#vms-tx-ws-persistent-websocket-connections) and [[VMS-TX-BARRIER]](#vms-tx-barrier-indexer-read-after-write-barrier); the resolver-changes subscription `IDX-VT-SUB-1` is not subscribed to by the MCP server. Live event delivery to MCP clients is out of scope for this revision.
 
 ### [VMS-TOOLS-GRAPH] Graph Tools
 
-Graph tools are PUBLIC and require no on-chain authorization. They are proxied to the configured `VERANA_GRAPH` endpoint as named queries. Each traversal tool maps to one of the canonical query selectors `A1`–`G1` defined by the [Verana Graph specification](../verana-graph/spec.md#graph-traversal-queries); each search tool maps to one of the faceted-search surfaces.
+Graph tools are PUBLIC and require no on-chain authorization. They are proxied to the configured `VERANA_GRAPH` origin as named queries against the REST traversal endpoint of [[TG-QRY-5]](../verana-graph/spec.md#traversal-rest-binding) and the faceted-search REST endpoint; implementations MAY use GraphQL or direct query-language pass-through when the upstream graph implementation exposes them. Each traversal tool maps to one of the canonical query selectors `A1`–`G1` defined by the [Verana Graph specification](../verana-graph/spec.md#graph-traversal-queries); each search tool maps to one of the faceted-search surfaces.
 
 #### [VMS-TOOLS-GRAPH-DID] DID-rooted Traversals
 
@@ -625,6 +625,8 @@ Graph tools are PUBLIC and require no on-chain authorization. They are proxied t
 | `verana.graph.search.corporation` | [Corporation surface](../verana-graph/spec.md#corporation-surface-filters) | Hybrid faceted search returning ranked `Corporation` hits. |
 | `verana.graph.search.schema` | [CredentialSchema surface](../verana-graph/spec.md#credentialschema-surface-filters) | Hybrid faceted search returning ranked `CredentialSchema` hits. |
 | `verana.graph.search.serviceEndpoint` | [ServiceEndpoint surface](../verana-graph/spec.md#serviceendpoint-surface-filters) | Hybrid faceted search returning ranked `ServiceEndpoint` hits. |
+
+> The graph block-progress WebSocket subscription ([[TG-BPS-1]](../verana-graph/spec.md#block-progress-subscription)) is NOT exposed as an MCP tool. The MCP server consumes it internally to track the graph's `lastAppliedBlock` for the `verana.wallet.getStatus` tool and the `verana://own/status` resource per [[VMS-TX-WS]](#vms-tx-ws-persistent-websocket-connections); live block-progress delivery to MCP clients is out of scope for this revision.
 
 ### [VMS-TOOLS-VSA] VS Agent Tools
 
