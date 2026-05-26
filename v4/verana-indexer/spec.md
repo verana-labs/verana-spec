@@ -1192,19 +1192,83 @@ Replay persisted Ecosystem, Credential Schema, and Participant events for a give
 
 ##### IDX-INDEXER-SUB-1 Subscribe Indexer Events
 
-`WS /indexer/v1/subscribe?did=<DID>`
+`WS /indexer/v1/subscribe`
 
-Real-time push of Ecosystem, Credential Schema, and Participant events for a given DID. The subscriber opens a WebSocket connection to `/indexer/v1/subscribe` with the `did` query parameter set to the target DID; the server then streams one `IndexerTransactionEvent` JSON message per indexed event affecting that DID, in block-and-tx order. *Indexer-specific (no VPR equivalent).*
+Real-time push of Ecosystem, Credential Schema, Participant, Trust Deposit, Delegation, Digest, and Exchange Rate events for one or more DIDs. The subscriber opens a WebSocket connection to `/indexer/v1/subscribe` and sends one or more JSON control messages; the first control message MUST be a `subscribe`. *Indexer-specific (no VPR equivalent).*
 
-| Name | In | Type | Required | Description |
-| --- | --- | --- | --- | --- |
-| `did` | query | string | yes | DID whose events are subscribed to. Each WebSocket connection is bound to exactly one DID; clients needing multiple DIDs MUST open multiple connections |
+###### Connect / ready
 
-**Server → client messages:** Each message is a single `IndexerTransactionEvent` (same shape as the `events[]` items returned by [`listIndexerEvents`](#idx-indexer-qry-6-list-indexer-events)). No batching, no envelope.
+Immediately after a successful WebSocket upgrade, before any `subscribe` is processed, the server sends a `ready` message:
 
-**Catch-up and resume:** This stream does not deliver historical events on connect. To bootstrap from a known point, the client SHOULD call [`listIndexerEvents`](#idx-indexer-qry-6-list-indexer-events) with `after_block_height` set to its `last_seen_block`, paginate to exhaustion, then connect the WebSocket. After a temporary disconnection, the client SHOULD repeat the same pattern using the most recent `block_height` it processed.
+```json
+{
+   "type": "ready",
+   "block": 1500005,
+   "blockTime": "2026-05-11T13:00:05Z",
+   "blockIntervalMs": 5000
+}
+```
 
-**Backpressure:** A subscriber that fails to drain its receive buffer within an indexer-defined window MAY have its connection closed. The client SHOULD reconnect and resume via [`listIndexerEvents`](#idx-indexer-qry-6-list-indexer-events).
+- `block` — The height of the **next** block that the server will deliver via this WebSocket (i.e. `latestProcessedBlock + 1` at connect time). Clients use `block - 1` as the catch-up cursor when bootstrapping via [`listIndexerEvents`](#idx-indexer-qry-6-list-indexer-events).
+- `blockIntervalMs` — The expected block production interval in milliseconds. Clients SHOULD treat `2 × blockIntervalMs` as the liveness timeout: if no `block` message arrives within that window after sending a `subscribe`, the subscription was not established and the client SHOULD reconnect. The same timeout applies to ongoing heartbeat detection (see [Heartbeat](#heartbeat) below).
+
+###### Subscribe control message
+
+```json
+{
+   "action": "subscribe",
+   "dids": [
+      "did:webvh:QmRhJBzLMF6L3REha9xFpLgxui9X5tFm4TDxHoEHpA8Kpr:organization.vs.hologram.zone"
+   ]
+}
+```
+
+- `dids[]` — DIDs whose events the client wants to receive. **Omit** to receive events for every DID indexed by this indexer.
+
+A subsequent `subscribe` message replaces the active subscription on the same connection. To stop receiving notifications entirely, send `{ "action": "unsubscribe" }` or close the socket.
+
+###### Block message (server → client)
+
+After the first `subscribe` is acknowledged, the server sends one **block message** per processed block, in strictly increasing order of `block`:
+
+```json
+{
+   "type": "block",
+   "block": 1500005,
+   "blockTime": "2026-05-11T13:00:05Z",
+   "events": [
+      {
+         "type":         "indexer-event",
+         "event_type":   "StartParticipantOP",
+         "did":          "did:webvh:QmRhJBzLMF6L3REha9xFpLgxui9X5tFm4TDxHoEHpA8Kpr:organization.vs.hologram.zone",
+         "block_height": 1500005,
+         "tx_hash":      "AB12...",
+         "timestamp":    "2026-05-11T13:00:05Z",
+         "payload":      { "module": "pp", "action": "start_participant_op", "message_type": "MsgStartParticipantOP", "tx_index": 3, "message_index": 0, "sender": "verana1...", "related_dids": [], "entity_type": "Participant", "entity_id": "..." }
+      }
+   ]
+}
+```
+
+Semantics:
+
+- `block` — Height of the just-processed block; equal to each `events[].block_height` in the envelope.
+- `blockTime` — Wall-clock time the block was committed (ISO 8601); equal to each `events[].timestamp` in the envelope.
+- `events[]` — Every indexer event from that block whose `did` matches the active subscription (or every event when the subscription is the wildcard), in `(payload.tx_index, payload.message_index)` order. Each entry is a full `IndexerTransactionEvent` (same shape as the `events[]` items returned by [`listIndexerEvents`](#idx-indexer-qry-6-list-indexer-events)). Empty when no event matches at this block — the message still acts as a heartbeat.
+
+###### Heartbeat
+
+Block messages are emitted **for every processed block**, even when `events[]` is empty. Block production is the heartbeat: a connection that does not deliver a block message within the expected block-time window is presumed broken, and the client SHOULD reconnect and catch up via [`listIndexerEvents`](#idx-indexer-qry-6-list-indexer-events).
+
+A subscriber detects a connection-level loss by observing a gap (`block > previousBlock + 1`) in the sequence of received block messages.
+
+###### Catch-up and resume (indexer events)
+
+This stream does not deliver historical events on connect. To bootstrap from a known point, the client SHOULD call [`listIndexerEvents`](#idx-indexer-qry-6-list-indexer-events) with `after_block_height` set to its `last_seen_block`, paginate to exhaustion, then connect the WebSocket and send its `subscribe`. After a temporary disconnection, the client SHOULD repeat the same pattern using the highest `block` from a previously received block message as its new `last_seen_block`.
+
+###### Backpressure (indexer events)
+
+A subscriber that fails to drain its receive buffer within an indexer-defined window MAY have its connection closed with WebSocket close code `1011` (server error / overloaded). The client SHOULD reconnect and resume via [`listIndexerEvents`](#idx-indexer-qry-6-list-indexer-events).
 
 #### Verifiable Trust Resolver methods
 

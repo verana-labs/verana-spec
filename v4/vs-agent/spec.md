@@ -189,13 +189,22 @@ Example fragment of the resulting DID Document:
 
 ### [VSA-VTI-NOTIF] Notifications
 
-The agent MUST maintain a permanent WebSocket connection to the VPR indexer's [`IDX-INDEXER-SUB-1` Subscribe Indexer Events](https://verana-labs.github.io/verana-spec/v4/verana-indexer/spec/#idx-indexer-sub-1-subscribe-indexer-events) endpoint, scoped to its own DID:
+The agent MUST maintain a permanent WebSocket connection to the VPR indexer's [`IDX-INDEXER-SUB-1` Subscribe Indexer Events](https://verana-labs.github.io/verana-spec/v4/verana-indexer/spec/#idx-indexer-sub-1-subscribe-indexer-events) endpoint:
 
 ```text
-WS {VERANA_INDEXER}/indexer/v1/subscribe?did={agent DID}
+WS {VERANA_INDEXER}/indexer/v1/subscribe
 ```
 
-Each connection is bound to exactly one DID. The indexer streams one [`IndexerTransactionEvent`](https://verana-labs.github.io/verana-spec/v4/verana-indexer/spec/#idx-indexer-qry-6-list-indexer-events) JSON message per indexed event affecting that DID, in block-and-tx order. An `IndexerTransactionEvent` carries `type: "indexer-event"`, `event_type` (Cosmos action name, e.g. `StartParticipantOP`), `did`, `block_height`, `tx_hash`, `timestamp`, and `payload: { module, action, message_type, tx_index, message_index, sender, related_dids[], entity_type, entity_id }`.
+After receiving the indexer's `ready` message, the agent MUST send a `subscribe` control message scoped to its own DID:
+
+```json
+{
+   "action": "subscribe",
+   "dids":   ["{agent DID}"]
+}
+```
+
+The indexer then streams one block envelope per processed block, in strictly increasing `block` order. Each envelope carries `{ type: "block", block, blockTime, events[] }`; each entry of `events[]` is an [`IndexerTransactionEvent`](https://verana-labs.github.io/verana-spec/v4/verana-indexer/spec/#idx-indexer-qry-6-list-indexer-events) — `type: "indexer-event"`, `event_type` (Cosmos action name, e.g. `StartParticipantOP`), `did`, `block_height`, `tx_hash`, `timestamp`, and `payload: { module, action, message_type, tx_index, message_index, sender, related_dids[], entity_type, entity_id }` — in `(payload.tx_index, payload.message_index)` order. An envelope with `events[]: []` carries no work but still serves as a per-block heartbeat for gap detection.
 
 The indexer tracks all on-chain entities where the agent's DID is `Corporation.did`, `Ecosystem.did`, or `Participant.did` — transitively covering the embedded `CredentialSchema`, `GovernanceFrameworkVersion`, `ParticipantSession`, `VSOperatorAuthorization`, and `FeeGrant` entries that reference those parents — and emits an event whenever any of those entities is created or modified by a transaction.
 
@@ -277,7 +286,7 @@ When the VS Agent starts, it SHOULD execute the following steps in order:
 
 4. **Catch up missed events**: Call [`GET {VERANA_INDEXER}/indexer/v1/events?did=<agent DID>&after_block_height=<last_seen_block>`](https://verana-labs.github.io/verana-spec/v4/verana-indexer/spec/#idx-indexer-qry-6-list-indexer-events), paginating to exhaustion, where `last_seen_block` is the highest block height the agent has fully processed in its persistent state (0 on first start). Process each `IndexerTransactionEvent` returned, then advance `last_seen_block` to the highest `block_height` observed.
 
-5. **Connect to indexer WebSocket**: Establish a persistent WebSocket connection to [`WS {VERANA_INDEXER}/indexer/v1/subscribe?did=<agent DID>`](https://verana-labs.github.io/verana-spec/v4/verana-indexer/spec/#idx-indexer-sub-1-subscribe-indexer-events) for real-time awareness of on-chain changes (see [Notifications](#vsa-vti-notif-notifications)). Process incoming `IndexerTransactionEvent` messages in block-and-tx order. Any event with `block_height <= last_seen_block` MUST be discarded as a duplicate. These actions may trigger outgoing DIDComm messages.
+5. **Connect to indexer WebSocket**: Establish a persistent WebSocket connection to [`WS {VERANA_INDEXER}/indexer/v1/subscribe`](https://verana-labs.github.io/verana-spec/v4/verana-indexer/spec/#idx-indexer-sub-1-subscribe-indexer-events) for real-time awareness of on-chain changes (see [Notifications](#vsa-vti-notif-notifications)). After receiving the indexer's `ready` message, send `{ "action": "subscribe", "dids": ["<agent DID>"] }`. The indexer then streams one block envelope per processed block; process each envelope's `events[]` entries (each an `IndexerTransactionEvent`) in `(payload.tx_index, payload.message_index)` order. Any event with `block_height <= last_seen_block` MUST be discarded as a duplicate. These actions may trigger outgoing DIDComm messages.
 
 6. **Start processing the queued incoming DIDComm messages**.
 

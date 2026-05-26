@@ -201,7 +201,7 @@ This section specifies the contract by which delegable Msg tools build, sign, br
 The MCP server MUST maintain two long-lived WebSocket connections at all times:
 
 - **CometBFT RPC WebSocket** — `wss://VERANA_RPC/websocket`. Used to subscribe, per transaction, to `tm.event='Tx' AND tx.hash='<HEX_HASH>'` filters and receive the corresponding `tx_result` event when the tx is included in a block.
-- **Indexer WebSocket** — `WS VERANA_INDEXER/indexer/v1/subscribe?did=<bound_corp.did>` per [`IDX-INDEXER-SUB-1`](../verana-indexer/spec.md#idx-indexer-sub-1-subscribe-indexer-events), where `bound_corp.did` is the `did` field of the bound `Corporation` resolved at startup. Used as the primary signal for indexer catch-up (read-after-write barrier).
+- **Indexer WebSocket** — `WS VERANA_INDEXER/indexer/v1/subscribe` per [`IDX-INDEXER-SUB-1`](../verana-indexer/spec.md#idx-indexer-sub-1-subscribe-indexer-events). After the server's `ready` message, the MCP server sends `{ "action": "subscribe", "dids": [bound_corp.did] }`, where `bound_corp.did` is the `did` field of the bound `Corporation` resolved at startup. Used as the primary signal for indexer catch-up (read-after-write barrier).
 
 Both connections MUST be re-established on failure with exponential backoff (initial 1 s, max 30 s, jitter ±20 %). While either connection is unavailable, ledger Msg tools MUST fall back to the polling path defined in [[VMS-TX-BARRIER]](#vms-tx-barrier-indexer-read-after-write-barrier).
 
