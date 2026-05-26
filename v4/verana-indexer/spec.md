@@ -1180,13 +1180,16 @@ Return every indexed entity change committed at the block selected by the `At-Bl
 
 `GET /indexer/v1/events`
 
-Replay persisted Ecosystem, Credential Schema, and Participant events for a given DID, after a given block height. Backs the DID-scoped WebSocket room described in the indexer's OpenAPI document at the same path (`?did=<DID>`). *Indexer-specific (no VPR equivalent).*
+Replay persisted indexer events scoped by the same membership filter as [`IDX-INDEXER-SUB-1`](#idx-indexer-sub-1-subscribe-indexer-events): an optional DID list, an optional Corporation, intersected when both are present. *Indexer-specific (no VPR equivalent).*
 
 | Name | In | Type | Required | Description |
 | --- | --- | --- | --- | --- |
-| `did` | query | string | yes | DID to replay events for (only rows persisted for this DID are returned) |
+| `dids` | query | string | no | Comma-separated DIDs. When present, restricts the response to events matching the DID branch of the membership filter — resources whose primary DID is in the list (`Corporation.did`, `Ecosystem.did`, or `Participant.did`, with sub-entities surfaced under their parent's DID), plus Participants whose validator's DID is in the list (one hop via `validator_participant_id`). |
+| `corporation_id` | query | uint64 | no | When present, restricts the response to events matching the Corporation branch of the membership filter — the `Corporation` itself, every `Ecosystem` and `Participant` with `corporation_id` equal to this value, all sub-entities transitively embedded in any of those, plus Participants whose validator's `corporation_id` equals this value (one hop via `validator_participant_id`). |
 | `after_block_height` | query | integer | no | Return events with `block_height` strictly greater than this value (default 0) |
 | `limit` | query | integer | no | 1..500, default 100 — maximum number of events to return |
+
+When **both** `dids` and `corporation_id` are present, only events matching **both** filters are returned (intersection). When **both** are absent, the response is unfiltered.
 
 **Response:** Inline `{ events: IndexerTransactionEvent[], count, after_block_height }`. Each `IndexerTransactionEvent` carries `type: "indexer-event"`, `event_type` (Cosmos action name, e.g. `StartParticipantOP`), `did`, `block_height`, `tx_hash`, `timestamp`, and `payload: { module, action, message_type, tx_index, message_index, sender, related_dids[], entity_type, entity_id }`.
 
@@ -1210,20 +1213,23 @@ Immediately after a successful WebSocket upgrade, before any `subscribe` is proc
 ```
 
 - `block` — The height of the **next** block that the server will deliver via this WebSocket (i.e. `latestProcessedBlock + 1` at connect time). Clients use `block - 1` as the catch-up cursor when bootstrapping via [`listIndexerEvents`](#idx-indexer-qry-6-list-indexer-events).
-- `blockIntervalMs` — The expected block production interval in milliseconds. Clients SHOULD treat `2 × blockIntervalMs` as the liveness timeout: if no `block` message arrives within that window after sending a `subscribe`, the subscription was not established and the client SHOULD reconnect. The same timeout applies to ongoing heartbeat detection (see [Heartbeat](#heartbeat) below).
+- `blockIntervalMs` — The expected block production interval in milliseconds. Clients SHOULD treat `2 × blockIntervalMs` as the liveness timeout: if no `block` message arrives within that window after sending a `subscribe`, the subscription was not established and the client SHOULD reconnect. The same timeout applies to ongoing heartbeat detection (see [Heartbeat (indexer events)](#heartbeat-indexer-events) below).
 
 ###### Subscribe control message
 
 ```json
 {
-   "action": "subscribe",
+   "action":        "subscribe",
    "dids": [
       "did:webvh:QmRhJBzLMF6L3REha9xFpLgxui9X5tFm4TDxHoEHpA8Kpr:organization.vs.hologram.zone"
-   ]
+   ],
+   "corporationId": 42
 }
 ```
 
-- `dids[]` — DIDs whose events the client wants to receive. **Omit** to receive events for every DID indexed by this indexer.
+- `dids[]` — Optional list of DIDs. When present, the server delivers events for any resource whose primary DID is in `dids[]` (i.e. `Corporation.did`, `Ecosystem.did`, or `Participant.did`, with sub-entities surfaced under their parent's DID), **and** for any `Participant` `P` whose `validator_participant_id` resolves to a `Participant` `V` such that `V.did` is in `dids[]` (one-hop validator-tree match).
+- `corporationId` — Optional `uint64` (the stable `Corporation.id`). When present, the server delivers events for any resource owned by that Corporation — the `Corporation` itself, every `Ecosystem` and `Participant` with `corporation_id` equal to that value, and all sub-entities transitively embedded in any of those — **and** for any `Participant` `P` whose `validator_participant_id` resolves to a `Participant` `V` such that `V.corporation_id` equals that value (one-hop validator-tree match).
+- When **both** `dids[]` and `corporationId` are present, the active set is their **intersection**: the server delivers only events that match **both** filters. When **both** are absent, the server delivers every event indexed by this indexer (wildcard).
 
 A subsequent `subscribe` message replaces the active subscription on the same connection. To stop receiving notifications entirely, send `{ "action": "unsubscribe" }` or close the socket.
 
@@ -1256,7 +1262,7 @@ Semantics:
 - `blockTime` — Wall-clock time the block was committed (ISO 8601); equal to each `events[].timestamp` in the envelope.
 - `events[]` — Every indexer event from that block whose `did` matches the active subscription (or every event when the subscription is the wildcard), in `(payload.tx_index, payload.message_index)` order. Each entry is a full `IndexerTransactionEvent` (same shape as the `events[]` items returned by [`listIndexerEvents`](#idx-indexer-qry-6-list-indexer-events)). Empty when no event matches at this block — the message still acts as a heartbeat.
 
-###### Heartbeat
+###### Heartbeat (indexer events)
 
 Block messages are emitted **for every processed block**, even when `events[]` is empty. Block production is the heartbeat: a connection that does not deliver a block message within the expected block-time window is presumed broken, and the client SHOULD reconnect and catch up via [`listIndexerEvents`](#idx-indexer-qry-6-list-indexer-events).
 
@@ -1634,16 +1640,17 @@ Immediately after a successful WebSocket upgrade, before any `subscribe` is proc
 ```
 
 - `block` — The height of the **next** block that the server will deliver via this WebSocket (i.e. `latestProcessedBlock + 1` at connect time). Clients use `block - 1` as the bootstrap snapshot point — see [Bootstrap pattern](#bootstrap-pattern).
-- `blockIntervalMs` — The expected block production interval in milliseconds. Clients SHOULD treat `2 × blockIntervalMs` as the liveness timeout: if no `block` message arrives within that window after sending a `subscribe`, the subscription was not established and the client SHOULD reconnect. The same timeout applies to ongoing heartbeat detection (see [Block production as ping](#block-production-as-ping)).
+- `blockIntervalMs` — The expected block production interval in milliseconds. Clients SHOULD treat `2 × blockIntervalMs` as the liveness timeout: if no `block` message arrives within that window after sending a `subscribe`, the subscription was not established and the client SHOULD reconnect. The same timeout applies to ongoing heartbeat detection (see [Heartbeat (resolver changes)](#heartbeat-resolver-changes)).
 
 ###### Subscribe control message
 
 ```json
 {
-   "action": "subscribe",
+   "action":        "subscribe",
    "dids": [
       "did:webvh:QmRhJBzLMF6L3REha9xFpLgxui9X5tFm4TDxHoEHpA8Kpr:organization.vs.hologram.zone"
    ],
+   "corporationId": 42,
    "channels": {
       "trust":          true,
       "ecsCredentials": true,
@@ -1667,7 +1674,9 @@ Immediately after a successful WebSocket upgrade, before any `subscribe` is proc
 }
 ```
 
-- `dids[]` — DIDs to subscribe to. **Omit** to subscribe to every DID indexed by this resolver.
+- `dids[]` — Optional list of DIDs. When present, the resolver delivers change envelopes for any DID in `dids[]` and for any `Participant` whose `validator_participant_id` resolves to a `Participant` `V` such that `V.did` is in `dids[]` (one-hop validator-tree match).
+- `corporationId` — Optional `uint64` (the stable `Corporation.id`). When present, the resolver delivers change envelopes for the Corporation's own DID, for every `Ecosystem` and `Participant` DID with `corporation_id` equal to that value, and for any `Participant` whose `validator_participant_id` resolves to a `Participant` `V` such that `V.corporation_id` equals that value (one-hop validator-tree match).
+- When **both** `dids[]` and `corporationId` are present, the active DID set is their **intersection**. When **both** are absent, the resolver subscribes to every indexed DID (wildcard).
 - `channels` — Map from channel name to either a boolean (use defaults) or a sub-options object. Channels not listed in the map are excluded from the stream.
 
 A subsequent `subscribe` message replaces the active subscription on the same connection. To stop receiving notifications entirely, send `{ "action": "unsubscribe" }` or close the socket.
@@ -1720,13 +1729,13 @@ Semantics:
 >
 > In practice, most blocks produce zero or very few changes for a given subscriber's DID set, so the number of follow-up resolve calls per block is low. Clients that need state for multiple DIDs that changed in the same block can batch their resolve calls.
 
-##### Block production as ping
+###### Heartbeat (resolver changes)
 
 Block messages are emitted **for every processed block**, even when `changes[]` is empty. Block production is the heartbeat: a connection that does not deliver a block message within the expected block-time window is presumed broken, and the client SHOULD reconnect and catch up via [`listChanges`](#idx-vt-qry-2-list-changes).
 
 A subscriber detects a connection-level loss by observing a gap (`block > previousBlock + 1`) in the sequence of received block messages.
 
-###### Backpressure
+###### Backpressure (resolver changes)
 
 A subscriber that fails to drain its receive buffer within an indexer-defined window MAY have its connection closed with WebSocket close code `1011` (server error / overloaded). The client SHOULD reconnect and resume via `listChanges`.
 
@@ -1740,6 +1749,7 @@ Request:
 GET /vt/v1/changes
   ?fromBlock=<int>
   [&dids=<comma-separated DIDs>]
+  [&corporation_id=<uint64>]
   [&channels=<comma-separated channel names>]
   [&includeParticipantCounts=true|false]
   [&includeIssuedCredentials=true|false]
@@ -1747,7 +1757,7 @@ GET /vt/v1/changes
   [&limit=<int>]
 ```
 
-`limit` defaults to `100` and MUST NOT exceed `1000`. When `dids` is omitted, the call subscribes-by-query to every indexed DID (same wildcard semantics as the WS `subscribe` with no `dids[]`).
+`limit` defaults to `100` and MUST NOT exceed `1000`. The `dids` and `corporation_id` parameters apply the same membership filter as the WS `subscribe` of [`IDX-VT-SUB-1`](#idx-vt-sub-1-subscribe-changes), including the one-hop validator-tree branch on each side. When **both** are present, the response is restricted to the **intersection** of the two filters; when **both** are omitted, the call subscribes-by-query to every indexed DID (wildcard).
 
 Response:
 
@@ -1800,11 +1810,12 @@ Request:
 ```http
 GET /vt/v1/dids
   [?cursor=<opaque string>]
+  [&corporation_id=<uint64>]
   [&limit=<int>]
 At-Block-Height: <int>
 ```
 
-The snapshot block is selected via the `At-Block-Height` HTTP request header per [Conventions](#at-block-height-header); when omitted, the latest indexed block is used. `limit` defaults to `1000` and MUST NOT exceed `10000`.
+The snapshot block is selected via the `At-Block-Height` HTTP request header per [Conventions](#at-block-height-header); when omitted, the latest indexed block is used. `limit` defaults to `1000` and MUST NOT exceed `10000`. When `corporation_id` is provided, the response enumerates only the DIDs in that Corporation's expanded membership set at the snapshot block (same direct-ownership + one-hop validator-tree semantics as the WS `subscribe` of [`IDX-VT-SUB-1`](#idx-vt-sub-1-subscribe-changes)).
 
 Response:
 

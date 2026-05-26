@@ -189,7 +189,7 @@ Example fragment of the resulting DID Document:
 
 ### [VSA-VTI-NOTIF] Notifications
 
-The agent MUST maintain a permanent WebSocket connection to the VPR indexer's [`IDX-INDEXER-SUB-1` Subscribe Indexer Events](https://verana-labs.github.io/verana-spec/v4/verana-indexer/spec/#idx-indexer-sub-1-subscribe-indexer-events) endpoint:
+The agent MUST maintain a permanent WebSocket connection to the VPR indexer's [`IDX-INDEXER-SUB-1` Subscribe Indexer Events](../verana-indexer/spec.md#idx-indexer-sub-1-subscribe-indexer-events) endpoint:
 
 ```text
 WS {VERANA_INDEXER}/indexer/v1/subscribe
@@ -204,11 +204,13 @@ After receiving the indexer's `ready` message, the agent MUST send a `subscribe`
 }
 ```
 
-The indexer then streams one block envelope per processed block, in strictly increasing `block` order. Each envelope carries `{ type: "block", block, blockTime, events[] }`; each entry of `events[]` is an [`IndexerTransactionEvent`](https://verana-labs.github.io/verana-spec/v4/verana-indexer/spec/#idx-indexer-qry-6-list-indexer-events) — `type: "indexer-event"`, `event_type` (Cosmos action name, e.g. `StartParticipantOP`), `did`, `block_height`, `tx_hash`, `timestamp`, and `payload: { module, action, message_type, tx_index, message_index, sender, related_dids[], entity_type, entity_id }` — in `(payload.tx_index, payload.message_index)` order. An envelope with `events[]: []` carries no work but still serves as a per-block heartbeat for gap detection.
+An agent that wants the broader corp-scoped view (its own Participant entry plus every other resource owned by its Corporation — sibling Participants, controlled Ecosystems, embedded sub-entities — plus every Participant the Corporation validates one hop down the tree) MAY instead send `{ "action": "subscribe", "corporationId": <Participant.corporation_id> }` per [`IDX-INDEXER-SUB-1`](../verana-indexer/spec.md#idx-indexer-sub-1-subscribe-indexer-events). The default scope is the agent's own DID.
+
+The indexer then streams one block envelope per processed block, in strictly increasing `block` order. Each envelope carries `{ type: "block", block, blockTime, events[] }`; each entry of `events[]` is an [`IndexerTransactionEvent`](../verana-indexer/spec.md#idx-indexer-qry-6-list-indexer-events) — `type: "indexer-event"`, `event_type` (Cosmos action name, e.g. `StartParticipantOP`), `did`, `block_height`, `tx_hash`, `timestamp`, and `payload: { module, action, message_type, tx_index, message_index, sender, related_dids[], entity_type, entity_id }` — in `(payload.tx_index, payload.message_index)` order. An envelope with `events[]: []` carries no work but still serves as a per-block heartbeat for gap detection.
 
 The indexer tracks all on-chain entities where the agent's DID is `Corporation.did`, `Ecosystem.did`, or `Participant.did` — transitively covering the embedded `CredentialSchema`, `GovernanceFrameworkVersion`, `ParticipantSession`, `VSOperatorAuthorization`, and `FeeGrant` entries that reference those parents — and emits an event whenever any of those entities is created or modified by a transaction.
 
-**Catch-up and resume:** The WebSocket stream does not deliver historical events on connect. The agent MUST persist the highest `block_height` it has fully processed and, on (re)connect, MUST first call [`GET /indexer/v1/events?did=<DID>&after_block_height=<last_seen_block>`](https://verana-labs.github.io/verana-spec/v4/verana-indexer/spec/#idx-indexer-qry-6-list-indexer-events) to drain any missed events to exhaustion **before** processing new WebSocket messages. Events that have already been processed (same `tx_hash` + `message_index`) MUST be discarded as idempotent duplicates.
+**Catch-up and resume:** The WebSocket stream does not deliver historical events on connect. The agent MUST persist the highest `block_height` it has fully processed and, on (re)connect, MUST first call [`GET /indexer/v1/events?dids=<agent DID>&after_block_height=<last_seen_block>`](../verana-indexer/spec.md#idx-indexer-qry-6-list-indexer-events) (or `?corporation_id=<Participant.corporation_id>` if the agent uses the corp-scoped subscription) to drain any missed events to exhaustion **before** processing new WebSocket messages. Events that have already been processed (same `tx_hash` + `message_index`) MUST be discarded as idempotent duplicates.
 
 If the WebSocket connection is lost, the agent MUST reconnect with exponential backoff and re-apply the catch-up pattern above.
 
@@ -218,7 +220,7 @@ Each notification must be associated with a specific handler interface in the VS
 
 Other `event_type` values not listed below COULD be received and SHOULD be ignored.
 
-> Independently from the indexer event stream above, the agent MAY also subscribe to the [Verifiable Trust Resolver subscription](https://verana-labs.github.io/verana-spec/v4/verana-indexer/spec/#idx-vt-sub-1-subscribe-changes) at `WS {VERANA_INDEXER}/vt/v1/subscribe` to receive aggregated trust-resolution change envelopes about its DID (e.g., when its `trusted` boolean flips). The two streams are complementary: `/indexer/v1/subscribe` is the source of truth for on-chain transactions; `/vt/v1/subscribe` is a derived, debounced view of the resolver state.
+> Independently from the indexer event stream above, the agent MAY also subscribe to the [Verifiable Trust Resolver subscription](../verana-indexer/spec.md#idx-vt-sub-1-subscribe-changes) at `WS {VERANA_INDEXER}/vt/v1/subscribe` to receive aggregated trust-resolution change envelopes about its DID (e.g., when its `trusted` boolean flips). The two streams are complementary: `/indexer/v1/subscribe` is the source of truth for on-chain transactions; `/vt/v1/subscribe` is a derived, debounced view of the resolver state.
 
 #### [VSA-VTI-NOTIF-CO] Corporation Notifications
 
@@ -227,7 +229,7 @@ These notifications are emitted when the agent's DID is the `did` of a `Corporat
 | `event_type` | Description | Default Handler Implementation |
 | --- | --- | --- |
 | `CreateNewCorporation` [[MOD-CO-MSG-1]](https://verana-labs.github.io/verifiable-trust-vpr-spec/#mod-co-msg-1-create-new-corporation) | A new Corporation has been created with the agent's DID. | N/A. |
-| `UpdateCorporation` [[MOD-CO-MSG-2]](https://verana-labs.github.io/verifiable-trust-vpr-spec/#mod-co-msg-2-update-corporation) | The Corporation has been updated (DID rotation, language, etc.). | If `Corporation.did` rotation moves the binding away from this agent's DID, the agent SHOULD log a warning and stop processing further events on the previous DID. |
+| `UpdateCorporation` [[MOD-CO-MSG-2]](https://verana-labs.github.io/verifiable-trust-vpr-spec/#mod-co-msg-2-update-corporation) | The Corporation has been updated (DID rotation, language, etc.). | If `Corporation.did` rotation moves the binding away from this agent's DID **and** the agent uses the per-DID subscription scope (`dids: [agent DID]`), the agent SHOULD log a warning and stop processing further events on the previous DID. Agents using the corp-scoped subscription (`corporationId: <Participant.corporation_id>`) are unaffected by `Corporation.did` rotation since the subscription scope is keyed on the stable `Corporation.id`, not on its DID. |
 | `AddGovernanceFrameworkDocument` [[MOD-GF-MSG-1]](https://verana-labs.github.io/verifiable-trust-vpr-spec/#mod-gf-msg-1-add-governance-framework-document) | A Governance Framework Document has been added to the Corporation's CGF. | N/A. |
 | `IncreaseActiveGovernanceFrameworkVersion` [[MOD-GF-MSG-2]](https://verana-labs.github.io/verifiable-trust-vpr-spec/#mod-gf-msg-2-increase-active-governance-framework-version) | The Corporation's active CGF version has been incremented. | N/A. |
 
@@ -284,9 +286,9 @@ When the VS Agent starts, it SHOULD execute the following steps in order:
 
 3. **Start DIDComm message processor**: Enable DIDComm for outgoing messages.
 
-4. **Catch up missed events**: Call [`GET {VERANA_INDEXER}/indexer/v1/events?did=<agent DID>&after_block_height=<last_seen_block>`](https://verana-labs.github.io/verana-spec/v4/verana-indexer/spec/#idx-indexer-qry-6-list-indexer-events), paginating to exhaustion, where `last_seen_block` is the highest block height the agent has fully processed in its persistent state (0 on first start). Process each `IndexerTransactionEvent` returned, then advance `last_seen_block` to the highest `block_height` observed.
+4. **Catch up missed events**: Call [`GET {VERANA_INDEXER}/indexer/v1/events?dids=<agent DID>&after_block_height=<last_seen_block>`](../verana-indexer/spec.md#idx-indexer-qry-6-list-indexer-events) (or `?corporation_id=<Participant.corporation_id>` if the agent uses the corp-scoped subscription per [[VSA-VTI-NOTIF]](#vsa-vti-notif-notifications)), paginating to exhaustion, where `last_seen_block` is the highest block height the agent has fully processed in its persistent state (0 on first start). Process each `IndexerTransactionEvent` returned, then advance `last_seen_block` to the highest `block_height` observed.
 
-5. **Connect to indexer WebSocket**: Establish a persistent WebSocket connection to [`WS {VERANA_INDEXER}/indexer/v1/subscribe`](https://verana-labs.github.io/verana-spec/v4/verana-indexer/spec/#idx-indexer-sub-1-subscribe-indexer-events) for real-time awareness of on-chain changes (see [Notifications](#vsa-vti-notif-notifications)). After receiving the indexer's `ready` message, send `{ "action": "subscribe", "dids": ["<agent DID>"] }`. The indexer then streams one block envelope per processed block; process each envelope's `events[]` entries (each an `IndexerTransactionEvent`) in `(payload.tx_index, payload.message_index)` order. Any event with `block_height <= last_seen_block` MUST be discarded as a duplicate. These actions may trigger outgoing DIDComm messages.
+5. **Connect to indexer WebSocket**: Establish a persistent WebSocket connection to [`WS {VERANA_INDEXER}/indexer/v1/subscribe`](../verana-indexer/spec.md#idx-indexer-sub-1-subscribe-indexer-events) for real-time awareness of on-chain changes (see [Notifications](#vsa-vti-notif-notifications)). After receiving the indexer's `ready` message, send `{ "action": "subscribe", "dids": ["<agent DID>"] }`. The indexer then streams one block envelope per processed block; process each envelope's `events[]` entries (each an `IndexerTransactionEvent`) in `(payload.tx_index, payload.message_index)` order. Any event with `block_height <= last_seen_block` MUST be discarded as a duplicate. These actions may trigger outgoing DIDComm messages.
 
 6. **Start processing the queued incoming DIDComm messages**.
 
@@ -849,21 +851,21 @@ The following environment variables MUST be provided when the VS Agent container
 | `ADMIN_API_CORPORATION_ACCOUNT_WHITELIST` | OPTIONAL | If set, limit corporation access to accounts from this list. Has no effect if `ADMIN_API_ENABLE_CORPORATION` is set to false. |
 | `ADMIN_API_ENABLE_INTERNAL` | REQUIRED | Enable full API access for containers of the same pod or deployment. No authentication needed. |
 
-### Flow Management
+### [VSA-ADM-FL] Flow Management
 
 The following methods list and progress credential-acquisition flows handled by the agent (see [[VSA-VTI-FLOW-STATE] Flow State](#vsa-vti-flow-state-flow-state)).
 
 | Module | Method Name | Relative REST API path | Type | Requirements | Authz |
 | --- | --- | --- | --- | --- | --- |
-| Flow Management | `listFlows` | | Query | | INTERNAL, CORPORATION (`SetParticipantOPValidated` or `StartParticipantOP` or `RenewParticipantOP`) |
-| Flow Management | `editCredentialClaims` | | Action | | INTERNAL, CORPORATION |
-| Flow Management | `sendOobLink` | | Action | | INTERNAL, CORPORATION (`SetParticipantOPValidated`) |
-| Flow Management | `validateFlow` | | Action | | INTERNAL, CORPORATION (`SetParticipantOPValidated`) |
-| Flow Management | `revokeCredential` | | Action | | INTERNAL, CORPORATION (`RevokeParticipant`) |
+| Flow Management | `listFlows` | | Query | [see](#vsa-adm-fl-list-listflows) | INTERNAL, CORPORATION (`SetParticipantOPValidated` or `StartParticipantOP` or `RenewParticipantOP`) |
+| Flow Management | `editCredentialClaims` | | Action | [see](#vsa-adm-fl-edit-editcredentialclaims) | INTERNAL, CORPORATION |
+| Flow Management | `sendOobLink` | | Action | [see](#vsa-adm-fl-send-sendooblink) | INTERNAL, CORPORATION (`SetParticipantOPValidated`) |
+| Flow Management | `validateFlow` | | Action | [see](#vsa-adm-fl-validate-validateflow) | INTERNAL, CORPORATION (`SetParticipantOPValidated`) |
+| Flow Management | `revokeCredential` | | Action | [see](#vsa-adm-fl-revoke-revokecredential) | INTERNAL, CORPORATION (`RevokeParticipant`) |
 
 > Note: some VS Agent implementations may not support all actions, or may prefer sending the user to a portal for providing proofs, etc., using the OOB link.
 
-#### listFlows
+#### [VSA-ADM-FL-LIST] listFlows
 
 Lists and inspects existing credential-acquisition flows handled by the agent.
 
@@ -890,7 +892,7 @@ Lists and inspects existing credential-acquisition flows handled by the agent.
 
 **Requirements**: none beyond caller authentication and corporation-scoped authorization.
 
-#### editCredentialClaims
+#### [VSA-ADM-FL-EDIT] editCredentialClaims
 
 Creates, modifies, or overrides the credential claims submitted by the applicant for a given flow.
 
@@ -912,7 +914,7 @@ Creates, modifies, or overrides the credential claims submitted by the applicant
 - `NOT_FOUND` — no flow with the given `session_uuid`.
 - `INVALID_STATE` — the flow is not in `VALIDATING` or `CRED_REVOKED` state.
 
-#### sendOobLink
+#### [VSA-ADM-FL-SEND] sendOobLink
 
 Sends or resends an `OOB_LINK` DIDComm message to the applicant for out-of-DIDComm information collection (see [[VSA-VTI-FLOW-DIDCOMM] DIDComm Message Summary](#vsa-vti-flow-didcomm-didcomm-message-summary)).
 
@@ -934,7 +936,7 @@ Sends or resends an `OOB_LINK` DIDComm message to the applicant for out-of-DIDCo
 - `NOT_FOUND` — no flow with the given `session_uuid`.
 - `INVALID_STATE` — the flow's Connection State is not `ESTABLISHED`.
 
-#### validateFlow
+#### [VSA-ADM-FL-VALIDATE] validateFlow
 
 Marks the applicant's documentation as validated for a given flow. When an Onboarding Process is involved, this is independent from the on-chain `SetParticipantOPValidated` transaction and MAY trigger credential issuance (see [[VSA-VTI-FLOW-OP-NEW] New Onboarding Process](#vsa-vti-flow-op-new-new-onboarding-process) steps 6–8).
 
@@ -953,7 +955,7 @@ Marks the applicant's documentation as validated for a given flow. When an Onboa
 - `NOT_FOUND` — no flow with the given `session_uuid`.
 - `INVALID_STATE` — the flow is not in a state where validation is expected.
 
-#### revokeCredential
+#### [VSA-ADM-FL-REVOKE] revokeCredential
 
 Revokes a previously issued credential for a given flow. The agent MUST notify the applicant via a `CRED_STATE_CHANGE` message over DIDComm (see [[VSA-VTI-FLOW-UPD] Validator Updates](#vsa-vti-flow-upd-validator-updates)).
 

@@ -120,7 +120,7 @@ The following environment variables MUST be provided when the Verana MCP Server 
 |---|---|---|
 | `VERANA_RPC` | REQUIRED | Verana CometBFT RPC endpoint URL (e.g. `https://rpc.testnet.verana.network`). The MCP server uses this for transaction broadcast, gas simulation, Cosmos SDK queries, and the CometBFT WebSocket subscription described in [[VMS-TX-WS]](#vms-tx-ws-persistent-websocket-connections). The endpoint MUST expose both the HTTPS RPC API and the corresponding WebSocket at `/websocket`. |
 | `VERANA_INDEXER` | REQUIRED | Verana indexer REST API URL (e.g. `https://idx.testnet.verana.network`). The MCP server uses this for all `verana.idx.*` tool calls and for the indexer WebSocket subscription described in [[VMS-TX-WS]](#vms-tx-ws-persistent-websocket-connections). The endpoint MUST conform to [Indexer v4](../verana-indexer/spec.md). |
-| `VERANA_GRAPH` | REQUIRED | Verana Graph GraphQL endpoint URL (e.g. `https://graph.testnet.verana.network/graphql`). The MCP server uses this for all `verana.graph.*` tool calls. The endpoint MUST conform to [Verana Graph](../verana-graph/spec.md). |
+| `VERANA_GRAPH` | REQUIRED | Verana Graph origin URL (e.g. `https://graph.testnet.verana.network`). The MCP server uses this as the base origin for all `verana.graph.*` tool calls (resolved against the REST traversal endpoint of [[TG-QRY-5]](../verana-graph/spec.md#traversal-rest-binding) and the faceted-search REST endpoint) and for the graph block-progress WebSocket subscription described in [[VMS-TX-WS]](#vms-tx-ws-persistent-websocket-connections). The endpoint MUST conform to [Verana Graph](../verana-graph/spec.md). |
 | `VERANA_CHAIN_ID` | OPTIONAL | Cosmos chain id. If unset, the MCP server SHOULD discover it via the RPC's `/status` endpoint at startup. |
 | `VERANA_DENOM` | OPTIONAL | Default fee denom (e.g. `uvna`). Default: as advertised by the chain. |
 | `VERANA_GAS_PRICE` | OPTIONAL | Default gas price (e.g. `0.025uvna`). Default: chain minimum. |
@@ -130,9 +130,7 @@ The following environment variables MUST be provided when the Verana MCP Server 
 | Variable | Required | Description |
 |---|---|---|
 | `VERANA_TX_TIMEOUT_MS` | OPTIONAL | Maximum wait, in milliseconds, for a CometBFT WebSocket event confirming inclusion of a broadcast transaction in a block. If exceeded, the tool returns a `BCAST_TIMEOUT` error. Default: `30000`. |
-| `VERANA_INDEXER_POLL_AFTER_MS` | OPTIONAL | After chain confirmation at block height `B`, the MCP server first waits this many milliseconds for the indexer WebSocket to deliver any event with `block_height >= B`. If no such event arrives within the window, polling on `IDX-INDEXER-QRY-1` begins per [[VMS-TX-BARRIER]](#vms-tx-barrier-indexer-read-after-write-barrier). Default: `2000`. |
-| `VERANA_INDEXER_POLL_INTERVAL_MS` | OPTIONAL | Interval between successive `GET /indexer/v1/block-height` polls during the indexer barrier. Default: `500`. |
-| `VERANA_INDEXER_TIMEOUT_MS` | OPTIONAL | Hard cap, in milliseconds, on the total time spent waiting for the indexer barrier. If exceeded, the tool returns its result with `indexer_synced: false` (the chain transaction itself has succeeded; only the read-after-write guarantee is degraded). Default: `15000`. |
+| `VERANA_INDEXER_TIMEOUT_MS` | OPTIONAL | Hard cap, in milliseconds, on the time spent waiting for the indexer's WebSocket height cursor to reach the broadcast block height per [[VMS-TX-BARRIER]](#vms-tx-barrier-indexer-read-after-write-barrier). If exceeded, the tool returns its result with `indexer_synced: false` (the chain transaction itself has succeeded; only the read-after-write guarantee is degraded). Default: `15000`. |
 
 #### [VMS-CFG-ENV-MCP] MCP Transport
 
@@ -198,12 +196,13 @@ This section specifies the contract by which delegable Msg tools build, sign, br
 
 ### [VMS-TX-WS] Persistent WebSocket Connections
 
-The MCP server MUST maintain two long-lived WebSocket connections at all times:
+The MCP server MUST maintain three long-lived WebSocket connections at all times:
 
 - **CometBFT RPC WebSocket** — `wss://VERANA_RPC/websocket`. Used to subscribe, per transaction, to `tm.event='Tx' AND tx.hash='<HEX_HASH>'` filters and receive the corresponding `tx_result` event when the tx is included in a block.
-- **Indexer WebSocket** — `WS VERANA_INDEXER/indexer/v1/subscribe` per [`IDX-INDEXER-SUB-1`](../verana-indexer/spec.md#idx-indexer-sub-1-subscribe-indexer-events). After the server's `ready` message, the MCP server sends `{ "action": "subscribe", "dids": [bound_corp.did] }`, where `bound_corp.did` is the `did` field of the bound `Corporation` resolved at startup. Used as the primary signal for indexer catch-up (read-after-write barrier).
+- **Indexer WebSocket** — `WS VERANA_INDEXER/indexer/v1/subscribe` per [`IDX-INDEXER-SUB-1`](../verana-indexer/spec.md#idx-indexer-sub-1-subscribe-indexer-events). After the server's `ready` message, the MCP server sends `{ "action": "subscribe", "corporationId": bound_corp.id }`, where `bound_corp.id` is the stable numeric `id` of the bound `Corporation` resolved at startup. The corporation-scoped subscription delivers events for the Corporation itself, every `Ecosystem` and `Participant` it owns (transitively including their embedded sub-entities), and every `Participant` whose `validator_participant_id` resolves to a Participant owned by the bound Corporation — without any client-side DID enumeration or churn handling. Multiple MCP-server instances bound to the same Corporation therefore observe the same stream. Used as the primary signal for indexer catch-up (read-after-write barrier).
+- **Graph block-progress WebSocket** — `WS VERANA_GRAPH/graph/v1/blocks/subscribe` per [[TG-BPS-1]](../verana-graph/spec.md#block-progress-subscription). After the server's `ready` message (per [[TG-BPS-2]](../verana-graph/spec.md#block-progress-subscription)) the MCP server initialises its graph height cursor from `ready.block` and advances it on every received `block` notification per [[TG-BPS-3]](../verana-graph/spec.md#block-progress-subscription). The connection is anonymous and forward-only; the MCP server sends no client-to-server payload after the WebSocket handshake. The graph height cursor is **informational only** — surfaced through [[VMS-TOOLS-WALLET]](#vms-tools-wallet-wallet-tools) and [[VMS-RES-CATALOG]](#vms-res-catalog-resource-catalog) so MCP clients can compare graph freshness to indexer freshness — and is **not** part of the read-after-write barrier of [[VMS-TX-BARRIER]](#vms-tx-barrier-indexer-read-after-write-barrier).
 
-Both connections MUST be re-established on failure with exponential backoff (initial 1 s, max 30 s, jitter ±20 %). While either connection is unavailable, ledger Msg tools MUST fall back to the polling path defined in [[VMS-TX-BARRIER]](#vms-tx-barrier-indexer-read-after-write-barrier).
+All three connections MUST be re-established on failure with exponential backoff (initial 1 s, max 30 s, jitter ±20 %). The indexer and graph WSs MUST treat the absence of either a `ready` or a `block` notification within `2 × blockIntervalMs` of the previously received notification as a presumed-broken connection — per [Heartbeat (indexer events)](../verana-indexer/spec.md#heartbeat-indexer-events) for the indexer and [[TG-BPS-7]](../verana-graph/spec.md#block-progress-subscription) for the graph; the CometBFT RPC WS relies on the chain implementation's transport-level keepalive and is reconnected on connection-level error. While the CometBFT WebSocket is unavailable, ledger Msg tools cannot confirm a broadcast and will eventually return `BCAST_TIMEOUT` per [[VMS-TX-BCAST]](#vms-tx-bcast-broadcast-and-chain-confirmation). While the indexer WebSocket is unavailable, the read-after-write barrier per [[VMS-TX-BARRIER]](#vms-tx-barrier-indexer-read-after-write-barrier) waits for the reconnect (whose `ready` message advances the height cursor); if the reconnect does not raise the cursor to the broadcast height within `VERANA_INDEXER_TIMEOUT_MS`, the tool returns `indexer_synced: false`. While the graph WebSocket is unavailable, the graph height cursor stales but no tool's success path is affected; `verana://own/status` reports the staleness via `graph_ws.connected = false`. There is no HTTP polling fallback for any of the three connections.
 
 ### [VMS-TX-BUILD] Message Construction and Signing
 
@@ -215,7 +214,25 @@ Both connections MUST be re-established on failure with exponential backoff (ini
 
 [VMS-TX-BUILD-2] The MCP server MUST sign the resulting transaction using the operator account's private key, following the chain implementation's required signing pattern for delegated execution. For chains that implement delegated execution through `cosmos.authz.v1beta1.MsgExec`, the inner Msg is wrapped in a `MsgExec` whose `grantee` is the operator account, the outer transaction is signed by the operator alone, and the chain's antehandler enforces [[AUTHZ-CHECK-1]](https://verana-labs.github.io/verifiable-trust-vpr-spec/#authz-check-1-operator-authorization-checks) on the inner Msg.
 
-[VMS-TX-BUILD-3] Gas estimation SHOULD use the chain's transaction simulation endpoint (`/cosmos/tx/v1beta1/simulate`). The transaction's `gas_wanted` SHOULD be set to `simulated_gas × gas_adjustment` with `gas_adjustment = 1.5` by default.
+[VMS-TX-BUILD-3] Fee grant. Before signing, the MCP server SHOULD determine whether the bound `Corporation` has granted the operator account a fee allowance covering the current inner Msg's type, per the VPR [`FeeGrant`](https://verana-labs.github.io/verifiable-trust-vpr-spec/#feegrant) entity and the [[AUTHZ-CHECK-2]](https://verana-labs.github.io/verifiable-trust-vpr-spec/#authz-check-2-fee-grant-checks) precondition. A relevant grant exists iff a `FeeGrant` `fg` satisfies all of:
+
+- `fg.grantor_corporation_id` equals `bound_corp.id`;
+- `fg.grantee` equals the operator account;
+- the current inner Msg's type is in `fg.msg_types`;
+- `fg` is currently active — either `fg.expiration` is unset, or `fg.expiration` is strictly greater than `now()` (after the auto-renewal that `[AUTHZ-CHECK-2]` performs when `fg.period` is set);
+- if `fg.spend_limit` is set, `fg.remaining_spend` covers the estimated transaction fees for the chosen denom.
+
+If a relevant grant exists, the MCP server MUST set the outer transaction's `Tx.AuthInfo.Fee.granter` to `bound_corp.policy_address`. The chain's antehandler then runs `[AUTHZ-CHECK-2]` and deducts the fees from the Corporation's account. No additional Msg is added to the transaction — the Cosmos `granter`-field convention is what triggers the VPR fee-grant check.
+
+If no relevant grant exists, the MCP server MUST leave `Tx.AuthInfo.Fee.granter` unset; the operator account pays the fees from its own balance, subject to `OperatorAuthorization.fee_spend_limit` if set.
+
+**Discovery and freshness.** The MCP server SHOULD maintain its view of the active `FeeGrant` for `(bound_corp.id, operator)` from the indexer event stream, applying [`[MOD-DE-MSG-1]`](https://verana-labs.github.io/verifiable-trust-vpr-spec/#mod-de-msg-1-grant-fee-allowance) Grant Fee Allowance and [`[MOD-DE-MSG-2]`](https://verana-labs.github.io/verifiable-trust-vpr-spec/#mod-de-msg-2-revoke-fee-allowance) Revoke Fee Allowance events delivered by [`IDX-INDEXER-SUB-1`](../verana-indexer/spec.md#idx-indexer-sub-1-subscribe-indexer-events) to refresh the cached value. At startup the MCP server MAY bootstrap the cache from a chain-side query or from the indexer's catch-up endpoint (`/indexer/v1/events?corporation_id=<bound_corp.id>` filtered to the two Delegation-module event types).
+
+**Fallback on antehandler rejection.** If a broadcast with `granter` set fails at the antehandler with an error indicating the grant has expired, has exhausted its `remaining_spend`, or no longer covers the message type, the MCP server SHOULD retry the same transaction exactly once with `Tx.AuthInfo.Fee.granter` unset (so the operator pays from its own balance) before returning a structured error to the caller. The retry MUST NOT recompute `tx_hash` against a different signed-body shape that has already been broadcast: the granter field is part of the signed bytes, so the retry produces a distinct `tx_hash` and a distinct CometBFT subscription per [[VMS-TX-BCAST]](#vms-tx-bcast-broadcast-and-chain-confirmation).
+
+> The parallel `with_feegrant` path on `ParticipantAuthorizationRecord` (per [[AUTHZ-CHECK-4]](https://verana-labs.github.io/verifiable-trust-vpr-spec/#authz-check-4-vs-operator-fee-grant-checks)) applies only to vs-operator-authorized messages and is out of scope for the MCP server's general-purpose `OperatorAuthorization` flow; vs-operator-authorized broadcasting is the concern of the VS Agent.
+
+[VMS-TX-BUILD-4] Gas estimation SHOULD use the chain's transaction simulation endpoint (`/cosmos/tx/v1beta1/simulate`). The transaction's `gas_wanted` SHOULD be set to `simulated_gas × gas_adjustment` with `gas_adjustment = 1.5` by default. Simulation MUST be performed with `Tx.AuthInfo.Fee.granter` set to the same value the broadcast will use (per [[VMS-TX-BUILD-3]](#vms-tx-build-message-construction-and-signing)) so the simulated gas reflects the fee-grant antehandler path actually exercised on broadcast.
 
 ### [VMS-TX-BCAST] Broadcast and Chain Confirmation
 
@@ -232,14 +249,23 @@ For each delegable Msg tool invocation, the MCP server MUST execute the followin
 
 After chain confirmation at block height `B`, the MCP server MUST guarantee that any subsequent `verana.idx.*` or `verana.graph.*` tool call issued by the same MCP client through the same MCP session reflects state at height `B` or later, before returning to the MCP client.
 
-The barrier is satisfied when **any** of the following becomes true within `VERANA_INDEXER_TIMEOUT_MS`:
+The barrier is **WebSocket-only**, satisfied as soon as the MCP server's tracked **indexer height cursor** is `>= B`. The cursor is maintained from the running indexer WS subscription (see [[VMS-TX-WS]](#vms-tx-ws-persistent-websocket-connections) and [`IDX-INDEXER-SUB-1`](../verana-indexer/spec.md#idx-indexer-sub-1-subscribe-indexer-events)) via two signals:
 
-1. **Indexer WebSocket signal:** the indexer WS subscription delivers any `IndexerTransactionEvent` with `block_height >= B`. This proves the indexer has fully committed block `B`.
-2. **Polling signal:** during the polling phase, a `GET /indexer/v1/block-height` response satisfies `response.height >= B`. Polling SHOULD start `VERANA_INDEXER_POLL_AFTER_MS` after chain confirmation (giving the WS a head start) and SHOULD repeat every `VERANA_INDEXER_POLL_INTERVAL_MS` until either signal fires or the timeout is reached.
+- Each `block` envelope received advances the cursor to `envelope.block`. Block envelopes are emitted for **every** processed block — with empty `events[]` acting as heartbeat when no event in the bound Corporation's scope occurred at that block — so the cursor advances at the chain's block-time cadence independent of the transaction's content.
+- Each `ready` message received on (re)connect advances the cursor to `ready.block - 1` (because `ready.block` is the *next* block the server will deliver, so the indexer has already finished `ready.block - 1`).
 
-If the timeout is reached without either signal, the MCP server MUST return the tool's normal success response with the additional field `indexer_synced: false`, indicating that the chain transaction itself succeeded but the read-after-write guarantee is degraded. It MUST NOT raise an error in this case: the chain has already committed the tx and degrading silently is preferable to misleading the LLM into believing the write failed.
+The barrier completes the first moment the cursor is `>= B`. In typical operation the cursor has already passed `B` by the time the CometBFT `tx_result` event arrives, and the barrier completes with no wait.
 
-> The dual-signal design exists because indexer WS events are scoped to the bound Corporation's DID and may not be emitted at block `B` if the tx affected entities not linked to that DID. Polling `/indexer/v1/block-height` is a DID-agnostic monotonically-advancing height oracle and therefore a reliable fallback.
+While the indexer WebSocket is disconnected the MCP server MUST reconnect with the exponential backoff specified in [[VMS-TX-WS]](#vms-tx-ws-persistent-websocket-connections); each successful reconnect's `ready` message refreshes the cursor and may by itself satisfy the barrier. **Polling is not an alternative**: there is no HTTP fallback path, the WebSocket is the sole signal, and ledger Msg tools simply wait on the reconnect.
+
+If `VERANA_INDEXER_TIMEOUT_MS` elapses without the cursor reaching `B`, the MCP server MUST return the tool's normal success response with the additional field `indexer_synced: false`, indicating that the chain transaction itself succeeded but the read-after-write guarantee is degraded. It MUST NOT raise an error in this case: the chain has already committed the tx and degrading silently is preferable to misleading the LLM into believing the write failed.
+
+> The single-signal design is enabled by two properties of [`IDX-INDEXER-SUB-1`](../verana-indexer/spec.md#idx-indexer-sub-1-subscribe-indexer-events):
+>
+> - Block envelopes are emitted for **every** processed block — block production itself is the heartbeat, so the cursor advances at every block regardless of whether the bound Corporation's scope produced any event.
+> - The `ready` message on each (re)connect carries the next-block-to-be-delivered, which doubles as a monotonic indexer-height oracle without any extra HTTP call.
+>
+> Together these make the indexer WebSocket a strict superset of the height oracle that an HTTP polling path would provide.
 
 ### [VMS-TX-RESPONSE] Tool Response Envelope
 
@@ -269,7 +295,7 @@ When the Verana MCP Server container starts, it MUST execute the following steps
 3. **Connect to chain RPC.** Issue a `/status` call against `VERANA_RPC` to validate connectivity and resolve `chain_id` (overrides `VERANA_CHAIN_ID` if both are present and consistent; aborts on mismatch). Fetch the operator account's `account_number` and current `sequence` and cache them.
 4. **Resolve bound Corporation.** Call [`IDX-CO-QRY-1` Get Corporation](../verana-indexer/spec.md#idx-co-qry-1-get-corporation) with `id = VERANA_CORPORATION` against `VERANA_INDEXER`. Cache `policy_address`, `did`, `active_version`, and `language`. If no Corporation exists with that id, exit immediately with a clear diagnostic.
 5. **Resolve operator capabilities.** Call [`IDX-DE-QRY-1` List Operator Authorizations](../verana-indexer/spec.md#idx-de-qry-1-list-operator-authorizations) with `corporation_id = VERANA_CORPORATION` and `operator = own_address`. If no authorization exists, log a `warn`-level message ("MCP server is unauthorised: every delegable Msg tool will fail until an `OperatorAuthorization` is granted") but continue; read-only tools (indexer, graph, Cosmos read-only) remain available.
-6. **Open persistent WebSocket connections** per [[VMS-TX-WS]](#vms-tx-ws-persistent-websocket-connections). Both connections MUST reach the `connected` state before proceeding; if either fails after the bootstrap retry budget, exit with a non-zero status code.
+6. **Open persistent WebSocket connections** per [[VMS-TX-WS]](#vms-tx-ws-persistent-websocket-connections). All three connections (CometBFT RPC, indexer, graph block-progress) MUST reach the `connected` state before proceeding; if any of them fails after the bootstrap retry budget, exit with a non-zero status code.
 7. **Start MCP transport.** Per `MCP_TRANSPORT`, start either the Streamable HTTP listener on `MCP_HTTP_BIND:MCP_HTTP_PORT` or the stdio transport on `stdin`/`stdout`. Once the transport accepts its first MCP `initialize` request, the server is in the `serving` state.
 
 After bootstrap, the MCP server SHOULD continuously refresh its caches (bound Corporation, operator capabilities, enumerated VS Agents) on indexer WebSocket events whose `payload.entity_type` indicates a relevant change.
@@ -513,7 +539,7 @@ Indexer tools issue HTTP GET requests against the configured `VERANA_INDEXER` en
 
 | Tool | Upstream Query | Description |
 |---|---|---|
-| `verana.idx.indexer.getBlockHeight` | [`IDX-INDEXER-QRY-1`](../verana-indexer/spec.md#idx-indexer-qry-1-get-block-height) | `GET /indexer/v1/block-height`. Also used internally by the indexer barrier per [[VMS-TX-BARRIER]](#vms-tx-barrier-indexer-read-after-write-barrier). |
+| `verana.idx.indexer.getBlockHeight` | [`IDX-INDEXER-QRY-1`](../verana-indexer/spec.md#idx-indexer-qry-1-get-block-height) | `GET /indexer/v1/block-height`. |
 | `verana.idx.indexer.getStatus` | [`IDX-INDEXER-QRY-2`](../verana-indexer/spec.md#idx-indexer-qry-2-get-indexer-status) | `GET /indexer/v1/status`. |
 | `verana.idx.indexer.getVersion` | [`IDX-INDEXER-QRY-3`](../verana-indexer/spec.md#idx-indexer-qry-3-get-version) | `GET /indexer/v1/version`. |
 | `verana.idx.indexer.getSnapshot` | [`IDX-INDEXER-QRY-4`](../verana-indexer/spec.md#idx-indexer-qry-4-get-indexer-snapshot) | `GET /indexer/v1/snapshot`. |
@@ -627,7 +653,7 @@ VS Agent tools authenticate to the target VS Agent's [Administration API](../vs-
 | `verana.vsa.se.updateServiceEndpoint` | [`updateServiceEndpoint`](../vs-agent/spec.md#vsa-adm-se-update-updateserviceendpoint) | Update an existing service entry. |
 | `verana.vsa.se.deleteServiceEndpoint` | [`deleteServiceEndpoint`](../vs-agent/spec.md#vsa-adm-se-delete-deleteserviceendpoint) | Remove a service entry. |
 
-> The `#vs-agent-admin-api` and other VPR-mandated service entries (e.g. `#trqp`, `#tr-presentations`) MUST NOT be mutable through these tools per [[VSA-ADM-SE]](../vs-agent/spec.md#service-endpoint-administration); the upstream agent enforces this constraint.
+> The `#vs-agent-admin-api` and other VPR-mandated service entries (e.g. `#trqp`, `#tr-presentations`) MUST NOT be mutable through these tools per [[VSA-ADM-SE]](../vs-agent/spec.md#vsa-adm-se-service-endpoint-management); the upstream agent enforces this constraint.
 
 ### [VMS-TOOLS-COSMOS] Cosmos Read-Only Tools
 
@@ -681,7 +707,7 @@ Wallet tools surface introspective information about the MCP server's own operat
 | `verana.wallet.getCorporation` | Return the bound Corporation as resolved by the MCP server at startup and refreshed on indexer events: `{ id, policy_address, did, active_version, language, modified }`. |
 | `verana.wallet.listAuthorizations` | Return the cached set of `OperatorAuthorization` entries granted by the bound Corporation to the operator account. Equivalent to `verana.idx.de.listOperatorAuthorizations` filtered by the operator's own address, but served from the in-memory cache used by [[VMS-TOOLS-ENV-FILTER]](#vms-tools-env-filter-tool-availability). |
 | `verana.wallet.listVSAgents` | Return the enumerated set of VS Agents under the bound Corporation, each with its `vs_operator` address, the controlled `Participant`s, and the `#vs-agent-admin-api` URL resolved from its DID Document (or an explanatory `unreachable_reason` field if URL resolution failed). |
-| `verana.wallet.getStatus` | Return the MCP server's runtime status: bootstrap completion, both WebSocket connection states, last block height seen on each WS, last indexer block height polled, and the timestamp of the most recent capability cache refresh. |
+| `verana.wallet.getStatus` | Return the MCP server's runtime status: bootstrap completion, the three WebSocket connection states (CometBFT RPC, indexer, graph block-progress), last block height seen on each WS (the indexer WS's `last_height` is the indexer height cursor used by [[VMS-TX-BARRIER]](#vms-tx-barrier-indexer-read-after-write-barrier); the graph WS's `last_height` is the graph's `lastAppliedBlock` per [[TG-BPS-3]](../verana-graph/spec.md#block-progress-subscription) and is informational only), and the timestamp of the most recent capability cache refresh. |
 
 ## [VMS-RES] Resources
 
@@ -709,7 +735,7 @@ This catalog deliberately omits resources for arbitrary on-chain entities (corpo
 | `verana://own/corporation` | The bound Corporation entity as resolved from the indexer: `{ id, policy_address, did, active_version, language, modified, ecosystems[] }`. The `ecosystems[]` field summarises Ecosystems controlled by this Corporation (id, did, archived). | Bootstrap; indexer events on the bound `Corporation` or any `Ecosystem` controlled by it. |
 | `verana://own/authorizations` | The cached set of `OperatorAuthorization` entries granted by the bound Corporation to the operator account: `[{ id, msg_types[], expiration, fee_grant_state }]`. Used by `tools/list` filtering per [[VMS-TOOLS-ENV-FILTER]](#vms-tools-env-filter-tool-availability). | Bootstrap; indexer events on `OperatorAuthorization` entries where `grantee = operator.address`. |
 | `verana://own/vs-agents` | The enumerated set of VS Agents under the bound Corporation: `[{ vs_operator, did, participants[], admin_url, admin_url_resolved_at, unreachable_reason? }]`. The `admin_url` field is resolved lazily per [[VMS-AUTH-VSA-2]](#vms-auth-vsa-vs-agent-admin-api-authentication); failed resolutions populate `unreachable_reason`. | Bootstrap; indexer events on `VSOperatorAuthorization` entries owned by the bound Corporation; periodic re-resolution of `admin_url`. |
-| `verana://own/status` | The MCP server's runtime status: `{ bootstrap_complete, rpc_ws: { connected, last_height, last_event_at }, indexer_ws: { connected, last_height, last_event_at }, indexer_last_polled_height, capability_cache_refreshed_at, build_version }`. | Continuous; emitted on every WS heartbeat and on every capability-cache refresh. |
+| `verana://own/status` | The MCP server's runtime status: `{ bootstrap_complete, rpc_ws: { connected, last_height, last_event_at }, indexer_ws: { connected, last_height, last_event_at }, graph_ws: { connected, last_height, last_event_at }, capability_cache_refreshed_at, build_version }`. The indexer WS's `last_height` is the indexer height cursor used by [[VMS-TX-BARRIER]](#vms-tx-barrier-indexer-read-after-write-barrier) (advanced from block envelopes and from each reconnect's `ready` message). The graph WS's `last_height` is the graph's `lastAppliedBlock` per [[TG-BPS-3]](../verana-graph/spec.md#block-progress-subscription) (advanced from each `block` notification and from each reconnect's `ready` message); it is informational only. | Continuous; emitted on every WS heartbeat and on every capability-cache refresh. |
 
 ## [VMS-ERR] Error Model
 

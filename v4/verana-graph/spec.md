@@ -470,7 +470,20 @@ This subscription is **not** a re-export of the graph's data. It carries no enti
 
 [TG-BPS-1] A Verana Graph implementation MUST expose a public WebSocket endpoint at `WS /graph/v1/blocks/subscribe`, served on the same origin as the traversal REST endpoint of [[TG-QRY-5]]. The endpoint MUST be reachable without authentication and MUST accept connections from any origin (the contract carries only public, derivable state, so no client-identity gate is required; implementations MAY still rate-limit by IP at the transport layer).
 
-[TG-BPS-2] Immediately after the WebSocket handshake completes, the server MUST send to the new client exactly one `block` notification carrying the graph's current `lastAppliedBlock` (per [Subscription contract](#subscription-contract)) and the corresponding block time. This initial notification has the same shape and the same `type` as the per-advance notifications defined in [[TG-BPS-3]].
+[TG-BPS-2] Immediately after a successful WebSocket upgrade, before any `block` notification is delivered, the server MUST send the new client exactly one `ready` message carrying the graph's current `lastAppliedBlock` (per [Subscription contract](#subscription-contract)), the corresponding block time, and the expected upstream chain block-production interval. This mirrors the `ready` envelope of the upstream indexer and resolver subscriptions ([`IDX-INDEXER-SUB-1`](../verana-indexer/spec.md#idx-indexer-sub-1-subscribe-indexer-events) and [`IDX-VT-SUB-1`](../verana-indexer/spec.md#idx-vt-sub-1-subscribe-changes)). The notification shape is:
+
+```json
+{
+   "type": "ready",
+   "block": 1234567,
+   "blockTime": "2026-05-26T13:32:03Z",
+   "blockIntervalMs": 5000
+}
+```
+
+- `block` — the current value of `lastAppliedBlock` at connect time. Clients use this as their initial freshness cursor; subsequent `block` notifications advance from this value monotonically.
+- `blockTime` — the envelope `blockTime` (per [Subscription contract](#subscription-contract)) of the block that established the current `lastAppliedBlock`. MUST satisfy [[TG-DT-1]].
+- `blockIntervalMs` — the expected upstream chain block-production interval in milliseconds. Clients SHOULD treat `2 × blockIntervalMs` as the liveness timeout for the WebSocket per [[TG-BPS-7]].
 
 [TG-BPS-3] Each time `lastAppliedBlock` advances — i.e., a block has been fully reconciled into the graph and durably committed per [[TG-INGEST-4]] / [[TG-INGEST-5]] — the server MUST send exactly one `block` notification to every currently-connected client. The notification shape is:
 
@@ -482,13 +495,15 @@ This subscription is **not** a re-export of the graph's data. It carries no enti
 }
 ```
 
-`block` MUST equal the current value of `lastAppliedBlock`; `blockTime` MUST equal the corresponding envelope `blockTime` (per [Subscription contract](#subscription-contract)) and MUST satisfy [[TG-DT-1]]. Block notifications MUST be delivered in strict monotonically-increasing order on each connection — including the initial notification of [[TG-BPS-2]] as the first element of the sequence — and the server MUST NOT collapse, reorder, or skip any advance of `lastAppliedBlock` between the initial notification and disconnection. If the graph commits multiple blocks in rapid succession (e.g., during gap-recovery via [[TG-INGEST-5]]), the server MUST emit one `block` notification per commit; batching multiple advances into a single notification is forbidden. Clients MUST tolerate any future server-to-client message types whose `type` field they do not recognise by ignoring them.
+`block` MUST equal the new value of `lastAppliedBlock`; `blockTime` MUST equal the corresponding envelope `blockTime` (per [Subscription contract](#subscription-contract)) and MUST satisfy [[TG-DT-1]]. `block` notifications MUST be delivered in strict monotonically-increasing order on each connection, beginning from a value strictly greater than the `block` field of the `ready` message of [[TG-BPS-2]], and the server MUST NOT collapse, reorder, or skip any advance of `lastAppliedBlock` between the `ready` message and disconnection. If the graph commits multiple blocks in rapid succession (e.g., during gap-recovery via [[TG-INGEST-5]]), the server MUST emit one `block` notification per commit; batching multiple advances into a single notification is forbidden. Clients MUST tolerate any future server-to-client message types whose `type` field they do not recognise by ignoring them.
 
 [TG-BPS-4] The subscription is **forward-only**. The endpoint MUST NOT accept any request parameters: no `since=<block>` query string, no `dids=` filter, no channel selectors, no historical-replay options. This is a deliberate consequence of the no-history retention model of [[TG-ACT-1]]: the graph has nothing meaningful to replay. The server MUST ignore any payload sent by the client over the WebSocket after connection establishment; the channel is server-to-client only.
 
-[TG-BPS-5] On any connection drop (network error, server restart, client-side timeout), the client is expected to reconnect; on each reconnect the server emits a fresh initial `block` notification per [[TG-BPS-2]] carrying the then-current `lastAppliedBlock`. There is no resumption token, session identifier, or replay buffer; the connection model is best-effort and stateless. Clients that need a stronger continuity guarantee MUST query the relevant entity state explicitly via the query surfaces, using `block` from the most recent notification as their freshness floor.
+[TG-BPS-5] On any connection drop (network error, server restart, client-side timeout), the client is expected to reconnect; on each reconnect the server emits a fresh `ready` message per [[TG-BPS-2]] carrying the then-current `lastAppliedBlock`. There is no resumption token, session identifier, or replay buffer; the connection model is best-effort and stateless. Clients that need a stronger continuity guarantee MUST query the relevant entity state explicitly via the query surfaces, using `block` from the most recent notification (`ready` or `block`) as their freshness floor.
 
-[TG-BPS-6] Implementations MUST support large client fanout (one notification per block, broadcast to every connected client). When a client's outbound write buffer exceeds an implementation-defined threshold, the implementation MUST disconnect the slow client rather than block the broadcast pipeline; the disconnected client is expected to reconnect per [[TG-BPS-5]] and observe the new `lastAppliedBlock` from the fresh initial `block` notification.
+[TG-BPS-6] Implementations MUST support large client fanout (one notification per block, broadcast to every connected client). When a client's outbound write buffer exceeds an implementation-defined threshold, the implementation MUST disconnect the slow client rather than block the broadcast pipeline; the disconnected client is expected to reconnect per [[TG-BPS-5]] and observe the new `lastAppliedBlock` from the fresh `ready` message.
+
+[TG-BPS-7] **Liveness.** Per [[TG-INGEST-4]] the graph commits one `lastAppliedBlock` advance per upstream chain block, including blocks that produced no entity changes for any subscriber; per [[TG-INGEST-3]] step 4, gap-recovery commits via [[TG-INGEST-5]] also advance `lastAppliedBlock`. `block` notifications therefore double as a heartbeat: a connection that does not deliver either a `ready` or a `block` notification within `2 × blockIntervalMs` (per the `ready` message of [[TG-BPS-2]]) of the previously received notification is presumed broken, and the client SHOULD reconnect per [[TG-BPS-5]]. This mirrors the heartbeat semantics of the upstream indexer and resolver subscriptions — see [Heartbeat (indexer events)](../verana-indexer/spec.md#heartbeat-indexer-events) and [Heartbeat (resolver changes)](../verana-indexer/spec.md#heartbeat-resolver-changes).
 
 ## Graph-traversal Queries
 
