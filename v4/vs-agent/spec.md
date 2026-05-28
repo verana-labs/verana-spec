@@ -851,17 +851,589 @@ The following environment variables MUST be provided when the VS Agent container
 | `ADMIN_API_CORPORATION_ACCOUNT_WHITELIST` | OPTIONAL | If set, limit corporation access to accounts from this list. Has no effect if `ADMIN_API_ENABLE_CORPORATION` is set to false. |
 | `ADMIN_API_ENABLE_INTERNAL` | REQUIRED | Enable full API access for containers of the same pod or deployment. No authentication needed. |
 
+### [VSA-ADM-AG] Agent
+
+Methods that expose runtime information about this VS Agent instance.
+
+| Module | Method Name | HTTP Method | Relative REST API path | Requirements | Authz |
+| --- | --- | --- | --- | --- | --- |
+| Agent | `getAgentInfo` | `GET` | `/v1/agent` | [see](#vsa-adm-ag-info-getagentinfo) | INTERNAL |
+
+#### [VSA-ADM-AG-INFO] getAgentInfo
+
+Returns the core configuration and runtime status of this VS Agent instance.
+
+**Inputs**: none.
+
+**Output**:
+
+- `label` — human-readable name of the agent.
+- `endpoints` — list of DIDComm service endpoints currently published for this agent.
+- `isInitialized` — `true` once the agent has completed its setup.
+- `publicDid` — public DID assigned to the agent (when set), e.g. `did:web:agent.example.com`.
+- `version` — running application version.
+
+### [VSA-ADM-HE] Health
+
+| Module | Method Name | HTTP Method | Relative REST API path | Requirements | Authz |
+| --- | --- | --- | --- | --- | --- |
+| Health | `getHealth` | `GET` | `/v1/health` | [see](#vsa-adm-he-get-gethealth) | INTERNAL |
+
+#### [VSA-ADM-HE-GET] getHealth
+
+Liveness/readiness probe for the agent. Returns HTTP `200` when the agent is up.
+
+**Inputs**: none.
+
+**Output**: opaque body indicating health. Implementations MAY include process-level diagnostics.
+
+### [VSA-ADM-CN] Connections
+
+Methods that manage DIDComm connection records held by this agent.
+
+| Module | Method Name | HTTP Method | Relative REST API path | Requirements | Authz |
+| --- | --- | --- | --- | --- | --- |
+| Connections | `listConnections` | `GET` | `/v1/connections` | [see](#vsa-adm-cn-list-listconnections) | INTERNAL |
+| Connections | `getConnection` | `GET` | `/v1/connections/{connectionId}` | [see](#vsa-adm-cn-get-getconnection) | INTERNAL |
+| Connections | `deleteConnection` | `DELETE` | `/v1/connections/{connectionId}` | [see](#vsa-adm-cn-delete-deleteconnection) | INTERNAL |
+
+#### [VSA-ADM-CN-LIST] listConnections
+
+Returns all connection records, optionally filtered.
+
+**Inputs** (all OPTIONAL query filters):
+
+- `outOfBandId` — filter by Out-of-Band identifier.
+- `state` — one of `start`, `invitation-sent`, `invitation-received`, `request-sent`, `request-received`, `response-sent`, `response-received`, `abandoned`, `completed`.
+- `role` — `requester` or `responder`.
+- `did` — filter by my DID for this connection.
+- `theirDid` — filter by the peer's DID.
+- `threadId` — filter by DIDComm thread ID.
+- `invitationDid` — filter by the invitation DID.
+- `didcommVersion` — `v1` or `v2`.
+- `mediatorId` — filter by mediator id.
+
+**Output**: array of connection records with at minimum `id`, `state`, `role`, `did`, `theirDid`, `threadId`, `createdAt`, `updatedAt`.
+
+#### [VSA-ADM-CN-GET] getConnection
+
+Retrieves a single connection record by id.
+
+**Path parameters**:
+
+- `connectionId` (REQUIRED) — UUID of the connection.
+
+**Output**: the connection record (same shape as in `listConnections`).
+
+**Errors**:
+
+- `NOT_FOUND` — no connection with the given id.
+
+#### [VSA-ADM-CN-DELETE] deleteConnection
+
+Deletes a connection record. The agent MAY also tear down the underlying DIDComm session.
+
+**Path parameters**:
+
+- `connectionId` (REQUIRED) — UUID of the connection to delete.
+
+**Inputs**: none.
+
+**Output**: empty body (HTTP `204`).
+
+**Errors**:
+
+- `NOT_FOUND` — no connection with the given id.
+
+### [VSA-ADM-IN] Invitations
+
+Methods that create or consume Out-of-Band invitations used to establish DIDComm connections, request presentations, or offer credentials.
+
+| Module | Method Name | HTTP Method | Relative REST API path | Requirements | Authz |
+| --- | --- | --- | --- | --- | --- |
+| Invitations | `createInvitation` | `POST` | `/v1/invitation` | [see](#vsa-adm-in-create-createinvitation) | INTERNAL |
+| Invitations | `receiveInvitation` | `POST` | `/v1/invitation/receive` | [see](#vsa-adm-in-receive-receiveinvitation) | INTERNAL |
+| Invitations | `createPresentationRequest` | `POST` | `/v1/invitation/presentation-request` | [see](#vsa-adm-in-pres-createpresentationrequest) | INTERNAL |
+| Invitations | `createCredentialOffer` | `POST` | `/v1/invitation/credential-offer` | [see](#vsa-adm-in-offer-createcredentialoffer) | INTERNAL |
+
+#### [VSA-ADM-IN-CREATE] createInvitation
+
+Creates a new Out-of-Band connection invitation.
+
+**Inputs** (request body, all OPTIONAL):
+
+- `useLegacyDid` — when the agent's DID is `did:webvh`, force the invitation to advertise the legacy `did:web` form.
+- `didCommVersion` — `v1` or `v2`. `v2` requires the agent's `AGENT_DIDCOMM_VERSIONS` to include `v2`. When omitted, the agent infers the version from its configuration.
+
+**Output**:
+
+- `url` — URL-encoded invitation, ready to be rendered as a QR code or sent as a link.
+
+#### [VSA-ADM-IN-RECEIVE] receiveInvitation
+
+Proactively connects to another agent by processing an invitation.
+
+**Inputs** (request body):
+
+- `url` (REQUIRED) — accepts either:
+  - an explicit OOB invitation URL (`https://...` or `didcomm://...`); or
+  - an implicit invitation DID (`did:webvh:...`, `did:web:...`, etc.). The agent MUST infer the invitation type from the URL scheme.
+
+**Output**:
+
+- `outOfBandId` — identifier of the resulting OOB record.
+- `connectionId` — identifier of the initiated connection.
+
+**Errors**:
+
+- `INVALID_INVITATION` — the URL/DID could not be parsed or resolved.
+
+#### [VSA-ADM-IN-PRES] createPresentationRequest
+
+Creates a Presentation Request invitation. Defines the credentials and attributes the holder is asked to present.
+
+**Inputs** (request body):
+
+- `requestedCredentials` (REQUIRED) — array of requested credential descriptors. Each entry references a credential by either `credentialDefinitionId` (AnonCreds) or `jsonSchemaCredentialId` (JSON Schema Credential), and lists the requested `attributes`. If `attributes` is omitted, the agent MUST request every attribute defined by the schema.
+- `callbackUrl` (OPTIONAL) — URL the agent calls (HTTP `POST`) when the presentation flow completes. The body contains `ref`, `presentationRequestId`, `status`, and `claims`.
+- `ref` (OPTIONAL) — caller-supplied correlation identifier echoed back on the callback.
+- `requireNonRevocation` (OPTIONAL, default `false`) — when `true`, the holder MUST provide a non-revocation proof at verification time.
+- `useLegacyDid` (OPTIONAL) — see `createInvitation`.
+- `didCommVersion` (OPTIONAL) — see `createInvitation`.
+
+**Output**:
+
+- `proofExchangeId` — flow identifier for subsequent tracking.
+- `url` — full DIDComm invitation URL.
+- `shortUrl` — short URL form suitable for QR codes (when supported).
+
+#### [VSA-ADM-IN-OFFER] createCredentialOffer
+
+Creates an AnonCreds credential offer invitation including a preview of the offered claims.
+
+**Inputs** (request body):
+
+- `credentialDefinitionId` (REQUIRED) — AnonCreds credential definition identifier.
+- `claims` (REQUIRED) — array of name/value pairs previewing the credential's attributes.
+- `revocationRegistryDefinitionId` (OPTIONAL) — required only for revocable credentials.
+- `revocationRegistryIndex` (OPTIONAL) — required only for revocable credentials.
+- `useLegacyDid` (OPTIONAL) — see `createInvitation`.
+- `didCommVersion` (OPTIONAL) — see `createInvitation`.
+
+**Output**:
+
+- `credentialExchangeId` — flow identifier.
+- `url` — full DIDComm invitation URL.
+- `shortUrl` — short URL form (when supported).
+
+**Errors**:
+
+- `INVALID_OFFER` — payload validation failed.
+
+### [VSA-ADM-MS] Messaging
+
+| Module | Method Name | HTTP Method | Relative REST API path | Requirements | Authz |
+| --- | --- | --- | --- | --- | --- |
+| Messaging | `sendMessage` | `POST` | `/v1/message` | [see](#vsa-adm-ms-send-sendmessage) | INTERNAL |
+
+#### [VSA-ADM-MS-SEND] sendMessage
+
+Sends a DIDComm message over an established connection. The set of accepted message `type` values depends on the plugins enabled via `VS_AGENT_PLUGINS` (text, credential-issuance, credential-revocation, identity-proof-request, contextual-menu-update, profile, terminate-connection, etc.).
+
+**Inputs** (request body):
+
+- `type` (REQUIRED) — message type from the agent's enabled plugins.
+- `connectionId` (REQUIRED) — target connection.
+- `id` (OPTIONAL) — UUID of the message; generated if not provided.
+- `threadId` (OPTIONAL) — DIDComm thread ID.
+- `timestamp` (OPTIONAL) — ISO-8601 timestamp.
+- additional type-specific fields (e.g., `content` for `text`, `credentialDefinitionId` and `claims` for `credential-issuance`, `requestedProofItems` for `identity-proof-request`, etc.).
+
+**Output**:
+
+- `id` — UUID of the submitted message (echoed or generated by the agent).
+
+**Errors**:
+
+- `5xx` — internal error; the response body MUST include a descriptive `error` field.
+
+### [VSA-ADM-CT] Credential Types
+
+Methods that manage AnonCreds credential definitions ("credential types") and their associated revocation registries.
+
+| Module | Method Name | HTTP Method | Relative REST API path | Requirements | Authz |
+| --- | --- | --- | --- | --- | --- |
+| Credential Types | `listCredentialTypes` | `GET` | `/v1/credential-types` | [see](#vsa-adm-ct-list-listcredentialtypes) | INTERNAL |
+| Credential Types | `createCredentialType` | `POST` | `/v1/credential-types` | [see](#vsa-adm-ct-create-createcredentialtype) | INTERNAL |
+| Credential Types | `deleteCredentialType` | `DELETE` | `/v1/credential-types/{credentialTypeId}` | [see](#vsa-adm-ct-delete-deletecredentialtype) | INTERNAL |
+| Credential Types | `exportCredentialType` | `GET` | `/v1/credential-types/export/{credentialTypeId}` | [see](#vsa-adm-ct-export-exportcredentialtype) | INTERNAL |
+| Credential Types | `importCredentialType` | `POST` | `/v1/credential-types/import` | [see](#vsa-adm-ct-import-importcredentialtype) | INTERNAL |
+| Credential Types | `listRevocationRegistries` | `GET` | `/v1/credential-types/revocation-registry` | [see](#vsa-adm-ct-revlist-listrevocationregistries) | INTERNAL |
+| Credential Types | `createRevocationRegistry` | `POST` | `/v1/credential-types/revocation-registry` | [see](#vsa-adm-ct-revcreate-createrevocationregistry) | INTERNAL |
+| Credential Types | `deleteRevocationRegistry` | `DELETE` | `/v1/credential-types/revocation-registry/{revocationRegistryDefinitionId}` | [see](#vsa-adm-ct-revdelete-deleterevocationregistry) | INTERNAL |
+
+> Note: the deployed agent currently exposes the revocation-registry endpoints under the camelCased path `/v1/credential-types/revocationRegistry`. The kebab-case form `revocation-registry` is RECOMMENDED for new deployments to stay consistent with the rest of the API; existing deployments MAY continue to expose the camelCased alias.
+
+#### [VSA-ADM-CT-LIST] listCredentialTypes
+
+Returns every credential type known to this agent.
+
+**Inputs**: none.
+
+**Output**: array of credential type records (see `createCredentialType` for fields).
+
+#### [VSA-ADM-CT-CREATE] createCredentialType
+
+Creates a new AnonCreds credential definition, optionally linked to a Verifiable Trust JSON Schema Credential.
+
+**Inputs** (request body):
+
+- `name` — credential type name (REQUIRED if `relatedJsonSchemaCredentialId` is not provided; used together with `version` to identify the credential type).
+- `version` — credential type version (REQUIRED if `relatedJsonSchemaCredentialId` is not provided).
+- `attributes` (OPTIONAL) — list of schema attribute names. Required when creating a brand-new schema without `relatedJsonSchemaCredentialId`.
+- `schemaId` (OPTIONAL) — identifier of an existing AnonCreds schema to bind to.
+- `relatedJsonSchemaCredentialId` (OPTIONAL) — Verifiable Trust JSON Schema Credential URL the credential type is based on.
+- `issuerDid` (OPTIONAL) — DID of the schema issuer; used when reusing an existing AnonCreds schema from another agent. Requires `relatedJsonSchemaCredentialId`.
+- `supportRevocation` (OPTIONAL, default `false`) — when `true`, the credential MAY be revoked.
+
+**Output**: the resulting credential type record.
+
+**Errors**:
+
+- `INVALID_PAYLOAD` — request body fails validation.
+
+#### [VSA-ADM-CT-DELETE] deleteCredentialType
+
+Deletes a credential type and all its associated cryptographic data.
+
+**Path parameters**:
+
+- `credentialTypeId` (REQUIRED) — identifier of the credential definition to delete.
+
+**Inputs** (OPTIONAL query parameter):
+
+- `deleteAssociatedRevocationRegistries` (default `false`) — when `true`, also delete every revocation registry and status list associated with this credential type.
+
+**Output**: empty body.
+
+**Errors**:
+
+- `INVALID_ID` — `credentialTypeId` is malformed.
+
+#### [VSA-ADM-CT-EXPORT] exportCredentialType
+
+Exports a credential type as a portable package suitable for import on another agent.
+
+**Path parameters**:
+
+- `credentialTypeId` (REQUIRED) — identifier of the credential definition to export.
+
+**Output**: a package object containing `id` and `data` fields.
+
+#### [VSA-ADM-CT-IMPORT] importCredentialType
+
+Imports a credential type package previously produced by `exportCredentialType`.
+
+**Inputs** (request body): the credential definition package as returned by `exportCredentialType`.
+
+**Output**: the imported credential type record.
+
+**Errors**:
+
+- `INVALID_PACKAGE` — package payload fails validation.
+
+#### [VSA-ADM-CT-REVLIST] listRevocationRegistries
+
+Returns revocation registry definition IDs known to this agent.
+
+**Inputs** (OPTIONAL query parameter):
+
+- `credentialDefinitionId` — when set, restrict the list to registries bound to that credential definition.
+
+**Output**: array of revocation registry definition identifiers.
+
+#### [VSA-ADM-CT-REVCREATE] createRevocationRegistry
+
+Creates a new revocation registry definition for a revocable credential type.
+
+**Inputs** (request body):
+
+- `credentialDefinitionId` (REQUIRED) — credential definition the registry is bound to.
+- `maximumCredentialNumber` (OPTIONAL, default `1000`) — capacity of the registry.
+
+**Output**: the resulting revocation registry definition identifier.
+
+#### [VSA-ADM-CT-REVDELETE] deleteRevocationRegistry
+
+Deletes a revocation registry definition and its associated status list records.
+
+**Path parameters**:
+
+- `revocationRegistryDefinitionId` (REQUIRED) — identifier of the registry to delete. Implementations that still expose the legacy endpoint MAY accept this parameter as a `?revocationRegistryDefinitionId=` query parameter instead.
+
+**Output**: empty body.
+
+**Errors**:
+
+- `INVALID_ID` — `revocationRegistryDefinitionId` is malformed.
+
+### [VSA-ADM-CE] Credential Exchanges
+
+Methods to inspect the credential issuance pipeline.
+
+| Module | Method Name | HTTP Method | Relative REST API path | Requirements | Authz |
+| --- | --- | --- | --- | --- | --- |
+| Credential Exchanges | `listCredentialExchanges` | `GET` | `/v1/credential-exchanges` | [see](#vsa-adm-ce-list-listcredentialexchanges) | INTERNAL |
+| Credential Exchanges | `getCredentialExchange` | `GET` | `/v1/credential-exchanges/{credentialExchangeId}` | [see](#vsa-adm-ce-get-getcredentialexchange) | INTERNAL |
+
+#### [VSA-ADM-CE-LIST] listCredentialExchanges
+
+Returns every credential exchange record tracked by the agent.
+
+**Inputs**: none.
+
+**Output**: array of credential exchange records, each containing at minimum `credentialExchangeId`, `state`, `threadId`, `connectionId`, `credentialDefinitionId`, `schemaId`, `claims`, `errorMessage`, `createdAt`, `updatedAt`.
+
+#### [VSA-ADM-CE-GET] getCredentialExchange
+
+Retrieves a single credential exchange record by id.
+
+**Path parameters**:
+
+- `credentialExchangeId` (REQUIRED) — exchange identifier.
+
+**Output**: the credential exchange record.
+
+**Errors**:
+
+- `NOT_FOUND` — no exchange with the given id.
+
+### [VSA-ADM-PR] Presentations
+
+Methods to inspect and clean up presentation (proof) exchanges.
+
+| Module | Method Name | HTTP Method | Relative REST API path | Requirements | Authz |
+| --- | --- | --- | --- | --- | --- |
+| Presentations | `listPresentations` | `GET` | `/v1/presentations` | [see](#vsa-adm-pr-list-listpresentations) | INTERNAL |
+| Presentations | `getPresentation` | `GET` | `/v1/presentations/{proofExchangeId}` | [see](#vsa-adm-pr-get-getpresentation) | INTERNAL |
+| Presentations | `deletePresentation` | `DELETE` | `/v1/presentations/{proofExchangeId}` | [see](#vsa-adm-pr-delete-deletepresentation) | INTERNAL |
+
+#### [VSA-ADM-PR-LIST] listPresentations
+
+Returns every presentation flow created by the agent.
+
+**Inputs**: none.
+
+**Output**: array of presentation records, each containing at minimum `proofExchangeId`, `state`, `requestedCredentials`, `claims`, `verified`, `threadId`, `updatedAt`.
+
+#### [VSA-ADM-PR-GET] getPresentation
+
+Retrieves a single presentation by `proofExchangeId`.
+
+**Path parameters**:
+
+- `proofExchangeId` (REQUIRED) — presentation flow identifier.
+
+**Output**: the presentation record.
+
+**Errors**:
+
+- `NOT_FOUND` — no presentation with the given id.
+
+#### [VSA-ADM-PR-DELETE] deletePresentation
+
+Deletes a presentation exchange record.
+
+**Path parameters**:
+
+- `proofExchangeId` (REQUIRED) — presentation flow identifier.
+
+**Output**: empty body (HTTP `204`).
+
+**Errors**:
+
+- `NOT_FOUND` — no presentation with the given id.
+
+### [VSA-ADM-QR] QR
+
+| Module | Method Name | HTTP Method | Relative REST API path | Requirements | Authz |
+| --- | --- | --- | --- | --- | --- |
+| QR | `getQrCode` | `GET` | `/v1/qr` | [see](#vsa-adm-qr-get-getqrcode) | INTERNAL |
+
+#### [VSA-ADM-QR-GET] getQrCode
+
+Returns a rendered QR-code image for an invitation URL.
+
+**Inputs** (OPTIONAL query parameters):
+
+- `size` — image size in pixels.
+- `padding` — padding around the QR.
+- `level` — error-correction level (`L`, `M`, `Q`, `H`).
+- `bcolor` — background color.
+- `fcolor` — foreground color.
+- `legacy` — when `true`, render a QR for the legacy `did:web` invitation form.
+
+**Output**: an image response (typically `image/png`).
+
+### [VSA-ADM-VTC] Verifiable Trust Credentials
+
+Methods that issue or revoke Verifiable Trust Credentials (VTCs) on behalf of the agent. Aligned with the [Verifiable Trust Specification](https://verana-labs.github.io/verifiable-trust-spec/).
+
+| Module | Method Name | HTTP Method | Relative REST API path | Requirements | Authz |
+| --- | --- | --- | --- | --- | --- |
+| Verifiable Trust Credentials | `issueCredential` | `POST` | `/v1/vt/issue-credential` | [see](#vsa-adm-vtc-issue-issuecredential) | INTERNAL |
+| Verifiable Trust Credentials | `revokeCredential` | `POST` | `/v1/vt/revoke-credential` | [see](#vsa-adm-vtc-revoke-revokecredential) | INTERNAL |
+
+#### [VSA-ADM-VTC-ISSUE] issueCredential
+
+Issues a Verifiable Trust Credential bound to a JSON Schema Credential. The agent MAY produce either a JSON-LD W3C credential or an AnonCreds credential depending on `format`.
+
+**Inputs** (request body):
+
+- `format` (REQUIRED) — `jsonld` or `anoncreds`.
+- `did` (REQUIRED for `jsonld`) — DID of the credential subject (the holder).
+- `jsonSchemaCredentialId` (REQUIRED) — URL of the JSON Schema Credential governing the credential structure.
+- `claims` (REQUIRED) — credential claims as a flat object of key/value pairs.
+
+**Output**:
+
+- For `jsonld`: the signed W3C Verifiable Credential, ready to be transmitted to the recipient.
+- For `anoncreds`: a DIDComm invitation and the associated `credentialExchangeId` for further tracking through the events interface.
+
+#### [VSA-ADM-VTC-REVOKE] revokeCredential
+
+Revokes a previously issued Verifiable Trust Credential. Currently only the AnonCreds format is supported.
+
+**Inputs** (request body):
+
+- `format` (REQUIRED) — `jsonld` or `anoncreds`. Revocation is currently NOT supported for `jsonld` and the agent MUST reject such requests.
+- `anoncredsRevocationRegistryDefinitionId` (REQUIRED for `anoncreds`) — revocation registry definition the credential is registered in.
+- `anoncredsRevocationRegistryIndex` (REQUIRED for `anoncreds`) — credential index within the registry.
+
+**Output**: confirmation of revocation.
+
+**Errors**:
+
+- `UNSUPPORTED_FORMAT` — caller asked to revoke a `jsonld` credential.
+
+### [VSA-ADM-LVP] Verifiable Trust Linked Verifiable Presentations
+
+Methods that manage stored Verifiable Trust Credentials (VTCs) exposed by the agent as `LinkedVerifiablePresentation` service entries (see [[VS-SVC-6]](https://verana-labs.github.io/verifiable-trust-spec/#vs-svc-service-declaration)).
+
+| Module | Method Name | HTTP Method | Relative REST API path | Requirements | Authz |
+| --- | --- | --- | --- | --- | --- |
+| Linked Verifiable Presentations | `listLinkedCredentials` | `GET` | `/v1/vt/linked-credentials` | [see](#vsa-adm-lvp-list-listlinkedcredentials) | INTERNAL |
+| Linked Verifiable Presentations | `createLinkedCredential` | `POST` | `/v1/vt/linked-credentials` | [see](#vsa-adm-lvp-create-createlinkedcredential) | INTERNAL |
+| Linked Verifiable Presentations | `deleteLinkedCredential` | `DELETE` | `/v1/vt/linked-credentials` | [see](#vsa-adm-lvp-delete-deletelinkedcredential) | INTERNAL |
+
+> Note: when the credential lifecycle is managed via Verana VPR events (per [[VSA-VTI-VTJSC] VTJSC Management](#vsa-vti-vtjsc-vtjsc-management)), the create and delete methods MUST be disabled. The agent SHOULD respond with HTTP `409 Conflict` if a caller attempts a managed mutation.
+
+#### [VSA-ADM-LVP-LIST] listLinkedCredentials
+
+Retrieves one or all Verifiable Trust Credentials linked to this agent.
+
+**Inputs** (OPTIONAL query parameters):
+
+- `schemaId` — full URL of a stored credential schema; when set, return only the VTC bound to that schema.
+- `limit` (default `10`) — page size.
+- `page` (default `1`) — 1-indexed page number.
+
+**Output**: paginated list of Verifiable Trust Credentials.
+
+#### [VSA-ADM-LVP-CREATE] createLinkedCredential
+
+Creates and stores a new Verifiable Trust Credential. The `schemaBaseId` defines the base name used to construct the resulting credential schema URL.
+
+**Inputs** (request body):
+
+- `schemaBaseId` (REQUIRED) — short identifier used to construct the schema URL, e.g. `organization` produces `https://<agent>/vt/schemas-organization-c-vp.json`.
+- `credential` (REQUIRED) — the W3C Verifiable Credential payload.
+
+**Output**: confirmation. The resulting schema URL is derived from `schemaBaseId`.
+
+**Errors**:
+
+- `INVALID_CREDENTIAL` — credential payload is malformed or missing required fields.
+
+#### [VSA-ADM-LVP-DELETE] deleteLinkedCredential
+
+Deletes a stored Verifiable Trust Credential identified by its schema URL.
+
+**Inputs** (REQUIRED query parameter):
+
+- `schemaId` — full URL of the VTC to delete.
+
+**Output**: empty body.
+
+**Errors**:
+
+- `NOT_FOUND` — no Verifiable Trust Credential with the given `schemaId`.
+
+### [VSA-ADM-JSC] Verifiable Trust JSON Schema Credentials
+
+Methods that manage Verifiable Trust JSON Schema Credentials (VTJSCs) — credentials by which a Trust Registry binds an on-chain `CredentialSchema` to the Ecosystem DID that governs it. The issuer DID of a VTJSC MUST equal the Ecosystem DID of the Trust Registry that created the referenced `CredentialSchema`.
+
+| Module | Method Name | HTTP Method | Relative REST API path | Requirements | Authz |
+| --- | --- | --- | --- | --- | --- |
+| JSON Schema Credentials | `listJsonSchemaCredentials` | `GET` | `/v1/vt/json-schema-credentials` | [see](#vsa-adm-jsc-list-listjsonschemacredentials) | INTERNAL |
+| JSON Schema Credentials | `createOrUpdateJsonSchemaCredential` | `POST` | `/v1/vt/json-schema-credentials` | [see](#vsa-adm-jsc-create-createorupdatejsonschemacredential) | INTERNAL |
+| JSON Schema Credentials | `deleteJsonSchemaCredential` | `DELETE` | `/v1/vt/json-schema-credentials` | [see](#vsa-adm-jsc-delete-deletejsonschemacredential) | INTERNAL |
+
+> Note: when the VTJSC lifecycle is managed via Verana VPR events (see [[VSA-VTI-VTJSC] VTJSC Management](#vsa-vti-vtjsc-vtjsc-management)), the create and delete methods MUST be disabled. The agent SHOULD respond with HTTP `409 Conflict` if a caller attempts a managed mutation.
+
+#### [VSA-ADM-JSC-LIST] listJsonSchemaCredentials
+
+Retrieves one or multiple Verifiable Trust JSON Schema Credentials.
+
+**Inputs** (OPTIONAL query parameters):
+
+- `schemaId` — full URL or identifier of a specific VTJSC.
+- `limit` (default `10`) — page size.
+- `page` (default `1`) — 1-indexed page number.
+
+**Output**: paginated list of VTJSCs.
+
+#### [VSA-ADM-JSC-CREATE] createOrUpdateJsonSchemaCredential
+
+Creates or updates a VTJSC.
+
+**Inputs** (request body):
+
+- `schemaBaseId` (REQUIRED) — short identifier used to construct the resulting VTJSC URL, e.g. `organization` produces `https://<agent>/vt/schemas-organization-jsc.json`.
+- `jsonSchemaRef` (REQUIRED) — VPR URI of the corresponding `CredentialSchema` entry, e.g. `vpr:verana:vna-testnet-1/cs/v1/js/12345678`.
+
+**Output**: confirmation that the VTJSC was created or updated.
+
+**Errors**:
+
+- `INVALID_INPUT` — schema parameters are malformed or missing.
+- `ISSUER_MISMATCH` — the agent's DID does not match the Ecosystem DID of the Trust Registry that owns the referenced `CredentialSchema`.
+
+#### [VSA-ADM-JSC-DELETE] deleteJsonSchemaCredential
+
+Deletes a stored VTJSC.
+
+**Inputs** (REQUIRED query parameter):
+
+- `schemaId` — full URL or identifier of the VTJSC to delete.
+
+**Output**: empty body.
+
+**Errors**:
+
+- `NOT_FOUND` — no VTJSC with the given `schemaId`.
+
 ### [VSA-ADM-FL] Flow Management
 
 The following methods list and progress credential-acquisition flows handled by the agent (see [[VSA-VTI-FLOW-STATE] Flow State](#vsa-vti-flow-state-flow-state)).
 
-| Module | Method Name | Relative REST API path | Type | Requirements | Authz |
+| Module | Method Name | HTTP Method | Relative REST API path | Requirements | Authz |
 | --- | --- | --- | --- | --- | --- |
-| Flow Management | `listFlows` | | Query | [see](#vsa-adm-fl-list-listflows) | INTERNAL, CORPORATION (`SetParticipantOPValidated` or `StartParticipantOP` or `RenewParticipantOP`) |
-| Flow Management | `editCredentialClaims` | | Action | [see](#vsa-adm-fl-edit-editcredentialclaims) | INTERNAL, CORPORATION |
-| Flow Management | `sendOobLink` | | Action | [see](#vsa-adm-fl-send-sendooblink) | INTERNAL, CORPORATION (`SetParticipantOPValidated`) |
-| Flow Management | `validateFlow` | | Action | [see](#vsa-adm-fl-validate-validateflow) | INTERNAL, CORPORATION (`SetParticipantOPValidated`) |
-| Flow Management | `revokeCredential` | | Action | [see](#vsa-adm-fl-revoke-revokecredential) | INTERNAL, CORPORATION (`RevokeParticipant`) |
+| Flow Management | `listFlows` | `GET` | `/v1/vt/flows` | [see](#vsa-adm-fl-list-listflows) | INTERNAL, CORPORATION (`SetParticipantOPValidated` or `StartParticipantOP` or `RenewParticipantOP`) |
+| Flow Management | `editCredentialClaims` | `PUT` | `/v1/vt/flows/{session_uuid}/claims` | [see](#vsa-adm-fl-edit-editcredentialclaims) | INTERNAL, CORPORATION |
+| Flow Management | `sendOobLink` | `POST` | `/v1/vt/flows/{session_uuid}/oob-link` | [see](#vsa-adm-fl-send-sendooblink) | INTERNAL, CORPORATION (`SetParticipantOPValidated`) |
+| Flow Management | `validateFlow` | `POST` | `/v1/vt/flows/{session_uuid}/validate` | [see](#vsa-adm-fl-validate-validateflow) | INTERNAL, CORPORATION (`SetParticipantOPValidated`) |
+| Flow Management | `revokeCredential` | `POST` | `/v1/vt/flows/{session_uuid}/revoke-credential` | [see](#vsa-adm-fl-revoke-revokecredential) | INTERNAL, CORPORATION (`RevokeParticipant`) |
 
 > Note: some VS Agent implementations may not support all actions, or may prefer sending the user to a portal for providing proofs, etc., using the OOB link.
 
@@ -896,9 +1468,12 @@ Lists and inspects existing credential-acquisition flows handled by the agent.
 
 Creates, modifies, or overrides the credential claims submitted by the applicant for a given flow.
 
-**Inputs**:
+**Path parameters**:
 
 - `session_uuid` (REQUIRED) — identifier of the target flow.
+
+**Inputs** (request body):
+
 - `claims` (REQUIRED) — replacement or patch set for the credential claims.
 
 **Output**: the updated claim set as stored on the flow.
@@ -918,9 +1493,12 @@ Creates, modifies, or overrides the credential claims submitted by the applicant
 
 Sends or resends an `OOB_LINK` DIDComm message to the applicant for out-of-DIDComm information collection (see [[VSA-VTI-FLOW-DIDCOMM] DIDComm Message Summary](#vsa-vti-flow-didcomm-didcomm-message-summary)).
 
-**Inputs**:
+**Path parameters**:
 
 - `session_uuid` (REQUIRED) — identifier of the target flow.
+
+**Inputs** (request body):
+
 - `url` (REQUIRED) — the OOB URL to send.
 - `message` (OPTIONAL) — descriptive text shown to the applicant.
 
@@ -940,9 +1518,11 @@ Sends or resends an `OOB_LINK` DIDComm message to the applicant for out-of-DIDCo
 
 Marks the applicant's documentation as validated for a given flow. When an Onboarding Process is involved, this is independent from the on-chain `SetParticipantOPValidated` transaction and MAY trigger credential issuance (see [[VSA-VTI-FLOW-OP-NEW] New Onboarding Process](#vsa-vti-flow-op-new-new-onboarding-process) steps 6–8).
 
-**Inputs**:
+**Path parameters**:
 
 - `session_uuid` (REQUIRED) — identifier of the target flow.
+
+**Inputs**: none.
 
 **Output**: the updated flow record.
 
@@ -959,9 +1539,12 @@ Marks the applicant's documentation as validated for a given flow. When an Onboa
 
 Revokes a previously issued credential for a given flow. The agent MUST notify the applicant via a `CRED_STATE_CHANGE` message over DIDComm (see [[VSA-VTI-FLOW-UPD] Validator Updates](#vsa-vti-flow-upd-validator-updates)).
 
-**Inputs**:
+**Path parameters**:
 
 - `session_uuid` (REQUIRED) — identifier of the target flow.
+
+**Inputs** (request body):
+
 - `reason` (OPTIONAL) — human-readable reason for the revocation.
 
 **Output**: confirmation of revocation.
@@ -981,12 +1564,12 @@ Revokes a previously issued credential for a given flow. The agent MUST notify t
 
 The following methods manage the **additional consumable** service entries declared in the agent's DID Document — i.e., the entries added under [[VS-SVC-3]](https://verana-labs.github.io/verifiable-trust-spec/#vs-svc-service-declaration), such as `MCP`, `A2A`, `LinkedDomains`, or any other ecosystem-defined consumable type.
 
-| Module | Method Name | Relative REST API path | Type | Requirements | Authz |
+| Module | Method Name | HTTP Method | Relative REST API path | Requirements | Authz |
 | --- | --- | --- | --- | --- | --- |
-| Service Endpoint Management | `listServiceEndpoints` | /se/v1/list | Query | [see](#vsa-adm-se-list-listserviceendpoints) | INTERNAL |
-| Service Endpoint Management | `deleteServiceEndpoint` | /se/v1/delete | Action | [see](#vsa-adm-se-delete-deleteserviceendpoint) | INTERNAL |
-| Service Endpoint Management | `addServiceEndpoint` | /se/v1/add | Action | [see](#vsa-adm-se-add-addserviceendpoint) | INTERNAL |
-| Service Endpoint Management | `updateServiceEndpoint` | /se/v1/update | Action | [see](#vsa-adm-se-update-updateserviceendpoint) | INTERNAL |
+| Service Endpoint Management | `listServiceEndpoints` | `GET` | `/v1/vt/service-endpoints` | [see](#vsa-adm-se-list-listserviceendpoints) | INTERNAL |
+| Service Endpoint Management | `addServiceEndpoint` | `POST` | `/v1/vt/service-endpoints` | [see](#vsa-adm-se-add-addserviceendpoint) | INTERNAL |
+| Service Endpoint Management | `updateServiceEndpoint` | `PATCH` | `/v1/vt/service-endpoints/{id}` | [see](#vsa-adm-se-update-updateserviceendpoint) | INTERNAL |
+| Service Endpoint Management | `deleteServiceEndpoint` | `DELETE` | `/v1/vt/service-endpoints/{id}` | [see](#vsa-adm-se-delete-deleteserviceendpoint) | INTERNAL |
 
 These methods MUST NOT be used to manipulate:
 
@@ -1021,9 +1604,11 @@ Returns every consumable service entry currently declared in the agent's DID Doc
 
 Removes a consumable service entry from the agent's DID Document.
 
-**Inputs**:
+**Path parameters**:
 
-- `id` (REQUIRED) — identifier of the entry to remove (DID-relative fragment such as `#mcp`, or full DID URL).
+- `id` (REQUIRED) — identifier of the entry to remove (DID-relative fragment such as `#mcp`, or full DID URL). The value MUST be percent-encoded when placed in the URL path (e.g., `%23mcp` for `#mcp`).
+
+**Inputs**: none.
 
 **Output**: the deleted entry.
 
@@ -1070,9 +1655,12 @@ Adds a new consumable service entry to the agent's DID Document.
 
 Updates the `type` and/or `serviceEndpoint` of an existing consumable service entry in the agent's DID Document.
 
-**Inputs**:
+**Path parameters**:
 
-- `id` (REQUIRED) — identifier of the entry to update.
+- `id` (REQUIRED) — identifier of the entry to update. The value MUST be percent-encoded when placed in the URL path (e.g., `%23mcp` for `#mcp`).
+
+**Inputs** (request body):
+
 - `type` (OPTIONAL) — new service type.
 - `serviceEndpoint` (OPTIONAL) — new endpoint value.
 
