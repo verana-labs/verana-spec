@@ -81,7 +81,7 @@ flowchart LR
     SRV -- "Admin API<br/>(ADR-036 auth)" --> VSAN
 ```
 
-*Figure 1 — Architecture overview. The MCP server is a single-principal mediator. Its blast radius is exactly the union of (a) on-chain Msg types granted to its operator account by the bound Corporation through `OperatorAuthorization`, and (b) the VS Agent Admin APIs that whitelist its operator account.*
+*Figure 1 — Architecture overview. The MCP server is a single-principal mediator. Its blast radius is exactly the union of (a) on-chain Msg types granted to its operator account by the bound Corporation through `OperatorAuthorization`, and (b) the VS Agent Admin APIs that allowlist its operator account.*
 
 ### Single-principal model
 
