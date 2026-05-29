@@ -162,7 +162,7 @@ The MCP transport layer authenticates the **MCP client** to the MCP server. It d
 - **HTTP transport:** every MCP request MUST carry `Authorization: Bearer <MCP_BEARER_TOKEN>`. Requests with a missing, malformed, or non-matching token MUST be rejected with HTTP 401 and MUST NOT reach any tool implementation. The token is opaque, MUST be at least 32 bytes of entropy, and MUST be protected at rest. TLS termination is the responsibility of an external reverse proxy; the MCP server itself MAY listen on plain HTTP and rely on the proxy.
 - **Stdio transport:** the MCP server is launched as a subprocess by the MCP client; trust is implicit in the process model. No additional authentication is performed.
 
-> Because the MCP server holds the operator account's private key, any party that successfully authenticates to the MCP server inherits the full set of capabilities granted to that account on chain and at every whitelisted VS Agent. Operators MUST treat `MCP_BEARER_TOKEN` and `MCP_VERANA_MNEMONIC` with equivalent secrecy.
+> Because the MCP server holds the operator account's private key, any party that successfully authenticates to the MCP server inherits the full set of capabilities granted to that account on chain and at every authorized VS Agent. Operators MUST treat `MCP_BEARER_TOKEN` and `MCP_VERANA_MNEMONIC` with equivalent secrecy.
 
 ### [VMS-AUTH-CHAIN] On-Chain Authorization
 
