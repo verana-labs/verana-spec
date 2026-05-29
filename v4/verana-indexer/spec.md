@@ -40,7 +40,7 @@ The JSON Schemas published alongside this document expose this constraint as the
 
 ### Method List
 
-| Module | Method Name | Relative REST API path | Type | Requirements | Authz |
+| Module | Method Name | Relative API path | Type | Requirements | Authz |
 | --- | --- | --- | --- | --- | --- |
 | Corporation | Get Corporation | `/co/v1/get/{id}` | Query | [`IDX-CO-QRY-1`](#idx-co-qry-1-get-corporation) | PUBLIC |
 | Corporation | List Corporations | `/co/v1/list` | Query | [`IDX-CO-QRY-2`](#idx-co-qry-2-list-corporations) | PUBLIC |
