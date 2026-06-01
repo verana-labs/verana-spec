@@ -156,7 +156,7 @@ See [comparison between VS-REQ-3 and VS-REQ-4](https://verana-labs.github.io/ver
 
 ### [VSA-VTI-DIDDOC] DID Document Required Service Entries
 
-In addition to the `DIDCommMessaging` entry mandated by [[VS-SVC-2]](https://verana-labs.github.io/verifiable-trust-spec/#vs-svc-service-declaration) and the `LinkedVerifiablePresentation` entries produced by the credential-acquisition flows and by [[VSA-VTI-VTJSC] VTJSC Management](#vsa-vti-vtjsc-vtjsc-management), the VS Agent MUST publish a `LinkedDomains` service entry in its DID Document, encoded as defined in [DIF Well-Known DID Configuration § Linked Domains Service Endpoint](https://identity.foundation/well-known-did-configuration/resources/did-configuration/#linked-domains).
+In addition to the `DIDCommMessaging` entry mandated by [[VS-SVC-2]](https://verana-labs.github.io/verifiable-trust-spec/#vs-svc-service-declaration) and the `LinkedVerifiablePresentation` entries produced by the credential-acquisition flows and by [[VSA-VTI-VTJSC] VTJSC Management](#vsa-vti-vtjsc-vtjsc-management), the VS Agent MUST publish a `VsAgentAdminAPI` service entry in its DID Document.
 
 This entry links the agent's DID to the public `https://` origin of the agent's [Administration API](#administration-api), so that external clients (operators, browsers, MCP servers, other Verifiable Services) can discover that URL directly from the agent's DID Document — in particular, removing the need for static `agent_did` → URL configuration in callers such as the [Verana MCP Server](../mcp-server/spec.md).
 
@@ -166,10 +166,10 @@ This entry links the agent's DID to the public `https://` origin of the agent's 
 
 The entry:
 
-- MUST use `type: "LinkedDomains"`.
-- MUST set `serviceEndpoint` to a single `https://` origin (either as a string or as the equivalent single-element array form permitted by the DIF specification). The value MUST equal the corresponding environment variable verbatim — scheme + host + optional port, no trailing path.
+- MUST use `type: "VsAgentAdminAPI"`.
+- MUST set `serviceEndpoint` to a single `https://` origin. The value MUST equal the corresponding environment variable verbatim — scheme + host + optional port, no trailing path.
 - MUST be produced and maintained automatically by the agent at every DID Document publication.
-- MUST NOT be created, modified, or deleted via the [[VSA-ADM-SE] Service Endpoint Management](#vsa-adm-se-service-endpoint-management) admin methods. The reserved-fragment rule applies in both directions: callers MUST NOT add or update an entry with `id` equal to `#vs-agent-admin-api`, and the agent's own entry MUST NOT be reachable for deletion through those methods.
+- MUST NOT be created, modified, or deleted via the [[VSA-ADM-SE] Service Endpoint Management](#vsa-adm-se-service-endpoint-management) admin methods.
 
 Example fragment of the resulting DID Document:
 
@@ -178,14 +178,13 @@ Example fragment of the resulting DID Document:
   "service": [
     {
       "id": "did:example:agent#vs-agent-admin-api",
-      "type": "LinkedDomains",
+      "type": "VsAgentAdminAPI",
       "serviceEndpoint": "https://admin.agent.example.com"
     }
   ]
 }
 ```
 
-> The DIF Well-Known DID Configuration specification also defines an optional reverse direction (a JSON document served at `https://<origin>/.well-known/did-configuration.json` that proves the domain links back to the DID). Provisioning that reverse-direction document is out of scope of this VS Agent specification and is left to the operator of each web server.
 
 ### [VSA-VTI-NOTIF] Notifications
 
@@ -846,7 +845,7 @@ The following environment variables MUST be provided when the VS Agent container
 
 | Variable | Required | Description |
 |---|---|---|
-| `ADMIN_API_PUBLIC_URL` | REQUIRED | Public `https://` URL at which this Administration API is reachable from outside the agent's pod or deployment (origin only — scheme + host + optional port, no trailing path). Published in the agent's DID Document as the `#vs-agent-admin-api` `LinkedDomains` entry per [[VSA-VTI-DIDDOC]](#vsa-vti-diddoc-did-document-required-service-entries). |
+| `ADMIN_API_PUBLIC_URL` | REQUIRED | Public `https://` URL at which this Administration API is reachable from outside the agent's pod or deployment (origin only — scheme + host + optional port, no trailing path). Published in the agent's DID Document as the `#vs-agent-admin-api` `VsAgentAdminAPI` entry per [[VSA-VTI-DIDDOC]](#vsa-vti-diddoc-did-document-required-service-entries). |
 | `ADMIN_API_ENABLE_CORPORATION` | REQUIRED | Enable access for accounts that hold `OperatorAuthorization` entries from the `VERANA_CORPORATION` Corporation. |
 | `ADMIN_API_CORPORATION_ACCOUNT_WHITELIST` | OPTIONAL | If set, limit corporation access to accounts from this list. Has no effect if `ADMIN_API_ENABLE_CORPORATION` is set to false. |
 | `ADMIN_API_ENABLE_INTERNAL` | REQUIRED | Enable full API access for containers of the same pod or deployment. No authentication needed. |
@@ -1562,7 +1561,7 @@ Revokes a previously issued credential for a given flow. The agent MUST notify t
 
 ### [VSA-ADM-SE] Service Endpoint Management
 
-The following methods manage the **additional consumable** service entries declared in the agent's DID Document — i.e., the entries added under [[VS-SVC-3]](https://verana-labs.github.io/verifiable-trust-spec/#vs-svc-service-declaration), such as `MCP`, `A2A`, `LinkedDomains`, or any other ecosystem-defined consumable type.
+The following methods manage the **additional consumable** service entries declared in the agent's DID Document — i.e., the entries added under [[VS-SVC-3]](https://verana-labs.github.io/verifiable-trust-spec/#vs-svc-service-declaration), such as `MCP`, `A2A`, `LinkedDomains`, or any other ecosystem-defined consumable type. Note that `VsAgentAdminAPI` entries are auto-managed and MUST NOT be manipulated through these methods.
 
 | Module | Method Name | HTTP Method | Relative REST API path | Requirements | Authz |
 | --- | --- | --- | --- | --- | --- |
@@ -1575,7 +1574,7 @@ These methods MUST NOT be used to manipulate:
 
 - `DIDCommMessaging` entries: the mandatory bootstrap channel required by [[VS-SVC-2]](https://verana-labs.github.io/verifiable-trust-spec/#vs-svc-service-declaration) is derived from the agent's container configuration and is maintained automatically by the agent.
 - `LinkedVerifiablePresentation` entries: per [[VS-SVC-6]](https://verana-labs.github.io/verifiable-trust-spec/#vs-svc-service-declaration), those are part of the identity layer and are produced and maintained automatically by the agent through [[VSA-VTI-VTJSC] VTJSC Management](#vsa-vti-vtjsc-vtjsc-management) and the credential acquisition flows.
-- `LinkedDomains` entry whose `id` ends in `#vs-agent-admin-api`: per [[VSA-VTI-DIDDOC] DID Document Required Service Entries](#vsa-vti-diddoc-did-document-required-service-entries), this entry is maintained automatically by the agent from `ADMIN_API_PUBLIC_URL`.
+- `VsAgentAdminAPI` entries: per [[VSA-VTI-DIDDOC] DID Document Required Service Entries](#vsa-vti-diddoc-did-document-required-service-entries), this entry is maintained automatically by the agent from `ADMIN_API_PUBLIC_URL`.
 
 For every successful mutation (`addServiceEndpoint`, `updateServiceEndpoint`, `deleteServiceEndpoint`):
 
@@ -1597,7 +1596,7 @@ Returns every consumable service entry currently declared in the agent's DID Doc
 **Requirements**:
 
 - MUST exclude entries whose `type` is `DIDCommMessaging` or `LinkedVerifiablePresentation` (managed automatically by the agent — see preamble).
-- MUST exclude `LinkedDomains` entries whose `id` ends in `#vs-agent-admin-api` (managed automatically by the agent — see preamble).
+- MUST exclude entries whose `type` is `VsAgentAdminAPI` (managed automatically by the agent — see preamble).
 - MUST reflect the currently published DID Document.
 
 #### [VSA-ADM-SE-DELETE] deleteServiceEndpoint
@@ -1614,15 +1613,14 @@ Removes a consumable service entry from the agent's DID Document.
 
 **Requirements**:
 
-- MUST refuse if `id` refers to a `DIDCommMessaging` or `LinkedVerifiablePresentation` entry (managed automatically by the agent — see preamble).
-- MUST refuse if `id` ends in `#vs-agent-admin-api` (reserved by [[VSA-VTI-DIDDOC]](#vsa-vti-diddoc-did-document-required-service-entries) — see preamble).
+- MUST refuse if `id` refers to a `DIDCommMessaging`, `LinkedVerifiablePresentation`, or `VsAgentAdminAPI` entry (managed automatically by the agent — see preamble).
 
 **Errors**:
 
 - `NOT_FOUND` — no entry with the given `id`.
 - `DIDCOMM_ENTRY` — `id` refers to a `DIDCommMessaging` entry.
 - `LINKED_VP_ENTRY` — `id` refers to a `LinkedVerifiablePresentation` entry.
-- `RESERVED_ID` — `id` ends in `#vs-agent-admin-api`.
+- `ADMIN_API_ENTRY` — `id` refers to a `VsAgentAdminAPI` entry.
 
 #### [VSA-ADM-SE-ADD] addServiceEndpoint
 
@@ -1630,7 +1628,7 @@ Adds a new consumable service entry to the agent's DID Document.
 
 **Inputs**:
 
-- `type` (REQUIRED) — service type (e.g., `MCP`, `A2A`, `LinkedDomains`). MUST NOT be `DIDCommMessaging` or `LinkedVerifiablePresentation`.
+- `type` (REQUIRED) — service type (e.g., `MCP`, `A2A`, `LinkedDomains`). MUST NOT be `DIDCommMessaging`, `LinkedVerifiablePresentation`, or `VsAgentAdminAPI`.
 - `serviceEndpoint` (REQUIRED) — URI string or object per [DID-CORE].
 - `id` (OPTIONAL) — DID-relative fragment for the new entry. If omitted, the agent MUST generate a unique fragment.
 
@@ -1638,8 +1636,7 @@ Adds a new consumable service entry to the agent's DID Document.
 
 **Requirements**:
 
-- MUST refuse `type = DIDCommMessaging` or `type = LinkedVerifiablePresentation` (managed automatically by the agent — see preamble).
-- MUST refuse if the resulting `id` ends in `#vs-agent-admin-api` (reserved by [[VSA-VTI-DIDDOC]](#vsa-vti-diddoc-did-document-required-service-entries) — see preamble).
+- MUST refuse `type = DIDCommMessaging`, `type = LinkedVerifiablePresentation`, or `type = VsAgentAdminAPI` (managed automatically by the agent — see preamble).
 - MUST refuse if the resulting `id` collides with an existing entry in the DID Document.
 - MUST validate the shape of `serviceEndpoint` per [DID-CORE] before publishing.
 
@@ -1649,7 +1646,7 @@ Adds a new consumable service entry to the agent's DID Document.
 - `INVALID_SERVICE_ENDPOINT` — `serviceEndpoint` does not conform to [DID-CORE].
 - `DIDCOMM_ENTRY` — caller attempted to add a `DIDCommMessaging` entry.
 - `LINKED_VP_ENTRY` — caller attempted to add a `LinkedVerifiablePresentation` entry.
-- `RESERVED_ID` — caller attempted to use `id` ending in `#vs-agent-admin-api`.
+- `ADMIN_API_ENTRY` — caller attempted to add a `VsAgentAdminAPI` entry.
 
 #### [VSA-ADM-SE-UPDATE] updateServiceEndpoint
 
@@ -1670,8 +1667,7 @@ At least one of `type` or `serviceEndpoint` MUST be provided.
 
 **Requirements**:
 
-- MUST refuse to update an entry whose existing `type` is `DIDCommMessaging` or `LinkedVerifiablePresentation`, and MUST refuse to change an entry's `type` to `DIDCommMessaging` or `LinkedVerifiablePresentation` (managed automatically by the agent — see preamble).
-- MUST refuse to update an entry whose `id` ends in `#vs-agent-admin-api` (reserved by [[VSA-VTI-DIDDOC]](#vsa-vti-diddoc-did-document-required-service-entries) — see preamble).
+- MUST refuse to update an entry whose existing `type` is `DIDCommMessaging`, `LinkedVerifiablePresentation`, or `VsAgentAdminAPI`, and MUST refuse to change an entry's `type` to `DIDCommMessaging`, `LinkedVerifiablePresentation`, or `VsAgentAdminAPI` (managed automatically by the agent — see preamble).
 - MUST validate the new `serviceEndpoint` shape per [DID-CORE] before publishing.
 
 **Errors**:
@@ -1679,5 +1675,5 @@ At least one of `type` or `serviceEndpoint` MUST be provided.
 - `NOT_FOUND` — no entry with the given `id`.
 - `DIDCOMM_ENTRY` — `id` refers to a `DIDCommMessaging` entry, or the requested change would produce one.
 - `LINKED_VP_ENTRY` — `id` refers to a `LinkedVerifiablePresentation` entry, or the requested change would produce one.
-- `RESERVED_ID` — `id` ends in `#vs-agent-admin-api`.
+- `ADMIN_API_ENTRY` — `id` refers to a `VsAgentAdminAPI` entry, or the requested change would produce one.
 - `INVALID_SERVICE_ENDPOINT` — `serviceEndpoint` does not conform to [DID-CORE].
