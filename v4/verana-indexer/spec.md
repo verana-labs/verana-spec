@@ -655,13 +655,13 @@ Supports pagination through attributes `max_id`, `min_id`, `limit` and `sort`, a
 
 `GET /v4/credential-schema/js/{id}`
 
-Retrieve the canonical JSON Schema document for a specific Credential Schema, with `$id` rewritten to the indexer's canonical VPR URI form (e.g. `vpr:verana:vna-testnet-1/v4/credential-schema/js/16`). *Aligned with VPR [[MOD-CS-QRY-3]](https://verana-labs.github.io/verifiable-trust-vpr-spec/#mod-cs-qry-3-render-json-schema).*
+Retrieve the canonical JSON Schema document for a specific Credential Schema, with `$id` rewritten to the indexer's canonical VPR URI form (e.g. `vpr:verana:vna-testnet-1:cs:16`). *Aligned with VPR [[MOD-CS-QRY-3]](https://verana-labs.github.io/verifiable-trust-vpr-spec/#mod-cs-qry-3-render-json-schema).*
 
 | Name | In | Type | Required | Description |
 | --- | --- | --- | --- | --- |
 | `id` | path | uint64 | yes | The Credential Schema ID |
 
-**Response:** The raw JSON Schema object as stored on-chain, with only the `$id` field overridden by the indexer. The body is `Content-Type: application/json`; clients SHOULD use this endpoint as the canonical schema-resolution target when dereferencing `vpr:verana:.../v4/credential-schema/js/<n>` URIs.
+**Response:** The raw JSON Schema object as stored on-chain, with only the `$id` field overridden by the indexer. The body is `Content-Type: application/json`; clients SHOULD use this endpoint as the canonical schema-resolution target when dereferencing `vpr:verana:...:cs:<n>` URIs.
 
 ##### IDX-CS-QRY-4 Get Credential Schema Params
 
@@ -1877,7 +1877,7 @@ The Verana profile of TRQP v2 is identified by the profile version `verana-trqp/
 | Profile version | `verana-trqp/spec-v4` |
 | Authorization actions | `issue`, `verify`, `grant_issue`, `grant_verify`, `govern` |
 | Recognition actions | same as authorization (action-invariant in v4) |
-| Authorization resource grammar | VPR schema URI (`vpr:verana:<network>/v4/credential-schema/js/<n>`) |
+| Authorization resource grammar | VPR schema URI (`vpr:verana:<network>:cs:<n>`) |
 | Recognition resource grammar | VPR schema URI |
 | Authorization trigger | `Participant.role = role_of(action)` AND `state = "ACTIVE"` |
 | Recognition trigger | `Ecosystem.did = entity_id` AND the Corporation referenced by `Ecosystem.corporationId` has `did = authority_id`, AND not archived |
@@ -1945,7 +1945,7 @@ POST /v4/trqp/v2/authorization
    "authority_id": "did:webvh:Qm…:ecosystem.eu-passport.example",
    "entity_id":    "did:webvh:Qm…:corp.acme.example",
    "action":       "issue",
-   "resource":     "vpr:verana:vna-mainnet-1/v4/credential-schema/js/42",
+   "resource":     "vpr:verana:vna-mainnet-1:cs:42",
    "context":      { "time": "2026-05-11T13:00:00Z" }
 }
 ```
@@ -1957,7 +1957,7 @@ POST /v4/trqp/v2/authorization
    "authority_id":   "did:webvh:Qm…:ecosystem.eu-passport.example",
    "entity_id":      "did:webvh:Qm…:corp.acme.example",
    "action":         "issue",
-   "resource":       "vpr:verana:vna-mainnet-1/v4/credential-schema/js/42",
+   "resource":       "vpr:verana:vna-mainnet-1:cs:42",
    "authorized":     true,
    "time_requested": "2026-05-11T13:00:00Z",
    "time_evaluated": "2026-05-11T13:00:00Z",
@@ -2017,7 +2017,7 @@ POST /v4/trqp/v2/recognition
    "authority_id": "did:webvh:Qm…:corp.acme.example",
    "entity_id":    "did:webvh:Qm…:ecosystem.eu-passport.example",
    "action":       "issue",
-   "resource":     "vpr:verana:vna-mainnet-1/v4/credential-schema/js/42",
+   "resource":     "vpr:verana:vna-mainnet-1:cs:42",
    "context":      { "time": "2026-05-11T13:00:00Z" }
 }
 ```
@@ -2029,7 +2029,7 @@ POST /v4/trqp/v2/recognition
    "authority_id":   "did:webvh:Qm…:corp.acme.example",
    "entity_id":      "did:webvh:Qm…:ecosystem.eu-passport.example",
    "action":         "issue",
-   "resource":       "vpr:verana:vna-mainnet-1/v4/credential-schema/js/42",
+   "resource":       "vpr:verana:vna-mainnet-1:cs:42",
    "recognized":     true,
    "time_requested": "2026-05-11T13:00:00Z",
    "time_evaluated": "2026-05-11T13:00:00Z",
