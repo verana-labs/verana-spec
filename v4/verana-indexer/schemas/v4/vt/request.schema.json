@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://verana.io/schemas/v4/vt/request.schema.json",
   "title": "ResolutionRequest",
-  "description": "Request payload for the verana indexer DID Resolver. Selectors with object form (`participations`, `presentations`, `ecosystems`) accept `false` to exclude, `true` for defaults, or an object of fine-grained options. See `### Example resolution request` in the indexer spec.",
+  "description": "Request payload for the verana indexer DID Resolver. The point-in-time is selected via the `At-Block-Height` HTTP request header (see the indexer spec Conventions section) and is therefore not part of this body. Selectors with object form (`participations`, `presentations`, `ecosystems`) accept `false` to exclude, `true` for defaults, or an object of fine-grained options. See `### Example resolution request` in the indexer spec.",
   "type": "object",
   "additionalProperties": false,
   "required": ["did"],
@@ -11,15 +11,6 @@
       "type": "string",
       "pattern": "^did:",
       "description": "DID to resolve. Any DID method supported by the resolver."
-    },
-    "atTime": {
-      "$ref": "#/$defs/Iso8601DateTime",
-      "description": "ISO 8601 datetime of the point-in-time evaluation. Mutually exclusive with `atBlock`. Defaults to latest block when neither is provided."
-    },
-    "atBlock": {
-      "type": "integer",
-      "minimum": 0,
-      "description": "Block height of the point-in-time evaluation. Mutually exclusive with `atTime`. Defaults to latest block when neither is provided."
     },
 
     "corporation": {
@@ -61,19 +52,8 @@
     }
   },
 
-  "not": {
-    "description": "`atTime` and `atBlock` are mutually exclusive.",
-    "required": ["atTime", "atBlock"]
-  },
-
   "$defs": {
-    "Iso8601DateTime": {
-      "type": "string",
-      "format": "date-time",
-      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(\\.[0-9]+)?Z$",
-      "description": "ISO 8601 / RFC 3339 datetime string in UTC. MUST include the date, the time (with seconds), and the trailing `Z` UTC designator. Fractional seconds are OPTIONAL. Local times, non-UTC offsets (e.g. `+02:00`), date-only values, and timezone-less times are NOT permitted."
-    },
-    "ParticipationState": {
+    "ParticipantState": {
       "enum": ["ACTIVE", "FUTURE", "INACTIVE", "EXPIRED", "REVOKED", "SLASHED", "REPAID"]
     },
     "ParticipationsOptions": {
@@ -84,7 +64,7 @@
           "type": "array",
           "uniqueItems": true,
           "default": ["ACTIVE"],
-          "items": { "$ref": "#/$defs/ParticipationState" },
+          "items": { "$ref": "#/$defs/ParticipantState" },
           "description": "Filter participations by state. Defaults to [\"ACTIVE\"] when omitted."
         }
       }

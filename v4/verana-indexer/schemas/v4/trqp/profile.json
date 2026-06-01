@@ -34,9 +34,9 @@
 
   "resource_grammar": {
     "label":   "VPR schema URI",
-    "format":  "vpr:verana:<network>/cs/v<schema-version>/js/<schema-id>",
-    "pattern": "^vpr:verana:[a-z0-9-]+/cs/v[0-9]+/js/[0-9]+$",
-    "example": "vpr:verana:vna-mainnet-1/cs/v1/js/42"
+    "format":  "vpr:verana:<network>:cs:<schema-id>",
+    "pattern": "^vpr:verana:[a-z0-9-]+:cs:[0-9]+$",
+    "example": "vpr:verana:vna-mainnet-1:cs:42"
   },
 
   "identifiers": {
@@ -54,7 +54,7 @@
   "context_extensions": {
     "session_id": {
       "type": "string",
-      "description": "Binds the answer to a Verana permission session (VPR MOD-PERM-MSG-10). When supplied alongside `time`, `time` MUST fall inside the session's validity window — otherwise the answer is denied with `message: \"session out of window\"`. If the session does not exist, the answer is denied with `message: \"session not found\"`.",
+      "description": "Binds the answer to a Verana participant session (VPR MOD-PP-MSG-10). When supplied alongside `time`, `time` MUST fall inside the session's validity window — otherwise the answer is denied with `message: \"session out of window\"`. If the session does not exist, the answer is denied with `message: \"session not found\"`.",
       "precedence_over_time": true,
       "permitted_by_upstream": true,
       "upstream_clause": "context.additionalProperties: { type: string }"
@@ -62,8 +62,8 @@
   },
 
   "triggers": {
-    "authorization": "An active Participant entry exists where the Participant's schema is owned by the Ecosystem whose did = authority_id, the Participant's corporationId references the Corporation whose did = entity_id, role = action_role_map[action], the schema's URI form (`vpr:verana:<network>/cs/v1/js/<id>`, deterministic from the schema's stable ledger id) equals resource, and state = ACTIVE at evaluation time. The indexer translates the URI form to the schema's stable id internally; the wire format remains URI-based.",
-    "recognition":   "An Ecosystem entry exists where did = entity_id, its corporationId references the Corporation whose did = authority_id, and archived IS NULL at evaluation time, AND a CredentialSchema entry exists whose URI form (`vpr:verana:<network>/cs/v1/js/<id>`, deterministic from the schema's stable ledger id) equals resource and is owned by that ecosystem at evaluation time. The indexer translates the URI form to the schema's stable id internally; the wire format remains URI-based."
+    "authorization": "An active Participant entry exists where the Participant's schema is owned by the Ecosystem whose did = authority_id, the Participant's corporationId references the Corporation whose did = entity_id, role = action_role_map[action], the schema's URI form (`vpr:verana:<network>:cs:<id>`, deterministic from the schema's stable ledger id) equals resource, and state = ACTIVE at evaluation time. The indexer translates the URI form to the schema's stable id internally; the wire format remains URI-based.",
+    "recognition":   "An Ecosystem entry exists where did = entity_id, its corporationId references the Corporation whose did = authority_id, and archived IS NULL at evaluation time, AND a CredentialSchema entry exists whose URI form (`vpr:verana:<network>:cs:<id>`, deterministic from the schema's stable ledger id) equals resource and is owned by that ecosystem at evaluation time. The indexer translates the URI form to the schema's stable id internally; the wire format remains URI-based."
   },
 
   "active_states": ["ACTIVE"],
