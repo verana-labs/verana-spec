@@ -192,7 +192,7 @@ Example fragment of the resulting DID Document:
 The agent MUST maintain a permanent WebSocket connection to the VPR indexer's [`IDX-INDEXER-SUB-1` Subscribe Indexer Events](../verana-indexer/spec.md#idx-indexer-sub-1-subscribe-indexer-events) endpoint:
 
 ```text
-WS {VERANA_INDEXER}/indexer/v1/subscribe
+WS {VERANA_INDEXER}/v4/indexer/subscribe
 ```
 
 After receiving the indexer's `ready` message, the agent MUST send a `subscribe` control message scoped to its own DID:
@@ -210,7 +210,7 @@ The indexer then streams one block envelope per processed block, in strictly inc
 
 The indexer tracks all on-chain entities where the agent's DID is `Corporation.did`, `Ecosystem.did`, or `Participant.did` — transitively covering the embedded `CredentialSchema`, `GovernanceFrameworkVersion`, `ParticipantSession`, `VSOperatorAuthorization`, and `FeeGrant` entries that reference those parents — and emits an event whenever any of those entities is created or modified by a transaction.
 
-**Catch-up and resume:** The WebSocket stream does not deliver historical events on connect. The agent MUST persist the highest `block_height` it has fully processed and, on (re)connect, MUST first call [`GET /indexer/v1/events?dids=<agent DID>&after_block_height=<last_seen_block>`](../verana-indexer/spec.md#idx-indexer-qry-6-list-indexer-events) (or `?corporation_id=<Participant.corporation_id>` if the agent uses the corp-scoped subscription) to drain any missed events to exhaustion **before** processing new WebSocket messages. Events that have already been processed (same `tx_hash` + `message_index`) MUST be discarded as idempotent duplicates.
+**Catch-up and resume:** The WebSocket stream does not deliver historical events on connect. The agent MUST persist the highest `block_height` it has fully processed and, on (re)connect, MUST first call [`GET /v4/indexer/events?dids=<agent DID>&after_block_height=<last_seen_block>`](../verana-indexer/spec.md#idx-indexer-qry-6-list-indexer-events) (or `?corporation_id=<Participant.corporation_id>` if the agent uses the corp-scoped subscription) to drain any missed events to exhaustion **before** processing new WebSocket messages. Events that have already been processed (same `tx_hash` + `message_index`) MUST be discarded as idempotent duplicates.
 
 If the WebSocket connection is lost, the agent MUST reconnect with exponential backoff and re-apply the catch-up pattern above.
 
@@ -220,7 +220,7 @@ Each notification must be associated with a specific handler interface in the VS
 
 Other `event_type` values not listed below COULD be received and SHOULD be ignored.
 
-> Independently from the indexer event stream above, the agent MAY also subscribe to the [Verifiable Trust Resolver subscription](../verana-indexer/spec.md#idx-vt-sub-1-subscribe-changes) at `WS {VERANA_INDEXER}/vt/v1/subscribe` to receive aggregated trust-resolution change envelopes about its DID (e.g., when its `trusted` boolean flips). The two streams are complementary: `/indexer/v1/subscribe` is the source of truth for on-chain transactions; `/vt/v1/subscribe` is a derived, debounced view of the resolver state.
+> Independently from the indexer event stream above, the agent MAY also subscribe to the [Verifiable Trust Resolver subscription](../verana-indexer/spec.md#idx-vt-sub-1-subscribe-changes) at `WS {VERANA_INDEXER}/v4/verifiable-trust/subscribe` to receive aggregated trust-resolution change envelopes about its DID (e.g., when its `trusted` boolean flips). The two streams are complementary: `/v4/indexer/subscribe` is the source of truth for on-chain transactions; `/v4/verifiable-trust/subscribe` is a derived, debounced view of the resolver state.
 
 #### [VSA-VTI-NOTIF-CO] Corporation Notifications
 
@@ -286,9 +286,9 @@ When the VS Agent starts, it SHOULD execute the following steps in order:
 
 3. **Start DIDComm message processor**: Enable DIDComm for outgoing messages.
 
-4. **Catch up missed events**: Call [`GET {VERANA_INDEXER}/indexer/v1/events?dids=<agent DID>&after_block_height=<last_seen_block>`](../verana-indexer/spec.md#idx-indexer-qry-6-list-indexer-events) (or `?corporation_id=<Participant.corporation_id>` if the agent uses the corp-scoped subscription per [[VSA-VTI-NOTIF]](#vsa-vti-notif-notifications)), paginating to exhaustion, where `last_seen_block` is the highest block height the agent has fully processed in its persistent state (0 on first start). Process each `IndexerTransactionEvent` returned, then advance `last_seen_block` to the highest `block_height` observed.
+4. **Catch up missed events**: Call [`GET {VERANA_INDEXER}/v4/indexer/events?dids=<agent DID>&after_block_height=<last_seen_block>`](../verana-indexer/spec.md#idx-indexer-qry-6-list-indexer-events) (or `?corporation_id=<Participant.corporation_id>` if the agent uses the corp-scoped subscription per [[VSA-VTI-NOTIF]](#vsa-vti-notif-notifications)), paginating to exhaustion, where `last_seen_block` is the highest block height the agent has fully processed in its persistent state (0 on first start). Process each `IndexerTransactionEvent` returned, then advance `last_seen_block` to the highest `block_height` observed.
 
-5. **Connect to indexer WebSocket**: Establish a persistent WebSocket connection to [`WS {VERANA_INDEXER}/indexer/v1/subscribe`](../verana-indexer/spec.md#idx-indexer-sub-1-subscribe-indexer-events) for real-time awareness of on-chain changes (see [Notifications](#vsa-vti-notif-notifications)). After receiving the indexer's `ready` message, send `{ "action": "subscribe", "dids": ["<agent DID>"] }`. The indexer then streams one block envelope per processed block; process each envelope's `events[]` entries (each an `IndexerTransactionEvent`) in `(payload.tx_index, payload.message_index)` order. Any event with `block_height <= last_seen_block` MUST be discarded as a duplicate. These actions may trigger outgoing DIDComm messages.
+5. **Connect to indexer WebSocket**: Establish a persistent WebSocket connection to [`WS {VERANA_INDEXER}/v4/indexer/subscribe`](../verana-indexer/spec.md#idx-indexer-sub-1-subscribe-indexer-events) for real-time awareness of on-chain changes (see [Notifications](#vsa-vti-notif-notifications)). After receiving the indexer's `ready` message, send `{ "action": "subscribe", "dids": ["<agent DID>"] }`. The indexer then streams one block envelope per processed block; process each envelope's `events[]` entries (each an `IndexerTransactionEvent`) in `(payload.tx_index, payload.message_index)` order. Any event with `block_height <= last_seen_block` MUST be discarded as a duplicate. These actions may trigger outgoing DIDComm messages.
 
 6. **Start processing the queued incoming DIDComm messages**.
 
@@ -983,10 +983,10 @@ The following methods manage the **additional consumable** service entries decla
 
 | Module | Method Name | Relative REST API path | Type | Requirements | Authz |
 | --- | --- | --- | --- | --- | --- |
-| Service Endpoint Management | `listServiceEndpoints` | /se/v1/list | Query | [see](#vsa-adm-se-list-listserviceendpoints) | INTERNAL |
-| Service Endpoint Management | `deleteServiceEndpoint` | /se/v1/delete | Action | [see](#vsa-adm-se-delete-deleteserviceendpoint) | INTERNAL |
-| Service Endpoint Management | `addServiceEndpoint` | /se/v1/add | Action | [see](#vsa-adm-se-add-addserviceendpoint) | INTERNAL |
-| Service Endpoint Management | `updateServiceEndpoint` | /se/v1/update | Action | [see](#vsa-adm-se-update-updateserviceendpoint) | INTERNAL |
+| Service Endpoint Management | `listServiceEndpoints` | /v4/se/list | Query | [see](#vsa-adm-se-list-listserviceendpoints) | INTERNAL |
+| Service Endpoint Management | `deleteServiceEndpoint` | /v4/se/delete | Action | [see](#vsa-adm-se-delete-deleteserviceendpoint) | INTERNAL |
+| Service Endpoint Management | `addServiceEndpoint` | /v4/se/add | Action | [see](#vsa-adm-se-add-addserviceendpoint) | INTERNAL |
+| Service Endpoint Management | `updateServiceEndpoint` | /v4/se/update | Action | [see](#vsa-adm-se-update-updateserviceendpoint) | INTERNAL |
 
 These methods MUST NOT be used to manipulate:
 

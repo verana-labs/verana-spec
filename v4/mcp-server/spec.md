@@ -199,8 +199,8 @@ This section specifies the contract by which delegable Msg tools build, sign, br
 The MCP server MUST maintain three long-lived WebSocket connections at all times:
 
 - **CometBFT RPC WebSocket** — `wss://VERANA_RPC/websocket`. Used to subscribe, per transaction, to `tm.event='Tx' AND tx.hash='<HEX_HASH>'` filters and receive the corresponding `tx_result` event when the tx is included in a block.
-- **Indexer WebSocket** — `WS VERANA_INDEXER/indexer/v1/subscribe` per [`IDX-INDEXER-SUB-1`](../verana-indexer/spec.md#idx-indexer-sub-1-subscribe-indexer-events). After the server's `ready` message, the MCP server sends `{ "action": "subscribe", "corporationId": bound_corp.id }`, where `bound_corp.id` is the stable numeric `id` of the bound `Corporation` resolved at startup. The corporation-scoped subscription delivers events for the Corporation itself, every `Ecosystem` and `Participant` it owns (transitively including their embedded sub-entities), and every `Participant` whose `validator_participant_id` resolves to a Participant owned by the bound Corporation — without any client-side DID enumeration or churn handling. Multiple MCP-server instances bound to the same Corporation therefore observe the same stream. Used as the primary signal for indexer catch-up (read-after-write barrier).
-- **Graph block-progress WebSocket** — `WS VERANA_GRAPH/graph/v1/blocks/subscribe` per [[TG-BPS-1]](../verana-graph/spec.md#block-progress-subscription). After the server's `ready` message (per [[TG-BPS-2]](../verana-graph/spec.md#block-progress-subscription)) the MCP server initialises its graph height cursor from `ready.block` and advances it on every received `block` notification per [[TG-BPS-3]](../verana-graph/spec.md#block-progress-subscription). The connection is anonymous and forward-only; the MCP server sends no client-to-server payload after the WebSocket handshake. The graph height cursor is **informational only** — surfaced through [[VMS-TOOLS-WALLET]](#vms-tools-wallet-wallet-tools) and [[VMS-RES-CATALOG]](#vms-res-catalog-resource-catalog) so MCP clients can compare graph freshness to indexer freshness — and is **not** part of the read-after-write barrier of [[VMS-TX-BARRIER]](#vms-tx-barrier-indexer-read-after-write-barrier).
+- **Indexer WebSocket** — `WS VERANA_INDEXER/v4/indexer/subscribe` per [`IDX-INDEXER-SUB-1`](../verana-indexer/spec.md#idx-indexer-sub-1-subscribe-indexer-events). After the server's `ready` message, the MCP server sends `{ "action": "subscribe", "corporationId": bound_corp.id }`, where `bound_corp.id` is the stable numeric `id` of the bound `Corporation` resolved at startup. The corporation-scoped subscription delivers events for the Corporation itself, every `Ecosystem` and `Participant` it owns (transitively including their embedded sub-entities), and every `Participant` whose `validator_participant_id` resolves to a Participant owned by the bound Corporation — without any client-side DID enumeration or churn handling. Multiple MCP-server instances bound to the same Corporation therefore observe the same stream. Used as the primary signal for indexer catch-up (read-after-write barrier).
+- **Graph block-progress WebSocket** — `WS VERANA_GRAPH/v4/graph/blocks/subscribe` per [[TG-BPS-1]](../verana-graph/spec.md#block-progress-subscription). After the server's `ready` message (per [[TG-BPS-2]](../verana-graph/spec.md#block-progress-subscription)) the MCP server initialises its graph height cursor from `ready.block` and advances it on every received `block` notification per [[TG-BPS-3]](../verana-graph/spec.md#block-progress-subscription). The connection is anonymous and forward-only; the MCP server sends no client-to-server payload after the WebSocket handshake. The graph height cursor is **informational only** — surfaced through [[VMS-TOOLS-WALLET]](#vms-tools-wallet-wallet-tools) and [[VMS-RES-CATALOG]](#vms-res-catalog-resource-catalog) so MCP clients can compare graph freshness to indexer freshness — and is **not** part of the read-after-write barrier of [[VMS-TX-BARRIER]](#vms-tx-barrier-indexer-read-after-write-barrier).
 
 All three connections MUST be re-established on failure with exponential backoff (initial 1 s, max 30 s, jitter ±20 %). The indexer and graph WSs MUST treat the absence of either a `ready` or a `block` notification within `2 × blockIntervalMs` of the previously received notification as a presumed-broken connection — per [Heartbeat (indexer events)](../verana-indexer/spec.md#heartbeat-indexer-events) for the indexer and [[TG-BPS-7]](../verana-graph/spec.md#block-progress-subscription) for the graph; the CometBFT RPC WS relies on the chain implementation's transport-level keepalive and is reconnected on connection-level error. While the CometBFT WebSocket is unavailable, ledger Msg tools cannot confirm a broadcast and will eventually return `BCAST_TIMEOUT` per [[VMS-TX-BCAST]](#vms-tx-bcast-broadcast-and-chain-confirmation). While the indexer WebSocket is unavailable, the read-after-write barrier per [[VMS-TX-BARRIER]](#vms-tx-barrier-indexer-read-after-write-barrier) waits for the reconnect (whose `ready` message advances the height cursor); if the reconnect does not raise the cursor to the broadcast height within `VERANA_INDEXER_TIMEOUT_MS`, the tool returns `indexer_synced: false`. While the graph WebSocket is unavailable, the graph height cursor stales but no tool's success path is affected; `verana://own/status` reports the staleness via `graph_ws.connected = false`. There is no HTTP polling fallback for any of the three connections.
 
@@ -226,7 +226,7 @@ If a relevant grant exists, the MCP server MUST set the outer transaction's `Tx.
 
 If no relevant grant exists, the MCP server MUST leave `Tx.AuthInfo.Fee.granter` unset; the operator account pays the fees from its own balance, subject to `OperatorAuthorization.fee_spend_limit` if set.
 
-**Discovery and freshness.** The MCP server SHOULD maintain its view of the active `FeeGrant` for `(bound_corp.id, operator)` from the indexer event stream, applying [`[MOD-DE-MSG-1]`](https://verana-labs.github.io/verifiable-trust-vpr-spec/#mod-de-msg-1-grant-fee-allowance) Grant Fee Allowance and [`[MOD-DE-MSG-2]`](https://verana-labs.github.io/verifiable-trust-vpr-spec/#mod-de-msg-2-revoke-fee-allowance) Revoke Fee Allowance events delivered by [`IDX-INDEXER-SUB-1`](../verana-indexer/spec.md#idx-indexer-sub-1-subscribe-indexer-events) to refresh the cached value. At startup the MCP server MAY bootstrap the cache from a chain-side query or from the indexer's catch-up endpoint (`/indexer/v1/events?corporation_id=<bound_corp.id>` filtered to the two Delegation-module event types).
+**Discovery and freshness.** The MCP server SHOULD maintain its view of the active `FeeGrant` for `(bound_corp.id, operator)` from the indexer event stream, applying [`[MOD-DE-MSG-1]`](https://verana-labs.github.io/verifiable-trust-vpr-spec/#mod-de-msg-1-grant-fee-allowance) Grant Fee Allowance and [`[MOD-DE-MSG-2]`](https://verana-labs.github.io/verifiable-trust-vpr-spec/#mod-de-msg-2-revoke-fee-allowance) Revoke Fee Allowance events delivered by [`IDX-INDEXER-SUB-1`](../verana-indexer/spec.md#idx-indexer-sub-1-subscribe-indexer-events) to refresh the cached value. At startup the MCP server MAY bootstrap the cache from a chain-side query or from the indexer's catch-up endpoint (`/v4/indexer/events?corporation_id=<bound_corp.id>` filtered to the two Delegation-module event types).
 
 **Fallback on antehandler rejection.** If a broadcast with `granter` set fails at the antehandler with an error indicating the grant has expired, has exhausted its `remaining_spend`, or no longer covers the message type, the MCP server SHOULD retry the same transaction exactly once with `Tx.AuthInfo.Fee.granter` unset (so the operator pays from its own balance) before returning a structured error to the caller. The retry MUST NOT recompute `tx_hash` against a different signed-body shape that has already been broadcast: the granter field is part of the signed bytes, so the retry produces a distinct `tx_hash` and a distinct CometBFT subscription per [[VMS-TX-BCAST]](#vms-tx-bcast-broadcast-and-chain-confirmation).
 
@@ -451,110 +451,110 @@ Indexer tools issue HTTP GET requests against the configured `VERANA_INDEXER` en
 
 | Tool | Upstream Query | Description |
 |---|---|---|
-| `verana.idx.co.getCorporation` | [`IDX-CO-QRY-1`](../verana-indexer/spec.md#idx-co-qry-1-get-corporation) | `GET /co/v1/get/{id}` — fetch a Corporation by id. |
-| `verana.idx.co.listCorporations` | [`IDX-CO-QRY-2`](../verana-indexer/spec.md#idx-co-qry-2-list-corporations) | `GET /co/v1/list` — list and filter Corporations. |
-| `verana.idx.co.getCorporationParams` | [`IDX-CO-QRY-3`](../verana-indexer/spec.md#idx-co-qry-3-get-corporation-params) | `GET /co/v1/params` — fetch the Corporation module parameters. |
-| `verana.idx.co.getCorporationHistory` | [`IDX-CO-QRY-4`](../verana-indexer/spec.md#idx-co-qry-4-get-corporation-history) | `GET /co/v1/history/{id}` — activity timeline. |
+| `verana.idx.co.getCorporation` | [`IDX-CO-QRY-1`](../verana-indexer/spec.md#idx-co-qry-1-get-corporation) | `GET /v4/corporation/get/{id}` — fetch a Corporation by id. |
+| `verana.idx.co.listCorporations` | [`IDX-CO-QRY-2`](../verana-indexer/spec.md#idx-co-qry-2-list-corporations) | `GET /v4/corporation/list` — list and filter Corporations. |
+| `verana.idx.co.getCorporationParams` | [`IDX-CO-QRY-3`](../verana-indexer/spec.md#idx-co-qry-3-get-corporation-params) | `GET /v4/corporation/params` — fetch the Corporation module parameters. |
+| `verana.idx.co.getCorporationHistory` | [`IDX-CO-QRY-4`](../verana-indexer/spec.md#idx-co-qry-4-get-corporation-history) | `GET /v4/corporation/history/{id}` — activity timeline. |
 
 #### [VMS-TOOLS-IDX-ES] Ecosystem
 
 | Tool | Upstream Query | Description |
 |---|---|---|
-| `verana.idx.es.getEcosystem` | [`IDX-ES-QRY-1`](../verana-indexer/spec.md#idx-es-qry-1-get-ecosystem) | `GET /es/v1/get/{id}`. |
-| `verana.idx.es.listEcosystems` | [`IDX-ES-QRY-2`](../verana-indexer/spec.md#idx-es-qry-2-list-ecosystems) | `GET /es/v1/list`. |
-| `verana.idx.es.getEcosystemParams` | [`IDX-ES-QRY-3`](../verana-indexer/spec.md#idx-es-qry-3-get-ecosystem-params) | `GET /es/v1/params`. |
-| `verana.idx.es.getEcosystemHistory` | [`IDX-ES-QRY-4`](../verana-indexer/spec.md#idx-es-qry-4-get-ecosystem-history) | `GET /es/v1/history/{id}`. |
+| `verana.idx.es.getEcosystem` | [`IDX-ES-QRY-1`](../verana-indexer/spec.md#idx-es-qry-1-get-ecosystem) | `GET /v4/ecosystem/get/{id}`. |
+| `verana.idx.es.listEcosystems` | [`IDX-ES-QRY-2`](../verana-indexer/spec.md#idx-es-qry-2-list-ecosystems) | `GET /v4/ecosystem/list`. |
+| `verana.idx.es.getEcosystemParams` | [`IDX-ES-QRY-3`](../verana-indexer/spec.md#idx-es-qry-3-get-ecosystem-params) | `GET /v4/ecosystem/params`. |
+| `verana.idx.es.getEcosystemHistory` | [`IDX-ES-QRY-4`](../verana-indexer/spec.md#idx-es-qry-4-get-ecosystem-history) | `GET /v4/ecosystem/history/{id}`. |
 
 #### [VMS-TOOLS-IDX-GF] Governance Framework
 
 | Tool | Upstream Query | Description |
 |---|---|---|
-| `verana.idx.gf.getGovernanceFrameworkVersion` | [`IDX-GF-QRY-1`](../verana-indexer/spec.md#idx-gf-qry-1-get-governance-framework-version) | `GET /gf/v1/get/{id}`. |
-| `verana.idx.gf.listGovernanceFrameworkVersions` | [`IDX-GF-QRY-2`](../verana-indexer/spec.md#idx-gf-qry-2-list-governance-framework-versions) | `GET /gf/v1/list`. |
+| `verana.idx.gf.getGovernanceFrameworkVersion` | [`IDX-GF-QRY-1`](../verana-indexer/spec.md#idx-gf-qry-1-get-governance-framework-version) | `GET /v4/governance-framework/get/{id}`. |
+| `verana.idx.gf.listGovernanceFrameworkVersions` | [`IDX-GF-QRY-2`](../verana-indexer/spec.md#idx-gf-qry-2-list-governance-framework-versions) | `GET /v4/governance-framework/list`. |
 
 #### [VMS-TOOLS-IDX-CS] Credential Schema
 
 | Tool | Upstream Query | Description |
 |---|---|---|
-| `verana.idx.cs.getCredentialSchema` | [`IDX-CS-QRY-1`](../verana-indexer/spec.md#idx-cs-qry-1-get-credential-schema) | `GET /cs/v1/get/{id}`. |
-| `verana.idx.cs.listCredentialSchemas` | [`IDX-CS-QRY-2`](../verana-indexer/spec.md#idx-cs-qry-2-list-credential-schemas) | `GET /cs/v1/list`. |
-| `verana.idx.cs.getJsonSchema` | [`IDX-CS-QRY-3`](../verana-indexer/spec.md#idx-cs-qry-3-get-json-schema) | `GET /cs/v1/js/{id}` — fetch the underlying JSON Schema body. |
-| `verana.idx.cs.getCredentialSchemaParams` | [`IDX-CS-QRY-4`](../verana-indexer/spec.md#idx-cs-qry-4-get-credential-schema-params) | `GET /cs/v1/params`. |
-| `verana.idx.cs.getCredentialSchemaHistory` | [`IDX-CS-QRY-5`](../verana-indexer/spec.md#idx-cs-qry-5-get-credential-schema-history) | `GET /cs/v1/history/{id}`. |
+| `verana.idx.cs.getCredentialSchema` | [`IDX-CS-QRY-1`](../verana-indexer/spec.md#idx-cs-qry-1-get-credential-schema) | `GET /v4/credential-schema/get/{id}`. |
+| `verana.idx.cs.listCredentialSchemas` | [`IDX-CS-QRY-2`](../verana-indexer/spec.md#idx-cs-qry-2-list-credential-schemas) | `GET /v4/credential-schema/list`. |
+| `verana.idx.cs.getJsonSchema` | [`IDX-CS-QRY-3`](../verana-indexer/spec.md#idx-cs-qry-3-get-json-schema) | `GET /v4/credential-schema/js/{id}` — fetch the underlying JSON Schema body. |
+| `verana.idx.cs.getCredentialSchemaParams` | [`IDX-CS-QRY-4`](../verana-indexer/spec.md#idx-cs-qry-4-get-credential-schema-params) | `GET /v4/credential-schema/params`. |
+| `verana.idx.cs.getCredentialSchemaHistory` | [`IDX-CS-QRY-5`](../verana-indexer/spec.md#idx-cs-qry-5-get-credential-schema-history) | `GET /v4/credential-schema/history/{id}`. |
 
 #### [VMS-TOOLS-IDX-PP] Participant
 
 | Tool | Upstream Query | Description |
 |---|---|---|
-| `verana.idx.pp.getParticipant` | [`IDX-PP-QRY-1`](../verana-indexer/spec.md#idx-pp-qry-1-get-participant) | `GET /pp/v1/get/{id}`. |
-| `verana.idx.pp.listParticipants` | [`IDX-PP-QRY-2`](../verana-indexer/spec.md#idx-pp-qry-2-list-participants) | `GET /pp/v1/list`. |
-| `verana.idx.pp.getParticipantHistory` | [`IDX-PP-QRY-3`](../verana-indexer/spec.md#idx-pp-qry-3-get-participant-history) | `GET /pp/v1/history/{id}`. |
-| `verana.idx.pp.findBeneficiaries` | [`IDX-PP-QRY-4`](../verana-indexer/spec.md#idx-pp-qry-4-find-beneficiaries) | `GET /pp/v1/beneficiaries`. |
-| `verana.idx.pp.pendingFlat` | [`IDX-PP-QRY-5`](../verana-indexer/spec.md#idx-pp-qry-5-pending-flat) | `GET /pp/v1/pending/flat`. |
-| `verana.idx.pp.getParticipantSession` | [`IDX-PP-QRY-6`](../verana-indexer/spec.md#idx-pp-qry-6-get-participant-session) | `GET /pp/v1/participant-session/{id}`. |
-| `verana.idx.pp.getParticipantSessionHistory` | [`IDX-PP-QRY-7`](../verana-indexer/spec.md#idx-pp-qry-7-get-participant-session-history) | `GET /pp/v1/participant-session-history/{id}`. |
-| `verana.idx.pp.getParticipantParams` | [`IDX-PP-QRY-8`](../verana-indexer/spec.md#idx-pp-qry-8-get-participant-params) | `GET /pp/v1/params`. |
+| `verana.idx.pp.getParticipant` | [`IDX-PP-QRY-1`](../verana-indexer/spec.md#idx-pp-qry-1-get-participant) | `GET /v4/participant/get/{id}`. |
+| `verana.idx.pp.listParticipants` | [`IDX-PP-QRY-2`](../verana-indexer/spec.md#idx-pp-qry-2-list-participants) | `GET /v4/participant/list`. |
+| `verana.idx.pp.getParticipantHistory` | [`IDX-PP-QRY-3`](../verana-indexer/spec.md#idx-pp-qry-3-get-participant-history) | `GET /v4/participant/history/{id}`. |
+| `verana.idx.pp.findBeneficiaries` | [`IDX-PP-QRY-4`](../verana-indexer/spec.md#idx-pp-qry-4-find-beneficiaries) | `GET /v4/participant/beneficiaries`. |
+| `verana.idx.pp.pendingFlat` | [`IDX-PP-QRY-5`](../verana-indexer/spec.md#idx-pp-qry-5-pending-flat) | `GET /v4/participant/pending/flat`. |
+| `verana.idx.pp.getParticipantSession` | [`IDX-PP-QRY-6`](../verana-indexer/spec.md#idx-pp-qry-6-get-participant-session) | `GET /v4/participant/participant-session/{id}`. |
+| `verana.idx.pp.getParticipantSessionHistory` | [`IDX-PP-QRY-7`](../verana-indexer/spec.md#idx-pp-qry-7-get-participant-session-history) | `GET /v4/participant/participant-session-history/{id}`. |
+| `verana.idx.pp.getParticipantParams` | [`IDX-PP-QRY-8`](../verana-indexer/spec.md#idx-pp-qry-8-get-participant-params) | `GET /v4/participant/params`. |
 
 #### [VMS-TOOLS-IDX-TD] Trust Deposit
 
 | Tool | Upstream Query | Description |
 |---|---|---|
-| `verana.idx.td.getTrustDeposit` | [`IDX-TD-QRY-1`](../verana-indexer/spec.md#idx-td-qry-1-get-trust-deposit-by-corporation) | `GET /td/v1/get/{corporation_id}`. |
-| `verana.idx.td.getTrustDepositParams` | [`IDX-TD-QRY-2`](../verana-indexer/spec.md#idx-td-qry-2-get-trust-deposit-params) | `GET /td/v1/params`. |
-| `verana.idx.td.getTrustDepositHistory` | [`IDX-TD-QRY-3`](../verana-indexer/spec.md#idx-td-qry-3-get-trust-deposit-history) | `GET /td/v1/history/{corporation_id}`. |
+| `verana.idx.td.getTrustDeposit` | [`IDX-TD-QRY-1`](../verana-indexer/spec.md#idx-td-qry-1-get-trust-deposit-by-corporation) | `GET /v4/trust-deposit/get/{corporation_id}`. |
+| `verana.idx.td.getTrustDepositParams` | [`IDX-TD-QRY-2`](../verana-indexer/spec.md#idx-td-qry-2-get-trust-deposit-params) | `GET /v4/trust-deposit/params`. |
+| `verana.idx.td.getTrustDepositHistory` | [`IDX-TD-QRY-3`](../verana-indexer/spec.md#idx-td-qry-3-get-trust-deposit-history) | `GET /v4/trust-deposit/history/{corporation_id}`. |
 
 #### [VMS-TOOLS-IDX-DE] Delegation
 
 | Tool | Upstream Query | Description |
 |---|---|---|
-| `verana.idx.de.listOperatorAuthorizations` | [`IDX-DE-QRY-1`](../verana-indexer/spec.md#idx-de-qry-1-list-operator-authorizations) | `GET /de/v1/operator-authorizations`. |
-| `verana.idx.de.listVSOperatorAuthorizations` | [`IDX-DE-QRY-2`](../verana-indexer/spec.md#idx-de-qry-2-list-vs-operator-authorizations) | `GET /de/v1/vs-operator-authorizations`. Used internally by the MCP server to enumerate VS Agents under the bound Corporation. |
-| `verana.idx.de.getOperatorAuthorization` | [`IDX-DE-QRY-3`](../verana-indexer/spec.md#idx-de-qry-3-get-operator-authorization) | `GET /de/v1/operator-authorization/{id}`. |
-| `verana.idx.de.getVSOperatorAuthorization` | [`IDX-DE-QRY-4`](../verana-indexer/spec.md#idx-de-qry-4-get-vs-operator-authorization) | `GET /de/v1/vs-operator-authorization/{id}`. |
+| `verana.idx.de.listOperatorAuthorizations` | [`IDX-DE-QRY-1`](../verana-indexer/spec.md#idx-de-qry-1-list-operator-authorizations) | `GET /v4/delegation/operator-authorizations`. |
+| `verana.idx.de.listVSOperatorAuthorizations` | [`IDX-DE-QRY-2`](../verana-indexer/spec.md#idx-de-qry-2-list-vs-operator-authorizations) | `GET /v4/delegation/vs-operator-authorizations`. Used internally by the MCP server to enumerate VS Agents under the bound Corporation. |
+| `verana.idx.de.getOperatorAuthorization` | [`IDX-DE-QRY-3`](../verana-indexer/spec.md#idx-de-qry-3-get-operator-authorization) | `GET /v4/delegation/operator-authorization/{id}`. |
+| `verana.idx.de.getVSOperatorAuthorization` | [`IDX-DE-QRY-4`](../verana-indexer/spec.md#idx-de-qry-4-get-vs-operator-authorization) | `GET /v4/delegation/vs-operator-authorization/{id}`. |
 
 #### [VMS-TOOLS-IDX-DI] Digest
 
 | Tool | Upstream Query | Description |
 |---|---|---|
-| `verana.idx.di.getDigest` | [`IDX-DI-QRY-1`](../verana-indexer/spec.md#idx-di-qry-1-get-digest) | `GET /di/v1/get/{digest}`. |
+| `verana.idx.di.getDigest` | [`IDX-DI-QRY-1`](../verana-indexer/spec.md#idx-di-qry-1-get-digest) | `GET /v4/di/get/{digest}`. |
 
 #### [VMS-TOOLS-IDX-XR] Exchange Rate
 
 | Tool | Upstream Query | Description |
 |---|---|---|
-| `verana.idx.xr.getExchangeRate` | [`IDX-XR-QRY-1`](../verana-indexer/spec.md#idx-xr-qry-1-get-exchange-rate) | `GET /xr/v1/get`. |
-| `verana.idx.xr.listExchangeRates` | [`IDX-XR-QRY-2`](../verana-indexer/spec.md#idx-xr-qry-2-list-exchange-rates) | `GET /xr/v1/list`. |
-| `verana.idx.xr.getPrice` | [`IDX-XR-QRY-3`](../verana-indexer/spec.md#idx-xr-qry-3-get-price) | `GET /xr/v1/price` — derived oracle conversion. |
+| `verana.idx.xr.getExchangeRate` | [`IDX-XR-QRY-1`](../verana-indexer/spec.md#idx-xr-qry-1-get-exchange-rate) | `GET /v4/exchange-rate/get`. |
+| `verana.idx.xr.listExchangeRates` | [`IDX-XR-QRY-2`](../verana-indexer/spec.md#idx-xr-qry-2-list-exchange-rates) | `GET /v4/exchange-rate/list`. |
+| `verana.idx.xr.getPrice` | [`IDX-XR-QRY-3`](../verana-indexer/spec.md#idx-xr-qry-3-get-price) | `GET /v4/exchange-rate/price` — derived oracle conversion. |
 
 #### [VMS-TOOLS-IDX-METRICS] Metrics and Statistics
 
 | Tool | Upstream Query | Description |
 |---|---|---|
-| `verana.idx.metrics.getGlobalMetrics` | [`IDX-METRICS-QRY-1`](../verana-indexer/spec.md#idx-metrics-qry-1-get-global-metrics) | `GET /metrics/v1/all`. |
-| `verana.idx.stats.getStats` | [`IDX-STATS-QRY-1`](../verana-indexer/spec.md#idx-stats-qry-1-get-stats) | `GET /stats/v1/get`. |
-| `verana.idx.stats.getStatsRange` | [`IDX-STATS-QRY-2`](../verana-indexer/spec.md#idx-stats-qry-2-get-stats-range) | `GET /stats/v1/stats`. |
-| `verana.idx.stats.countParticipants` | [`IDX-STATS-QRY-3`](../verana-indexer/spec.md#idx-stats-qry-3-count-participants) | `GET /stats/v1/count-participants`. |
+| `verana.idx.metrics.getGlobalMetrics` | [`IDX-METRICS-QRY-1`](../verana-indexer/spec.md#idx-metrics-qry-1-get-global-metrics) | `GET /v4/metrics/all`. |
+| `verana.idx.stats.getStats` | [`IDX-STATS-QRY-1`](../verana-indexer/spec.md#idx-stats-qry-1-get-stats) | `GET /v4/stats/get`. |
+| `verana.idx.stats.getStatsRange` | [`IDX-STATS-QRY-2`](../verana-indexer/spec.md#idx-stats-qry-2-get-stats-range) | `GET /v4/stats/stats`. |
+| `verana.idx.stats.countParticipants` | [`IDX-STATS-QRY-3`](../verana-indexer/spec.md#idx-stats-qry-3-count-participants) | `GET /v4/stats/count-participants`. |
 
 #### [VMS-TOOLS-IDX-INDEXER] Indexer Self-Inspection
 
 | Tool | Upstream Query | Description |
 |---|---|---|
-| `verana.idx.indexer.getBlockHeight` | [`IDX-INDEXER-QRY-1`](../verana-indexer/spec.md#idx-indexer-qry-1-get-block-height) | `GET /indexer/v1/block-height`. |
-| `verana.idx.indexer.getStatus` | [`IDX-INDEXER-QRY-2`](../verana-indexer/spec.md#idx-indexer-qry-2-get-indexer-status) | `GET /indexer/v1/status`. |
-| `verana.idx.indexer.getVersion` | [`IDX-INDEXER-QRY-3`](../verana-indexer/spec.md#idx-indexer-qry-3-get-version) | `GET /indexer/v1/version`. |
-| `verana.idx.indexer.getSnapshot` | [`IDX-INDEXER-QRY-4`](../verana-indexer/spec.md#idx-indexer-qry-4-get-indexer-snapshot) | `GET /indexer/v1/snapshot`. |
-| `verana.idx.indexer.listChanges` | [`IDX-INDEXER-QRY-5`](../verana-indexer/spec.md#idx-indexer-qry-5-list-changes) | `GET /indexer/v1/changes`. |
-| `verana.idx.indexer.listEvents` | [`IDX-INDEXER-QRY-6`](../verana-indexer/spec.md#idx-indexer-qry-6-list-indexer-events) | `GET /indexer/v1/events`. |
+| `verana.idx.indexer.getBlockHeight` | [`IDX-INDEXER-QRY-1`](../verana-indexer/spec.md#idx-indexer-qry-1-get-block-height) | `GET /v4/indexer/block-height`. |
+| `verana.idx.indexer.getStatus` | [`IDX-INDEXER-QRY-2`](../verana-indexer/spec.md#idx-indexer-qry-2-get-indexer-status) | `GET /v4/indexer/status`. |
+| `verana.idx.indexer.getVersion` | [`IDX-INDEXER-QRY-3`](../verana-indexer/spec.md#idx-indexer-qry-3-get-version) | `GET /v4/indexer/version`. |
+| `verana.idx.indexer.getSnapshot` | [`IDX-INDEXER-QRY-4`](../verana-indexer/spec.md#idx-indexer-qry-4-get-indexer-snapshot) | `GET /v4/indexer/snapshot`. |
+| `verana.idx.indexer.listChanges` | [`IDX-INDEXER-QRY-5`](../verana-indexer/spec.md#idx-indexer-qry-5-list-changes) | `GET /v4/indexer/changes`. |
+| `verana.idx.indexer.listEvents` | [`IDX-INDEXER-QRY-6`](../verana-indexer/spec.md#idx-indexer-qry-6-list-indexer-events) | `GET /v4/indexer/events`. |
 
 #### [VMS-TOOLS-IDX-VT] Verifiable Trust Resolver and TRQP
 
 | Tool | Upstream Query | Description |
 |---|---|---|
-| `verana.idx.vt.resolve` | [`IDX-VT-QRY-1`](../verana-indexer/spec.md#idx-vt-qry-1-resolve) | `GET /vt/v1/resolve` — full trust resolution for a DID. |
-| `verana.idx.vt.listChanges` | [`IDX-VT-QRY-2`](../verana-indexer/spec.md#idx-vt-qry-2-list-changes) | `GET /vt/v1/changes`. |
-| `verana.idx.vt.listIndexedDids` | [`IDX-VT-QRY-3`](../verana-indexer/spec.md#idx-vt-qry-3-list-indexed-dids) | `GET /vt/v1/dids`. |
-| `verana.idx.trqp.authorize` | [`IDX-TRQP-QRY-1`](../verana-indexer/spec.md#idx-trqp-qry-1-trqp-authorize) | `GET /trqp/v2/authorization` — TRQP authorization decision. |
-| `verana.idx.trqp.recognize` | [`IDX-TRQP-QRY-2`](../verana-indexer/spec.md#idx-trqp-qry-2-trqp-recognize) | `GET /trqp/v2/recognition` — TRQP recognition decision. |
+| `verana.idx.vt.resolve` | [`IDX-VT-QRY-1`](../verana-indexer/spec.md#idx-vt-qry-1-resolve) | `GET /v4/verifiable-trust/resolve` — full trust resolution for a DID. |
+| `verana.idx.vt.listChanges` | [`IDX-VT-QRY-2`](../verana-indexer/spec.md#idx-vt-qry-2-list-changes) | `GET /v4/verifiable-trust/changes`. |
+| `verana.idx.vt.listIndexedDids` | [`IDX-VT-QRY-3`](../verana-indexer/spec.md#idx-vt-qry-3-list-indexed-dids) | `GET /v4/verifiable-trust/dids`. |
+| `verana.idx.trqp.authorize` | [`IDX-TRQP-QRY-1`](../verana-indexer/spec.md#idx-trqp-qry-1-trqp-authorize) | `GET /v4/trqp/v2/authorization` — TRQP authorization decision. |
+| `verana.idx.trqp.recognize` | [`IDX-TRQP-QRY-2`](../verana-indexer/spec.md#idx-trqp-qry-2-trqp-recognize) | `GET /v4/trqp/v2/recognition` — TRQP recognition decision. |
 
 > Indexer WebSocket subscriptions (`IDX-INDEXER-SUB-1`, `IDX-VT-SUB-1`) are NOT exposed as MCP tools. The MCP server consumes `IDX-INDEXER-SUB-1` internally for cache-refresh and the read-after-write barrier per [[VMS-TX-WS]](#vms-tx-ws-persistent-websocket-connections) and [[VMS-TX-BARRIER]](#vms-tx-barrier-indexer-read-after-write-barrier); the resolver-changes subscription `IDX-VT-SUB-1` is not subscribed to by the MCP server. Live event delivery to MCP clients is out of scope for this revision.
 
