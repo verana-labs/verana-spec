@@ -250,7 +250,7 @@
       "type": "object",
       "additionalProperties": false,
       "required": ["id", "type", "digestSri", "archived"],
-      "description": "A schema embedded in an Ecosystem's `credentialSchemas[]` array. Identified by its stable VPR id (`id`); the URI form (`vpr:verana:<network>/cs/v1/js/<id>`) is deterministic from `(network, id)` and is not repeated inline. The schema body is loaded out-of-band via the indexer's resource-load API by `id`.",
+      "description": "A schema embedded in an Ecosystem's `credentialSchemas[]` array. Identified by its stable VPR id (`id`); the URI form (`vpr:verana:<network>:cs:<id>`) is deterministic from `(network, id)` and is not repeated inline. The schema body is loaded out-of-band via the indexer's resource-load API by `id`.",
       "properties": {
         "id":                  { "type": "integer", "minimum": 0, "description": "Stable VPR ledger id of the schema. The sole identity used by the graph and by the indexer's schema-load API. Anchors `BASED_ON_SCHEMA`, `FOR_SCHEMA`, and `OWNS_SCHEMA` edges." },
         "type":                { "const": "JsonSchema" },

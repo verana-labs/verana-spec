@@ -40,59 +40,59 @@ The JSON Schemas published alongside this document expose this constraint as the
 
 ### Method List
 
-| Module | Method Name | Relative REST API path | Type | Requirements | Authz |
+| Module | Method Name | Relative API path | Type | Requirements | Authz |
 | --- | --- | --- | --- | --- | --- |
-| Corporation | Get Corporation | `/co/v1/get/{id}` | Query | [`IDX-CO-QRY-1`](#idx-co-qry-1-get-corporation) | PUBLIC |
-| Corporation | List Corporations | `/co/v1/list` | Query | [`IDX-CO-QRY-2`](#idx-co-qry-2-list-corporations) | PUBLIC |
-| Corporation | Get Corporation Params | `/co/v1/params` | Query | [`IDX-CO-QRY-3`](#idx-co-qry-3-get-corporation-params) | PUBLIC |
-| Corporation | Get Corporation History | `/co/v1/history/{id}` | Query | [`IDX-CO-QRY-4`](#idx-co-qry-4-get-corporation-history) | PUBLIC |
-| Ecosystem | Get Ecosystem | `/es/v1/get/{id}` | Query | [`IDX-ES-QRY-1`](#idx-es-qry-1-get-ecosystem) | PUBLIC |
-| Ecosystem | List Ecosystems | `/es/v1/list` | Query | [`IDX-ES-QRY-2`](#idx-es-qry-2-list-ecosystems) | PUBLIC |
-| Ecosystem | Get Ecosystem Params | `/es/v1/params` | Query | [`IDX-ES-QRY-3`](#idx-es-qry-3-get-ecosystem-params) | PUBLIC |
-| Ecosystem | Get Ecosystem History | `/es/v1/history/{id}` | Query | [`IDX-ES-QRY-4`](#idx-es-qry-4-get-ecosystem-history) | PUBLIC |
-| Governance Framework | Get Governance Framework Version | `/gf/v1/get/{id}` | Query | [`IDX-GF-QRY-1`](#idx-gf-qry-1-get-governance-framework-version) | PUBLIC |
-| Governance Framework | List Governance Framework Versions | `/gf/v1/list` | Query | [`IDX-GF-QRY-2`](#idx-gf-qry-2-list-governance-framework-versions) | PUBLIC |
-| Credential Schema | Get Credential Schema | `/cs/v1/get/{id}` | Query | [`IDX-CS-QRY-1`](#idx-cs-qry-1-get-credential-schema) | PUBLIC |
-| Credential Schema | List Credential Schemas | `/cs/v1/list` | Query | [`IDX-CS-QRY-2`](#idx-cs-qry-2-list-credential-schemas) | PUBLIC |
-| Credential Schema | Get JSON Schema | `/cs/v1/js/{id}` | Query | [`IDX-CS-QRY-3`](#idx-cs-qry-3-get-json-schema) | PUBLIC |
-| Credential Schema | Get Credential Schema Params | `/cs/v1/params` | Query | [`IDX-CS-QRY-4`](#idx-cs-qry-4-get-credential-schema-params) | PUBLIC |
-| Credential Schema | Get Credential Schema History | `/cs/v1/history/{id}` | Query | [`IDX-CS-QRY-5`](#idx-cs-qry-5-get-credential-schema-history) | PUBLIC |
-| Participant | Get Participant | `/pp/v1/get/{id}` | Query | [`IDX-PP-QRY-1`](#idx-pp-qry-1-get-participant) | PUBLIC |
-| Participant | List Participants | `/pp/v1/list` | Query | [`IDX-PP-QRY-2`](#idx-pp-qry-2-list-participants) | PUBLIC |
-| Participant | Get Participant History | `/pp/v1/history/{id}` | Query | [`IDX-PP-QRY-3`](#idx-pp-qry-3-get-participant-history) | PUBLIC |
-| Participant | Find Beneficiaries | `/pp/v1/beneficiaries` | Query | [`IDX-PP-QRY-4`](#idx-pp-qry-4-find-beneficiaries) | PUBLIC |
-| Participant | Pending Flat | `/pp/v1/pending/flat` | Query | [`IDX-PP-QRY-5`](#idx-pp-qry-5-pending-flat) | PUBLIC |
-| Participant | Get Participant Session | `/pp/v1/participant-session/{id}` | Query | [`IDX-PP-QRY-6`](#idx-pp-qry-6-get-participant-session) | PUBLIC |
-| Participant | Get Participant Session History | `/pp/v1/participant-session-history/{id}` | Query | [`IDX-PP-QRY-7`](#idx-pp-qry-7-get-participant-session-history) | PUBLIC |
-| Participant | Get Participant Params | `/pp/v1/params` | Query | [`IDX-PP-QRY-8`](#idx-pp-qry-8-get-participant-params) | PUBLIC |
-| Trust Deposit | Get Trust Deposit By Corporation | `/td/v1/get/{corporation_id}` | Query | [`IDX-TD-QRY-1`](#idx-td-qry-1-get-trust-deposit-by-corporation) | PUBLIC |
-| Trust Deposit | Get Trust Deposit Params | `/td/v1/params` | Query | [`IDX-TD-QRY-2`](#idx-td-qry-2-get-trust-deposit-params) | PUBLIC |
-| Trust Deposit | Get Trust Deposit History | `/td/v1/history/{corporation_id}` | Query | [`IDX-TD-QRY-3`](#idx-td-qry-3-get-trust-deposit-history) | PUBLIC |
-| Delegation | List Operator Authorizations | `/de/v1/operator-authorizations` | Query | [`IDX-DE-QRY-1`](#idx-de-qry-1-list-operator-authorizations) | PUBLIC |
-| Delegation | List VS Operator Authorizations | `/de/v1/vs-operator-authorizations` | Query | [`IDX-DE-QRY-2`](#idx-de-qry-2-list-vs-operator-authorizations) | PUBLIC |
-| Delegation | Get Operator Authorization | `/de/v1/operator-authorization/{id}` | Query | [`IDX-DE-QRY-3`](#idx-de-qry-3-get-operator-authorization) | PUBLIC |
-| Delegation | Get VS Operator Authorization | `/de/v1/vs-operator-authorization/{id}` | Query | [`IDX-DE-QRY-4`](#idx-de-qry-4-get-vs-operator-authorization) | PUBLIC |
-| Digest | Get Digest | `/di/v1/get/{digest}` | Query | [`IDX-DI-QRY-1`](#idx-di-qry-1-get-digest) | PUBLIC |
-| Exchange Rate | Get Exchange Rate | `/xr/v1/get` | Query | [`IDX-XR-QRY-1`](#idx-xr-qry-1-get-exchange-rate) | PUBLIC |
-| Exchange Rate | List Exchange Rates | `/xr/v1/list` | Query | [`IDX-XR-QRY-2`](#idx-xr-qry-2-list-exchange-rates) | PUBLIC |
-| Exchange Rate | Get Price | `/xr/v1/price` | Query | [`IDX-XR-QRY-3`](#idx-xr-qry-3-get-price) | PUBLIC |
-| Metrics | Get Global Metrics | `/metrics/v1/all` | Query | [`IDX-METRICS-QRY-1`](#idx-metrics-qry-1-get-global-metrics) | PUBLIC |
-| Statistics | Get Stats | `/stats/v1/get` | Query | [`IDX-STATS-QRY-1`](#idx-stats-qry-1-get-stats) | PUBLIC |
-| Statistics | Get Stats Range | `/stats/v1/stats` | Query | [`IDX-STATS-QRY-2`](#idx-stats-qry-2-get-stats-range) | PUBLIC |
-| Statistics | Count Participants | `/stats/v1/count-participants` | Query | [`IDX-STATS-QRY-3`](#idx-stats-qry-3-count-participants) | PUBLIC |
-| Indexer | Get Block Height | `/indexer/v1/block-height` | Query | [`IDX-INDEXER-QRY-1`](#idx-indexer-qry-1-get-block-height) | PUBLIC |
-| Indexer | Get Indexer Status | `/indexer/v1/status` | Query | [`IDX-INDEXER-QRY-2`](#idx-indexer-qry-2-get-indexer-status) | PUBLIC |
-| Indexer | Get Version | `/indexer/v1/version` | Query | [`IDX-INDEXER-QRY-3`](#idx-indexer-qry-3-get-version) | PUBLIC |
-| Indexer | Get Indexer Snapshot | `/indexer/v1/snapshot` | Query | [`IDX-INDEXER-QRY-4`](#idx-indexer-qry-4-get-indexer-snapshot) | PUBLIC |
-| Indexer | List Changes | `/indexer/v1/changes` | Query | [`IDX-INDEXER-QRY-5`](#idx-indexer-qry-5-list-changes) | PUBLIC |
-| Indexer | List Indexer Events | `/indexer/v1/events` | Query | [`IDX-INDEXER-QRY-6`](#idx-indexer-qry-6-list-indexer-events) | PUBLIC |
-| Indexer | Subscribe Indexer Events | `/indexer/v1/subscribe` | Subscription (WebSocket) | [`IDX-INDEXER-SUB-1`](#idx-indexer-sub-1-subscribe-indexer-events) | PUBLIC |
-| Verifiable Trust Resolver | Resolve | `/vt/v1/resolve` | Query | [`IDX-VT-QRY-1`](#idx-vt-qry-1-resolve), [[VS-REQ-2]], [[VS-REQ-3]], [[VS-REQ-4]] | PUBLIC |
-| Verifiable Trust Resolver | Subscribe Changes | `/vt/v1/subscribe` | Subscription (WebSocket) | [`IDX-VT-SUB-1`](#idx-vt-sub-1-subscribe-changes) | PUBLIC |
-| Verifiable Trust Resolver | List Changes | `/vt/v1/changes` | Query | [`IDX-VT-QRY-2`](#idx-vt-qry-2-list-changes) | PUBLIC |
-| Verifiable Trust Resolver | List Indexed DIDs | `/vt/v1/dids` | Query | [`IDX-VT-QRY-3`](#idx-vt-qry-3-list-indexed-dids) | PUBLIC |
-| TRQP | TRQP Authorize | `/trqp/v2/authorization` | Query | [`IDX-TRQP-QRY-1`](#idx-trqp-qry-1-trqp-authorize) | PUBLIC |
-| TRQP | TRQP Recognize | `/trqp/v2/recognition` | Query | [`IDX-TRQP-QRY-2`](#idx-trqp-qry-2-trqp-recognize) | PUBLIC |
+| Corporation | Get Corporation | `/v4/corporation/get/{id}` | Query | [`IDX-CO-QRY-1`](#idx-co-qry-1-get-corporation) | PUBLIC |
+| Corporation | List Corporations | `/v4/corporation/list` | Query | [`IDX-CO-QRY-2`](#idx-co-qry-2-list-corporations) | PUBLIC |
+| Corporation | Get Corporation Params | `/v4/corporation/params` | Query | [`IDX-CO-QRY-3`](#idx-co-qry-3-get-corporation-params) | PUBLIC |
+| Corporation | Get Corporation History | `/v4/corporation/history/{id}` | Query | [`IDX-CO-QRY-4`](#idx-co-qry-4-get-corporation-history) | PUBLIC |
+| Ecosystem | Get Ecosystem | `/v4/ecosystem/get/{id}` | Query | [`IDX-ES-QRY-1`](#idx-es-qry-1-get-ecosystem) | PUBLIC |
+| Ecosystem | List Ecosystems | `/v4/ecosystem/list` | Query | [`IDX-ES-QRY-2`](#idx-es-qry-2-list-ecosystems) | PUBLIC |
+| Ecosystem | Get Ecosystem Params | `/v4/ecosystem/params` | Query | [`IDX-ES-QRY-3`](#idx-es-qry-3-get-ecosystem-params) | PUBLIC |
+| Ecosystem | Get Ecosystem History | `/v4/ecosystem/history/{id}` | Query | [`IDX-ES-QRY-4`](#idx-es-qry-4-get-ecosystem-history) | PUBLIC |
+| Governance Framework | Get Governance Framework Version | `/v4/governance-framework/get/{id}` | Query | [`IDX-GF-QRY-1`](#idx-gf-qry-1-get-governance-framework-version) | PUBLIC |
+| Governance Framework | List Governance Framework Versions | `/v4/governance-framework/list` | Query | [`IDX-GF-QRY-2`](#idx-gf-qry-2-list-governance-framework-versions) | PUBLIC |
+| Credential Schema | Get Credential Schema | `/v4/credential-schema/get/{id}` | Query | [`IDX-CS-QRY-1`](#idx-cs-qry-1-get-credential-schema) | PUBLIC |
+| Credential Schema | List Credential Schemas | `/v4/credential-schema/list` | Query | [`IDX-CS-QRY-2`](#idx-cs-qry-2-list-credential-schemas) | PUBLIC |
+| Credential Schema | Get JSON Schema | `/v4/credential-schema/js/{id}` | Query | [`IDX-CS-QRY-3`](#idx-cs-qry-3-get-json-schema) | PUBLIC |
+| Credential Schema | Get Credential Schema Params | `/v4/credential-schema/params` | Query | [`IDX-CS-QRY-4`](#idx-cs-qry-4-get-credential-schema-params) | PUBLIC |
+| Credential Schema | Get Credential Schema History | `/v4/credential-schema/history/{id}` | Query | [`IDX-CS-QRY-5`](#idx-cs-qry-5-get-credential-schema-history) | PUBLIC |
+| Participant | Get Participant | `/v4/participant/get/{id}` | Query | [`IDX-PP-QRY-1`](#idx-pp-qry-1-get-participant) | PUBLIC |
+| Participant | List Participants | `/v4/participant/list` | Query | [`IDX-PP-QRY-2`](#idx-pp-qry-2-list-participants) | PUBLIC |
+| Participant | Get Participant History | `/v4/participant/history/{id}` | Query | [`IDX-PP-QRY-3`](#idx-pp-qry-3-get-participant-history) | PUBLIC |
+| Participant | Find Beneficiaries | `/v4/participant/beneficiaries` | Query | [`IDX-PP-QRY-4`](#idx-pp-qry-4-find-beneficiaries) | PUBLIC |
+| Participant | Pending Flat | `/v4/participant/pending/flat` | Query | [`IDX-PP-QRY-5`](#idx-pp-qry-5-pending-flat) | PUBLIC |
+| Participant | Get Participant Session | `/v4/participant/participant-session/{id}` | Query | [`IDX-PP-QRY-6`](#idx-pp-qry-6-get-participant-session) | PUBLIC |
+| Participant | Get Participant Session History | `/v4/participant/participant-session-history/{id}` | Query | [`IDX-PP-QRY-7`](#idx-pp-qry-7-get-participant-session-history) | PUBLIC |
+| Participant | Get Participant Params | `/v4/participant/params` | Query | [`IDX-PP-QRY-8`](#idx-pp-qry-8-get-participant-params) | PUBLIC |
+| Trust Deposit | Get Trust Deposit By Corporation | `/v4/trust-deposit/get/{corporation_id}` | Query | [`IDX-TD-QRY-1`](#idx-td-qry-1-get-trust-deposit-by-corporation) | PUBLIC |
+| Trust Deposit | Get Trust Deposit Params | `/v4/trust-deposit/params` | Query | [`IDX-TD-QRY-2`](#idx-td-qry-2-get-trust-deposit-params) | PUBLIC |
+| Trust Deposit | Get Trust Deposit History | `/v4/trust-deposit/history/{corporation_id}` | Query | [`IDX-TD-QRY-3`](#idx-td-qry-3-get-trust-deposit-history) | PUBLIC |
+| Delegation | List Operator Authorizations | `/v4/delegation/operator-authorizations` | Query | [`IDX-DE-QRY-1`](#idx-de-qry-1-list-operator-authorizations) | PUBLIC |
+| Delegation | List VS Operator Authorizations | `/v4/delegation/vs-operator-authorizations` | Query | [`IDX-DE-QRY-2`](#idx-de-qry-2-list-vs-operator-authorizations) | PUBLIC |
+| Delegation | Get Operator Authorization | `/v4/delegation/operator-authorization/{id}` | Query | [`IDX-DE-QRY-3`](#idx-de-qry-3-get-operator-authorization) | PUBLIC |
+| Delegation | Get VS Operator Authorization | `/v4/delegation/vs-operator-authorization/{id}` | Query | [`IDX-DE-QRY-4`](#idx-de-qry-4-get-vs-operator-authorization) | PUBLIC |
+| Digest | Get Digest | `/v4/di/get/{digest}` | Query | [`IDX-DI-QRY-1`](#idx-di-qry-1-get-digest) | PUBLIC |
+| Exchange Rate | Get Exchange Rate | `/v4/exchange-rate/get` | Query | [`IDX-XR-QRY-1`](#idx-xr-qry-1-get-exchange-rate) | PUBLIC |
+| Exchange Rate | List Exchange Rates | `/v4/exchange-rate/list` | Query | [`IDX-XR-QRY-2`](#idx-xr-qry-2-list-exchange-rates) | PUBLIC |
+| Exchange Rate | Get Price | `/v4/exchange-rate/price` | Query | [`IDX-XR-QRY-3`](#idx-xr-qry-3-get-price) | PUBLIC |
+| Metrics | Get Global Metrics | `/v4/metrics/all` | Query | [`IDX-METRICS-QRY-1`](#idx-metrics-qry-1-get-global-metrics) | PUBLIC |
+| Statistics | Get Stats | `/v4/stats/get` | Query | [`IDX-STATS-QRY-1`](#idx-stats-qry-1-get-stats) | PUBLIC |
+| Statistics | Get Stats Range | `/v4/stats/stats` | Query | [`IDX-STATS-QRY-2`](#idx-stats-qry-2-get-stats-range) | PUBLIC |
+| Statistics | Count Participants | `/v4/stats/count-participants` | Query | [`IDX-STATS-QRY-3`](#idx-stats-qry-3-count-participants) | PUBLIC |
+| Indexer | Get Block Height | `/v4/indexer/block-height` | Query | [`IDX-INDEXER-QRY-1`](#idx-indexer-qry-1-get-block-height) | PUBLIC |
+| Indexer | Get Indexer Status | `/v4/indexer/status` | Query | [`IDX-INDEXER-QRY-2`](#idx-indexer-qry-2-get-indexer-status) | PUBLIC |
+| Indexer | Get Version | `/v4/indexer/version` | Query | [`IDX-INDEXER-QRY-3`](#idx-indexer-qry-3-get-version) | PUBLIC |
+| Indexer | Get Indexer Snapshot | `/v4/indexer/snapshot` | Query | [`IDX-INDEXER-QRY-4`](#idx-indexer-qry-4-get-indexer-snapshot) | PUBLIC |
+| Indexer | List Changes | `/v4/indexer/changes` | Query | [`IDX-INDEXER-QRY-5`](#idx-indexer-qry-5-list-changes) | PUBLIC |
+| Indexer | List Indexer Events | `/v4/indexer/events` | Query | [`IDX-INDEXER-QRY-6`](#idx-indexer-qry-6-list-indexer-events) | PUBLIC |
+| Indexer | Subscribe Indexer Events | `/v4/indexer/subscribe` | Subscription (WebSocket) | [`IDX-INDEXER-SUB-1`](#idx-indexer-sub-1-subscribe-indexer-events) | PUBLIC |
+| Verifiable Trust Resolver | Resolve | `/v4/verifiable-trust/resolve` | Query | [`IDX-VT-QRY-1`](#idx-vt-qry-1-resolve), [[VS-REQ-2]], [[VS-REQ-3]], [[VS-REQ-4]] | PUBLIC |
+| Verifiable Trust Resolver | Subscribe Changes | `/v4/verifiable-trust/subscribe` | Subscription (WebSocket) | [`IDX-VT-SUB-1`](#idx-vt-sub-1-subscribe-changes) | PUBLIC |
+| Verifiable Trust Resolver | List Changes | `/v4/verifiable-trust/changes` | Query | [`IDX-VT-QRY-2`](#idx-vt-qry-2-list-changes) | PUBLIC |
+| Verifiable Trust Resolver | List Indexed DIDs | `/v4/verifiable-trust/dids` | Query | [`IDX-VT-QRY-3`](#idx-vt-qry-3-list-indexed-dids) | PUBLIC |
+| TRQP | TRQP Authorize | `/v4/trqp/v2/authorization` | Query | [`IDX-TRQP-QRY-1`](#idx-trqp-qry-1-trqp-authorize) | PUBLIC |
+| TRQP | TRQP Recognize | `/v4/trqp/v2/recognition` | Query | [`IDX-TRQP-QRY-2`](#idx-trqp-qry-2-trqp-recognize) | PUBLIC |
 
 All methods are specified in [Method Specification](#method-specification) below, grouped by module.
 
@@ -128,10 +128,10 @@ Every list and history method paginates **in `id` order**. The cursor is a half-
 
 Universal parameters:
 
-- `response_max_size` (integer; 1..1024, default 64) — caps the number of items returned.
-- `min_id` (integer, int64; inclusive) and `max_id` (integer, int64; exclusive) — half-open range cursor on the entity's `id`. For history methods the cursor key is `ActivityItem.id` (an indexer-assigned per-row monotonic int64, distinct from `entity_id`).
+- `limit` (integer; 1..1024, default 64) — caps the number of items returned.
+- `min_id` (uint64; inclusive) and `max_id` (uint64; exclusive) — half-open range cursor on the entity's `id`. For history methods the cursor key is `ActivityItem.id` (an indexer-assigned per-row monotonic uint64, distinct from `entity_id`).
 
-Stable cursor recipe: read the first page with `response_max_size=N` (the implicit default `sort=-id` applies, giving newest-first); on the next call, pass `max_id=<id of the last item on the previous page>` to continue. For ascending (oldest-first) order, set `sort=+id` and use `min_id=<id of the last item>` instead.
+Stable cursor recipe: read the first page with `limit=N` (the implicit default `sort=-id` applies, giving newest-first); on the next call, pass `max_id=<id of the last item on the previous page>` to continue. For ascending (oldest-first) order, set `sort=+id` and use `min_id=<id of the last item>` instead.
 
 ##### `sort` query parameter
 
@@ -440,13 +440,13 @@ For an entity that has never received a flip up to `:height`, the result set is 
 
 ##### IDX-CO-QRY-1 Get Corporation
 
-`GET /co/v1/get/{id}`
+`GET /v4/corporation/get/{id}`
 
 Retrieve a specific Corporation by its id. *Aligned with VPR [[MOD-CO-QRY-1]](https://verana-labs.github.io/verifiable-trust-vpr-spec/#mod-co-qry-1-get-corporation).*
 
 | Name | In | Type | Required | Description |
 | --- | --- | --- | --- | --- |
-| `id` | path | integer (int64) | yes | The Corporation ID |
+| `id` | path | uint64 | yes | The Corporation ID |
 | `gf_data` | query | enum | no | `none` \| `only_active` \| `all` — controls inclusion of CGF `versions[]`. Default: `only_active`. |
 | `preferred_language` | query | string | no | Preferred document language (ISO 639); affects ordering of returned CGF documents |
 | `trust_data` | query | enum | no | `null` \| `summary` \| `full` — see [Conventions](#trust_data-query-parameter) |
@@ -463,7 +463,7 @@ Retrieve a specific Corporation by its id. *Aligned with VPR [[MOD-CO-QRY-1]](ht
 
 ##### IDX-CO-QRY-2 List Corporations
 
-`GET /co/v1/list`
+`GET /v4/corporation/list`
 
 Retrieve a paginated, filtered list of Corporations. *Aligned with VPR [[MOD-CO-QRY-2]](https://verana-labs.github.io/verifiable-trust-vpr-spec/#mod-co-qry-2-list-corporations).*
 
@@ -476,13 +476,13 @@ Retrieve a paginated, filtered list of Corporations. *Aligned with VPR [[MOD-CO-
 | `modified_after` | query | datetime | no | Only return Corporations modified strictly after this ISO 8601 datetime |
 | `trust_data` | query | enum | no | `null` \| `summary` \| `full` — see [Conventions](#trust_data-query-parameter) |
 
-Supports pagination through attributes `max_id`, `min_id`, `response_max_size` and `sort`, as explained in [Pagination](#pagination).
+Supports pagination through attributes `max_id`, `min_id`, `limit` and `sort`, as explained in [Pagination](#pagination).
 
 **Response:** `{ corporations: Corporation[] }`. Each entry has the same shape as [`getCorporation`](#idx-co-qry-1-get-corporation).
 
 ##### IDX-CO-QRY-3 Get Corporation Params
 
-`GET /co/v1/params`
+`GET /v4/corporation/params`
 
 Retrieve the network-level Corporation module parameters. *Aligned with VPR [[MOD-CO-QRY-3]](https://verana-labs.github.io/verifiable-trust-vpr-spec/#mod-co-qry-3-list-module-parameters).*
 
@@ -492,15 +492,15 @@ Retrieve the network-level Corporation module parameters. *Aligned with VPR [[MO
 
 ##### IDX-CO-QRY-4 Get Corporation History
 
-`GET /co/v1/history/{id}`
+`GET /v4/corporation/history/{id}`
 
 Retrieve the activity timeline for a Corporation, ordered by `id` descending (newest-first). Each entry returns only the diff (changed fields), not the full state. *Indexer-specific (no VPR equivalent).*
 
 | Name | In | Type | Required | Description |
 | --- | --- | --- | --- | --- |
-| `id` | path | integer (int64) | yes | The Corporation ID |
+| `id` | path | uint64 | yes | The Corporation ID |
 
-Supports pagination through attributes `max_id`, `min_id`, `response_max_size` and `sort`, as explained in [Pagination](#pagination).
+Supports pagination through attributes `max_id`, `min_id`, `limit` and `sort`, as explained in [Pagination](#pagination).
 
 **Response:** `ActivityTimelineResponse` with `entity_type: "Corporation"`. Each `ActivityItem`'s `msg` is one of `CreateCorporation`, `UpdateCorporation`, `ArchiveCorporation`, `AddCGFDocument`, `IncreaseCGFActiveVersion`, etc.
 
@@ -508,13 +508,13 @@ Supports pagination through attributes `max_id`, `min_id`, `response_max_size` a
 
 ##### IDX-ES-QRY-1 Get Ecosystem
 
-`GET /es/v1/get/{id}`
+`GET /v4/ecosystem/get/{id}`
 
 Retrieve a specific Ecosystem by its ID. *Aligned with VPR [[MOD-ES-QRY-1]](https://verana-labs.github.io/verifiable-trust-vpr-spec/#mod-es-qry-1-get-ecosystem).*
 
 | Name | In | Type | Required | Description |
 | --- | --- | --- | --- | --- |
-| `id` | path | integer (int64) | yes | The Ecosystem ID |
+| `id` | path | uint64 | yes | The Ecosystem ID |
 | `gf_data` | query | enum | no | `none` \| `only_active` \| `all` — controls inclusion of EGF `versions[]`. Default: `only_active`. |
 | `preferred_language` | query | string | no | Preferred document language (ISO 639); affects ordering of returned governance-framework documents |
 | `trust_data` | query | enum | no | `null` \| `summary` \| `full` — see [Conventions](#trust_data-query-parameter) |
@@ -532,7 +532,7 @@ Retrieve a specific Ecosystem by its ID. *Aligned with VPR [[MOD-ES-QRY-1]](http
 
 ##### IDX-ES-QRY-2 List Ecosystems
 
-`GET /es/v1/list`
+`GET /v4/ecosystem/list`
 
 Retrieve a paginated, filtered list of Ecosystems. *Aligned with VPR [[MOD-ES-QRY-2]](https://verana-labs.github.io/verifiable-trust-vpr-spec/#mod-es-qry-2-list-ecosystems).*
 
@@ -541,20 +541,20 @@ Retrieve a paginated, filtered list of Ecosystems. *Aligned with VPR [[MOD-ES-QR
 | `gf_data` | query | enum | no | `none` \| `only_active` \| `all` — controls inclusion of EGF `versions[]`. Default: `only_active`. |
 | `preferred_language` | query | string | no | Preferred document language; affects governance-framework document ordering |
 | `archived` | query | boolean | no | `true` → only archived Ecosystems; `false` → only not-archived Ecosystems; null/omitted → both. Default: null. |
-| `corporation_id` | query | integer (int64) | no | Filter by controlling-Corporation id |
+| `corporation_id` | query | uint64 | no | Filter by controlling-Corporation id |
 | `participant` | query | string | no | Account address; returns Ecosystems where this account is the Ecosystem corporation or holds an active `Participant` entry on a schema in the Ecosystem |
 | `modified_after` | query | datetime | no | Only return Ecosystems modified strictly after this ISO 8601 datetime |
 | `trust_data` | query | enum | no | `null` \| `summary` \| `full` — see [Conventions](#trust_data-query-parameter) |
 | `min_active_schemas` / `max_active_schemas` | query | integer | no | Active-schema count bounds |
 | *(standard list filters)* | query | — | no | See [Standard list filters](#standard-list-filters) |
 
-Supports pagination through attributes `max_id`, `min_id`, `response_max_size` and `sort`, as explained in [Pagination](#pagination).
+Supports pagination through attributes `max_id`, `min_id`, `limit` and `sort`, as explained in [Pagination](#pagination).
 
 **Response:** `{ ecosystems: Ecosystem[] }`. Each entry has the same shape as [`getEcosystem`](#idx-es-qry-1-get-ecosystem).
 
 ##### IDX-ES-QRY-3 Get Ecosystem Params
 
-`GET /es/v1/params`
+`GET /v4/ecosystem/params`
 
 Retrieve the network-level Ecosystem module parameters. *Aligned with VPR [[MOD-ES-QRY-3]](https://verana-labs.github.io/verifiable-trust-vpr-spec/#mod-es-qry-3-list-module-parameters).*
 
@@ -564,17 +564,17 @@ Retrieve the network-level Ecosystem module parameters. *Aligned with VPR [[MOD-
 
 ##### IDX-ES-QRY-4 Get Ecosystem History
 
-`GET /es/v1/history/{id}`
+`GET /v4/ecosystem/history/{id}`
 
 Retrieve the activity timeline for an Ecosystem, ordered by `id` descending (newest-first). Each entry returns only the diff (changed fields), not the full state. *Indexer-specific (no VPR equivalent).*
 
 | Name | In | Type | Required | Description |
 | --- | --- | --- | --- | --- |
-| `id` | path | integer (int64) | yes | The Ecosystem ID |
+| `id` | path | uint64 | yes | The Ecosystem ID |
 
-Supports pagination through attributes `max_id`, `min_id`, `response_max_size` and `sort`, as explained in [Pagination](#pagination).
+Supports pagination through attributes `max_id`, `min_id`, `limit` and `sort`, as explained in [Pagination](#pagination).
 
-**Response:** `ActivityTimelineResponse` — `{ entity_type: "Ecosystem", entity_id, activity: ActivityItem[] }`. Each `ActivityItem` has `id` (int64; indexer-assigned monotonic per-row surrogate key, used as the pagination cursor — distinct from `entity_id`), `timestamp`, `block_height`, `entity_type`, `entity_id`, `msg` (e.g. `CreateEcosystem`, `AddGovernanceFrameworkDocument`), `account` (signer), and `changes` (object of changed fields). The same `ActivityTimelineResponse` shape is reused by every `*History` and the indexer-level `listChanges` method.
+**Response:** `ActivityTimelineResponse` — `{ entity_type: "Ecosystem", entity_id, activity: ActivityItem[] }`. Each `ActivityItem` has `id` (uint64; indexer-assigned monotonic per-row surrogate key, used as the pagination cursor — distinct from `entity_id`), `timestamp`, `block_height`, `entity_type`, `entity_id`, `msg` (e.g. `CreateEcosystem`, `AddGovernanceFrameworkDocument`), `account` (signer), and `changes` (object of changed fields). The same `ActivityTimelineResponse` shape is reused by every `*History` and the indexer-level `listChanges` method.
 
 #### Governance Framework methods
 
@@ -582,31 +582,31 @@ The Governance Framework module surfaces `GovernanceFrameworkVersion` (GFV) and 
 
 ##### IDX-GF-QRY-1 Get Governance Framework Version
 
-`GET /gf/v1/get/{id}`
+`GET /v4/governance-framework/get/{id}`
 
 Retrieve a specific `GovernanceFrameworkVersion` by its ID, with its nested `GovernanceFrameworkDocument` entries. *Aligned with VPR [[MOD-GF-QRY-1]](https://verana-labs.github.io/verifiable-trust-vpr-spec/#mod-gf-qry-1-get-governance-framework-version).*
 
 | Name | In | Type | Required | Description |
 | --- | --- | --- | --- | --- |
-| `id` | path | integer (int64) | yes | The GovernanceFrameworkVersion ID |
+| `id` | path | uint64 | yes | The GovernanceFrameworkVersion ID |
 | `preferred_language` | query | string | no | If set, return only one document per version, preferring `preferred_language`; otherwise return all documents in all languages |
 
 **Response:** `{ version: GovernanceFrameworkVersion }` — `id`, `ecosystem_id` (set iff this is an EGF; null otherwise), `corporation_id` (set iff this is a CGF; null otherwise), `created`, `version` (int), `active_since` (timestamp), and `documents[]: GovernanceFrameworkDocument[]` (each carrying `id`, `gfv_id`, `created`, `language`, `url`, `digest_sri`). Exactly one of `ecosystem_id` and `corporation_id` MUST be set, per VPR data model invariant.
 
 ##### IDX-GF-QRY-2 List Governance Framework Versions
 
-`GET /gf/v1/list`
+`GET /v4/governance-framework/list`
 
 Retrieve the list of `GovernanceFrameworkVersion` entries for one owning subject — either an Ecosystem or a Corporation. *Aligned with VPR [[MOD-GF-QRY-2]](https://verana-labs.github.io/verifiable-trust-vpr-spec/#mod-gf-qry-2-list-governance-framework-versions).*
 
 | Name | In | Type | Required | Description |
 | --- | --- | --- | --- | --- |
-| `ecosystem_id` | query | integer (int64) | conditional | Filter by owning Ecosystem. MUST be set iff `corporation_id` is null |
-| `corporation_id` | query | integer (int64) | conditional | Filter by owning Corporation id. MUST be set iff `ecosystem_id` is null |
+| `ecosystem_id` | query | uint64 | conditional | Filter by owning Ecosystem. MUST be set iff `corporation_id` is null |
+| `corporation_id` | query | uint64 | conditional | Filter by owning Corporation id. MUST be set iff `ecosystem_id` is null |
 | `active_only` | query | boolean | no | If true, return only the entry corresponding to the subject's `active_version` |
 | `preferred_language` | query | string | no | If set, return only one document per version, preferring `preferred_language` |
 
-Supports pagination through attributes `max_id`, `min_id`, `response_max_size` and `sort`, as explained in [Pagination](#pagination).
+Supports pagination through attributes `max_id`, `min_id`, `limit` and `sort`, as explained in [Pagination](#pagination).
 
 **Response:** `{ versions: GovernanceFrameworkVersion[] }`. Each entry has the same shape as [`getGovernanceFrameworkVersion`](#idx-gf-qry-1-get-governance-framework-version). Exactly one of `ecosystem_id` and `corporation_id` MUST be provided in the query; otherwise HTTP 400. Within a single owning subject, ascending `id` equals ascending `version`, so clients that want chronological (oldest-first) ordering can request it with `sort=+id`.
 
@@ -614,13 +614,13 @@ Supports pagination through attributes `max_id`, `min_id`, `response_max_size` a
 
 ##### IDX-CS-QRY-1 Get Credential Schema
 
-`GET /cs/v1/get/{id}`
+`GET /v4/credential-schema/get/{id}`
 
 Retrieve a specific Credential Schema by its ID. *Aligned with VPR [[MOD-CS-QRY-2]](https://verana-labs.github.io/verifiable-trust-vpr-spec/#mod-cs-qry-2-get-credential-schema).*
 
 | Name | In | Type | Required | Description |
 | --- | --- | --- | --- | --- |
-| `id` | path | integer (int64) | yes | The Credential Schema ID |
+| `id` | path | uint64 | yes | The Credential Schema ID |
 
 **Response:** `{ schema: CredentialSchema }`. The `CredentialSchema` object carries:
 
@@ -632,39 +632,40 @@ Retrieve a specific Credential Schema by its ID. *Aligned with VPR [[MOD-CS-QRY-
 
 ##### IDX-CS-QRY-2 List Credential Schemas
 
-`GET /cs/v1/list`
+`GET /v4/credential-schema/list`
 
 Retrieve a paginated, filtered list of Credential Schemas. *Aligned with VPR [[MOD-CS-QRY-1]](https://verana-labs.github.io/verifiable-trust-vpr-spec/#mod-cs-qry-1-list-credential-schemas).*
 
 | Name | In | Type | Required | Description |
 | --- | --- | --- | --- | --- |
-| `ecosystem_id` | query | integer (int64) | no | Filter by owning Ecosystem ID |
+| `ecosystem_id` | query | uint64 | no | Filter by owning Ecosystem ID |
 | `archived` | query | boolean | no | `true` → only archived schemas; `false` → only not-archived schemas; null/omitted → both. Default: null. |
-| `issuer_onboarding_mode` | query | string | no | Filter by issuer onboarding mode (`OPEN`, `ECOSYSTEM_ONBOARDING_PROCESS`, `GRANTOR_ONBOARDING_PROCESS`) |
-| `verifier_onboarding_mode` | query | string | no | Filter by verifier onboarding mode (`OPEN`, `ECOSYSTEM_ONBOARDING_PROCESS`, `GRANTOR_ONBOARDING_PROCESS`) |
+| `issuer_onboarding_mode` | query | enum | no | Filter by issuer onboarding mode: `OPEN` \| `GRANTOR_ONBOARDING_PROCESS` \| `ECOSYSTEM_ONBOARDING_PROCESS` |
+| `verifier_onboarding_mode` | query | enum | no | Filter by verifier onboarding mode: `OPEN` \| `GRANTOR_ONBOARDING_PROCESS` \| `ECOSYSTEM_ONBOARDING_PROCESS` |
+| `holder_onboarding_mode` | query | enum | no | Filter by holder onboarding mode: `ISSUER_ONBOARDING_PROCESS` \| `PERMISSIONLESS` |
 | `participant` | query | string | no | Account address; returns schemas where the account is the Ecosystem corporation or holds an active `Participant` entry |
 | `modified_after` | query | datetime | no | Only return schemas modified strictly after this datetime |
 | *(standard list filters)* | query | — | no | See [Standard list filters](#standard-list-filters) |
 
-Supports pagination through attributes `max_id`, `min_id`, `response_max_size` and `sort`, as explained in [Pagination](#pagination).
+Supports pagination through attributes `max_id`, `min_id`, `limit` and `sort`, as explained in [Pagination](#pagination).
 
 **Response:** `{ schemas: CredentialSchema[] }`. Each entry has the same shape as [`getCredentialSchema`](#idx-cs-qry-1-get-credential-schema).
 
 ##### IDX-CS-QRY-3 Get JSON Schema
 
-`GET /cs/v1/js/{id}`
+`GET /v4/credential-schema/js/{id}`
 
-Retrieve the canonical JSON Schema document for a specific Credential Schema, with `$id` rewritten to the indexer's canonical VPR URI form (e.g. `vpr:verana:vna-testnet-1/cs/v1/js/16`). *Aligned with VPR [[MOD-CS-QRY-3]](https://verana-labs.github.io/verifiable-trust-vpr-spec/#mod-cs-qry-3-render-json-schema).*
+Retrieve the canonical JSON Schema document for a specific Credential Schema, with `$id` rewritten to the indexer's canonical VPR URI form (e.g. `vpr:verana:vna-testnet-1:cs:16`). *Aligned with VPR [[MOD-CS-QRY-3]](https://verana-labs.github.io/verifiable-trust-vpr-spec/#mod-cs-qry-3-render-json-schema).*
 
 | Name | In | Type | Required | Description |
 | --- | --- | --- | --- | --- |
-| `id` | path | integer (int64) | yes | The Credential Schema ID |
+| `id` | path | uint64 | yes | The Credential Schema ID |
 
-**Response:** The raw JSON Schema object as stored on-chain, with only the `$id` field overridden by the indexer. The body is `Content-Type: application/json`; clients SHOULD use this endpoint as the canonical schema-resolution target when dereferencing `vpr:verana:.../cs/v1/js/<n>` URIs.
+**Response:** The raw JSON Schema object as stored on-chain, with only the `$id` field overridden by the indexer. The body is `Content-Type: application/json`; clients SHOULD use this endpoint as the canonical schema-resolution target when dereferencing `vpr:verana:...:cs:<n>` URIs.
 
 ##### IDX-CS-QRY-4 Get Credential Schema Params
 
-`GET /cs/v1/params`
+`GET /v4/credential-schema/params`
 
 Retrieve the network-level Credential Schema module parameters. *Aligned with VPR [[MOD-CS-QRY-4]](https://verana-labs.github.io/verifiable-trust-vpr-spec/#mod-cs-qry-4-list-module-parameters).*
 
@@ -674,15 +675,15 @@ Retrieve the network-level Credential Schema module parameters. *Aligned with VP
 
 ##### IDX-CS-QRY-5 Get Credential Schema History
 
-`GET /cs/v1/history/{id}`
+`GET /v4/credential-schema/history/{id}`
 
 Retrieve the activity timeline for a Credential Schema, ordered by `id` descending (newest-first). Same shape as [`getEcosystemHistory`](#idx-es-qry-4-get-ecosystem-history) with `entity_type: "CredentialSchema"`. *Indexer-specific (no VPR equivalent).*
 
 | Name | In | Type | Required | Description |
 | --- | --- | --- | --- | --- |
-| `id` | path | integer (int64) | yes | The Credential Schema ID |
+| `id` | path | uint64 | yes | The Credential Schema ID |
 
-Supports pagination through attributes `max_id`, `min_id`, `response_max_size` and `sort`, as explained in [Pagination](#pagination).
+Supports pagination through attributes `max_id`, `min_id`, `limit` and `sort`, as explained in [Pagination](#pagination).
 
 **Response:** `ActivityTimelineResponse` with `entity_type: "CredentialSchema"`.
 
@@ -690,13 +691,13 @@ Supports pagination through attributes `max_id`, `min_id`, `response_max_size` a
 
 ##### IDX-PP-QRY-1 Get Participant
 
-`GET /pp/v1/get/{id}`
+`GET /v4/participant/get/{id}`
 
 Retrieve a specific Participant by its ID. A Participant is a single VPR participant entry — a binding of a Corporation/DID into a Credential Schema with a specific role and lifecycle. *Aligned with VPR [[MOD-PP-QRY-2]](https://verana-labs.github.io/verifiable-trust-vpr-spec/#mod-pp-qry-2-get-participant).*
 
 | Name | In | Type | Required | Description |
 | --- | --- | --- | --- | --- |
-| `id` | path | integer (int64) | yes | The Participant ID |
+| `id` | path | uint64 | yes | The Participant ID |
 | `trust_data` | query | enum | no | `null` \| `summary` \| `full` |
 
 **Response:** `{ participant: Participant }`. The `Participant` object carries:
@@ -711,62 +712,62 @@ Retrieve a specific Participant by its ID. A Participant is a single VPR partici
 
 ##### IDX-PP-QRY-2 List Participants
 
-`GET /pp/v1/list`
+`GET /v4/participant/list`
 
 Retrieve a paginated, filtered list of Participants. *Aligned with VPR [[MOD-PP-QRY-1]](https://verana-labs.github.io/verifiable-trust-vpr-spec/#mod-pp-qry-1-list-participants).*
 
 | Name | In | Type | Required | Description |
 | --- | --- | --- | --- | --- |
-| `corporation_id` | query | integer (int64) | no | Filter by participant-owner Corporation id |
+| `corporation_id` | query | uint64 | no | Filter by participant-owner Corporation id |
 | `did` | query | string | no | Filter by DID |
-| `participant_id` | query | integer | no | Filter by exact Participant ID |
+| `participant_id` | query | uint64 | no | Filter by exact Participant ID |
 | `role` | query | enum | no | `ISSUER` \| `VERIFIER` \| `ISSUER_GRANTOR` \| `VERIFIER_GRANTOR` \| `ECOSYSTEM` \| `HOLDER` |
 | `participant_state` | query | enum | no | Indexer-derived lifecycle state: `REPAID` \| `SLASHED` \| `REVOKED` \| `EXPIRED` \| `ACTIVE` \| `FUTURE` \| `INACTIVE` |
 | `op_state` | query | enum | no | `PENDING` \| `VALIDATED` \| `TERMINATED` |
 | `only_valid` | query | boolean | no | Filter only valid (non-slashed, non-revoked, non-expired) Participants |
 | `only_slashed` | query | boolean | no | Filter only slashed Participants |
 | `only_repaid` | query | boolean | no | Filter only repaid Participants |
-| `schema_id` | query | integer | no | Filter by Credential Schema ID |
-| `validator_participant_id` | query | integer | no | Filter by validator Participant ID |
+| `schema_id` | query | uint64 | no | Filter by Credential Schema ID |
+| `validator_participant_id` | query | uint64 | no | Filter by validator Participant ID |
 | `when` | query | datetime | no | Effective-date filter; returns Participants whose effective range includes this datetime |
 | `modified_after` | query | datetime | no | Only return Participants modified strictly after this datetime |
 | `trust_data` | query | enum | no | `null` \| `summary` \| `full` |
 | *(standard list filters)* | query | — | no | See [Standard list filters](#standard-list-filters) |
 
-Supports pagination through attributes `max_id`, `min_id`, `response_max_size` and `sort`, as explained in [Pagination](#pagination).
+Supports pagination through attributes `max_id`, `min_id`, `limit` and `sort`, as explained in [Pagination](#pagination).
 
 **Response:** `{ participants: Participant[] }`. Each entry has the same shape as [`getParticipant`](#idx-pp-qry-1-get-participant).
 
 ##### IDX-PP-QRY-3 Get Participant History
 
-`GET /pp/v1/history/{id}`
+`GET /v4/participant/history/{id}`
 
 Retrieve the activity timeline for a Participant, ordered by `id` descending (newest-first). *Indexer-specific (no VPR equivalent).*
 
 | Name | In | Type | Required | Description |
 | --- | --- | --- | --- | --- |
-| `id` | path | integer (int64) | yes | The Participant ID |
+| `id` | path | uint64 | yes | The Participant ID |
 
-Supports pagination through attributes `max_id`, `min_id`, `response_max_size` and `sort`, as explained in [Pagination](#pagination).
+Supports pagination through attributes `max_id`, `min_id`, `limit` and `sort`, as explained in [Pagination](#pagination).
 
 **Response:** `ActivityTimelineResponse` with `entity_type: "Participant"`.
 
 ##### IDX-PP-QRY-4 Find Beneficiaries
 
-`GET /pp/v1/beneficiaries`
+`GET /v4/participant/beneficiaries`
 
 Compute the chain of beneficiary Participants for a credential transaction. Given an issuer Participant and a verifier Participant, returns every ancestor Participant in either tree (issuer grantor, verifier grantor, ecosystem, network) that participates in the fee-distribution flow. *Aligned with VPR [[MOD-PP-QRY-4]](https://verana-labs.github.io/verifiable-trust-vpr-spec/#mod-pp-qry-4-find-beneficiaries).*
 
 | Name | In | Type | Required | Description |
 | --- | --- | --- | --- | --- |
-| `issuer_participant_id` | query | string | yes | Issuer Participant ID |
-| `verifier_participant_id` | query | string | yes | Verifier Participant ID |
+| `issuer_participant_id` | query | uint64 | yes | Issuer Participant ID |
+| `verifier_participant_id` | query | uint64 | yes | Verifier Participant ID |
 
 **Response:** `{ participants: Participant[] }` — the ordered set of beneficiary Participants.
 
 ##### IDX-PP-QRY-5 Pending Flat
 
-`GET /pp/v1/pending/flat`
+`GET /v4/participant/pending/flat`
 
 Return the open task list for a given account — every Participant anywhere on the network where the account is the validator and the Participant is in a state that requires the validator's action (e.g. `op_state: PENDING`). Results are grouped by Ecosystem then by Credential Schema. *Indexer-specific (no VPR equivalent).*
 
@@ -774,7 +775,7 @@ Return the open task list for a given account — every Participant anywhere on 
 | --- | --- | --- | --- | --- |
 | `account` | query | string | yes | Account address whose pending tasks are returned |
 | `trust_data` | query | enum | no | `null` \| `summary` \| `full` |
-| `response_max_size` | query | integer | no | 1..1024, default 64 (caps the number of Ecosystems returned) |
+| `limit` | query | integer | no | 1..1024, default 64 (caps the number of Ecosystems returned) |
 
 **Response:** `{ ecosystems: EcosystemPending[] }`. Each `EcosystemPending` carries:
 
@@ -784,7 +785,7 @@ Return the open task list for a given account — every Participant anywhere on 
 
 ##### IDX-PP-QRY-6 Get Participant Session
 
-`GET /pp/v1/participant-session/{id}`
+`GET /v4/participant/participant-session/{id}`
 
 Retrieve a specific ParticipantSession by its UUID. A ParticipantSession binds an end-user agent into one (or more) Issuer/Verifier participant contexts for the lifetime of a credential-exchange flow. *Aligned with VPR [[MOD-PP-QRY-5]](https://verana-labs.github.io/verifiable-trust-vpr-spec/#mod-pp-qry-5-get-participantsession).*
 
@@ -799,7 +800,7 @@ Retrieve a specific ParticipantSession by its UUID. A ParticipantSession binds a
 
 ##### IDX-PP-QRY-7 Get Participant Session History
 
-`GET /pp/v1/participant-session-history/{id}`
+`GET /v4/participant/participant-session-history/{id}`
 
 Retrieve the activity timeline for a ParticipantSession, ordered by `id` descending (newest-first). *Indexer-specific (no VPR equivalent).*
 
@@ -807,13 +808,13 @@ Retrieve the activity timeline for a ParticipantSession, ordered by `id` descend
 | --- | --- | --- | --- | --- |
 | `id` | path | uuid | yes | ParticipantSession UUID |
 
-Supports pagination through attributes `max_id`, `min_id`, `response_max_size` and `sort`, as explained in [Pagination](#pagination).
+Supports pagination through attributes `max_id`, `min_id`, `limit` and `sort`, as explained in [Pagination](#pagination).
 
 **Response:** `ActivityTimelineResponse` with `entity_type: "ParticipantSession"`.
 
 ##### IDX-PP-QRY-8 Get Participant Params
 
-`GET /pp/v1/params`
+`GET /v4/participant/params`
 
 Retrieve the network-level Participant module parameters. *Aligned with VPR [[MOD-PP-QRY-6]](https://verana-labs.github.io/verifiable-trust-vpr-spec/#mod-pp-qry-6-list-participant-module-parameters).*
 
@@ -825,13 +826,13 @@ Retrieve the network-level Participant module parameters. *Aligned with VPR [[MO
 
 ##### IDX-TD-QRY-1 Get Trust Deposit By Corporation
 
-`GET /td/v1/get/{corporation_id}`
+`GET /v4/trust-deposit/get/{corporation_id}`
 
 Retrieve the aggregated trust-deposit position of a single Corporation across every entity it owns (Ecosystems, Credential Schemas, Participants). Per VPR, every Corporation has at most one TrustDeposit row (1:1 by `corporation_id`). *Aligned with VPR [[MOD-TD-QRY-1]](https://verana-labs.github.io/verifiable-trust-vpr-spec/#mod-td-qry-1-get-trust-deposit).*
 
 | Name | In | Type | Required | Description |
 | --- | --- | --- | --- | --- |
-| `corporation_id` | path | integer (int64) | yes | The Corporation ID |
+| `corporation_id` | path | uint64 | yes | The Corporation ID |
 
 **Response:** `{ trust_deposit: TrustDeposit }`. The `TrustDeposit` object carries:
 
@@ -840,7 +841,7 @@ Retrieve the aggregated trust-deposit position of a single Corporation across ev
 
 ##### IDX-TD-QRY-2 Get Trust Deposit Params
 
-`GET /td/v1/params`
+`GET /v4/trust-deposit/params`
 
 Retrieve the network-level Trust Deposit module parameters. *Aligned with VPR [[MOD-TD-QRY-2]](https://verana-labs.github.io/verifiable-trust-vpr-spec/#mod-td-qry-2-list-module-parameters).*
 
@@ -850,15 +851,15 @@ Retrieve the network-level Trust Deposit module parameters. *Aligned with VPR [[
 
 ##### IDX-TD-QRY-3 Get Trust Deposit History
 
-`GET /td/v1/history/{corporation_id}`
+`GET /v4/trust-deposit/history/{corporation_id}`
 
 Retrieve the activity timeline for a Trust Deposit row, ordered by `id` descending (newest-first). *Indexer-specific (no VPR equivalent).*
 
 | Name | In | Type | Required | Description |
 | --- | --- | --- | --- | --- |
-| `corporation_id` | path | integer (int64) | yes | The Corporation ID (the TrustDeposit row is identified 1:1 by `corporation_id`) |
+| `corporation_id` | path | uint64 | yes | The Corporation ID (the TrustDeposit row is identified 1:1 by `corporation_id`) |
 
-Supports pagination through attributes `max_id`, `min_id`, `response_max_size` and `sort`, as explained in [Pagination](#pagination).
+Supports pagination through attributes `max_id`, `min_id`, `limit` and `sort`, as explained in [Pagination](#pagination).
 
 **Response:** `ActivityTimelineResponse` with `entity_type: "TrustDeposit"`. Each `ActivityItem`'s `msg` is one of `CREATE_TRUST_DEPOSIT`, `ADJUST_TRUST_DEPOSIT`, `SLASH_TRUST_DEPOSIT`, `SLASH_PARTICIPANT_TRUST_DEPOSIT`, `RECLAIM_YIELD`, `RECLAIM_DEPOSIT`, `REPAY_SLASHED`.
 
@@ -868,61 +869,61 @@ The Delegation module surfaces the two on-chain authorization entities that repl
 
 ##### IDX-DE-QRY-1 List Operator Authorizations
 
-`GET /de/v1/operator-authorizations`
+`GET /v4/delegation/operator-authorizations`
 
 Retrieve a paginated, filtered list of `OperatorAuthorization` entries. Each entry represents a corporation's authorization granted to a specific operator account for one or more module message types. *Aligned with VPR [[MOD-DE-QRY-1]](https://verana-labs.github.io/verifiable-trust-vpr-spec/#mod-de-qry-1-list-operator-authorizations).*
 
 | Name | In | Type | Required | Description |
 | --- | --- | --- | --- | --- |
-| `corporation_id` | query | integer (int64) | no | Filter by the granting Corporation id |
+| `corporation_id` | query | uint64 | no | Filter by the granting Corporation id |
 | `operator` | query | string | no | Filter by the grantee operator account |
 | `msg_type` | query | string | no | Filter to authorizations whose `msg_types[]` includes this message type |
 | `only_active` | query | boolean | no | If true, only return non-expired authorizations (`expiration > now` or null) |
 | `modified_after` | query | datetime | no | Only return authorizations modified strictly after this datetime |
 
-Supports pagination through attributes `max_id`, `min_id`, `response_max_size` and `sort`, as explained in [Pagination](#pagination).
+Supports pagination through attributes `max_id`, `min_id`, `limit` and `sort`, as explained in [Pagination](#pagination).
 
-**Response:** `{ authorizations: OperatorAuthorization[] }` — each entry carries `id` (auto-incremented int64), `corporation_id`, `operator`, `msg_types[]`, `spend_limit[]` (optional `DenomAmount[]`), `remaining_spend[]` (when `spend_limit` is set), `fee_spend_limit[]` (optional), `remaining_fee_spend[]` (when `fee_spend_limit` is set), `expiration` (optional timestamp), and `period` (optional duration).
+**Response:** `{ authorizations: OperatorAuthorization[] }` — each entry carries `id` (auto-incremented uint64), `corporation_id`, `operator`, `msg_types[]`, `spend_limit[]` (optional `DenomAmount[]`), `remaining_spend[]` (when `spend_limit` is set), `fee_spend_limit[]` (optional), `remaining_fee_spend[]` (when `fee_spend_limit` is set), `expiration` (optional timestamp), and `period` (optional duration).
 
 ##### IDX-DE-QRY-2 List VS Operator Authorizations
 
-`GET /de/v1/vs-operator-authorizations`
+`GET /v4/delegation/vs-operator-authorizations`
 
-Retrieve a paginated, filtered list of `VSOperatorAuthorization` entries. Each entry has its own `id` (auto-incremented int64) and is uniquely identified by the `(corporation_id, vs_operator)` pair; it holds the `ParticipantAuthorizationRecord[]` array — one record per `Participant` whose VS-operator authorization is delegated to that `vs_operator`. *Aligned with VPR [[MOD-DE-QRY-2]](https://verana-labs.github.io/verifiable-trust-vpr-spec/#mod-de-qry-2-list-vs-operator-authorizations).*
+Retrieve a paginated, filtered list of `VSOperatorAuthorization` entries. Each entry has its own `id` (auto-incremented uint64) and is uniquely identified by the `(corporation_id, vs_operator)` pair; it holds the `ParticipantAuthorizationRecord[]` array — one record per `Participant` whose VS-operator authorization is delegated to that `vs_operator`. *Aligned with VPR [[MOD-DE-QRY-2]](https://verana-labs.github.io/verifiable-trust-vpr-spec/#mod-de-qry-2-list-vs-operator-authorizations).*
 
 | Name | In | Type | Required | Description |
 | --- | --- | --- | --- | --- |
-| `corporation_id` | query | integer (int64) | no | Filter by the granting Corporation id |
+| `corporation_id` | query | uint64 | no | Filter by the granting Corporation id |
 | `vs_operator` | query | string | no | Filter by the grantee VS-operator account |
-| `participant_id` | query | integer (int64) | no | Filter to entries whose `records[]` contains a record for this `Participant.id` |
+| `participant_id` | query | uint64 | no | Filter to entries whose `records[]` contains a record for this `Participant.id` |
 | `only_active` | query | boolean | no | If true, only return entries with at least one non-expired record |
 | `modified_after` | query | datetime | no | Only return entries modified strictly after this datetime |
 
-Supports pagination through attributes `max_id`, `min_id`, `response_max_size` and `sort`, as explained in [Pagination](#pagination).
+Supports pagination through attributes `max_id`, `min_id`, `limit` and `sort`, as explained in [Pagination](#pagination).
 
-**Response:** `{ authorizations: VSOperatorAuthorization[] }` — each entry carries `id` (auto-incremented int64), `corporation_id`, `vs_operator`, and `records[]: ParticipantAuthorizationRecord[]`. Each `ParticipantAuthorizationRecord` carries `participant_id` (globally unique), `msg_types[]`, `spend_limit[]` (optional), `remaining_spend[]` (when `spend_limit` is set), `fee_spend_limit[]` (optional), `remaining_fee_spend[]` (when `fee_spend_limit` is set), `with_feegrant` (boolean), `expiration` (timestamp), and `period` (optional duration). This is the canonical surface for the data that was previously inlined as `Participant.vs_operator_authz_*` fields.
+**Response:** `{ authorizations: VSOperatorAuthorization[] }` — each entry carries `id` (auto-incremented uint64), `corporation_id`, `vs_operator`, and `records[]: ParticipantAuthorizationRecord[]`. Each `ParticipantAuthorizationRecord` carries `participant_id` (globally unique), `msg_types[]`, `spend_limit[]` (optional), `remaining_spend[]` (when `spend_limit` is set), `fee_spend_limit[]` (optional), `remaining_fee_spend[]` (when `fee_spend_limit` is set), `with_feegrant` (boolean), `expiration` (timestamp), and `period` (optional duration). This is the canonical surface for the data that was previously inlined as `Participant.vs_operator_authz_*` fields.
 
 ##### IDX-DE-QRY-3 Get Operator Authorization
 
-`GET /de/v1/operator-authorization/{id}`
+`GET /v4/delegation/operator-authorization/{id}`
 
 Retrieve a specific `OperatorAuthorization` entry by its id. *Aligned with VPR [[MOD-DE-QRY-3]](https://verana-labs.github.io/verifiable-trust-vpr-spec/#mod-de-qry-3-get-operator-authorization).*
 
 | Name | In | Type | Required | Description |
 | --- | --- | --- | --- | --- |
-| `id` | path | integer (int64) | yes | The OperatorAuthorization ID |
+| `id` | path | uint64 | yes | The OperatorAuthorization ID |
 
 **Response:** `{ authorization: OperatorAuthorization }` — same shape as an entry returned by [`listOperatorAuthorizations`](#idx-de-qry-1-list-operator-authorizations): `id`, `corporation_id`, `operator`, `msg_types[]`, `spend_limit[]` (optional `DenomAmount[]`), `remaining_spend[]` (when `spend_limit` is set), `fee_spend_limit[]` (optional), `remaining_fee_spend[]` (when `fee_spend_limit` is set), `expiration` (optional timestamp), and `period` (optional duration).
 
 ##### IDX-DE-QRY-4 Get VS Operator Authorization
 
-`GET /de/v1/vs-operator-authorization/{id}`
+`GET /v4/delegation/vs-operator-authorization/{id}`
 
 Retrieve a specific `VSOperatorAuthorization` entry by its id, including its nested `records[]`. *Aligned with VPR [[MOD-DE-QRY-4]](https://verana-labs.github.io/verifiable-trust-vpr-spec/#mod-de-qry-4-get-vs-operator-authorization).*
 
 | Name | In | Type | Required | Description |
 | --- | --- | --- | --- | --- |
-| `id` | path | integer (int64) | yes | The VSOperatorAuthorization ID |
+| `id` | path | uint64 | yes | The VSOperatorAuthorization ID |
 
 **Response:** `{ authorization: VSOperatorAuthorization }` — same shape as an entry returned by [`listVSOperatorAuthorizations`](#idx-de-qry-2-list-vs-operator-authorizations): `id`, `corporation_id`, `vs_operator`, and `records[]: ParticipantAuthorizationRecord[]` (each record carries `participant_id`, `msg_types[]`, `spend_limit[]` and `remaining_spend[]`, `fee_spend_limit[]` and `remaining_fee_spend[]`, `with_feegrant`, `expiration`, `period`).
 
@@ -930,7 +931,7 @@ Retrieve a specific `VSOperatorAuthorization` entry by its id, including its nes
 
 ##### IDX-DI-QRY-1 Get Digest
 
-`GET /di/v1/get/{digest}`
+`GET /v4/di/get/{digest}`
 
 Look up a previously stored `Digest` entry by its digest string. *Aligned with VPR [[MOD-DI-QRY-1]](https://verana-labs.github.io/verifiable-trust-vpr-spec/#mod-di-qry-1-get-digest).*
 
@@ -946,16 +947,16 @@ The Exchange Rate module is a protocol-level oracle that publishes on-chain conv
 
 ##### IDX-XR-QRY-1 Get Exchange Rate
 
-`GET /xr/v1/get`
+`GET /v4/exchange-rate/get`
 
 Retrieve a single `ExchangeRate` entry, either by its primary key `id` or by the natural composite asset-pair key. *Aligned with VPR [[MOD-XR-QRY-1]](https://verana-labs.github.io/verifiable-trust-vpr-spec/#mod-xr-qry-1-get-exchange-rate).*
 
 | Name | In | Type | Required | Description |
 | --- | --- | --- | --- | --- |
-| `id` | query | integer (int64) | conditional¹ | Primary-key lookup |
-| `base_asset_type` | query | enum | conditional¹ | `TRUST_UNIT` \| `COIN` \| `FIAT` |
-| `base_asset` | query | string | conditional¹ | Base asset identifier (`"TU"` for `TRUST_UNIT`; on-chain denom for `COIN`; ISO-4217 currency code for `FIAT`) |
-| `quote_asset_type` | query | enum | conditional¹ | `TRUST_UNIT` \| `COIN` \| `FIAT` |
+| `id` | query | uint64 | conditional¹ | Primary-key lookup |
+| `base_asset_type` | query | enum | conditional¹ | `TU` \| `COIN` \| `FIAT` |
+| `base_asset` | query | string | conditional¹ | Base asset identifier (`"tu"` for `TU`; on-chain denom for `COIN`; ISO-4217 currency code for `FIAT`) |
+| `quote_asset_type` | query | enum | conditional¹ | `TU` \| `COIN` \| `FIAT` |
 | `quote_asset` | query | string | conditional¹ | Quote asset identifier (same rules as `base_asset`) |
 | `state` | query | boolean | no | Force-filter on `state` (`true` enabled / `false` disabled). When omitted, both are returned |
 | `expire_ts` | query | datetime | no | Return only if `expires > expire_ts` |
@@ -966,7 +967,7 @@ Retrieve a single `ExchangeRate` entry, either by its primary key `id` or by the
 
 ##### IDX-XR-QRY-2 List Exchange Rates
 
-`GET /xr/v1/list`
+`GET /v4/exchange-rate/list`
 
 Retrieve a paginated, filtered list of `ExchangeRate` entries. *Aligned with VPR [[MOD-XR-QRY-2]](https://verana-labs.github.io/verifiable-trust-vpr-spec/#mod-xr-qry-2-list-exchange-rates).*
 
@@ -979,21 +980,21 @@ Retrieve a paginated, filtered list of `ExchangeRate` entries. *Aligned with VPR
 | `state` | query | boolean | no | Filter on `state` |
 | `expire` | query | datetime | no | Return only entries whose `expires > expire` |
 
-Supports pagination through attributes `max_id`, `min_id`, `response_max_size` and `sort`, as explained in [Pagination](#pagination).
+Supports pagination through attributes `max_id`, `min_id`, `limit` and `sort`, as explained in [Pagination](#pagination).
 
 **Response:** `{ exchange_rates: ExchangeRate[] }`. Each entry has the same shape as [`getExchangeRate`](#idx-xr-qry-1-get-exchange-rate).
 
 ##### IDX-XR-QRY-3 Get Price
 
-`GET /xr/v1/price`
+`GET /v4/exchange-rate/price`
 
 Convert an amount of a base asset to its equivalent in a quote asset using the relevant active, non-expired `ExchangeRate` entry. *Aligned with VPR [[MOD-XR-QRY-3]](https://verana-labs.github.io/verifiable-trust-vpr-spec/#mod-xr-qry-3-get-price).*
 
 | Name | In | Type | Required | Description |
 | --- | --- | --- | --- | --- |
-| `base_asset_type` | query | enum | yes | `TRUST_UNIT` \| `COIN` \| `FIAT` |
+| `base_asset_type` | query | enum | yes | `TU` \| `COIN` \| `FIAT` |
 | `base_asset` | query | string | yes | Base asset identifier |
-| `quote_asset_type` | query | enum | yes | `TRUST_UNIT` \| `COIN` \| `FIAT` |
+| `quote_asset_type` | query | enum | yes | `TU` \| `COIN` \| `FIAT` |
 | `quote_asset` | query | string | yes | Quote asset identifier |
 | `amount` | query | string | yes | Base-asset amount expressed as a base-10 unsigned integer string, in the base asset's base units |
 
@@ -1003,7 +1004,7 @@ Convert an amount of a base asset to its equivalent in a quote asset using the r
 
 ##### IDX-METRICS-QRY-1 Get Global Metrics
 
-`GET /metrics/v1/all`
+`GET /v4/metrics/all`
 
 Return network-wide aggregate metrics across all Ecosystems, Credential Schemas, and Participants at the current (or historical, via `At-Block-Height`) block. *Indexer-specific (no VPR equivalent).*
 
@@ -1075,17 +1076,17 @@ When [`IDX-STATS-QRY-2 Get Stats Range`](#idx-stats-qry-2-get-stats-range) retur
 
 ##### IDX-STATS-QRY-1 Get Stats
 
-`GET /stats/v1/get`
+`GET /v4/stats/get`
 
 Retrieve a single statistics row — either by its primary key `id`, or by the natural composite key (`granularity`, `timestamp`, `entity_type`, `entity_id`). *Indexer-specific (no VPR equivalent).*
 
 | Name | In | Type | Required | Description |
 | --- | --- | --- | --- | --- |
-| `id` | query | integer | no¹ | Primary-key lookup |
+| `id` | query | uint64 | no¹ | Primary-key lookup |
 | `granularity` | query | enum | no¹ | `HOUR` \| `DAY` \| `MONTH` |
 | `timestamp` | query | datetime | no¹ | Bucket start (ISO 8601 UTC) |
 | `entity_type` | query | enum | no¹ | `GLOBAL` \| `ECOSYSTEM` \| `CREDENTIAL_SCHEMA` \| `PARTICIPANT` |
-| `entity_id` | query | integer | no¹ | Required for non-`GLOBAL` entity types |
+| `entity_id` | query | uint64 | no¹ | Required for non-`GLOBAL` entity types |
 
 ¹ Either `id` MUST be provided, **or** the composite key (`granularity`, `timestamp`, `entity_type`, `entity_id`) MUST be provided.
 
@@ -1093,7 +1094,7 @@ Retrieve a single statistics row — either by its primary key `id`, or by the n
 
 ##### IDX-STATS-QRY-2 Get Stats Range
 
-`GET /stats/v1/stats`
+`GET /v4/stats/stats`
 
 Retrieve cumulative-and-delta statistics over a time range as buckets, totals, or both. When `granularity` is omitted, the indexer auto-selects the smallest combination of `MONTH` + `DAY` + `HOUR` buckets that covers the range. *Indexer-specific (no VPR equivalent).*
 
@@ -1110,14 +1111,14 @@ Retrieve cumulative-and-delta statistics over a time range as buckets, totals, o
 
 ##### IDX-STATS-QRY-3 Count Participants
 
-`GET /stats/v1/count-participants`
+`GET /v4/stats/count-participants`
 
 Return the count of participants of a given role for a given entity at the block selected by the `At-Block-Height` header (or the latest indexed block when omitted), derived from the `entity_participant_changes` log. See [Conventions → Active Participant Count Semantics](#active-participant-count-semantics) for the underlying algorithm. *Indexer-specific (no VPR equivalent).*
 
 | Name | In | Type | Required | Description |
 | --- | --- | --- | --- | --- |
 | `entity_kind` | query | integer | yes | `0`=GLOBAL, `1`=ECOSYSTEM, `2`=CREDENTIAL_SCHEMA, `3`=PARTICIPANT |
-| `entity_id` | query | integer | conditional | Required for non-`GLOBAL` entity kinds; MUST be omitted for `GLOBAL` |
+| `entity_id` | query | uint64 | conditional | Required for non-`GLOBAL` entity kinds; MUST be omitted for `GLOBAL` |
 | `role_type` | query | integer | yes | `0`=ANY, `1`=ECOSYSTEM, `2`=ISSUER_GRANTOR, `3`=ISSUER, `4`=VERIFIER_GRANTOR, `5`=VERIFIER, `6`=HOLDER |
 
 **Response:** Inline object `{ entity_kind, entity_id, role_type, block_height, participants }` where `block_height` echoes the resolved evaluation block and `participants` is the integer count.
@@ -1126,7 +1127,7 @@ Return the count of participants of a given role for a given entity at the block
 
 ##### IDX-INDEXER-QRY-1 Get Block Height
 
-`GET /indexer/v1/block-height`
+`GET /v4/indexer/block-height`
 
 Return the latest block height that the indexer has fully processed and committed. *Indexer-specific (no VPR equivalent).*
 
@@ -1136,7 +1137,7 @@ Return the latest block height that the indexer has fully processed and committe
 
 ##### IDX-INDEXER-QRY-2 Get Indexer Status
 
-`GET /indexer/v1/status`
+`GET /v4/indexer/status`
 
 Return the indexer's operational status — whether it is running, whether crawling is active, and any error information if crawling or the indexer has stopped. Useful for monitoring and debugging. *Indexer-specific (no VPR equivalent).*
 
@@ -1146,7 +1147,7 @@ Return the indexer's operational status — whether it is running, whether crawl
 
 ##### IDX-INDEXER-QRY-3 Get Version
 
-`GET /indexer/v1/version`
+`GET /v4/indexer/version`
 
 Return the indexer version and the network environment it is bound to. *Indexer-specific (no VPR equivalent).*
 
@@ -1156,7 +1157,7 @@ Return the indexer version and the network environment it is bound to. *Indexer-
 
 ##### IDX-INDEXER-QRY-4 Get Indexer Snapshot
 
-`GET /indexer/v1/snapshot`
+`GET /v4/indexer/snapshot`
 
 Return the indexed snapshot of all DID-linked objects (Ecosystems, Credential Schemas, Participants) for a single DID at the block selected by the `At-Block-Height` header (or the latest indexed block when omitted). Only queries current tables that expose a height column; does **not** consult history tables. *Indexer-specific (no VPR equivalent).*
 
@@ -1168,9 +1169,9 @@ Return the indexed snapshot of all DID-linked objects (Ecosystems, Credential Sc
 
 ##### IDX-INDEXER-QRY-5 List Changes
 
-`GET /indexer/v1/changes`
+`GET /v4/indexer/changes`
 
-Return every indexed entity change committed at the block selected by the `At-Block-Height` header (or the latest indexed block when omitted). Distinct from the WebSocket-companion [`listChanges` at `/vt/v1/changes`](#idx-vt-qry-2-list-changes), which collapses across blocks for resolver-stream catch-up. *Indexer-specific (no VPR equivalent).*
+Return every indexed entity change committed at the block selected by the `At-Block-Height` header (or the latest indexed block when omitted). Distinct from the WebSocket-companion [`listChanges` at `/v4/verifiable-trust/changes`](#idx-vt-qry-2-list-changes), which collapses across blocks for resolver-stream catch-up. *Indexer-specific (no VPR equivalent).*
 
 (No method-specific parameters.)
 
@@ -1178,7 +1179,7 @@ Return every indexed entity change committed at the block selected by the `At-Bl
 
 ##### IDX-INDEXER-QRY-6 List Indexer Events
 
-`GET /indexer/v1/events`
+`GET /v4/indexer/events`
 
 Replay persisted indexer events scoped by the same membership filter as [`IDX-INDEXER-SUB-1`](#idx-indexer-sub-1-subscribe-indexer-events): an optional DID list, an optional Corporation, intersected when both are present. *Indexer-specific (no VPR equivalent).*
 
@@ -1195,9 +1196,9 @@ When **both** `dids` and `corporation_id` are present, only events matching **bo
 
 ##### IDX-INDEXER-SUB-1 Subscribe Indexer Events
 
-`WS /indexer/v1/subscribe`
+`WS /v4/indexer/subscribe`
 
-Real-time push of Ecosystem, Credential Schema, Participant, Trust Deposit, Delegation, Digest, and Exchange Rate events for one or more DIDs. The subscriber opens a WebSocket connection to `/indexer/v1/subscribe` and sends one or more JSON control messages; the first control message MUST be a `subscribe`. *Indexer-specific (no VPR equivalent).*
+Real-time push of Ecosystem, Credential Schema, Participant, Trust Deposit, Delegation, Digest, and Exchange Rate events for one or more DIDs. The subscriber opens a WebSocket connection to `/v4/indexer/subscribe` and sends one or more JSON control messages; the first control message MUST be a `subscribe`. *Indexer-specific (no VPR equivalent).*
 
 ###### Connect / ready
 
@@ -1306,7 +1307,7 @@ The point-in-time is controlled by the `At-Block-Height` HTTP request header per
 
 ##### IDX-VT-QRY-1 Resolve
 
-`POST /vt/v1/resolve`
+`POST /v4/verifiable-trust/resolve`
 
 ###### Resolution request schema
 
@@ -1580,7 +1581,7 @@ validatorParticipantId: non-null `uint64` pointer to the parent `Participant` in
 }
 ```
 
-The Verifiable Trust Resolver also exposes a real-time event stream so that clients can keep an indexer-backed mirror in sync without polling `/vt/v1/resolve` for every DID on every block.
+The Verifiable Trust Resolver also exposes a real-time event stream so that clients can keep an indexer-backed mirror in sync without polling `/v4/verifiable-trust/resolve` for every DID on every block.
 
 The stream is organised around three coordinated endpoints. Together they cover live updates (`subscribeChanges`), catch-up after a disconnection (`listChanges`), and bootstrap from an empty mirror (`listIndexedDids`).
 
@@ -1620,11 +1621,11 @@ Channels that carry Coin-amount fields (`weight`, `deposit`) or high-frequency a
 
 All sub-flags default to `false`. The Coin-amount flags (`includeDepositChanges`, `includeWeightChanges`) and the counter flags (`includeParticipantCounts`, `includeIssuedCredentials`, `includeVerifiedCredentials`) gate fields that can tick on routine transactions and would otherwise dominate the stream.
 
-Channel flags carry **change signals**, not full new values — except for `trust`, which is delivered inline because it is small, fixed-shape, and the most frequently consumed. To obtain the new state for any other changed channel, the client calls `/vt/v1/resolve` with the `At-Block-Height` header set to the block of the change envelope.
+Channel flags carry **change signals**, not full new values — except for `trust`, which is delivered inline because it is small, fixed-shape, and the most frequently consumed. To obtain the new state for any other changed channel, the client calls `/v4/verifiable-trust/resolve` with the `At-Block-Height` header set to the block of the change envelope.
 
 ##### IDX-VT-SUB-1 Subscribe Changes
 
-The subscriber opens a WebSocket connection to `/vt/v1/subscribe` and sends one or more JSON control messages. The first control message MUST be a `subscribe`.
+The subscriber opens a WebSocket connection to `/v4/verifiable-trust/subscribe` and sends one or more JSON control messages. The first control message MUST be a `subscribe`.
 
 ###### Connect / ready
 
@@ -1718,13 +1719,13 @@ Semantics:
 - `changes[]` — One entry per DID whose subscribed-to state changed at this block. Empty when no subscribed change occurred — the message still acts as a heartbeat.
 - `changes[].did` — The DID this envelope refers to.
 - `changes[].trust` — Present iff `trust` is in the subscription **and** any trust-core field changed at this block. Carries the new core values inline, with the same shape as the trust-core fields in the [resolution response schema](#resolution-response-schema).
-- `changes[].<channel>` — `true` iff the channel is in the subscription **and** changed at this block; `false` otherwise. Clients fetch the new state by calling `/vt/v1/resolve` with `At-Block-Height: <block>`.
+- `changes[].<channel>` — `true` iff the channel is in the subscription **and** changed at this block; `false` otherwise. Clients fetch the new state by calling `/v4/verifiable-trust/resolve` with `At-Block-Height: <block>`.
 
 > **Why signal-only?** All channels except `trust` carry change signals (`true`/`false`) rather than inline payloads. This is by design:
 >
-> - **`trust` is the exception** — it is small, fixed-shape, and the most frequently consumed channel. Clients that subscribe only to `trust` receive everything they need inline and never have to call `/vt/v1/resolve`.
+> - **`trust` is the exception** — it is small, fixed-shape, and the most frequently consumed channel. Clients that subscribe only to `trust` receive everything they need inline and never have to call `/v4/verifiable-trust/resolve`.
 > - **Other channels have variable, potentially large payloads** — a DID may have hundreds of participations or ecosystem entries. Inlining them in every WebSocket frame would bloat the stream even for clients that only need a narrow slice of the data.
-> - **Resolve gives response-shaping control** — the `/vt/v1/resolve` call lets the client select exactly which sections and sub-flags it needs; a fat WebSocket payload cannot offer that flexibility.
+> - **Resolve gives response-shaping control** — the `/v4/verifiable-trust/resolve` call lets the client select exactly which sections and sub-flags it needs; a fat WebSocket payload cannot offer that flexibility.
 > - **Server fan-out stays cheap** — computing and serialising full per-subscriber per-DID payloads on every block would multiply the indexer's CPU and memory cost by the number of concurrent subscribers.
 >
 > In practice, most blocks produce zero or very few changes for a given subscriber's DID set, so the number of follow-up resolve calls per block is low. Clients that need state for multiple DIDs that changed in the same block can batch their resolve calls.
@@ -1746,7 +1747,7 @@ After a disconnection — or whenever the subscriber detects a gap in the WebSoc
 Request:
 
 ```http
-GET /vt/v1/changes
+GET /v4/verifiable-trust/changes
   ?fromBlock=<int>
   [&dids=<comma-separated DIDs>]
   [&corporation_id=<uint64>]
@@ -1790,7 +1791,7 @@ Catch-up loop:
 ```
 last_seen = client_last_seen_block
 while true:
-  r = GET /vt/v1/changes?fromBlock=last_seen+1&...
+  r = GET /v4/verifiable-trust/changes?fromBlock=last_seen+1&...
   apply(r.blocks)
   if r.blocks:
     last_seen = r.blocks[-1].block
@@ -1803,12 +1804,12 @@ The `nextFromBlock` cursor lets the client jump over arbitrarily long change-fre
 
 ##### IDX-VT-QRY-3 List Indexed DIDs
 
-A client that starts with an empty mirror needs a way to enumerate the universe of DIDs the indexer tracks at a frozen snapshot block, then resolve each via `/vt/v1/resolve` to populate its initial state.
+A client that starts with an empty mirror needs a way to enumerate the universe of DIDs the indexer tracks at a frozen snapshot block, then resolve each via `/v4/verifiable-trust/resolve` to populate its initial state.
 
 Request:
 
 ```http
-GET /vt/v1/dids
+GET /v4/verifiable-trust/dids
   [?cursor=<opaque string>]
   [&corporation_id=<uint64>]
   [&limit=<int>]
@@ -1839,10 +1840,10 @@ Response:
 
 The recommended initial-sync sequence for a client with an empty mirror:
 
-1. **Connect** to `WS /vt/v1/subscribe`. Read the `ready` message and capture `B = ready.block`.
+1. **Connect** to `WS /v4/verifiable-trust/subscribe`. Read the `ready` message and capture `B = ready.block`.
 2. **Subscribe** with the desired `dids` / `channels`. Buffer all incoming block messages **without applying them** until step 5.
-3. **Enumerate** the DID universe at block `B - 1` by calling `GET /vt/v1/dids` with header `At-Block-Height: B-1` and paginating through `nextCursor`.
-4. **Resolve** each enumerated DID by calling `POST /vt/v1/resolve` with header `At-Block-Height: B-1` and the response selectors the client cares about. Persist the resulting state as the snapshot at block `B - 1`.
+3. **Enumerate** the DID universe at block `B - 1` by calling `GET /v4/verifiable-trust/dids` with header `At-Block-Height: B-1` and paginating through `nextCursor`.
+4. **Resolve** each enumerated DID by calling `POST /v4/verifiable-trust/resolve` with header `At-Block-Height: B-1` and the response selectors the client cares about. Persist the resulting state as the snapshot at block `B - 1`.
 5. **Apply** the buffered WebSocket block messages in order (starting at block `B`), then continue applying live block messages as they arrive.
 
 Because the snapshot is taken at the immutable past block `B - 1` and the WebSocket delivers from `B` onwards, no events are lost or double-counted.
@@ -1852,7 +1853,7 @@ Because the snapshot is taken at the immutable past block `B - 1` and the WebSoc
 After a temporary disconnection, a client with a non-empty mirror resumes by:
 
 1. Recording `last_seen_block` of the most recently applied WebSocket block message.
-2. Reconnecting to `WS /vt/v1/subscribe` and re-subscribing as before. Buffer incoming block messages.
+2. Reconnecting to `WS /v4/verifiable-trust/subscribe` and re-subscribing as before. Buffer incoming block messages.
 3. Running the [`listChanges`](#idx-vt-qry-2-list-changes) catch-up loop from `fromBlock = last_seen_block + 1` until either `nextFromBlock` is `null` or it has reached the smallest block held in the WebSocket buffer.
 4. Applying the buffered WebSocket block messages in order, deduplicated by `block` against anything already applied from `listChanges`.
 
@@ -1876,7 +1877,7 @@ The Verana profile of TRQP v2 is identified by the profile version `verana-trqp/
 | Profile version | `verana-trqp/spec-v4` |
 | Authorization actions | `issue`, `verify`, `grant_issue`, `grant_verify`, `govern` |
 | Recognition actions | same as authorization (action-invariant in v4) |
-| Authorization resource grammar | VPR schema URI (`vpr:verana:<network>/cs/v1/js/<n>`) |
+| Authorization resource grammar | VPR schema URI (`vpr:verana:<network>:cs:<n>`) |
 | Recognition resource grammar | VPR schema URI |
 | Authorization trigger | `Participant.role = role_of(action)` AND `state = "ACTIVE"` |
 | Recognition trigger | `Ecosystem.did = entity_id` AND the Corporation referenced by `Ecosystem.corporationId` has `did = authority_id`, AND not archived |
@@ -1890,13 +1891,13 @@ The full machine-readable Verana TRQP profile descriptor — including the actio
 
 Profile discovery. TRQP v2.0 does not standardise a profile-discovery mechanism, but per TRQP v2.0 §Identifiers/`authority_id` and §Conformance the **ecosystem governance framework** — of which this profile forms part — MUST be discoverable via the authority's identifier. Verana implements that requirement as follows:
 
-- A Verana corporation or ecosystem MAY advertise a `TRQPEndpoint` service entry in its DID Document, pointing at the indexer's `/trqp/v2/` base path.
-- The indexer MUST serve the profile descriptor at `/trqp/v2/profile` with `Content-Type: application/json`; the body is byte-identical to [`schemas/v4/trqp/profile.json`](./schemas/v4/trqp/profile.json).
+- A Verana corporation or ecosystem MAY advertise a `TRQPEndpoint` service entry in its DID Document, pointing at the indexer's `/v4/trqp/v2/` base path.
+- The indexer MUST serve the profile descriptor at `/v4/trqp/v2/profile` with `Content-Type: application/json`; the body is byte-identical to [`schemas/v4/trqp/profile.json`](./schemas/v4/trqp/profile.json).
 - The action vocabulary, resource grammar, trigger semantics, and scope rules in the descriptor MUST match the table above; the descriptor is the canonical machine-readable form, this table is its prose summary.
 
 ##### IDX-TRQP-QRY-1 TRQP Authorize
 
-`POST /trqp/v2/authorization`
+`POST /v4/trqp/v2/authorization`
 
 Direction: ecosystem → corporation. Derived from `Participant` entries.
 
@@ -1939,12 +1940,12 @@ Authorization responses use the upstream ToIP TSWG schema [`trqp_authorization_r
 *"Does the EU-Passport ecosystem authorize Acme Corp to `issue` schema 42?"*
 
 ```json
-POST /trqp/v2/authorization
+POST /v4/trqp/v2/authorization
 {
    "authority_id": "did:webvh:Qm…:ecosystem.eu-passport.example",
    "entity_id":    "did:webvh:Qm…:corp.acme.example",
    "action":       "issue",
-   "resource":     "vpr:verana:vna-mainnet-1/cs/v1/js/42",
+   "resource":     "vpr:verana:vna-mainnet-1:cs:42",
    "context":      { "time": "2026-05-11T13:00:00Z" }
 }
 ```
@@ -1956,7 +1957,7 @@ POST /trqp/v2/authorization
    "authority_id":   "did:webvh:Qm…:ecosystem.eu-passport.example",
    "entity_id":      "did:webvh:Qm…:corp.acme.example",
    "action":         "issue",
-   "resource":       "vpr:verana:vna-mainnet-1/cs/v1/js/42",
+   "resource":       "vpr:verana:vna-mainnet-1:cs:42",
    "authorized":     true,
    "time_requested": "2026-05-11T13:00:00Z",
    "time_evaluated": "2026-05-11T13:00:00Z",
@@ -1970,7 +1971,7 @@ POST /trqp/v2/authorization
 
 ##### IDX-TRQP-QRY-2 TRQP Recognize
 
-`POST /trqp/v2/recognition`
+`POST /v4/trqp/v2/recognition`
 
 Direction: Corporation → Ecosystem. Derived from `Ecosystem` entries — specifically the controlling-Corporation reference each Ecosystem carries (VPR-level `Ecosystem.corporation` group field; surfaced in the graph as `Ecosystem.corporationId`). TRQP itself remains DID-only at the wire level — the `authority_id` (Corporation DID) and `entity_id` (Ecosystem DID) inputs are translated to internal stable ids only inside the indexer when evaluating the predicate. Per-Participant-entry recognition (e.g. ECOSYSTEM-role recognition for individual Credential Schemas, Ecosystem-to-Ecosystem federation, Corporation-to-Corporation peer recognition) is **out of scope for v4**.
 
@@ -2011,12 +2012,12 @@ Recognition responses use the upstream ToIP TSWG schema [`trqp_recognition_respo
 *"Does Acme Corp recognize EU-Passport to be authoritative to `issue` schema 42?"*
 
 ```json
-POST /trqp/v2/recognition
+POST /v4/trqp/v2/recognition
 {
    "authority_id": "did:webvh:Qm…:corp.acme.example",
    "entity_id":    "did:webvh:Qm…:ecosystem.eu-passport.example",
    "action":       "issue",
-   "resource":     "vpr:verana:vna-mainnet-1/cs/v1/js/42",
+   "resource":     "vpr:verana:vna-mainnet-1:cs:42",
    "context":      { "time": "2026-05-11T13:00:00Z" }
 }
 ```
@@ -2028,7 +2029,7 @@ POST /trqp/v2/recognition
    "authority_id":   "did:webvh:Qm…:corp.acme.example",
    "entity_id":      "did:webvh:Qm…:ecosystem.eu-passport.example",
    "action":         "issue",
-   "resource":       "vpr:verana:vna-mainnet-1/cs/v1/js/42",
+   "resource":       "vpr:verana:vna-mainnet-1:cs:42",
    "recognized":     true,
    "time_requested": "2026-05-11T13:00:00Z",
    "time_evaluated": "2026-05-11T13:00:00Z",
