@@ -128,10 +128,10 @@ Every list and history method paginates **in `id` order**. The cursor is a half-
 
 Universal parameters:
 
-- `response_max_size` (integer; 1..1024, default 64) — caps the number of items returned.
+- `limit` (integer; 1..1024, default 64) — caps the number of items returned.
 - `min_id` (uint64; inclusive) and `max_id` (uint64; exclusive) — half-open range cursor on the entity's `id`. For history methods the cursor key is `ActivityItem.id` (an indexer-assigned per-row monotonic uint64, distinct from `entity_id`).
 
-Stable cursor recipe: read the first page with `response_max_size=N` (the implicit default `sort=-id` applies, giving newest-first); on the next call, pass `max_id=<id of the last item on the previous page>` to continue. For ascending (oldest-first) order, set `sort=+id` and use `min_id=<id of the last item>` instead.
+Stable cursor recipe: read the first page with `limit=N` (the implicit default `sort=-id` applies, giving newest-first); on the next call, pass `max_id=<id of the last item on the previous page>` to continue. For ascending (oldest-first) order, set `sort=+id` and use `min_id=<id of the last item>` instead.
 
 ##### `sort` query parameter
 
@@ -476,7 +476,7 @@ Retrieve a paginated, filtered list of Corporations. *Aligned with VPR [[MOD-CO-
 | `modified_after` | query | datetime | no | Only return Corporations modified strictly after this ISO 8601 datetime |
 | `trust_data` | query | enum | no | `null` \| `summary` \| `full` — see [Conventions](#trust_data-query-parameter) |
 
-Supports pagination through attributes `max_id`, `min_id`, `response_max_size` and `sort`, as explained in [Pagination](#pagination).
+Supports pagination through attributes `max_id`, `min_id`, `limit` and `sort`, as explained in [Pagination](#pagination).
 
 **Response:** `{ corporations: Corporation[] }`. Each entry has the same shape as [`getCorporation`](#idx-co-qry-1-get-corporation).
 
@@ -500,7 +500,7 @@ Retrieve the activity timeline for a Corporation, ordered by `id` descending (ne
 | --- | --- | --- | --- | --- |
 | `id` | path | uint64 | yes | The Corporation ID |
 
-Supports pagination through attributes `max_id`, `min_id`, `response_max_size` and `sort`, as explained in [Pagination](#pagination).
+Supports pagination through attributes `max_id`, `min_id`, `limit` and `sort`, as explained in [Pagination](#pagination).
 
 **Response:** `ActivityTimelineResponse` with `entity_type: "Corporation"`. Each `ActivityItem`'s `msg` is one of `CreateCorporation`, `UpdateCorporation`, `ArchiveCorporation`, `AddCGFDocument`, `IncreaseCGFActiveVersion`, etc.
 
@@ -548,7 +548,7 @@ Retrieve a paginated, filtered list of Ecosystems. *Aligned with VPR [[MOD-ES-QR
 | `min_active_schemas` / `max_active_schemas` | query | integer | no | Active-schema count bounds |
 | *(standard list filters)* | query | — | no | See [Standard list filters](#standard-list-filters) |
 
-Supports pagination through attributes `max_id`, `min_id`, `response_max_size` and `sort`, as explained in [Pagination](#pagination).
+Supports pagination through attributes `max_id`, `min_id`, `limit` and `sort`, as explained in [Pagination](#pagination).
 
 **Response:** `{ ecosystems: Ecosystem[] }`. Each entry has the same shape as [`getEcosystem`](#idx-es-qry-1-get-ecosystem).
 
@@ -572,7 +572,7 @@ Retrieve the activity timeline for an Ecosystem, ordered by `id` descending (new
 | --- | --- | --- | --- | --- |
 | `id` | path | uint64 | yes | The Ecosystem ID |
 
-Supports pagination through attributes `max_id`, `min_id`, `response_max_size` and `sort`, as explained in [Pagination](#pagination).
+Supports pagination through attributes `max_id`, `min_id`, `limit` and `sort`, as explained in [Pagination](#pagination).
 
 **Response:** `ActivityTimelineResponse` — `{ entity_type: "Ecosystem", entity_id, activity: ActivityItem[] }`. Each `ActivityItem` has `id` (uint64; indexer-assigned monotonic per-row surrogate key, used as the pagination cursor — distinct from `entity_id`), `timestamp`, `block_height`, `entity_type`, `entity_id`, `msg` (e.g. `CreateEcosystem`, `AddGovernanceFrameworkDocument`), `account` (signer), and `changes` (object of changed fields). The same `ActivityTimelineResponse` shape is reused by every `*History` and the indexer-level `listChanges` method.
 
@@ -606,7 +606,7 @@ Retrieve the list of `GovernanceFrameworkVersion` entries for one owning subject
 | `active_only` | query | boolean | no | If true, return only the entry corresponding to the subject's `active_version` |
 | `preferred_language` | query | string | no | If set, return only one document per version, preferring `preferred_language` |
 
-Supports pagination through attributes `max_id`, `min_id`, `response_max_size` and `sort`, as explained in [Pagination](#pagination).
+Supports pagination through attributes `max_id`, `min_id`, `limit` and `sort`, as explained in [Pagination](#pagination).
 
 **Response:** `{ versions: GovernanceFrameworkVersion[] }`. Each entry has the same shape as [`getGovernanceFrameworkVersion`](#idx-gf-qry-1-get-governance-framework-version). Exactly one of `ecosystem_id` and `corporation_id` MUST be provided in the query; otherwise HTTP 400. Within a single owning subject, ascending `id` equals ascending `version`, so clients that want chronological (oldest-first) ordering can request it with `sort=+id`.
 
@@ -647,7 +647,7 @@ Retrieve a paginated, filtered list of Credential Schemas. *Aligned with VPR [[M
 | `modified_after` | query | datetime | no | Only return schemas modified strictly after this datetime |
 | *(standard list filters)* | query | — | no | See [Standard list filters](#standard-list-filters) |
 
-Supports pagination through attributes `max_id`, `min_id`, `response_max_size` and `sort`, as explained in [Pagination](#pagination).
+Supports pagination through attributes `max_id`, `min_id`, `limit` and `sort`, as explained in [Pagination](#pagination).
 
 **Response:** `{ schemas: CredentialSchema[] }`. Each entry has the same shape as [`getCredentialSchema`](#idx-cs-qry-1-get-credential-schema).
 
@@ -683,7 +683,7 @@ Retrieve the activity timeline for a Credential Schema, ordered by `id` descendi
 | --- | --- | --- | --- | --- |
 | `id` | path | uint64 | yes | The Credential Schema ID |
 
-Supports pagination through attributes `max_id`, `min_id`, `response_max_size` and `sort`, as explained in [Pagination](#pagination).
+Supports pagination through attributes `max_id`, `min_id`, `limit` and `sort`, as explained in [Pagination](#pagination).
 
 **Response:** `ActivityTimelineResponse` with `entity_type: "CredentialSchema"`.
 
@@ -734,7 +734,7 @@ Retrieve a paginated, filtered list of Participants. *Aligned with VPR [[MOD-PP-
 | `trust_data` | query | enum | no | `null` \| `summary` \| `full` |
 | *(standard list filters)* | query | — | no | See [Standard list filters](#standard-list-filters) |
 
-Supports pagination through attributes `max_id`, `min_id`, `response_max_size` and `sort`, as explained in [Pagination](#pagination).
+Supports pagination through attributes `max_id`, `min_id`, `limit` and `sort`, as explained in [Pagination](#pagination).
 
 **Response:** `{ participants: Participant[] }`. Each entry has the same shape as [`getParticipant`](#idx-pp-qry-1-get-participant).
 
@@ -748,7 +748,7 @@ Retrieve the activity timeline for a Participant, ordered by `id` descending (ne
 | --- | --- | --- | --- | --- |
 | `id` | path | uint64 | yes | The Participant ID |
 
-Supports pagination through attributes `max_id`, `min_id`, `response_max_size` and `sort`, as explained in [Pagination](#pagination).
+Supports pagination through attributes `max_id`, `min_id`, `limit` and `sort`, as explained in [Pagination](#pagination).
 
 **Response:** `ActivityTimelineResponse` with `entity_type: "Participant"`.
 
@@ -775,7 +775,7 @@ Return the open task list for a given account — every Participant anywhere on 
 | --- | --- | --- | --- | --- |
 | `account` | query | string | yes | Account address whose pending tasks are returned |
 | `trust_data` | query | enum | no | `null` \| `summary` \| `full` |
-| `response_max_size` | query | integer | no | 1..1024, default 64 (caps the number of Ecosystems returned) |
+| `limit` | query | integer | no | 1..1024, default 64 (caps the number of Ecosystems returned) |
 
 **Response:** `{ ecosystems: EcosystemPending[] }`. Each `EcosystemPending` carries:
 
@@ -808,7 +808,7 @@ Retrieve the activity timeline for a ParticipantSession, ordered by `id` descend
 | --- | --- | --- | --- | --- |
 | `id` | path | uuid | yes | ParticipantSession UUID |
 
-Supports pagination through attributes `max_id`, `min_id`, `response_max_size` and `sort`, as explained in [Pagination](#pagination).
+Supports pagination through attributes `max_id`, `min_id`, `limit` and `sort`, as explained in [Pagination](#pagination).
 
 **Response:** `ActivityTimelineResponse` with `entity_type: "ParticipantSession"`.
 
@@ -859,7 +859,7 @@ Retrieve the activity timeline for a Trust Deposit row, ordered by `id` descendi
 | --- | --- | --- | --- | --- |
 | `corporation_id` | path | uint64 | yes | The Corporation ID (the TrustDeposit row is identified 1:1 by `corporation_id`) |
 
-Supports pagination through attributes `max_id`, `min_id`, `response_max_size` and `sort`, as explained in [Pagination](#pagination).
+Supports pagination through attributes `max_id`, `min_id`, `limit` and `sort`, as explained in [Pagination](#pagination).
 
 **Response:** `ActivityTimelineResponse` with `entity_type: "TrustDeposit"`. Each `ActivityItem`'s `msg` is one of `CREATE_TRUST_DEPOSIT`, `ADJUST_TRUST_DEPOSIT`, `SLASH_TRUST_DEPOSIT`, `SLASH_PARTICIPANT_TRUST_DEPOSIT`, `RECLAIM_YIELD`, `RECLAIM_DEPOSIT`, `REPAY_SLASHED`.
 
@@ -881,7 +881,7 @@ Retrieve a paginated, filtered list of `OperatorAuthorization` entries. Each ent
 | `only_active` | query | boolean | no | If true, only return non-expired authorizations (`expiration > now` or null) |
 | `modified_after` | query | datetime | no | Only return authorizations modified strictly after this datetime |
 
-Supports pagination through attributes `max_id`, `min_id`, `response_max_size` and `sort`, as explained in [Pagination](#pagination).
+Supports pagination through attributes `max_id`, `min_id`, `limit` and `sort`, as explained in [Pagination](#pagination).
 
 **Response:** `{ authorizations: OperatorAuthorization[] }` — each entry carries `id` (auto-incremented uint64), `corporation_id`, `operator`, `msg_types[]`, `spend_limit[]` (optional `DenomAmount[]`), `remaining_spend[]` (when `spend_limit` is set), `fee_spend_limit[]` (optional), `remaining_fee_spend[]` (when `fee_spend_limit` is set), `expiration` (optional timestamp), and `period` (optional duration).
 
@@ -899,7 +899,7 @@ Retrieve a paginated, filtered list of `VSOperatorAuthorization` entries. Each e
 | `only_active` | query | boolean | no | If true, only return entries with at least one non-expired record |
 | `modified_after` | query | datetime | no | Only return entries modified strictly after this datetime |
 
-Supports pagination through attributes `max_id`, `min_id`, `response_max_size` and `sort`, as explained in [Pagination](#pagination).
+Supports pagination through attributes `max_id`, `min_id`, `limit` and `sort`, as explained in [Pagination](#pagination).
 
 **Response:** `{ authorizations: VSOperatorAuthorization[] }` — each entry carries `id` (auto-incremented uint64), `corporation_id`, `vs_operator`, and `records[]: ParticipantAuthorizationRecord[]`. Each `ParticipantAuthorizationRecord` carries `participant_id` (globally unique), `msg_types[]`, `spend_limit[]` (optional), `remaining_spend[]` (when `spend_limit` is set), `fee_spend_limit[]` (optional), `remaining_fee_spend[]` (when `fee_spend_limit` is set), `with_feegrant` (boolean), `expiration` (timestamp), and `period` (optional duration). This is the canonical surface for the data that was previously inlined as `Participant.vs_operator_authz_*` fields.
 
@@ -980,7 +980,7 @@ Retrieve a paginated, filtered list of `ExchangeRate` entries. *Aligned with VPR
 | `state` | query | boolean | no | Filter on `state` |
 | `expire` | query | datetime | no | Return only entries whose `expires > expire` |
 
-Supports pagination through attributes `max_id`, `min_id`, `response_max_size` and `sort`, as explained in [Pagination](#pagination).
+Supports pagination through attributes `max_id`, `min_id`, `limit` and `sort`, as explained in [Pagination](#pagination).
 
 **Response:** `{ exchange_rates: ExchangeRate[] }`. Each entry has the same shape as [`getExchangeRate`](#idx-xr-qry-1-get-exchange-rate).
 
