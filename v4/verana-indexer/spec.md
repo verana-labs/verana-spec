@@ -129,7 +129,7 @@ Every list and history method paginates **in `id` order**. The cursor is a half-
 Universal parameters:
 
 - `response_max_size` (integer; 1..1024, default 64) — caps the number of items returned.
-- `min_id` (integer, int64; inclusive) and `max_id` (integer, int64; exclusive) — half-open range cursor on the entity's `id`. For history methods the cursor key is `ActivityItem.id` (an indexer-assigned per-row monotonic int64, distinct from `entity_id`).
+- `min_id` (uint64; inclusive) and `max_id` (uint64; exclusive) — half-open range cursor on the entity's `id`. For history methods the cursor key is `ActivityItem.id` (an indexer-assigned per-row monotonic uint64, distinct from `entity_id`).
 
 Stable cursor recipe: read the first page with `response_max_size=N` (the implicit default `sort=-id` applies, giving newest-first); on the next call, pass `max_id=<id of the last item on the previous page>` to continue. For ascending (oldest-first) order, set `sort=+id` and use `min_id=<id of the last item>` instead.
 
@@ -446,7 +446,7 @@ Retrieve a specific Corporation by its id. *Aligned with VPR [[MOD-CO-QRY-1]](ht
 
 | Name | In | Type | Required | Description |
 | --- | --- | --- | --- | --- |
-| `id` | path | integer (int64) | yes | The Corporation ID |
+| `id` | path | uint64 | yes | The Corporation ID |
 | `gf_data` | query | enum | no | `none` \| `only_active` \| `all` — controls inclusion of CGF `versions[]`. Default: `only_active`. |
 | `preferred_language` | query | string | no | Preferred document language (ISO 639); affects ordering of returned CGF documents |
 | `trust_data` | query | enum | no | `null` \| `summary` \| `full` — see [Conventions](#trust_data-query-parameter) |
@@ -498,7 +498,7 @@ Retrieve the activity timeline for a Corporation, ordered by `id` descending (ne
 
 | Name | In | Type | Required | Description |
 | --- | --- | --- | --- | --- |
-| `id` | path | integer (int64) | yes | The Corporation ID |
+| `id` | path | uint64 | yes | The Corporation ID |
 
 Supports pagination through attributes `max_id`, `min_id`, `response_max_size` and `sort`, as explained in [Pagination](#pagination).
 
@@ -514,7 +514,7 @@ Retrieve a specific Ecosystem by its ID. *Aligned with VPR [[MOD-ES-QRY-1]](http
 
 | Name | In | Type | Required | Description |
 | --- | --- | --- | --- | --- |
-| `id` | path | integer (int64) | yes | The Ecosystem ID |
+| `id` | path | uint64 | yes | The Ecosystem ID |
 | `gf_data` | query | enum | no | `none` \| `only_active` \| `all` — controls inclusion of EGF `versions[]`. Default: `only_active`. |
 | `preferred_language` | query | string | no | Preferred document language (ISO 639); affects ordering of returned governance-framework documents |
 | `trust_data` | query | enum | no | `null` \| `summary` \| `full` — see [Conventions](#trust_data-query-parameter) |
@@ -541,7 +541,7 @@ Retrieve a paginated, filtered list of Ecosystems. *Aligned with VPR [[MOD-ES-QR
 | `gf_data` | query | enum | no | `none` \| `only_active` \| `all` — controls inclusion of EGF `versions[]`. Default: `only_active`. |
 | `preferred_language` | query | string | no | Preferred document language; affects governance-framework document ordering |
 | `archived` | query | boolean | no | `true` → only archived Ecosystems; `false` → only not-archived Ecosystems; null/omitted → both. Default: null. |
-| `corporation_id` | query | integer (int64) | no | Filter by controlling-Corporation id |
+| `corporation_id` | query | uint64 | no | Filter by controlling-Corporation id |
 | `participant` | query | string | no | Account address; returns Ecosystems where this account is the Ecosystem corporation or holds an active `Participant` entry on a schema in the Ecosystem |
 | `modified_after` | query | datetime | no | Only return Ecosystems modified strictly after this ISO 8601 datetime |
 | `trust_data` | query | enum | no | `null` \| `summary` \| `full` — see [Conventions](#trust_data-query-parameter) |
@@ -570,11 +570,11 @@ Retrieve the activity timeline for an Ecosystem, ordered by `id` descending (new
 
 | Name | In | Type | Required | Description |
 | --- | --- | --- | --- | --- |
-| `id` | path | integer (int64) | yes | The Ecosystem ID |
+| `id` | path | uint64 | yes | The Ecosystem ID |
 
 Supports pagination through attributes `max_id`, `min_id`, `response_max_size` and `sort`, as explained in [Pagination](#pagination).
 
-**Response:** `ActivityTimelineResponse` — `{ entity_type: "Ecosystem", entity_id, activity: ActivityItem[] }`. Each `ActivityItem` has `id` (int64; indexer-assigned monotonic per-row surrogate key, used as the pagination cursor — distinct from `entity_id`), `timestamp`, `block_height`, `entity_type`, `entity_id`, `msg` (e.g. `CreateEcosystem`, `AddGovernanceFrameworkDocument`), `account` (signer), and `changes` (object of changed fields). The same `ActivityTimelineResponse` shape is reused by every `*History` and the indexer-level `listChanges` method.
+**Response:** `ActivityTimelineResponse` — `{ entity_type: "Ecosystem", entity_id, activity: ActivityItem[] }`. Each `ActivityItem` has `id` (uint64; indexer-assigned monotonic per-row surrogate key, used as the pagination cursor — distinct from `entity_id`), `timestamp`, `block_height`, `entity_type`, `entity_id`, `msg` (e.g. `CreateEcosystem`, `AddGovernanceFrameworkDocument`), `account` (signer), and `changes` (object of changed fields). The same `ActivityTimelineResponse` shape is reused by every `*History` and the indexer-level `listChanges` method.
 
 #### Governance Framework methods
 
@@ -588,7 +588,7 @@ Retrieve a specific `GovernanceFrameworkVersion` by its ID, with its nested `Gov
 
 | Name | In | Type | Required | Description |
 | --- | --- | --- | --- | --- |
-| `id` | path | integer (int64) | yes | The GovernanceFrameworkVersion ID |
+| `id` | path | uint64 | yes | The GovernanceFrameworkVersion ID |
 | `preferred_language` | query | string | no | If set, return only one document per version, preferring `preferred_language`; otherwise return all documents in all languages |
 
 **Response:** `{ version: GovernanceFrameworkVersion }` — `id`, `ecosystem_id` (set iff this is an EGF; null otherwise), `corporation_id` (set iff this is a CGF; null otherwise), `created`, `version` (int), `active_since` (timestamp), and `documents[]: GovernanceFrameworkDocument[]` (each carrying `id`, `gfv_id`, `created`, `language`, `url`, `digest_sri`). Exactly one of `ecosystem_id` and `corporation_id` MUST be set, per VPR data model invariant.
@@ -601,8 +601,8 @@ Retrieve the list of `GovernanceFrameworkVersion` entries for one owning subject
 
 | Name | In | Type | Required | Description |
 | --- | --- | --- | --- | --- |
-| `ecosystem_id` | query | integer (int64) | conditional | Filter by owning Ecosystem. MUST be set iff `corporation_id` is null |
-| `corporation_id` | query | integer (int64) | conditional | Filter by owning Corporation id. MUST be set iff `ecosystem_id` is null |
+| `ecosystem_id` | query | uint64 | conditional | Filter by owning Ecosystem. MUST be set iff `corporation_id` is null |
+| `corporation_id` | query | uint64 | conditional | Filter by owning Corporation id. MUST be set iff `ecosystem_id` is null |
 | `active_only` | query | boolean | no | If true, return only the entry corresponding to the subject's `active_version` |
 | `preferred_language` | query | string | no | If set, return only one document per version, preferring `preferred_language` |
 
@@ -620,7 +620,7 @@ Retrieve a specific Credential Schema by its ID. *Aligned with VPR [[MOD-CS-QRY-
 
 | Name | In | Type | Required | Description |
 | --- | --- | --- | --- | --- |
-| `id` | path | integer (int64) | yes | The Credential Schema ID |
+| `id` | path | uint64 | yes | The Credential Schema ID |
 
 **Response:** `{ schema: CredentialSchema }`. The `CredentialSchema` object carries:
 
@@ -638,10 +638,11 @@ Retrieve a paginated, filtered list of Credential Schemas. *Aligned with VPR [[M
 
 | Name | In | Type | Required | Description |
 | --- | --- | --- | --- | --- |
-| `ecosystem_id` | query | integer (int64) | no | Filter by owning Ecosystem ID |
+| `ecosystem_id` | query | uint64 | no | Filter by owning Ecosystem ID |
 | `archived` | query | boolean | no | `true` → only archived schemas; `false` → only not-archived schemas; null/omitted → both. Default: null. |
-| `issuer_onboarding_mode` | query | string | no | Filter by issuer onboarding mode (`OPEN`, `ECOSYSTEM_ONBOARDING_PROCESS`, `GRANTOR_ONBOARDING_PROCESS`) |
-| `verifier_onboarding_mode` | query | string | no | Filter by verifier onboarding mode (`OPEN`, `ECOSYSTEM_ONBOARDING_PROCESS`, `GRANTOR_ONBOARDING_PROCESS`) |
+| `issuer_onboarding_mode` | query | enum | no | Filter by issuer onboarding mode: `OPEN` \| `GRANTOR_ONBOARDING_PROCESS` \| `ECOSYSTEM_ONBOARDING_PROCESS` |
+| `verifier_onboarding_mode` | query | enum | no | Filter by verifier onboarding mode: `OPEN` \| `GRANTOR_ONBOARDING_PROCESS` \| `ECOSYSTEM_ONBOARDING_PROCESS` |
+| `holder_onboarding_mode` | query | enum | no | Filter by holder onboarding mode: `ISSUER_ONBOARDING_PROCESS` \| `PERMISSIONLESS` |
 | `participant` | query | string | no | Account address; returns schemas where the account is the Ecosystem corporation or holds an active `Participant` entry |
 | `modified_after` | query | datetime | no | Only return schemas modified strictly after this datetime |
 | *(standard list filters)* | query | — | no | See [Standard list filters](#standard-list-filters) |
@@ -658,7 +659,7 @@ Retrieve the canonical JSON Schema document for a specific Credential Schema, wi
 
 | Name | In | Type | Required | Description |
 | --- | --- | --- | --- | --- |
-| `id` | path | integer (int64) | yes | The Credential Schema ID |
+| `id` | path | uint64 | yes | The Credential Schema ID |
 
 **Response:** The raw JSON Schema object as stored on-chain, with only the `$id` field overridden by the indexer. The body is `Content-Type: application/json`; clients SHOULD use this endpoint as the canonical schema-resolution target when dereferencing `vpr:verana:.../cs/v1/js/<n>` URIs.
 
@@ -680,7 +681,7 @@ Retrieve the activity timeline for a Credential Schema, ordered by `id` descendi
 
 | Name | In | Type | Required | Description |
 | --- | --- | --- | --- | --- |
-| `id` | path | integer (int64) | yes | The Credential Schema ID |
+| `id` | path | uint64 | yes | The Credential Schema ID |
 
 Supports pagination through attributes `max_id`, `min_id`, `response_max_size` and `sort`, as explained in [Pagination](#pagination).
 
@@ -696,7 +697,7 @@ Retrieve a specific Participant by its ID. A Participant is a single VPR partici
 
 | Name | In | Type | Required | Description |
 | --- | --- | --- | --- | --- |
-| `id` | path | integer (int64) | yes | The Participant ID |
+| `id` | path | uint64 | yes | The Participant ID |
 | `trust_data` | query | enum | no | `null` \| `summary` \| `full` |
 
 **Response:** `{ participant: Participant }`. The `Participant` object carries:
@@ -717,17 +718,17 @@ Retrieve a paginated, filtered list of Participants. *Aligned with VPR [[MOD-PP-
 
 | Name | In | Type | Required | Description |
 | --- | --- | --- | --- | --- |
-| `corporation_id` | query | integer (int64) | no | Filter by participant-owner Corporation id |
+| `corporation_id` | query | uint64 | no | Filter by participant-owner Corporation id |
 | `did` | query | string | no | Filter by DID |
-| `participant_id` | query | integer | no | Filter by exact Participant ID |
+| `participant_id` | query | uint64 | no | Filter by exact Participant ID |
 | `role` | query | enum | no | `ISSUER` \| `VERIFIER` \| `ISSUER_GRANTOR` \| `VERIFIER_GRANTOR` \| `ECOSYSTEM` \| `HOLDER` |
 | `participant_state` | query | enum | no | Indexer-derived lifecycle state: `REPAID` \| `SLASHED` \| `REVOKED` \| `EXPIRED` \| `ACTIVE` \| `FUTURE` \| `INACTIVE` |
 | `op_state` | query | enum | no | `PENDING` \| `VALIDATED` \| `TERMINATED` |
 | `only_valid` | query | boolean | no | Filter only valid (non-slashed, non-revoked, non-expired) Participants |
 | `only_slashed` | query | boolean | no | Filter only slashed Participants |
 | `only_repaid` | query | boolean | no | Filter only repaid Participants |
-| `schema_id` | query | integer | no | Filter by Credential Schema ID |
-| `validator_participant_id` | query | integer | no | Filter by validator Participant ID |
+| `schema_id` | query | uint64 | no | Filter by Credential Schema ID |
+| `validator_participant_id` | query | uint64 | no | Filter by validator Participant ID |
 | `when` | query | datetime | no | Effective-date filter; returns Participants whose effective range includes this datetime |
 | `modified_after` | query | datetime | no | Only return Participants modified strictly after this datetime |
 | `trust_data` | query | enum | no | `null` \| `summary` \| `full` |
@@ -745,7 +746,7 @@ Retrieve the activity timeline for a Participant, ordered by `id` descending (ne
 
 | Name | In | Type | Required | Description |
 | --- | --- | --- | --- | --- |
-| `id` | path | integer (int64) | yes | The Participant ID |
+| `id` | path | uint64 | yes | The Participant ID |
 
 Supports pagination through attributes `max_id`, `min_id`, `response_max_size` and `sort`, as explained in [Pagination](#pagination).
 
@@ -759,8 +760,8 @@ Compute the chain of beneficiary Participants for a credential transaction. Give
 
 | Name | In | Type | Required | Description |
 | --- | --- | --- | --- | --- |
-| `issuer_participant_id` | query | string | yes | Issuer Participant ID |
-| `verifier_participant_id` | query | string | yes | Verifier Participant ID |
+| `issuer_participant_id` | query | uint64 | yes | Issuer Participant ID |
+| `verifier_participant_id` | query | uint64 | yes | Verifier Participant ID |
 
 **Response:** `{ participants: Participant[] }` — the ordered set of beneficiary Participants.
 
@@ -831,7 +832,7 @@ Retrieve the aggregated trust-deposit position of a single Corporation across ev
 
 | Name | In | Type | Required | Description |
 | --- | --- | --- | --- | --- |
-| `corporation_id` | path | integer (int64) | yes | The Corporation ID |
+| `corporation_id` | path | uint64 | yes | The Corporation ID |
 
 **Response:** `{ trust_deposit: TrustDeposit }`. The `TrustDeposit` object carries:
 
@@ -856,7 +857,7 @@ Retrieve the activity timeline for a Trust Deposit row, ordered by `id` descendi
 
 | Name | In | Type | Required | Description |
 | --- | --- | --- | --- | --- |
-| `corporation_id` | path | integer (int64) | yes | The Corporation ID (the TrustDeposit row is identified 1:1 by `corporation_id`) |
+| `corporation_id` | path | uint64 | yes | The Corporation ID (the TrustDeposit row is identified 1:1 by `corporation_id`) |
 
 Supports pagination through attributes `max_id`, `min_id`, `response_max_size` and `sort`, as explained in [Pagination](#pagination).
 
@@ -874,7 +875,7 @@ Retrieve a paginated, filtered list of `OperatorAuthorization` entries. Each ent
 
 | Name | In | Type | Required | Description |
 | --- | --- | --- | --- | --- |
-| `corporation_id` | query | integer (int64) | no | Filter by the granting Corporation id |
+| `corporation_id` | query | uint64 | no | Filter by the granting Corporation id |
 | `operator` | query | string | no | Filter by the grantee operator account |
 | `msg_type` | query | string | no | Filter to authorizations whose `msg_types[]` includes this message type |
 | `only_active` | query | boolean | no | If true, only return non-expired authorizations (`expiration > now` or null) |
@@ -882,25 +883,25 @@ Retrieve a paginated, filtered list of `OperatorAuthorization` entries. Each ent
 
 Supports pagination through attributes `max_id`, `min_id`, `response_max_size` and `sort`, as explained in [Pagination](#pagination).
 
-**Response:** `{ authorizations: OperatorAuthorization[] }` — each entry carries `id` (auto-incremented int64), `corporation_id`, `operator`, `msg_types[]`, `spend_limit[]` (optional `DenomAmount[]`), `remaining_spend[]` (when `spend_limit` is set), `fee_spend_limit[]` (optional), `remaining_fee_spend[]` (when `fee_spend_limit` is set), `expiration` (optional timestamp), and `period` (optional duration).
+**Response:** `{ authorizations: OperatorAuthorization[] }` — each entry carries `id` (auto-incremented uint64), `corporation_id`, `operator`, `msg_types[]`, `spend_limit[]` (optional `DenomAmount[]`), `remaining_spend[]` (when `spend_limit` is set), `fee_spend_limit[]` (optional), `remaining_fee_spend[]` (when `fee_spend_limit` is set), `expiration` (optional timestamp), and `period` (optional duration).
 
 ##### IDX-DE-QRY-2 List VS Operator Authorizations
 
 `GET /de/v1/vs-operator-authorizations`
 
-Retrieve a paginated, filtered list of `VSOperatorAuthorization` entries. Each entry has its own `id` (auto-incremented int64) and is uniquely identified by the `(corporation_id, vs_operator)` pair; it holds the `ParticipantAuthorizationRecord[]` array — one record per `Participant` whose VS-operator authorization is delegated to that `vs_operator`. *Aligned with VPR [[MOD-DE-QRY-2]](https://verana-labs.github.io/verifiable-trust-vpr-spec/#mod-de-qry-2-list-vs-operator-authorizations).*
+Retrieve a paginated, filtered list of `VSOperatorAuthorization` entries. Each entry has its own `id` (auto-incremented uint64) and is uniquely identified by the `(corporation_id, vs_operator)` pair; it holds the `ParticipantAuthorizationRecord[]` array — one record per `Participant` whose VS-operator authorization is delegated to that `vs_operator`. *Aligned with VPR [[MOD-DE-QRY-2]](https://verana-labs.github.io/verifiable-trust-vpr-spec/#mod-de-qry-2-list-vs-operator-authorizations).*
 
 | Name | In | Type | Required | Description |
 | --- | --- | --- | --- | --- |
-| `corporation_id` | query | integer (int64) | no | Filter by the granting Corporation id |
+| `corporation_id` | query | uint64 | no | Filter by the granting Corporation id |
 | `vs_operator` | query | string | no | Filter by the grantee VS-operator account |
-| `participant_id` | query | integer (int64) | no | Filter to entries whose `records[]` contains a record for this `Participant.id` |
+| `participant_id` | query | uint64 | no | Filter to entries whose `records[]` contains a record for this `Participant.id` |
 | `only_active` | query | boolean | no | If true, only return entries with at least one non-expired record |
 | `modified_after` | query | datetime | no | Only return entries modified strictly after this datetime |
 
 Supports pagination through attributes `max_id`, `min_id`, `response_max_size` and `sort`, as explained in [Pagination](#pagination).
 
-**Response:** `{ authorizations: VSOperatorAuthorization[] }` — each entry carries `id` (auto-incremented int64), `corporation_id`, `vs_operator`, and `records[]: ParticipantAuthorizationRecord[]`. Each `ParticipantAuthorizationRecord` carries `participant_id` (globally unique), `msg_types[]`, `spend_limit[]` (optional), `remaining_spend[]` (when `spend_limit` is set), `fee_spend_limit[]` (optional), `remaining_fee_spend[]` (when `fee_spend_limit` is set), `with_feegrant` (boolean), `expiration` (timestamp), and `period` (optional duration). This is the canonical surface for the data that was previously inlined as `Participant.vs_operator_authz_*` fields.
+**Response:** `{ authorizations: VSOperatorAuthorization[] }` — each entry carries `id` (auto-incremented uint64), `corporation_id`, `vs_operator`, and `records[]: ParticipantAuthorizationRecord[]`. Each `ParticipantAuthorizationRecord` carries `participant_id` (globally unique), `msg_types[]`, `spend_limit[]` (optional), `remaining_spend[]` (when `spend_limit` is set), `fee_spend_limit[]` (optional), `remaining_fee_spend[]` (when `fee_spend_limit` is set), `with_feegrant` (boolean), `expiration` (timestamp), and `period` (optional duration). This is the canonical surface for the data that was previously inlined as `Participant.vs_operator_authz_*` fields.
 
 ##### IDX-DE-QRY-3 Get Operator Authorization
 
@@ -910,7 +911,7 @@ Retrieve a specific `OperatorAuthorization` entry by its id. *Aligned with VPR [
 
 | Name | In | Type | Required | Description |
 | --- | --- | --- | --- | --- |
-| `id` | path | integer (int64) | yes | The OperatorAuthorization ID |
+| `id` | path | uint64 | yes | The OperatorAuthorization ID |
 
 **Response:** `{ authorization: OperatorAuthorization }` — same shape as an entry returned by [`listOperatorAuthorizations`](#idx-de-qry-1-list-operator-authorizations): `id`, `corporation_id`, `operator`, `msg_types[]`, `spend_limit[]` (optional `DenomAmount[]`), `remaining_spend[]` (when `spend_limit` is set), `fee_spend_limit[]` (optional), `remaining_fee_spend[]` (when `fee_spend_limit` is set), `expiration` (optional timestamp), and `period` (optional duration).
 
@@ -922,7 +923,7 @@ Retrieve a specific `VSOperatorAuthorization` entry by its id, including its nes
 
 | Name | In | Type | Required | Description |
 | --- | --- | --- | --- | --- |
-| `id` | path | integer (int64) | yes | The VSOperatorAuthorization ID |
+| `id` | path | uint64 | yes | The VSOperatorAuthorization ID |
 
 **Response:** `{ authorization: VSOperatorAuthorization }` — same shape as an entry returned by [`listVSOperatorAuthorizations`](#idx-de-qry-2-list-vs-operator-authorizations): `id`, `corporation_id`, `vs_operator`, and `records[]: ParticipantAuthorizationRecord[]` (each record carries `participant_id`, `msg_types[]`, `spend_limit[]` and `remaining_spend[]`, `fee_spend_limit[]` and `remaining_fee_spend[]`, `with_feegrant`, `expiration`, `period`).
 
@@ -952,10 +953,10 @@ Retrieve a single `ExchangeRate` entry, either by its primary key `id` or by the
 
 | Name | In | Type | Required | Description |
 | --- | --- | --- | --- | --- |
-| `id` | query | integer (int64) | conditional¹ | Primary-key lookup |
-| `base_asset_type` | query | enum | conditional¹ | `TRUST_UNIT` \| `COIN` \| `FIAT` |
-| `base_asset` | query | string | conditional¹ | Base asset identifier (`"TU"` for `TRUST_UNIT`; on-chain denom for `COIN`; ISO-4217 currency code for `FIAT`) |
-| `quote_asset_type` | query | enum | conditional¹ | `TRUST_UNIT` \| `COIN` \| `FIAT` |
+| `id` | query | uint64 | conditional¹ | Primary-key lookup |
+| `base_asset_type` | query | enum | conditional¹ | `TU` \| `COIN` \| `FIAT` |
+| `base_asset` | query | string | conditional¹ | Base asset identifier (`"tu"` for `TU`; on-chain denom for `COIN`; ISO-4217 currency code for `FIAT`) |
+| `quote_asset_type` | query | enum | conditional¹ | `TU` \| `COIN` \| `FIAT` |
 | `quote_asset` | query | string | conditional¹ | Quote asset identifier (same rules as `base_asset`) |
 | `state` | query | boolean | no | Force-filter on `state` (`true` enabled / `false` disabled). When omitted, both are returned |
 | `expire_ts` | query | datetime | no | Return only if `expires > expire_ts` |
@@ -991,9 +992,9 @@ Convert an amount of a base asset to its equivalent in a quote asset using the r
 
 | Name | In | Type | Required | Description |
 | --- | --- | --- | --- | --- |
-| `base_asset_type` | query | enum | yes | `TRUST_UNIT` \| `COIN` \| `FIAT` |
+| `base_asset_type` | query | enum | yes | `TU` \| `COIN` \| `FIAT` |
 | `base_asset` | query | string | yes | Base asset identifier |
-| `quote_asset_type` | query | enum | yes | `TRUST_UNIT` \| `COIN` \| `FIAT` |
+| `quote_asset_type` | query | enum | yes | `TU` \| `COIN` \| `FIAT` |
 | `quote_asset` | query | string | yes | Quote asset identifier |
 | `amount` | query | string | yes | Base-asset amount expressed as a base-10 unsigned integer string, in the base asset's base units |
 
@@ -1081,11 +1082,11 @@ Retrieve a single statistics row — either by its primary key `id`, or by the n
 
 | Name | In | Type | Required | Description |
 | --- | --- | --- | --- | --- |
-| `id` | query | integer | no¹ | Primary-key lookup |
+| `id` | query | uint64 | no¹ | Primary-key lookup |
 | `granularity` | query | enum | no¹ | `HOUR` \| `DAY` \| `MONTH` |
 | `timestamp` | query | datetime | no¹ | Bucket start (ISO 8601 UTC) |
 | `entity_type` | query | enum | no¹ | `GLOBAL` \| `ECOSYSTEM` \| `CREDENTIAL_SCHEMA` \| `PARTICIPANT` |
-| `entity_id` | query | integer | no¹ | Required for non-`GLOBAL` entity types |
+| `entity_id` | query | uint64 | no¹ | Required for non-`GLOBAL` entity types |
 
 ¹ Either `id` MUST be provided, **or** the composite key (`granularity`, `timestamp`, `entity_type`, `entity_id`) MUST be provided.
 
@@ -1117,7 +1118,7 @@ Return the count of participants of a given role for a given entity at the block
 | Name | In | Type | Required | Description |
 | --- | --- | --- | --- | --- |
 | `entity_kind` | query | integer | yes | `0`=GLOBAL, `1`=ECOSYSTEM, `2`=CREDENTIAL_SCHEMA, `3`=PARTICIPANT |
-| `entity_id` | query | integer | conditional | Required for non-`GLOBAL` entity kinds; MUST be omitted for `GLOBAL` |
+| `entity_id` | query | uint64 | conditional | Required for non-`GLOBAL` entity kinds; MUST be omitted for `GLOBAL` |
 | `role_type` | query | integer | yes | `0`=ANY, `1`=ECOSYSTEM, `2`=ISSUER_GRANTOR, `3`=ISSUER, `4`=VERIFIER_GRANTOR, `5`=VERIFIER, `6`=HOLDER |
 
 **Response:** Inline object `{ entity_kind, entity_id, role_type, block_height, participants }` where `block_height` echoes the resolved evaluation block and `participants` is the integer count.
