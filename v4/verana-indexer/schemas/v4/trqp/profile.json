@@ -34,8 +34,8 @@
 
   "resource_grammar": {
     "label":   "VPR schema URI",
-    "format":  "vpr:verana:<network>/cs/v<schema-version>/js/<schema-id>",
-    "pattern": "^vpr:verana:[a-z0-9-]+/cs/v[0-9]+/js/[0-9]+$",
+    "format":  "vpr:verana:<network>:cs:<schema-id>",
+    "pattern": "^vpr:verana:[a-z0-9-]+:cs:[0-9]+$",
     "example": "vpr:verana:vna-mainnet-1:cs:42"
   },
 

@@ -550,11 +550,11 @@ Indexer tools issue HTTP GET requests against the configured `VERANA_INDEXER` en
 
 | Tool | Upstream Query | Description |
 |---|---|---|
-| `verana.idx.vt.resolve` | [`IDX-VT-QRY-1`](../verana-indexer/spec.md#idx-vt-qry-1-resolve) | `GET /v4/verifiable-trust/resolve` — full trust resolution for a DID. |
+| `verana.idx.vt.resolve` | [`IDX-VT-QRY-1`](../verana-indexer/spec.md#idx-vt-qry-1-resolve) | `POST /v4/verifiable-trust/resolve` — full trust resolution for a DID. |
 | `verana.idx.vt.listChanges` | [`IDX-VT-QRY-2`](../verana-indexer/spec.md#idx-vt-qry-2-list-changes) | `GET /v4/verifiable-trust/changes`. |
 | `verana.idx.vt.listIndexedDids` | [`IDX-VT-QRY-3`](../verana-indexer/spec.md#idx-vt-qry-3-list-indexed-dids) | `GET /v4/verifiable-trust/dids`. |
-| `verana.idx.trqp.authorize` | [`IDX-TRQP-QRY-1`](../verana-indexer/spec.md#idx-trqp-qry-1-trqp-authorize) | `GET /v4/trqp/v2/authorization` — TRQP authorization decision. |
-| `verana.idx.trqp.recognize` | [`IDX-TRQP-QRY-2`](../verana-indexer/spec.md#idx-trqp-qry-2-trqp-recognize) | `GET /v4/trqp/v2/recognition` — TRQP recognition decision. |
+| `verana.idx.trqp.authorize` | [`IDX-TRQP-QRY-1`](../verana-indexer/spec.md#idx-trqp-qry-1-trqp-authorize) | `POST /v4/trqp/v2/authorization` — TRQP authorization decision. |
+| `verana.idx.trqp.recognize` | [`IDX-TRQP-QRY-2`](../verana-indexer/spec.md#idx-trqp-qry-2-trqp-recognize) | `POST /v4/trqp/v2/recognition` — TRQP recognition decision. |
 
 > Indexer WebSocket subscriptions (`IDX-INDEXER-SUB-1`, `IDX-VT-SUB-1`) are NOT exposed as MCP tools. The MCP server consumes `IDX-INDEXER-SUB-1` internally for cache-refresh and the read-after-write barrier per [[VMS-TX-WS]](#vms-tx-ws-persistent-websocket-connections) and [[VMS-TX-BARRIER]](#vms-tx-barrier-indexer-read-after-write-barrier); the resolver-changes subscription `IDX-VT-SUB-1` is not subscribed to by the MCP server. Live event delivery to MCP clients is out of scope for this revision.
 
