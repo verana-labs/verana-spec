@@ -97,7 +97,7 @@ Three discovery flows are exercised by the server:
 
 - **Bound Corporation resolution** — at startup, [`IDX-CO-QRY-1` Get Corporation](../verana-indexer/spec.md#idx-co-qry-1-get-corporation) is called with `VERANA_CORPORATION` to resolve the bound Corporation's `policy_address`, `did`, and `active_version`. These are cached in memory and refreshed when an indexer event indicates a `Corporation` mutation.
 - **Operator capability resolution** — [`IDX-DE-QRY-1` List Operator Authorizations](../verana-indexer/spec.md#idx-de-qry-1-list-operator-authorizations) is called with `operator = own_address` and `corporation_id = VERANA_CORPORATION` to enumerate the `msg_types` this server is authorized to issue. Results are cached and refreshed on indexer events touching `OperatorAuthorization`.
-- **VS Agent enumeration and admin URL resolution** — [`IDX-DE-QRY-2` List VS Operator Authorizations](../verana-indexer/spec.md#idx-de-qry-2-list-vs-operator-authorizations) with `corporation_id = VERANA_CORPORATION` enumerates the bound Corporation's `VSOperatorAuthorization` entries; for each entry, the server resolves the agent's DID Document and reads the `#vs-agent-admin-api` `VsAgentAdminAPI` service entry per [[VSA-VTI-DIDDOC]](../vs-agent/spec.md#vsa-vti-diddoc-did-document-required-service-entries) to obtain the agent's Admin API origin.
+- **VS Agent enumeration and admin URL resolution** — [`IDX-DE-QRY-2` List VS Operator Authorizations](../verana-indexer/spec.md#idx-de-qry-2-list-vs-operator-authorizations) with `corporation_id = VERANA_CORPORATION` enumerates the bound Corporation's `VSOperatorAuthorization` entries; for each entry, the server resolves the agent's DID Document and reads the `VsAgentAdminAPI` service entry per [[VSA-VTI-DIDDOC]](../vs-agent/spec.md#vsa-vti-diddoc-did-document-service-entries) to obtain the agent's Admin API origin.
 
 No static configuration is required for any of these — the chain and the DID layer are the source of truth.
 
@@ -182,9 +182,9 @@ The MCP server's authority on the Verana ledger is bounded entirely by the [`Ope
 
 For every `verana.vsa.*` tool invocation, the MCP server addresses one specific VS Agent identified by its DID, authenticates as the operator account, and forwards the call.
 
-[VMS-AUTH-VSA-1] The agent's Admin API origin MUST be discovered by resolving the agent's DID Document and reading the `serviceEndpoint` of its `#vs-agent-admin-api` `VsAgentAdminAPI` entry per [[VSA-VTI-DIDDOC]](../vs-agent/spec.md#vsa-vti-diddoc-did-document-required-service-entries). Static configuration mapping `agent_did → URL` MUST NOT be required. The resolved origin MAY be cached and SHOULD be refreshed when the agent's DID Document changes.
+[VMS-AUTH-VSA-1] The agent's Admin API origin MUST be discovered by resolving the agent's DID Document and reading the `serviceEndpoint` of the service entry with `type: "VsAgentAdminAPI"` per [[VSA-VTI-DIDDOC]](../vs-agent/spec.md#vsa-vti-diddoc-did-document-service-entries). Static configuration mapping `agent_did → URL` MUST NOT be required. The resolved origin MAY be cached and SHOULD be refreshed when the agent's DID Document changes.
 
-[VMS-AUTH-VSA-2] If the agent's DID Document does not expose a `#vs-agent-admin-api` `VsAgentAdminAPI` service entry, the tool MUST fail fast with a `VSA_ADMIN_URL_NOT_FOUND` error.
+[VMS-AUTH-VSA-2] If the agent's DID Document does not expose a `VsAgentAdminAPI` service entry, the tool MUST fail fast with a `VSA_ADMIN_URL_NOT_FOUND` error.
 
 [VMS-AUTH-VSA-3] Authentication to the Admin API uses an [ADR-036 signed message](https://docs.cosmos.network/main/build/architecture/adr-036-arbitrary-signature) challenge issued by the operator account, per the VS Agent's [Authentication](../vs-agent/spec.md#authentication-and-authorization) section. The MCP server MUST NOT cache long-lived bearer tokens issued by the agent across distinct tool invocations beyond their server-declared expiry.
 
@@ -634,7 +634,7 @@ VS Agent tools authenticate to the target VS Agent's [Administration API](../vs-
 
 [VMS-TOOLS-VSA-1] If the supplied `agent_did` is not the `vs_operator` of any `VSOperatorAuthorization` owned by the bound Corporation, the tool MUST fail with `VSA_NOT_AUTHORIZED` and MUST NOT contact the VS Agent.
 
-[VMS-TOOLS-VSA-2] If the supplied `agent_did` resolves but the resulting DID Document does not expose a `#vs-agent-admin-api` `VsAgentAdminAPI` service entry, the tool MUST fail with `VSA_ADMIN_URL_NOT_FOUND` per [[VMS-AUTH-VSA-2]](#vms-auth-vsa-vs-agent-admin-api-authentication).
+[VMS-TOOLS-VSA-2] If the supplied `agent_did` resolves but the resulting DID Document does not expose a `VsAgentAdminAPI` service entry, the tool MUST fail with `VSA_ADMIN_URL_NOT_FOUND` per [[VMS-AUTH-VSA-2]](#vms-auth-vsa-vs-agent-admin-api-authentication).
 
 #### [VMS-TOOLS-VSA-FLOW] Flow Management
 
@@ -655,7 +655,7 @@ VS Agent tools authenticate to the target VS Agent's [Administration API](../vs-
 | `verana.vsa.se.updateServiceEndpoint` | [`updateServiceEndpoint`](../vs-agent/spec.md#vsa-adm-se-update-updateserviceendpoint) | Update an existing service entry. |
 | `verana.vsa.se.deleteServiceEndpoint` | [`deleteServiceEndpoint`](../vs-agent/spec.md#vsa-adm-se-delete-deleteserviceendpoint) | Remove a service entry. |
 
-> The `#vs-agent-admin-api` and other VPR-mandated service entries (e.g. `#trqp`, `#tr-presentations`) MUST NOT be mutable through these tools per [[VSA-ADM-SE]](../vs-agent/spec.md#vsa-adm-se-service-endpoint-management); the upstream agent enforces this constraint.
+> The `VsAgentAdminAPI` and other VPR-mandated service entries (e.g. `#trqp`, `#tr-presentations`) MUST NOT be mutable through these tools per [[VSA-ADM-SE]](../vs-agent/spec.md#vsa-adm-se-service-endpoint-management); the upstream agent enforces this constraint.
 
 ### [VMS-TOOLS-COSMOS] Cosmos Read-Only Tools
 
@@ -708,7 +708,7 @@ Wallet tools surface introspective information about the MCP server's own operat
 | `verana.wallet.getAddress` | Return the operator account's bech32 address (and `account_number`, `sequence`, `chain_id`). |
 | `verana.wallet.getCorporation` | Return the bound Corporation as resolved by the MCP server at startup and refreshed on indexer events: `{ id, policy_address, did, active_version, language, modified }`. |
 | `verana.wallet.listAuthorizations` | Return the cached set of `OperatorAuthorization` entries granted by the bound Corporation to the operator account. Equivalent to `verana.idx.de.listOperatorAuthorizations` filtered by the operator's own address, but served from the in-memory cache used by [[VMS-TOOLS-ENV-FILTER]](#vms-tools-env-filter-tool-availability). |
-| `verana.wallet.listVSAgents` | Return the enumerated set of VS Agents under the bound Corporation, each with its `vs_operator` address, the controlled `Participant`s, and the `#vs-agent-admin-api` URL resolved from its DID Document (or an explanatory `unreachable_reason` field if URL resolution failed). |
+| `verana.wallet.listVSAgents` | Return the enumerated set of VS Agents under the bound Corporation, each with its `vs_operator` address, the controlled `Participant`s, and the `VsAgentAdminAPI` URL resolved from its DID Document (or an explanatory `unreachable_reason` field if URL resolution failed). |
 | `verana.wallet.getStatus` | Return the MCP server's runtime status: bootstrap completion, the three WebSocket connection states (CometBFT RPC, indexer, graph block-progress), last block height seen on each WS (the indexer WS's `last_height` is the indexer height cursor used by [[VMS-TX-BARRIER]](#vms-tx-barrier-indexer-read-after-write-barrier); the graph WS's `last_height` is the graph's `lastAppliedBlock` per [[TG-BPS-3]](../verana-graph/spec.md#block-progress-subscription) and is informational only), and the timestamp of the most recent capability cache refresh. |
 
 ## [VMS-RES] Resources
@@ -825,7 +825,7 @@ The `data.stage` field localises the failure to a specific phase of the tool's e
 | Code | Stage | Description |
 |---|---|---|
 | `VSA_NOT_AUTHORIZED` | `authz` | The supplied `agent_did` is not the `vs_operator` of any `VSOperatorAuthorization` owned by the bound Corporation per [[VMS-TOOLS-VSA-1]](#vms-tools-vsa-vs-agent-tools). |
-| `VSA_ADMIN_URL_NOT_FOUND` | `upstream` | The agent's DID Document is reachable but does not expose a `#vs-agent-admin-api` `VsAgentAdminAPI` service entry per [[VMS-AUTH-VSA-2]](#vms-auth-vsa-vs-agent-admin-api-authentication). |
+| `VSA_ADMIN_URL_NOT_FOUND` | `upstream` | The agent's DID Document is reachable but does not expose a `VsAgentAdminAPI` service entry per [[VMS-AUTH-VSA-2]](#vms-auth-vsa-vs-agent-admin-api-authentication). |
 | `VSA_DID_RESOLUTION_FAILED` | `upstream` | The DID Document could not be resolved at all (network failure, DID method failure, signature validation failure on the resolved document). |
 | `VSA_AUTH_FAILED` | `authz` | The ADR-036 challenge-response loop with the VS Agent failed: nonce expired, signature rejected, bearer token rejected, or the agent claims the operator is not authorized at the VS Agent layer. |
 
