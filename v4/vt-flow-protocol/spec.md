@@ -576,7 +576,7 @@ Error codes are carried in the adopted `problem-report`'s `description.code` fie
 | `vt-flow.invalid-wallet-agent-participant-id` | Validator | `wallet_agent_participant_id` is malformed or does not resolve on-chain. | `you` | `thread` |
 | `vt-flow.invalid-claims` | Validator | Submitted `claims` do not satisfy the schema. | `you` | `thread` |
 | `vt-flow.invalid-participant-session-id` | Validator | `participant_session_id` is malformed or collides with an existing session. | `you` | `thread` |
-| `vt-flow.not-a-verifiable-service` | Validator | Applicant's DID does not satisfy [[VS-CONN-VS]][vt-spec-conn-vs]. | `none` | `connection` |
+| `vt-flow.not-a-verifiable-service` | Either | Peer's DID does not satisfy [[VS-CONN-VS]][vt-spec-conn-vs]. | `none` | `connection` |
 | `vt-flow.validation-failed` | Validator | Off-chain validation of submitted documentation failed. | `you` (OPTIONAL) | `thread` |
 | `vt-flow.oob-expired` | Validator | OOB link expired before Applicant completed the step. | `you` | `thread` |
 | `vt-flow.session-terminated` | Either | Party explicitly terminated the session. | `none` | `thread` |
