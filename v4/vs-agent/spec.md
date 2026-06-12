@@ -410,7 +410,10 @@ sequenceDiagram
 
     Note over Validator: 6. Generate credential<br/>(sign + compute digest)
     Validator->>VPR: 7. CreateOrUpdateParticipantSession
-    Validator->>Applicant Agent: 8. Credential offer
+    Validator->>Applicant Agent: 6. Credential offer, applicant requests
+    Note over Validator: Sign credential<br/>+ compute digest
+    Validator->>VPR: 7. CreateOrUpdateParticipantSession
+    Validator->>Applicant Agent: 8. Deliver signed credential
     Applicant Agent->>VPR: 9. Verify validator + digest
     Applicant Agent->>Validator: 10. Accept Credential
     Note over Applicant Agent: 11. Store credential
