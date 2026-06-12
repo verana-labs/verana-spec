@@ -526,6 +526,10 @@ stateDiagram-v2
     COMPLETED --> TERMINATED_BY_VALIDATOR: close session
     ERROR --> [*]
     TERMINATED_BY_VALIDATOR --> [*]
+    AWAITING_OR --> TERMINATED_BY_APPLICANT: applicant terminates
+    AWAITING_IR --> TERMINATED_BY_APPLICANT: applicant terminates
+    VALIDATING --> TERMINATED_BY_APPLICANT: applicant terminates
+    COMPLETED --> TERMINATED_BY_APPLICANT: applicant terminates
     TERMINATED_BY_APPLICANT --> [*]
     PARTICIPANT_REVOKED --> [*]
     PARTICIPANT_SLASHED --> [*]
