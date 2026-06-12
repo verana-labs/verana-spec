@@ -12,10 +12,10 @@ The **Verifiable Trust Flow Protocol** (`vt-flow`) is a DIDComm superprotocol th
 
 `vt-flow` covers two flow variants defined in the [VS Agent Specification](../vs-agent/spec.md):
 
-- **Onboarding Process** ([VSA-VTI-FLOW-OP](../vs-agent/spec.md#vsa-vti-flow-op-onboarding-processes)) — required when a Credential Schema's onboarding mode is `GRANTOR_ONBOARDING_PROCESS` or `ECOSYSTEM_ONBOARDING_PROCESS`. The Applicant first creates an on-chain Onboarding Process (`StartParticipantOP`) before DIDComm interaction. The Validator performs off-chain validation, transitions the on-chain `Participant` to `VALIDATED` (`SetParticipantOPValidated`), then — **optionally** — issues a credential. Validation-only outcomes (no issuance) are valid terminal states.
+- **Onboarding Process** ([VSA-VTI-FLOW-OP](../vs-agent/spec.md#vsa-vti-flow-op-onboarding-processes)) — required when a Credential Schema's onboarding mode is `GRANTOR_ONBOARDING_PROCESS` or `ECOSYSTEM_ONBOARDING_PROCESS`. The Applicant first creates an on-chain Onboarding Process (`StartParticipantOP`) before DIDComm interaction. The Validator performs off-chain validation, transitions the on-chain `Participant` to `VALIDATED` (`SetParticipantOPtoValidated`), then — **optionally** — issues a credential. Validation-only outcomes (no issuance) are valid terminal states.
 - **Credential Direct Issuance** ([VSA-VTI-FLOW-DI](../vs-agent/spec.md#vsa-vti-flow-di-credential-direct-issuance)) — used when the Applicant is a `HOLDER`, the Validator is an `ISSUER`, and the schema permits direct issuance (`holder_onboarding_mode` = `PERMISSIONLESS`). No on-chain Onboarding Process is required.
 
-Both variants share the same state machine, message set, and error model. They differ only in the initial request message (`validation-request` vs `issuance-request`) and in whether an on-chain Onboarding Process precedes credential delivery.
+Both variants share the same state machine, message set, and error model. They differ only in the initial request message (`onboarding-request` vs `issuance-request`) and in whether an on-chain Onboarding Process precedes credential delivery.
 
 ## Motivation
 
@@ -42,7 +42,7 @@ https://didcomm.org/vt-flow/1.0/<message-name>
 
 ### Protocol Identification
 
-The protocol is identified by the message type URI of the first vt-flow message received on the connection (`validation-request` or `issuance-request`).
+The protocol is identified by the message type URI of the first vt-flow message received on the connection (`onboarding-request` or `issuance-request`).
 
 ### Key Concepts
 
@@ -51,7 +51,7 @@ The protocol is identified by the message type URI of the first vt-flow message 
 | **Verifiable Trust Credential (VTC)** | A W3C Verifiable Credential (JSON-LD) governed by a Verana Credential Schema. |
 | **Credential Schema** | An on-chain resource in the VPR that defines the format and validation rules for a credential. Each schema has onboarding modes (`issuer_onboarding_mode`, `verifier_onboarding_mode`, `holder_onboarding_mode`) that determine whether an Onboarding Process is required. |
 | **Participant** | An on-chain record granting a DID a specific role (`ISSUER`, `VERIFIER`, `HOLDER`, `ISSUER_GRANTOR`, `VERIFIER_GRANTOR`) for a schema. Obtained either directly (`OPEN` mode) or through an Onboarding Process. |
-| **Onboarding Process (OP)** | An on-chain state transition used when a Credential Schema requires validator approval. Initiated with `StartParticipantOP`, transitioned to `VALIDATED` with `SetParticipantOPValidated`. |
+| **Onboarding Process (OP)** | An on-chain state transition used when a Credential Schema requires validator approval. Initiated with `StartParticipantOP`, transitioned to `VALIDATED` with `SetParticipantOPtoValidated`. |
 | **Participant Session** | An on-chain record created by `CreateOrUpdateParticipantSession` that binds a specific credential issuance to a validator's Participant. Identified by `participant_session_id`. |
 | **vt-flow session** | A DIDComm conversation between an Applicant and a Validator identified by the `thid` of the first vt-flow message. |
 | **Superprotocol / Subprotocol** | Per [RFC 0003][rfc0003], `vt-flow` is the outer (super)protocol; Issue Credential V2 runs nested inside a vt-flow session and is linked via `~thread.pthid`. |
@@ -62,7 +62,7 @@ Two identifiers carry session semantics in vt-flow. They serve different layers 
 
 | Identifier | Layer | Purpose |
 |---|---|---|
-| `thid` (DIDComm `~thread.thid`) | DIDComm correlation | Links all vt-flow messages in one session, and carried as `pthid` on all Issue Credential V2 subprotocol messages. Equals the `@id` of the initial `validation-request` or `issuance-request`. |
+| `thid` (DIDComm `~thread.thid`) | DIDComm correlation | Links all vt-flow messages in one session, and carried as `pthid` on all Issue Credential V2 subprotocol messages. Equals the `@id` of the initial `onboarding-request` or `issuance-request`. |
 | `participant_session_id` (vt-flow message body field) | On-chain / VPR | Identifier used for `CreateOrUpdateParticipantSession`. Also used by the Validator to re-attach an existing flow to a new DIDComm connection on reconnection (see [Reconnection](#reconnection)). |
 
 ### Roles
@@ -78,7 +78,7 @@ The valid Applicant/Validator pairings are enumerated in the [VS Agent Specifica
 
 Per [[VS-CONN-VS]][vt-spec-conn-vs], both parties **MUST** verify the peer is a Verifiable Service at the protocol level:
 
-- The **Validator MUST** perform the check **on receipt of the first vt-flow message** (`validation-request` or `issuance-request`).
+- The **Validator MUST** perform the check **on receipt of the first vt-flow message** (`onboarding-request` or `issuance-request`).
 - The **Applicant MUST** perform the check **before sending** the first vt-flow message.
 
 On check failure, the failing party **MUST** terminate the session with `problem-report` code `vt-flow.not-a-verifiable-service` (Flow State transitions to `ERROR`).
@@ -109,13 +109,13 @@ All states enumerated below are normative.
 | Flow State | Applies to | Flow | Description |
 |---|---|---|---|
 | `AWAITING_OP` | Applicant | Onboarding Process | `NOT_CONNECTED`. Waiting for the Applicant to submit or renew a `StartParticipantOP` / `RenewParticipantOP`. |
-| `OR_SENT` | Applicant | Onboarding Process | `ESTABLISHED`. `validation-request` sent to Validator. |
-| `AWAITING_OR` | Validator | Onboarding Process | `ESTABLISHED`. `validation-request` expected but not yet received, or last request was rejected (Applicant may retry). |
+| `OR_SENT` | Applicant | Onboarding Process | `ESTABLISHED`. `onboarding-request` sent to Validator. |
+| `AWAITING_OR` | Validator | Onboarding Process | `ESTABLISHED`. `onboarding-request` expected but not yet received, or last request was rejected (Applicant may retry). |
 | `IR_SENT` | Applicant | Direct Issuance | `ESTABLISHED`. `issuance-request` sent to Validator. |
 | `AWAITING_IR` | Validator | Direct Issuance | `ESTABLISHED`. `issuance-request` expected but not yet received, or last request was rejected (Applicant may retry). |
 | `OOB_PENDING` | Both | Both | `ESTABLISHED`. Validator sent an `oob-link`; awaiting Applicant completion. |
 | `VALIDATING` | Both | Onboarding Process | `ESTABLISHED`. Validator performing off-chain validation. |
-| `VALIDATED` | Both | Onboarding Process | `ESTABLISHED`. Validator called `SetParticipantOPValidated` on-chain; `op_state` is now `VALIDATED`. In the Onboarding Process flow, this is a valid terminal state if no credential will be issued. |
+| `VALIDATED` | Both | Onboarding Process | `ESTABLISHED`. Validator called `SetParticipantOPtoValidated` on-chain; `op_state` is now `VALIDATED`. In the Onboarding Process flow, this is a valid terminal state if no credential will be issued. |
 | `CRED_OFFERED` | Both | Both | `ESTABLISHED`. Issue Credential V2 subprotocol in flight. Applicant verifies on-chain digest while in this state; acceptance transitions to `COMPLETED`. |
 | `COMPLETED` | Both | Both | `ESTABLISHED`. Credential delivered, verified, and accepted (Issue Credential V2 Ack sent). Connection remains open for future updates. |
 | `CRED_REVOKED` | Both | Both | `ESTABLISHED`. Validator sent `credential-state-change` with `state=REVOKED`. Applicant removed the linked VP and deleted the credential. Connection remains open. |
@@ -147,7 +147,7 @@ Applicant                          VPR (Chain)                    Validator
     │                                  │                              │
     │ ─── vt-flow protocol begins ─────────────────────────────────── │
     │                                  │                              │
-    │ 3. validation-request            │                              │
+    │ 3. onboarding-request            │                              │
     │ ───────────────────────────────────────────────────────────────>│
     │    (Validator runs VS-CONN-VS check on receipt)                 │
     │                                  │                              │
@@ -157,7 +157,7 @@ Applicant                          VPR (Chain)                    Validator
     │   (optional) validating          │                              │
     │ <───────────────────────────────────────────────────────────────│
     │                                  │                              │
-    │                                  │ 4. SetParticipantOPValidated │
+    │                                  │ 4. SetParticipantOPtoValidated │
     │                                  │<─────────────────────────────│
     │                                  │                              │
     │   Flow State: VALIDATED (valid terminal if no issuance)         │
@@ -242,13 +242,13 @@ Both variants converge on the Issue Credential V2 subprotocol when issuance occu
 
 All vt-flow messages use DIDComm v1 envelope format with `@type`, `@id`, and `~thread` decorators. Message fields are top-level alongside these decorators (not nested in a `body` object). See [DIDComm Envelope Compatibility](#didcomm-envelope-compatibility) for the v2 mapping.
 
-### validation-request
+### onboarding-request
 
 Sent by the Applicant to initiate an Onboarding Process flow. **MUST** be the first vt-flow message sent in this variant. The message's `@id` becomes the vt-flow session's `thid`.
 
 ```json
 {
-  "@type": "https://didcomm.org/vt-flow/1.0/validation-request",
+  "@type": "https://didcomm.org/vt-flow/1.0/onboarding-request",
   "@id": "<uuid>",
   "~thread": {
     "thid": "<same as @id>"
@@ -284,7 +284,7 @@ Upon receipt, the Validator **MUST** either accept and transition Flow State to 
 
 ### issuance-request
 
-Sent by the Applicant to initiate a Direct Issuance flow. Same shape as `validation-request` but carries `schema_id` instead of `participant_id`.
+Sent by the Applicant to initiate a Direct Issuance flow. Same shape as `onboarding-request` but carries `schema_id` instead of `participant_id`.
 
 ```json
 {
@@ -293,8 +293,8 @@ Sent by the Applicant to initiate a Direct Issuance flow. Same shape as `validat
   "~thread": { "thid": "<same as @id>" },
   "schema_id": "<VPR credential schema id>",
   "participant_session_id": "<applicant-generated uuid>",
-  "agent_participant_id": "<see validation-request>",
-  "wallet_agent_participant_id": "<see validation-request>",
+  "agent_participant_id": "<see onboarding-request>",
+  "wallet_agent_participant_id": "<see onboarding-request>",
   "claims": {},
   "proofs~attach": []
 }
@@ -303,7 +303,7 @@ Sent by the Applicant to initiate a Direct Issuance flow. Same shape as `validat
 | Field | Type | Required | Description |
 |---|---|---|---|
 | `schema_id` | string | REQUIRED | The VPR Credential Schema ID of the desired credential. |
-| *others* | | | As in `validation-request`. |
+| *others* | | | As in `onboarding-request`. |
 
 ### oob-link
 
@@ -429,7 +429,7 @@ Receiving `credential-received` on the Applicant side is the hook point for on-c
 If the Applicant reconnects after a connection closes:
 
 1. The Applicant **MUST** establish a new DIDComm connection (via implicit invitation to the Validator's DID).
-2. The Applicant **MUST** resend a `validation-request` or `issuance-request` matching the original, carrying the **same** `participant_session_id`, `agent_participant_id`, `wallet_agent_participant_id`, and (for Onboarding Process) `participant_id` or (for Direct Issuance) `schema_id`.
+2. The Applicant **MUST** resend a `onboarding-request` or `issuance-request` matching the original, carrying the **same** `participant_session_id`, `agent_participant_id`, `wallet_agent_participant_id`, and (for Onboarding Process) `participant_id` or (for Direct Issuance) `schema_id`.
 3. The Validator **MUST** recognize the request as belonging to an existing session by matching on `participant_session_id` (plus `participant_id` or `schema_id` for defence-in-depth) and re-attach the existing flow to the new connection.
 4. The reattached flow's Flow State resumes from whatever stage it was in when the connection dropped.
 
@@ -445,10 +445,10 @@ Diagrams show the **Flow State** dimension only. Connection State transitions (`
 stateDiagram-v2
     direction TB
     [*] --> AWAITING_OP: submit StartParticipantOP
-    AWAITING_OP --> OR_SENT: send validation-request
+    AWAITING_OP --> OR_SENT: send onboarding-request
     OR_SENT --> OOB_PENDING: oob-link received
     OOB_PENDING --> OR_SENT: OOB complete
-    OR_SENT --> VALIDATED: SetParticipantOPValidated on-chain
+    OR_SENT --> VALIDATED: SetParticipantOPtoValidated on-chain
     VALIDATED --> CRED_OFFERED: offer-credential received
     CRED_OFFERED --> COMPLETED: Ack sent after verification
 
@@ -501,7 +501,7 @@ stateDiagram-v2
     direction TB
     [*] --> AWAITING_OR: OR request expected
     [*] --> AWAITING_IR: IR request expected
-    AWAITING_OR --> VALIDATING: accept validation-request
+    AWAITING_OR --> VALIDATING: accept onboarding-request
     AWAITING_IR --> VALIDATING: accept issuance-request
     AWAITING_OR --> OOB_PENDING: send oob-link
     AWAITING_IR --> OOB_PENDING: send oob-link
@@ -549,7 +549,7 @@ All vt-flow message types use the base URI `https://didcomm.org/vt-flow/1.0/`.
 
 | Message | Type URI |
 |---|---|
-| validation-request | `https://didcomm.org/vt-flow/1.0/validation-request` |
+| onboarding-request | `https://didcomm.org/vt-flow/1.0/onboarding-request` |
 | issuance-request | `https://didcomm.org/vt-flow/1.0/issuance-request` |
 | oob-link | `https://didcomm.org/vt-flow/1.0/oob-link` |
 | validating | `https://didcomm.org/vt-flow/1.0/validating` |
@@ -564,7 +564,7 @@ Error codes are carried in the adopted `problem-report`'s `description.code` fie
 
 | Code | Sender | Meaning | `who_retries` | `impact` |
 |---|---|---|---|---|
-| `vt-flow.or-required` | Validator | Expected `validation-request` but received a different vt-flow message. | `you` | `thread` |
+| `vt-flow.or-required` | Validator | Expected `onboarding-request` but received a different vt-flow message. | `you` | `thread` |
 | `vt-flow.ir-required` | Validator | Expected `issuance-request` but received a different vt-flow message. | `you` | `thread` |
 | `vt-flow.unsupported-message` | Either | Received a message type not supported in the current state. Note: if this is the first message on the connection, senders **SHOULD** prefer `vt-flow.or-required` / `vt-flow.ir-required` over the generic code. | `none` | `connection` |
 | `vt-flow.invalid-participant-id` | Validator | `participant_id` does not exist, does not reference the Validator's Participant, or is in the wrong `op_state`. | `you` | `thread` |
@@ -585,7 +585,7 @@ Errors during the Issue Credential V2 subprotocol use that protocol's own proble
 
 Every vt-flow message **MUST** be associated with two logical identifiers:
 
-- `thid` — the vt-flow session's thread id (equals the message id of the initial `validation-request` or `issuance-request`).
+- `thid` — the vt-flow session's thread id (equals the message id of the initial `onboarding-request` or `issuance-request`).
 - `pthid` — optional parent thread id. Set only if vt-flow itself was nested inside a larger parent protocol.
 
 Every message inside the Issue Credential V2 subprotocol **MUST** carry:
@@ -615,12 +615,12 @@ Message type URIs, field names, state machine, error semantics, and subprotocol 
 | Message body fields | Top-level alongside decorators | Nested in `body` object |
 | Attachments | `<field>~attach` suffix ([RFC 0017][rfc0017]) | top-level `attachments` array ([DIDComm v2 Attachments][didcomm-v2-attachments]) |
 
-#### Example: same `validation-request` in both envelopes
+#### Example: same `onboarding-request` in both envelopes
 
 **DIDComm v1 (Aries):**
 ```json
 {
-  "@type": "https://didcomm.org/vt-flow/1.0/validation-request",
+  "@type": "https://didcomm.org/vt-flow/1.0/onboarding-request",
   "@id": "8a3f7c2b-9e4d-4b1a-8f6c-2e5a7d3b9c1f",
   "~thread": {
     "thid": "8a3f7c2b-9e4d-4b1a-8f6c-2e5a7d3b9c1f"
@@ -636,7 +636,7 @@ Message type URIs, field names, state machine, error semantics, and subprotocol 
 **DIDComm v2 (equivalent):**
 ```json
 {
-  "type": "https://didcomm.org/vt-flow/1.0/validation-request",
+  "type": "https://didcomm.org/vt-flow/1.0/onboarding-request",
   "id": "8a3f7c2b-9e4d-4b1a-8f6c-2e5a7d3b9c1f",
   "thid": "8a3f7c2b-9e4d-4b1a-8f6c-2e5a7d3b9c1f",
   "body": {

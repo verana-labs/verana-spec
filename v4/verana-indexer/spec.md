@@ -179,7 +179,7 @@ In addition, `listEcosystems` accepts `min_active_schemas` / `max_active_schemas
 The indexer derives two arrays of next-step VPR messages for every `Participant` entry it returns:
 
 - **`corporation_available_actions[]`** — VPR messages the **owning Corporation** (`corporation_id`) MAY execute against this entry. A subset of `RenewParticipantOP`, `CancelParticipantOPLastRequest`, `RevokeParticipant`, `SetParticipantEffectiveUntil`, `RepayParticipantSlashedTrustDeposit`.
-- **`validator_available_actions[]`** — VPR messages the **validator Corporation** (the Corporation that owns `validator_participant`, i.e. the Participant referenced by `validator_participant_id`) MAY execute against this entry. A subset of `SetParticipantOPValidated`, `SetParticipantEffectiveUntil`, `RevokeParticipant`, `SlashParticipantTrustDeposit`.
+- **`validator_available_actions[]`** — VPR messages the **validator Corporation** (the Corporation that owns `validator_participant`, i.e. the Participant referenced by `validator_participant_id`) MAY execute against this entry. A subset of `SetParticipantOPtoValidated`, `SetParticipantEffectiveUntil`, `RevokeParticipant`, `SlashParticipantTrustDeposit`.
 
 Both arrays are recomputed at the resolved evaluation block (current block, or the `At-Block-Height` block if set). They are UI-affordance hints only — the on-chain `MOD-PP-MSG-*` handlers remain the authoritative source for which messages are accepted; the indexer mirrors that policy for display purposes.
 
@@ -221,7 +221,7 @@ Eligibility is evaluated per (`role`, schema `issuer_onboarding_mode`, schema `v
 
 In the `SetParticipantEffectiveUntil` column, "new `effective_until`" refers to the value proposed in the message; the cell is "yes" only when that proposed value is less than or equal to the entry's current `op_exp`.
 
-| `role` | `issuer_onboarding_mode` | `verifier_onboarding_mode` | `participant_state` | `op_state` | `SetParticipantOPValidated` | `SetParticipantEffectiveUntil` | `RevokeParticipant` | `SlashParticipantTrustDeposit` |
+| `role` | `issuer_onboarding_mode` | `verifier_onboarding_mode` | `participant_state` | `op_state` | `SetParticipantOPtoValidated` | `SetParticipantEffectiveUntil` | `RevokeParticipant` | `SlashParticipantTrustDeposit` |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | `ISSUER_GRANTOR`, `ISSUER` | `GRANTOR_ONBOARDING_PROCESS`, `ECOSYSTEM_ONBOARDING_PROCESS` | any | any | any |||| yes |
 | `ISSUER_GRANTOR`, `ISSUER` | `GRANTOR_ONBOARDING_PROCESS`, `ECOSYSTEM_ONBOARDING_PROCESS` | any | `ACTIVE`, `FUTURE` | any ||| yes | yes |
@@ -333,7 +333,7 @@ create index epc_lookup_idx
 
 The indexer maintains the schedule only for VPR messages that can change `participant_state`:
 
-- [`SetParticipantOPValidated`](https://verana-labs.github.io/verifiable-trust-vpr-spec/#mod-pp-msg-3-set-participant-op-to-validated) (MOD-PP-MSG-3)
+- [`SetParticipantOPtoValidated`](https://verana-labs.github.io/verifiable-trust-vpr-spec/#mod-pp-msg-3-set-participant-op-to-validated) (MOD-PP-MSG-3)
 - [`CreateRootParticipant`](https://verana-labs.github.io/verifiable-trust-vpr-spec/#mod-pp-msg-7-create-root-participant) (MOD-PP-MSG-7)
 - [`SetParticipantEffectiveUntil`](https://verana-labs.github.io/verifiable-trust-vpr-spec/#mod-pp-msg-8-set-participant-effective-until) (MOD-PP-MSG-8)
 - [`RevokeParticipant`](https://verana-labs.github.io/verifiable-trust-vpr-spec/#mod-pp-msg-9-revoke-participant) (MOD-PP-MSG-9)
@@ -705,7 +705,7 @@ Retrieve a specific Participant by its ID. A Participant is a single VPR partici
 - **On-chain (VPR `Participant`):** `id`, `schema_id`, `role` (one of `ISSUER`, `VERIFIER`, `ISSUER_GRANTOR`, `VERIFIER_GRANTOR`, `ECOSYSTEM`, `HOLDER`), `did`, `corporation_id` (uint64; FK to `Corporation.id`), `vs_operator` (account), lifecycle timestamps (`created`, `modified`, `adjusted`, `slashed`, `repaid`, `revoked`, `effective_from`, `effective_until`), fee fields (`validation_fees`, `issuance_fees`, `verification_fees`, `issuance_fee_discount`, `verification_fee_discount`), deposit fields (`deposit`, `slashed_deposit`, `repaid_deposit`), and the onboarding-process state (`op_state` enum: `PENDING` / `VALIDATED` / `TERMINATED`; plus `op_last_state_change`, `op_current_fees`, `op_current_deposit`, `op_summary_digest`, `op_exp`, `op_validator_deposit`, `validator_participant_id`).
 - **Indexer-derived (computed at evaluation block; not stored on-chain):**
   - `participant_state` — lifecycle state derived from on-chain timestamps. One of `ACTIVE`, `FUTURE`, `INACTIVE`, `EXPIRED`, `REVOKED`, `SLASHED`, `REPAID`. See [Conventions → `participant_state` semantics](#participant-state-semantics).
-  - `corporation_available_actions[]`, `validator_available_actions[]` — UI-affordance arrays listing the next allowable VPR messages for the owning Corporation / validator at the current state (e.g. `CancelParticipantOPLastRequest`, `SetParticipantOPValidated`, `RenewParticipantOP`). See [Conventions → Available Actions Semantics](#available-actions-semantics).
+  - `corporation_available_actions[]`, `validator_available_actions[]` — UI-affordance arrays listing the next allowable VPR messages for the owning Corporation / validator at the current state (e.g. `CancelParticipantOPLastRequest`, `SetParticipantOPtoValidated`, `RenewParticipantOP`). See [Conventions → Available Actions Semantics](#available-actions-semantics).
 - **Indexer-enriched aggregates** (computed): `weight`, `issued`, `verified`, `participants` (sub-participant count for grantor roles), and the same slash counters as on `CredentialSchema`.
 - **VS-operator authorization grants** for this `Participant.id` are **not** surfaced inline. Query them via [`listVSOperatorAuthorizations`](#idx-de-qry-2-list-vs-operator-authorizations) filtered by `participant_id` — they live in `ParticipantAuthorizationRecord` entries (formerly the `Participant.vs_operator_authz_*` fields).
 - **Optional `trust_data`** — when set to `summary` or `full`, a [vt response object](schemas/v4/vt/response.schema.json) for the Participant's DID is added inline; see [Conventions](#trust_data-query-parameter) for the included fields.

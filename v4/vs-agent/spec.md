@@ -116,7 +116,7 @@ The `vs_operator` account should have been granted appropriate authorizations by
 
 recommended:
 
-- **`VSOperatorAuthorization`** (see [[VSOperatorAuthorization]](https://verana-labs.github.io/verifiable-trust-vpr-spec/#vsoperatorauthorization) and [[ParticipantAuthorizationRecord]](https://verana-labs.github.io/verifiable-trust-vpr-spec/#participantauthorizationrecord)): groups one or more `ParticipantAuthorizationRecord` entries, each keyed by `participant_id`, that grant the agent the right to execute, on behalf of the Corporation and in the context of that specific `Participant`, the message types declared in `record.msg_types` (typically `CreateOrUpdateParticipantSession`, `TriggerResolver`, `SetParticipantOPValidated`). See [[AUTHZ-CHECK-3]](https://verana-labs.github.io/verifiable-trust-vpr-spec/#authz-check-3-vs-operator-authorization-checks).
+- **`VSOperatorAuthorization`** (see [[VSOperatorAuthorization]](https://verana-labs.github.io/verifiable-trust-vpr-spec/#vsoperatorauthorization) and [[ParticipantAuthorizationRecord]](https://verana-labs.github.io/verifiable-trust-vpr-spec/#participantauthorizationrecord)): groups one or more `ParticipantAuthorizationRecord` entries, each keyed by `participant_id`, that grant the agent the right to execute, on behalf of the Corporation and in the context of that specific `Participant`, the message types declared in `record.msg_types` (typically `CreateOrUpdateParticipantSession`, `TriggerResolver`, `SetParticipantOPtoValidated`). See [[AUTHZ-CHECK-3]](https://verana-labs.github.io/verifiable-trust-vpr-spec/#authz-check-3-vs-operator-authorization-checks).
   - If `record.with_feegrant` is `true` for the relevant `Participant`, the Corporation's `policy_address` covers transaction fees via an on-chain `FeeGrant` and the agent account does not need to be independently funded.
   - If `record.with_feegrant` is `false`, the agent account MUST have sufficient balance to pay transaction fees.
 
@@ -252,7 +252,7 @@ These notifications are emitted when a `Participant` entry whose `did` equals th
 | --- | --- | --- |
 | `StartParticipantOP` [[MOD-PP-MSG-1]](https://verana-labs.github.io/verifiable-trust-vpr-spec/#mod-pp-msg-1-start-participant-op) | An applicant has started a new Onboarding Process targeting a validator `Participant` of this agent. | For Validator: N/A. For Applicant: Progress the credential acquisition flow (see [new onboarding process](#vsa-vti-flow-op-new-new-onboarding-process)). |
 | `RenewParticipantOP` [[MOD-PP-MSG-2]](https://verana-labs.github.io/verifiable-trust-vpr-spec/#mod-pp-msg-2-renew-participant-op) | An applicant has renewed an existing Onboarding Process. | For Validator: N/A. For Applicant: Progress the credential acquisition flow (see [renew onboarding process](#vsa-vti-flow-op-renew-renew-onboarding-process)). |
-| `SetParticipantOPValidated` [[MOD-PP-MSG-3]](https://verana-labs.github.io/verifiable-trust-vpr-spec/#mod-pp-msg-3-set-participant-op-to-validated) | Validator has set the agent's `Participant.op_state` to `VALIDATED`. | For Validator: Progress the credential acquisition flow (see [new onboarding process](#vsa-vti-flow-op-new-new-onboarding-process)). For Applicant: N/A. |
+| `SetParticipantOPtoValidated` [[MOD-PP-MSG-3]](https://verana-labs.github.io/verifiable-trust-vpr-spec/#mod-pp-msg-3-set-participant-op-to-validated) | Validator has set the agent's `Participant.op_state` to `VALIDATED`. | For Validator: Progress the credential acquisition flow (see [new onboarding process](#vsa-vti-flow-op-new-new-onboarding-process)). For Applicant: N/A. |
 | `CreateRootParticipant` [[MOD-PP-MSG-7]](https://verana-labs.github.io/verifiable-trust-vpr-spec/#mod-pp-msg-7-create-root-participant) | A root `Participant` (no validator parent) has been created with the agent's DID. | N/A. |
 | `SetParticipantEffectiveUntil` [[MOD-PP-MSG-8]](https://verana-labs.github.io/verifiable-trust-vpr-spec/#mod-pp-msg-8-set-participant-effective-until) | Validator or ancestor has set or adjusted the agent's `Participant.effective_until`. | N/A. |
 | `RevokeParticipant` [[MOD-PP-MSG-9]](https://verana-labs.github.io/verifiable-trust-vpr-spec/#mod-pp-msg-9-revoke-participant) | Validator, ancestor, or Ecosystem controller has revoked the agent's `Participant` entry. | Remove the corresponding linked VP from the DID Document (if any) and delete the credential from the credential store (HOLDER `Participant` only). For non-HOLDER `Participant`, terminate every in-flight downstream flow it serves as Validator for (see [Revoke Participant / Slash Participant Trust Deposit](#vsa-vti-flow-op-revoke-revoke-participant--slash-participant-trust-deposit)). |
@@ -268,8 +268,8 @@ These notifications are emitted whenever a `VSOperatorAuthorization` whose `vs_o
 
 | `event_type` | Description | Default Handler Implementation |
 | --- | --- | --- |
-| `GrantVSOperatorAuthorization` [[MOD-DE-MSG-5]](https://verana-labs.github.io/verifiable-trust-vpr-spec/#mod-de-msg-5-grant-vs-operator-authorization) | The Corporation has granted the agent's `vs_operator` one or more `ParticipantAuthorizationRecord` entries within a `VSOperatorAuthorization`. | Refresh the cached `VSOperatorAuthorization`; `CreateOrUpdateParticipantSession`, `TriggerResolver`, and `SetParticipantOPValidated` MAY now be signed for the newly authorized `Participant` entries. |
-| `RevokeVSOperatorAuthorization` [[MOD-DE-MSG-6]](https://verana-labs.github.io/verifiable-trust-vpr-spec/#mod-de-msg-6-revoke-vs-operator-authorization) | One or more of the agent's `ParticipantAuthorizationRecord` entries have been revoked. The parent `VSOperatorAuthorization` is deleted when its last record is removed. | Invalidate the cached records. Stop signing `CreateOrUpdateParticipantSession`, `TriggerResolver`, and `SetParticipantOPValidated` for the affected `Participant` entries until a new authorization is granted. |
+| `GrantVSOperatorAuthorization` [[MOD-DE-MSG-5]](https://verana-labs.github.io/verifiable-trust-vpr-spec/#mod-de-msg-5-grant-vs-operator-authorization) | The Corporation has granted the agent's `vs_operator` one or more `ParticipantAuthorizationRecord` entries within a `VSOperatorAuthorization`. | Refresh the cached `VSOperatorAuthorization`; `CreateOrUpdateParticipantSession`, `TriggerResolver`, and `SetParticipantOPtoValidated` MAY now be signed for the newly authorized `Participant` entries. |
+| `RevokeVSOperatorAuthorization` [[MOD-DE-MSG-6]](https://verana-labs.github.io/verifiable-trust-vpr-spec/#mod-de-msg-6-revoke-vs-operator-authorization) | One or more of the agent's `ParticipantAuthorizationRecord` entries have been revoked. The parent `VSOperatorAuthorization` is deleted when its last record is removed. | Invalidate the cached records. Stop signing `CreateOrUpdateParticipantSession`, `TriggerResolver`, and `SetParticipantOPtoValidated` for the affected `Participant` entries until a new authorization is granted. |
 | `UpdateVSOperatorAuthorizationExpiration` [[MOD-DE-MSG-9]](https://verana-labs.github.io/verifiable-trust-vpr-spec/#mod-de-msg-9-update-vs-operator-authorization-expiration) | A `ParticipantAuthorizationRecord.expiration` has been updated. | Refresh the cached record; recompute remaining feegrant validity if `record.with_feegrant` is true. |
 
 ### [VSA-VTI-BOOT] Bootstrap Sequence
@@ -404,16 +404,15 @@ sequenceDiagram
     Applicant Agent->>Validator: 2. DIDComm connect
     Applicant Agent->>Validator: 3. OR: participant_id, participant_session_id,<br/>cred. claims, proofs, ...
     Validator-->>Applicant Agent: 4. (optional) out-of-band info collection
-    Validator->>VPR: 5. SetParticipantOPValidated
+    Validator->>VPR: 5. SetParticipantOPtoValidated
 
     Note over Applicant Agent,Validator: All steps below are optional
 
-    Note over Validator: 6. Generate credential<br/>(sign + compute digest)
+    Validator->>Applicant Agent: 6a. Credential offer
+    Applicant Agent->>Validator: 6b. Credential request
+    Note over Validator: 6c. Sign credential<br/>+ compute digest
     Validator->>VPR: 7. CreateOrUpdateParticipantSession
-    Validator->>Applicant Agent: 6. Credential offer, applicant requests
-    Note over Validator: Sign credential<br/>+ compute digest
-    Validator->>VPR: 7. CreateOrUpdateParticipantSession
-    Validator->>Applicant Agent: 8. Deliver signed credential
+    Validator->>Applicant Agent: 8. Deliver signed credential (issue-credential)
     Applicant Agent->>VPR: 9. Verify validator + digest
     Applicant Agent->>Validator: 10. Accept Credential
     Note over Applicant Agent: 11. Store credential
@@ -437,13 +436,9 @@ sequenceDiagram
 
 4. If the validator requires additional information to generate the credential (e.g., missing claims or proofs), the validator MAY send a link to the applicant for an out-of-DIDComm flow (such as a web form or portal) to collect the missing data.
 
-5. After validation, the validator calls `SetParticipantOPValidated` ([[MOD-PP-MSG-3]](https://verana-labs.github.io/verifiable-trust-vpr-spec/#mod-pp-msg-3-set-participant-op-to-validated)) on-chain, changing `op_state` to `VALIDATED`. The VS Agent is notified.
+5. After validation, the validator calls `SetParticipantOPtoValidated` ([[MOD-PP-MSG-3]](https://verana-labs.github.io/verifiable-trust-vpr-spec/#mod-pp-msg-3-set-participant-op-to-validated)) on-chain, changing `op_state` to `VALIDATED`. The VS Agent is notified.
 
 All steps below are optional and executed only if the validator issues a credential.
-
-6. The validator generates and signs the credential, and computes the digest.
-
-7. The **validator** calls `CreateOrUpdateParticipantSession` ([[MOD-PP-MSG-10]](https://verana-labs.github.io/verifiable-trust-vpr-spec/#mod-pp-msg-10-create-or-update-participant-session)) on-chain (see [Agent Account Authorizations](#agent-account-authorizations)). The credential MUST NOT be delivered until this transaction succeeds.
 
 6. The validator offers the credential to the applicant via the Issue Credential V2 subprotocol. Upon receiving the applicant's credential request, the validator generates and signs the credential, and computes the digest.
 
@@ -456,13 +451,13 @@ All steps below are optional and executed only if the validator issues a credent
    - Recompute the credential's digest and verify it matches the digest recorded on-chain in the `ParticipantSession` updated in step 7.
    - If either check fails, the applicant MUST reject the credential and log the error.
 
-10. The applicant sends a **CRED_ACCEPT** message to the validator, confirming that the credential has been verified and accepted.
+10.  The applicant sends a **CRED_ACCEPT** message to the validator, confirming that the credential has been verified and accepted.
 
-11. The applicant stores the credential in its credential store.
+11.  The applicant stores the credential in its credential store.
 
-12. **Optionally**, the applicant links the credential as a `LinkedVerifiablePresentation` in its DID Document per [[VT-CRED-W3C-LINKED-VP]](https://verana-labs.github.io/verifiable-trust-spec/#vt-cred-w3c-linked-vp-w3c-vtc-linked-vp). This is required for ECS credentials but optional for other credential types.
+12.  **Optionally**, the applicant links the credential as a `LinkedVerifiablePresentation` in its DID Document per [[VT-CRED-W3C-LINKED-VP]](https://verana-labs.github.io/verifiable-trust-spec/#vt-cred-w3c-linked-vp-w3c-vtc-linked-vp). This is required for ECS credentials but optional for other credential types.
 
-13. **Optionally**, the applicant calls `TriggerResolver` ([[MOD-PP-MSG-15]](https://verana-labs.github.io/verifiable-trust-vpr-spec/#mod-pp-msg-15-trigger-resolver)) on-chain to refresh its Verifiable Service resolution state. The applicant SHOULD call `TriggerResolver` when:
+13.  **Optionally**, the applicant calls `TriggerResolver` ([[MOD-PP-MSG-15]](https://verana-labs.github.io/verifiable-trust-vpr-spec/#mod-pp-msg-15-trigger-resolver)) on-chain to refresh its Verifiable Service resolution state. The applicant SHOULD call `TriggerResolver` when:
     - it has just become a Verifiable Service by newly complying with [[VS-REQ]](https://verana-labs.github.io/verifiable-trust-spec/#vs-req-verifiable-service-basic-requirements-and-linked-vps); or
     - it has added or removed a `LinkedVerifiablePresentation` entry in its DID Document.
 
@@ -480,10 +475,10 @@ sequenceDiagram
     Applicant Agent->>Validator: 2. DIDComm (re)connect
     Applicant Agent->>Validator: 3. OR: participant_id, participant_session_id,<br/>updated claims, proofs
     Validator-->>Applicant Agent: 4. (optional) out-of-band info collection
-    Validator->>VPR: 5. SetParticipantOPValidated
+    Validator->>VPR: 5. SetParticipantOPtoValidated
     Note over VPR: op_exp += validity_period
 
-    Note over Applicant Agent,Validator: ... credential offer / accept / store / update VP ...<br/>(same as New Onboarding Process steps 6–12)
+    Note over Applicant Agent,Validator: ... credential offer / accept / store / update VP ...<br/>(same as New Onboarding Process steps 6–13)
 ```
 
 **Preconditions**:
@@ -503,7 +498,7 @@ sequenceDiagram
 
 4. If the Validator requires fresh information for the renewal (e.g., re-confirming identity, updated documentation), it MAY send an `OOB_LINK` to the Applicant for an out-of-DIDComm flow.
 
-5. After validation, the Validator calls `SetParticipantOPValidated` on-chain. For a renewal, the VPR enforces that `validation_fees`, `issuance_fees`, `verification_fees`, and fee discounts MUST equal the values originally agreed; any modification will be rejected on-chain. On success, `op_state` returns to `VALIDATED` and `op_exp` is extended by the schema-defined `validity_period`.
+5. After validation, the Validator calls `SetParticipantOPtoValidated` on-chain. For a renewal, the VPR enforces that `validation_fees`, `issuance_fees`, `verification_fees`, and fee discounts MUST equal the values originally agreed; any modification will be rejected on-chain. On success, `op_state` returns to `VALIDATED` and `op_exp` is extended by the schema-defined `validity_period`.
 
 Steps 6–13 are identical to those of [New Onboarding Process](#vsa-vti-flow-op-new-new-onboarding-process) and are executed only if the Validator chooses to issue an updated credential as part of the renewal. If a credential is delivered:
 
@@ -641,13 +636,16 @@ sequenceDiagram
     Applicant->>Validator: 1. DIDComm connect
     Applicant->>Validator: 2. IR: schema_id, cred. claims,<br/>proofs, participant_session_id
     Validator-->>Applicant: 3. (optional) out-of-band info collection
-    Note over Validator: 4. Generate credential<br/>(sign + compute digest)
+    Validator->>Applicant: 4a. Credential offer
+    Applicant->>Validator: 4b. Credential request
+    Note over Validator: 4c. Sign credential<br/>+ compute digest
     Validator->>VPR: 5. CreateOrUpdateParticipantSession
-    Validator->>Applicant: 6. Credential offer
+    Validator->>Applicant: 6. Deliver signed credential (issue-credential)
     Applicant->>VPR: 7. Verify validator + digest
     Applicant->>Validator: 8. Accept Credential
     Note over Applicant: 9. Store credential
     Note over Applicant: 10. (optional) VP in DID Doc
+    Applicant->>VPR: 11. (optional) TriggerResolver
 ```
 
 **Step-by-step**:
@@ -661,11 +659,11 @@ sequenceDiagram
 
 3. If the validator requires additional information to generate the credential (e.g., missing claims or proofs), the validator MAY send a link to the applicant for an out-of-DIDComm flow (such as a web form or portal) to collect the missing data.
 
-4. The validator generates and signs the credential, and computes the digest.
+4. The validator offers the credential to the applicant via the Issue Credential V2 subprotocol. Upon receiving the applicant's credential request, the validator generates and signs the credential, and computes the digest.
 
 5. The **validator** calls `CreateOrUpdateParticipantSession` ([[MOD-PP-MSG-10]](https://verana-labs.github.io/verifiable-trust-vpr-spec/#mod-pp-msg-10-create-or-update-participant-session)) on-chain (see [Agent Account Authorizations](#agent-account-authorizations)). The credential MUST NOT be delivered until this transaction succeeds.
 
-6. The validator delivers the signed credential to the applicant via the DIDComm session.
+6. The validator delivers the signed credential (`issue-credential`) to the applicant via the existing DIDComm session.
 
 7. The applicant MUST verify the received credential before accepting it:
    - Verify the validator is authorized by the ecosystem to issue credentials for this schema (query the VPR via the indexer to confirm the validator has an active ISSUER `Participant` entry).
@@ -778,7 +776,7 @@ The following table summarises how Flow States relate to agent-level flows:
 | `AWAITING_IR` | Validator | [Credential Direct Issuance](#vsa-vti-flow-di-credential-direct-issuance) | `issuance-request` expected; last request rejected or not yet received. |
 | `OOB_PENDING` | Both | Both | Validator sent `oob-link`; awaiting applicant completion. |
 | `VALIDATING` | Both | [New Onboarding Process](#vsa-vti-flow-op-new-new-onboarding-process) | Off-chain validation in progress. |
-| `VALIDATED` | Both | [New Onboarding Process](#vsa-vti-flow-op-new-new-onboarding-process) | `SetParticipantOPValidated` on-chain; valid terminal if no credential issued. |
+| `VALIDATED` | Both | [New Onboarding Process](#vsa-vti-flow-op-new-new-onboarding-process) | `SetParticipantOPtoValidated` on-chain; valid terminal if no credential issued. |
 | `CRED_OFFERED` | Both | Both | Issue Credential V2 subprotocol in flight. |
 | `COMPLETED` | Both | Both | Credential accepted. Connection remains open for [Validator Updates](#vsa-vti-flow-upd-validator-updates). |
 | `CRED_REVOKED` | Both | Both | Credential revoked (see [Validator Updates](#vsa-vti-flow-upd-validator-updates)). |
@@ -848,7 +846,7 @@ The VPR defines two authorization grants whose `msg_types` field is reused by th
 | Authorization grant | VPR check | When to use |
 |---|---|---|
 | [`OperatorAuthorization`](https://verana-labs.github.io/verifiable-trust-vpr-spec/#operatorauthorization) | [[AUTHZ-CHECK-1]](https://verana-labs.github.io/verifiable-trust-vpr-spec/#authz-check-1-operator-authorization-checks) | For methods that drive **non-`Participant`-scoped** VPR `Msg`s (Corporation, Ecosystem, GovernanceFramework, CredentialSchema management, etc.). |
-| [`VSOperatorAuthorization`](https://verana-labs.github.io/verifiable-trust-vpr-spec/#vsoperatorauthorization) + `ParticipantAuthorizationRecord.msg_types` | [[AUTHZ-CHECK-3]](https://verana-labs.github.io/verifiable-trust-vpr-spec/#authz-check-3-vs-operator-authorization-checks) | For methods that drive **`Participant`-scoped** VPR `Msg`s (`StartParticipantOP`, `RenewParticipantOP`, `SetParticipantOPValidated`, `RevokeParticipant`, `CreateOrUpdateParticipantSession`, etc.). The required scope is the specific `Participant` referenced by the method (e.g. via `participant_session_id` or path parameter). |
+| [`VSOperatorAuthorization`](https://verana-labs.github.io/verifiable-trust-vpr-spec/#vsoperatorauthorization) + `ParticipantAuthorizationRecord.msg_types` | [[AUTHZ-CHECK-3]](https://verana-labs.github.io/verifiable-trust-vpr-spec/#authz-check-3-vs-operator-authorization-checks) | For methods that drive **`Participant`-scoped** VPR `Msg`s (`StartParticipantOP`, `RenewParticipantOP`, `SetParticipantOPtoValidated`, `RevokeParticipant`, `CreateOrUpdateParticipantSession`, etc.). The required scope is the specific `Participant` referenced by the method (e.g. via `participant_session_id` or path parameter). |
 
 Each Admin API method MUST declare:
 
@@ -856,14 +854,14 @@ Each Admin API method MUST declare:
 - the **VPR `Msg` type(s)** that MUST be present in the grant's `msg_types`,
 - for `VSOperatorAuthorization`, the **`Participant` scope** identifying which `ParticipantAuthorizationRecord` is consulted.
 
-The VPR `Msg` type identifiers used here are those defined in the [VPR Specification](https://verana-labs.github.io/verifiable-trust-vpr-spec/) (e.g. `SetParticipantOPValidated`, `RevokeParticipant`); this specification does NOT define new ones.
+The VPR `Msg` type identifiers used here are those defined in the [VPR Specification](https://verana-labs.github.io/verifiable-trust-vpr-spec/) (e.g. `SetParticipantOPtoValidated`, `RevokeParticipant`); this specification does NOT define new ones.
 
 ##### Example
 
-`validateFlow` causes the agent to submit `SetParticipantOPValidated` on-chain for a specific `Participant` (the validator's). Therefore:
+`validateFlow` causes the agent to submit `SetParticipantOPtoValidated` on-chain for a specific `Participant` (the validator's). Therefore:
 
-- **Authz**: `CORPORATION` — `VSOperatorAuthorization` with `msg_types` ⊇ {`SetParticipantOPValidated`}, scoped to the validator `Participant` of the target flow.
-- **Caller check**: the authenticated caller MUST be the `vs_operator` of a `VSOperatorAuthorization` whose `ParticipantAuthorizationRecord` for that `Participant` includes `SetParticipantOPValidated` in `msg_types`.
+- **Authz**: `CORPORATION` — `VSOperatorAuthorization` with `msg_types` ⊇ {`SetParticipantOPtoValidated`}, scoped to the validator `Participant` of the target flow.
+- **Caller check**: the authenticated caller MUST be the `vs_operator` of a `VSOperatorAuthorization` whose `ParticipantAuthorizationRecord` for that `Participant` includes `SetParticipantOPtoValidated` in `msg_types`.
 - **Agent check** (later, on submission): the agent's own `vs_operator` account MUST equally hold such authorization. In the typical deployment where the caller is the same operator as the agent's `vs_operator`, both checks resolve against the same `VSOperatorAuthorization` record.
 
 ### Container Environment Variables
@@ -1454,10 +1452,10 @@ The following methods list and progress credential-acquisition flows handled by 
 
 | Module | Method Name | HTTP Method | Relative REST API path | Requirements | Authz |
 | --- | --- | --- | --- | --- | --- |
-| Flow Management | `listFlows` | `GET` | `/v1/vt/flows` | [see](#vsa-adm-fl-list-listflows) | INTERNAL, CORPORATION (`VSOperatorAuthorization`, msg_types ⊇ any of {`SetParticipantOPValidated`, `StartParticipantOP`, `RenewParticipantOP`}, scope: any `Participant` operated by the agent) |
-| Flow Management | `editCredentialClaims` | `PUT` | `/v1/vt/flows/{participant_session_id}/claims` | [see](#vsa-adm-fl-edit-editcredentialclaims) | INTERNAL, CORPORATION (`VSOperatorAuthorization`, msg_types ⊇ {`SetParticipantOPValidated`}, scope: validator `Participant` of the flow) |
-| Flow Management | `sendOobLink` | `POST` | `/v1/vt/flows/{participant_session_id}/oob-link` | [see](#vsa-adm-fl-send-sendooblink) | INTERNAL, CORPORATION (`VSOperatorAuthorization`, msg_types ⊇ {`SetParticipantOPValidated`}, scope: validator `Participant` of the flow) |
-| Flow Management | `validateFlow` | `POST` | `/v1/vt/flows/{participant_session_id}/validate` | [see](#vsa-adm-fl-validate-validateflow) | INTERNAL, CORPORATION (`VSOperatorAuthorization`, msg_types ⊇ {`SetParticipantOPValidated`}, scope: validator `Participant` of the flow) |
+| Flow Management | `listFlows` | `GET` | `/v1/vt/flows` | [see](#vsa-adm-fl-list-listflows) | INTERNAL, CORPORATION (`VSOperatorAuthorization`, msg_types ⊇ any of {`SetParticipantOPtoValidated`, `StartParticipantOP`, `RenewParticipantOP`}, scope: any `Participant` operated by the agent) |
+| Flow Management | `editCredentialClaims` | `PUT` | `/v1/vt/flows/{participant_session_id}/claims` | [see](#vsa-adm-fl-edit-editcredentialclaims) | INTERNAL, CORPORATION (`VSOperatorAuthorization`, msg_types ⊇ {`SetParticipantOPtoValidated`}, scope: validator `Participant` of the flow) |
+| Flow Management | `sendOobLink` | `POST` | `/v1/vt/flows/{participant_session_id}/oob-link` | [see](#vsa-adm-fl-send-sendooblink) | INTERNAL, CORPORATION (`VSOperatorAuthorization`, msg_types ⊇ {`SetParticipantOPtoValidated`}, scope: validator `Participant` of the flow) |
+| Flow Management | `validateFlow` | `POST` | `/v1/vt/flows/{participant_session_id}/validate` | [see](#vsa-adm-fl-validate-validateflow) | INTERNAL, CORPORATION (`VSOperatorAuthorization`, msg_types ⊇ {`SetParticipantOPtoValidated`}, scope: validator `Participant` of the flow) |
 | Flow Management | `revokeCredential` | `POST` | `/v1/vt/flows/{participant_session_id}/revoke-credential` | [see](#vsa-adm-fl-revoke-revokecredential) | INTERNAL, CORPORATION (`VSOperatorAuthorization`, msg_types ⊇ {`RevokeParticipant`}, scope: validator `Participant` of the flow) |
 
 > Note: some VS Agent implementations may not support all actions, or may prefer sending the user to a portal for providing proofs, etc., using the OOB link.
@@ -1505,7 +1503,7 @@ Creates, modifies, or overrides the credential claims submitted by the applicant
 
 **Requirements**:
 
-- MUST be called by an account that is the `vs_operator` of a `VSOperatorAuthorization` whose `ParticipantAuthorizationRecord` for the validator `Participant` in scope includes `SetParticipantOPValidated` in `msg_types` (see [Authorization](#authorization)).
+- MUST be called by an account that is the `vs_operator` of a `VSOperatorAuthorization` whose `ParticipantAuthorizationRecord` for the validator `Participant` in scope includes `SetParticipantOPtoValidated` in `msg_types` (see [Authorization](#authorization)).
 - MUST refuse when connection is not in `ESTABLISHED` state.
 - MUST refuse when the flow is not `VALIDATING` or `CRED_REVOKED` (see [Flow State](#vsa-vti-flow-state-flow-state)).
 
@@ -1531,7 +1529,7 @@ Sends or resends an `OOB_LINK` DIDComm message to the applicant for out-of-DIDCo
 
 **Requirements**:
 
-- MUST be called by an account that is the `vs_operator` of a `VSOperatorAuthorization` whose `ParticipantAuthorizationRecord` for the validator `Participant` in scope includes `SetParticipantOPValidated` in `msg_types` (see [Authorization](#authorization)).
+- MUST be called by an account that is the `vs_operator` of a `VSOperatorAuthorization` whose `ParticipantAuthorizationRecord` for the validator `Participant` in scope includes `SetParticipantOPtoValidated` in `msg_types` (see [Authorization](#authorization)).
 - MUST refuse when the flow's Connection State is not `ESTABLISHED`.
 
 **Errors**:
@@ -1541,7 +1539,7 @@ Sends or resends an `OOB_LINK` DIDComm message to the applicant for out-of-DIDCo
 
 #### [VSA-ADM-FL-VALIDATE] validateFlow
 
-Marks the applicant's documentation as validated for a given flow. When an Onboarding Process is involved, this is independent from the on-chain `SetParticipantOPValidated` transaction and MAY trigger credential issuance (see [[VSA-VTI-FLOW-OP-NEW] New Onboarding Process](#vsa-vti-flow-op-new-new-onboarding-process) steps 6–8).
+Marks the applicant's documentation as validated for a given flow. When an Onboarding Process is involved, this is independent from the on-chain `SetParticipantOPtoValidated` transaction and MAY trigger credential issuance (see [[VSA-VTI-FLOW-OP-NEW] New Onboarding Process](#vsa-vti-flow-op-new-new-onboarding-process) steps 6–8).
 
 **Path parameters**:
 
@@ -1553,7 +1551,7 @@ Marks the applicant's documentation as validated for a given flow. When an Onboa
 
 **Requirements**:
 
-- MUST be called by an account that is the `vs_operator` of a `VSOperatorAuthorization` whose `ParticipantAuthorizationRecord` for the validator `Participant` in scope includes `SetParticipantOPValidated` in `msg_types` (see [Authorization](#authorization)).
+- MUST be called by an account that is the `vs_operator` of a `VSOperatorAuthorization` whose `ParticipantAuthorizationRecord` for the validator `Participant` in scope includes `SetParticipantOPtoValidated` in `msg_types` (see [Authorization](#authorization)).
 
 **Errors**:
 
