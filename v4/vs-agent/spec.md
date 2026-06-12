@@ -445,7 +445,11 @@ All steps below are optional and executed only if the validator issues a credent
 
 7. The **validator** calls `CreateOrUpdateParticipantSession` ([[MOD-PP-MSG-10]](https://verana-labs.github.io/verifiable-trust-vpr-spec/#mod-pp-msg-10-create-or-update-participant-session)) on-chain (see [Agent Account Authorizations](#agent-account-authorizations)). The credential MUST NOT be delivered until this transaction succeeds.
 
-8. The validator delivers the signed credential to the applicant via the existing DIDComm session.
+6. The validator offers the credential to the applicant via the Issue Credential V2 subprotocol. Upon receiving the applicant's credential request, the validator generates and signs the credential, and computes the digest.
+
+7. The **validator** calls `CreateOrUpdateParticipantSession` ([[MOD-PP-MSG-10]](https://verana-labs.github.io/verifiable-trust-vpr-spec/#mod-pp-msg-10-create-or-update-participant-session)) on-chain (see [Agent Account Authorizations](#agent-account-authorizations)). The credential MUST NOT be delivered until this transaction succeeds.
+
+8. The validator delivers the signed credential (`issue-credential`) to the applicant via the existing DIDComm session.
 
 9. The applicant MUST verify the received credential before accepting it:
    - Verify the validator is authorized by the ecosystem to issue credentials for this schema (`validator_participant.role` is `ISSUER` and the `Participant` is active).
