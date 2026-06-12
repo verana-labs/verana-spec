@@ -770,8 +770,8 @@ The following table summarises how Flow States relate to agent-level flows:
 | Flow State | Role | Agent Flow | Agent-level trigger |
 | --- | --- | --- | --- |
 | `AWAITING_OP` | Applicant | [New Onboarding Process](#vsa-vti-flow-op-new-new-onboarding-process) | Waiting for `StartParticipantOP` / `RenewParticipantOP` on-chain. |
-| `OR_SENT` | Applicant | [New Onboarding Process](#vsa-vti-flow-op-new-new-onboarding-process) | `validation-request` sent to validator. |
-| `AWAITING_OR` | Validator | [New Onboarding Process](#vsa-vti-flow-op-new-new-onboarding-process) | `validation-request` expected; last request rejected or not yet received. |
+| `OR_SENT` | Applicant | [New Onboarding Process](#vsa-vti-flow-op-new-new-onboarding-process) | `onboarding-request` sent to validator. |
+| `AWAITING_OR` | Validator | [New Onboarding Process](#vsa-vti-flow-op-new-new-onboarding-process) | `onboarding-request` expected; last request rejected or not yet received. |
 | `IR_SENT` | Applicant | [Credential Direct Issuance](#vsa-vti-flow-di-credential-direct-issuance) | `issuance-request` sent to validator. |
 | `AWAITING_IR` | Validator | [Credential Direct Issuance](#vsa-vti-flow-di-credential-direct-issuance) | `issuance-request` expected; last request rejected or not yet received. |
 | `OOB_PENDING` | Both | Both | Validator sent `oob-link`; awaiting applicant completion. |
