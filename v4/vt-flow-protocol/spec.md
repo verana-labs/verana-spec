@@ -429,7 +429,7 @@ Receiving `credential-received` on the Applicant side is the hook point for on-c
 If the Applicant reconnects after a connection closes:
 
 1. The Applicant **MUST** establish a new DIDComm connection (via implicit invitation to the Validator's DID).
-2. The Applicant **MUST** resend a `onboarding-request` or `issuance-request` matching the original, carrying the **same** `participant_session_id`, `agent_participant_id`, `wallet_agent_participant_id`, and (for Onboarding Process) `participant_id` or (for Direct Issuance) `schema_id`.
+2. The Applicant **MUST** resend an `onboarding-request` or `issuance-request` matching the original, carrying the **same** `participant_session_id`, `agent_participant_id`, `wallet_agent_participant_id`, and (for Onboarding Process) `participant_id` or (for Direct Issuance) `schema_id`.
 3. The Validator **MUST** recognize the request as belonging to an existing session by matching on `participant_session_id` (plus `participant_id` or `schema_id` for defence-in-depth) and re-attach the existing flow to the new connection.
 4. The reattached flow's Flow State resumes from whatever stage it was in when the connection dropped.
 
