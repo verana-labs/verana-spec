@@ -655,7 +655,7 @@ sequenceDiagram
 2. The applicant sends an **IR (Issuance Request)** message containing the desired credential `schema_id`, along with the following session parameters (to be used later for `CreateOrUpdateParticipantSession`):
    - `participant_session_id`: A UUID for the `ParticipantSession`.
 
-   The applicant MAY also include credential claims and supporting proofs if already available. The validator MUST either accept the information and proceed, or refuse it with an error code and descriptive error message. If refused, the applicant MAY retry with corrected information.
+   The applicant MAY also include credential claims and supporting proofs if already available. The validator MUST either accept the information and proceed, or refuse it with an error code and descriptive error message. If refused, the applicant MAY retry with corrected information. On acceptance, the Flow State transitions to `VALIDATING` (see [Flow State](#vsa-vti-flow-state-flow-state)) while the validator processes the request.
 
 3. If the validator requires additional information to generate the credential (e.g., missing claims or proofs), the validator MAY send a link to the applicant for an out-of-DIDComm flow (such as a web form or portal) to collect the missing data.
 
@@ -775,7 +775,7 @@ The following table summarises how Flow States relate to agent-level flows:
 | `IR_SENT` | Applicant | [Credential Direct Issuance](#vsa-vti-flow-di-credential-direct-issuance) | `issuance-request` sent to validator. |
 | `AWAITING_IR` | Validator | [Credential Direct Issuance](#vsa-vti-flow-di-credential-direct-issuance) | `issuance-request` expected; last request rejected or not yet received. |
 | `OOB_PENDING` | Both | Both | Validator sent `oob-link`; awaiting applicant completion. |
-| `VALIDATING` | Both | [New Onboarding Process](#vsa-vti-flow-op-new-new-onboarding-process) | Off-chain validation in progress. |
+| `VALIDATING` | Both | Both | Off-chain validation (Onboarding Process) or processing an accepted issuance request (Direct Issuance) in progress. |
 | `VALIDATED` | Both | [New Onboarding Process](#vsa-vti-flow-op-new-new-onboarding-process) | `SetParticipantOPtoValidated` on-chain; valid terminal if no credential issued. |
 | `CRED_OFFERED` | Both | Both | Issue Credential V2 subprotocol in flight. |
 | `COMPLETED` | Both | Both | Credential accepted. Connection remains open for [Validator Updates](#vsa-vti-flow-upd-validator-updates). |
