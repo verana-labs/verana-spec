@@ -448,6 +448,8 @@ stateDiagram-v2
     AWAITING_OP --> OR_SENT: send onboarding-request
     OR_SENT --> OOB_PENDING: oob-link received
     OOB_PENDING --> OR_SENT: OOB complete
+    OR_SENT --> VALIDATING: validating received
+    VALIDATING --> VALIDATED: SetParticipantOPtoValidated on-chain
     OR_SENT --> VALIDATED: SetParticipantOPtoValidated on-chain
     VALIDATED --> CRED_OFFERED: offer-credential received
     CRED_OFFERED --> COMPLETED: Ack sent after verification
