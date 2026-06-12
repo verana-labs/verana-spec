@@ -743,7 +743,7 @@ The following table maps the agent-level message names used in this specificatio
 
 | Agent-level name | vt-flow message | Sender | Agent-level trigger |
 | --- | --- | --- | --- |
-| OR (Onboarding Request) | [`validation-request`](../vt-flow-protocol/spec.md#validation-request) | Applicant | After `StartParticipantOP` / `RenewParticipantOP` succeeds on-chain. |
+| OR (Onboarding Request) | [`onboarding-request`](../vt-flow-protocol/spec.md#onboarding-request) | Applicant | After `StartParticipantOP` / `RenewParticipantOP` succeeds on-chain. |
 | IR (Issuance Request) | [`issuance-request`](../vt-flow-protocol/spec.md#issuance-request) | Applicant | When initiating a [Credential Direct Issuance](#vsa-vti-flow-di-credential-direct-issuance). |
 | OOB_LINK | [`oob-link`](../vt-flow-protocol/spec.md#oob-link) | Validator | When additional out-of-DIDComm information is needed. |
 | VALIDATING | [`validating`](../vt-flow-protocol/spec.md#validating) | Validator | When off-chain validation begins. |
