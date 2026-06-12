@@ -540,6 +540,7 @@ stateDiagram-v2
     direction LR
     COMPLETED --> CRED_OFFERED: new offer-credential starts<br/>new subprotocol run
     COMPLETED --> OOB_PENDING: oob-link received
+    OOB_PENDING --> COMPLETED: OOB complete
     COMPLETED --> CRED_REVOKED: credential-state-change REVOKED
 ```
 
