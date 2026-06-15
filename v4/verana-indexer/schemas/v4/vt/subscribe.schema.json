@@ -79,7 +79,7 @@
         "services": {
           "type": "boolean",
           "default": false,
-          "description": "Trigger when a non-LinkedVerifiablePresentation service entry in the DID Document changes (DIDComm, MCP, A2A, LinkedDomains, …)."
+          "description": "Trigger when a non-LinkedVerifiablePresentation service entry in the DID Document changes (DIDComm, MCP, A2A, VsAgentAdminAPI, …)."
         },
         "ecosystems": {
           "oneOf": [

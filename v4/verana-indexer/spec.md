@@ -179,7 +179,7 @@ In addition, `listEcosystems` accepts `min_active_schemas` / `max_active_schemas
 The indexer derives two arrays of next-step VPR messages for every `Participant` entry it returns:
 
 - **`corporation_available_actions[]`** — VPR messages the **owning Corporation** (`corporation_id`) MAY execute against this entry. A subset of `RenewParticipantOP`, `CancelParticipantOPLastRequest`, `RevokeParticipant`, `SetParticipantEffectiveUntil`, `RepayParticipantSlashedTrustDeposit`.
-- **`validator_available_actions[]`** — VPR messages the **validator Corporation** (the Corporation that owns `validator_participant`, i.e. the Participant referenced by `validator_participant_id`) MAY execute against this entry. A subset of `SetParticipantOPValidated`, `SetParticipantEffectiveUntil`, `RevokeParticipant`, `SlashParticipantTrustDeposit`.
+- **`validator_available_actions[]`** — VPR messages the **validator Corporation** (the Corporation that owns `validator_participant`, i.e. the Participant referenced by `validator_participant_id`) MAY execute against this entry. A subset of `SetParticipantOPtoValidated`, `SetParticipantEffectiveUntil`, `RevokeParticipant`, `SlashParticipantTrustDeposit`.
 
 Both arrays are recomputed at the resolved evaluation block (current block, or the `At-Block-Height` block if set). They are UI-affordance hints only — the on-chain `MOD-PP-MSG-*` handlers remain the authoritative source for which messages are accepted; the indexer mirrors that policy for display purposes.
 
@@ -221,7 +221,7 @@ Eligibility is evaluated per (`role`, schema `issuer_onboarding_mode`, schema `v
 
 In the `SetParticipantEffectiveUntil` column, "new `effective_until`" refers to the value proposed in the message; the cell is "yes" only when that proposed value is less than or equal to the entry's current `op_exp`.
 
-| `role` | `issuer_onboarding_mode` | `verifier_onboarding_mode` | `participant_state` | `op_state` | `SetParticipantOPValidated` | `SetParticipantEffectiveUntil` | `RevokeParticipant` | `SlashParticipantTrustDeposit` |
+| `role` | `issuer_onboarding_mode` | `verifier_onboarding_mode` | `participant_state` | `op_state` | `SetParticipantOPtoValidated` | `SetParticipantEffectiveUntil` | `RevokeParticipant` | `SlashParticipantTrustDeposit` |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | `ISSUER_GRANTOR`, `ISSUER` | `GRANTOR_ONBOARDING_PROCESS`, `ECOSYSTEM_ONBOARDING_PROCESS` | any | any | any |||| yes |
 | `ISSUER_GRANTOR`, `ISSUER` | `GRANTOR_ONBOARDING_PROCESS`, `ECOSYSTEM_ONBOARDING_PROCESS` | any | `ACTIVE`, `FUTURE` | any ||| yes | yes |
@@ -333,7 +333,7 @@ create index epc_lookup_idx
 
 The indexer maintains the schedule only for VPR messages that can change `participant_state`:
 
-- [`SetParticipantOPValidated`](https://verana-labs.github.io/verifiable-trust-vpr-spec/#mod-pp-msg-3-set-participant-op-to-validated) (MOD-PP-MSG-3)
+- [`SetParticipantOPtoValidated`](https://verana-labs.github.io/verifiable-trust-vpr-spec/#mod-pp-msg-3-set-participant-op-to-validated) (MOD-PP-MSG-3)
 - [`CreateRootParticipant`](https://verana-labs.github.io/verifiable-trust-vpr-spec/#mod-pp-msg-7-create-root-participant) (MOD-PP-MSG-7)
 - [`SetParticipantEffectiveUntil`](https://verana-labs.github.io/verifiable-trust-vpr-spec/#mod-pp-msg-8-set-participant-effective-until) (MOD-PP-MSG-8)
 - [`RevokeParticipant`](https://verana-labs.github.io/verifiable-trust-vpr-spec/#mod-pp-msg-9-revoke-participant) (MOD-PP-MSG-9)
@@ -705,7 +705,7 @@ Retrieve a specific Participant by its ID. A Participant is a single VPR partici
 - **On-chain (VPR `Participant`):** `id`, `schema_id`, `role` (one of `ISSUER`, `VERIFIER`, `ISSUER_GRANTOR`, `VERIFIER_GRANTOR`, `ECOSYSTEM`, `HOLDER`), `did`, `corporation_id` (uint64; FK to `Corporation.id`), `vs_operator` (account), lifecycle timestamps (`created`, `modified`, `adjusted`, `slashed`, `repaid`, `revoked`, `effective_from`, `effective_until`), fee fields (`validation_fees`, `issuance_fees`, `verification_fees`, `issuance_fee_discount`, `verification_fee_discount`), deposit fields (`deposit`, `slashed_deposit`, `repaid_deposit`), and the onboarding-process state (`op_state` enum: `PENDING` / `VALIDATED` / `TERMINATED`; plus `op_last_state_change`, `op_current_fees`, `op_current_deposit`, `op_summary_digest`, `op_exp`, `op_validator_deposit`, `validator_participant_id`).
 - **Indexer-derived (computed at evaluation block; not stored on-chain):**
   - `participant_state` — lifecycle state derived from on-chain timestamps. One of `ACTIVE`, `FUTURE`, `INACTIVE`, `EXPIRED`, `REVOKED`, `SLASHED`, `REPAID`. See [Conventions → `participant_state` semantics](#participant-state-semantics).
-  - `corporation_available_actions[]`, `validator_available_actions[]` — UI-affordance arrays listing the next allowable VPR messages for the owning Corporation / validator at the current state (e.g. `CancelParticipantOPLastRequest`, `SetParticipantOPValidated`, `RenewParticipantOP`). See [Conventions → Available Actions Semantics](#available-actions-semantics).
+  - `corporation_available_actions[]`, `validator_available_actions[]` — UI-affordance arrays listing the next allowable VPR messages for the owning Corporation / validator at the current state (e.g. `CancelParticipantOPLastRequest`, `SetParticipantOPtoValidated`, `RenewParticipantOP`). See [Conventions → Available Actions Semantics](#available-actions-semantics).
 - **Indexer-enriched aggregates** (computed): `weight`, `issued`, `verified`, `participants` (sub-participant count for grantor roles), and the same slash counters as on `CredentialSchema`.
 - **VS-operator authorization grants** for this `Participant.id` are **not** surfaced inline. Query them via [`listVSOperatorAuthorizations`](#idx-de-qry-2-list-vs-operator-authorizations) filtered by `participant_id` — they live in `ParticipantAuthorizationRecord` entries (formerly the `Participant.vs_operator_authz_*` fields).
 - **Optional `trust_data`** — when set to `summary` or `full`, a [vt response object](schemas/v4/vt/response.schema.json) for the Participant's DID is added inline; see [Conventions](#trust_data-query-parameter) for the included fields.
@@ -1295,7 +1295,7 @@ The Verifiable Trust Resolver answers two complementary questions about a DID at
    - **`corporation`** — The on-chain Corporation entry the DID **represents** (the Corporation whose `did` equals the resolved DID). A singular object — by VPR, a DID is the `did` of at most one Corporation; omitted when no such Corporation exists for this `did`. Carries the Corporation's stable `id` (uint64) and `policy_address` (the on-chain account that signs on its behalf), plus `deposit`, slash history, and active CGF.
    - **`participations`** — Credential Schemas the DID participates in, filterable by state (`ACTIVE`, `FUTURE`, `INACTIVE`, `EXPIRED`, `REVOKED`, `SLASHED`, `REPAID`); defaults to `ACTIVE` when no filter is given.
    - **`ecsCredentials`** — The full ECS credentials extracted from the DID's linked-VPs, with their `credentialSubject` claims.
-   - **`services`** — Non-`LinkedVerifiablePresentation` service entries from the DID Document (DIDComm, MCP, A2A, LinkedDomains, …), surfaced verbatim.
+   - **`services`** — Non-`LinkedVerifiablePresentation` service entries from the DID Document (DIDComm, MCP, A2A, VsAgentAdminAPI, …), surfaced verbatim.
    - **`presentations`** — Per-VP credential summaries (`vtcCredentials[]`, each entry `{id, credentialSchemaId, ecosystemId}`); sub-flags additionally surface unresolvable and invalid credential IDs per VP.
    - **`ecosystems`** — Aggregate metrics for the Ecosystems (and their underlying Credential Schemas and active Ecosystem Governance Frameworks) **the DID is the controller of** (the Ecosystems whose `did` equals the resolved DID). Sub-flags control whether archived Ecosystems (and their archived embedded Credential Schemas) are included.
 
@@ -1350,7 +1350,7 @@ Selector semantics:
 - **`corporation`** — `true` to include the `corporation` object (the unique Corporation whose `did` equals the resolved DID; carries `id`, `policyAddress`, `deposit`, slash history, and `cgf`). Omit or set `false` to exclude. The top-level `corporationId` scalar — the stable `uint64` id of the Corporation that *owns* this DID, i.e. the unique Corporation entry whose `did` equals the resolved DID — is **always** returned with the trust-core fields and is not gated by this selector. Its value is well-defined by VPR's per-Corporation `did` uniqueness invariant (at most one Corporation has any given DID); see the `Ecosystem.corporationId` description in [`schemas/v4/vt/response.schema.json`](./schemas/v4/vt/response.schema.json) for the caveat that the Corp that *owns* a DID and the Corp that *controls Ecosystems claiming* that DID are not unified by any VPR invariant. When the `corporation` selector is also set, `corporation.id` equals this scalar; the selector only controls whether the full Corporation object (`policyAddress`, `deposit`, slash history, CGF) is also surfaced inline.
 - **`participations`** — Omit to exclude. When present, `states[]` filters which participation states are returned. Defaults to `["ACTIVE"]` when `participations` is provided without `states`. Valid values: `ACTIVE, FUTURE, INACTIVE, EXPIRED, REVOKED, SLASHED, REPAID`.
 - **`ecsCredentials`** — `true` to include the full ECS credentials with subject claims. Omit or `false` to exclude.
-- **`services`** — `true` to include `services[]`, the non-LinkedVerifiablePresentation service entries from the DID Document (e.g. DIDComm, MCP, LinkedDomains). Omit or `false` to exclude.
+- **`services`** — `true` to include `services[]`, the non-LinkedVerifiablePresentation service entries from the DID Document (e.g. DIDComm, MCP, VsAgentAdminAPI). Omit or `false` to exclude.
 - **`presentations`** — Omit to exclude. When present, each entry always carries `vtcCredentials[]` (array of `{id, credentialSchemaId, ecosystemId}` per non-ECS VTC carried by the VP) plus the VP's `id` and `serviceId`. The two sub-flags additionally enable `unresolvableCredentialIds[]` and `invalidCredentialIds[]` per entry; both default to `false`.
 - **`ecosystems`** — Omit to exclude. `includeArchived` (default `false`) controls whether archived ecosystems appear in the top-level array. The nested `credentialSchemas` object controls embedded Credential Schemas: omit `credentialSchemas` entirely to suppress them, or set `credentialSchemas.includeArchived` (default `false`) to also surface archived Credential Schemas.
 
@@ -1603,7 +1603,7 @@ A subscription selects a set of channels. Each channel narrows what counts as a 
 | `participations` | A `Participant` entry the DID is part of is created or transitions state. `weight` fluctuations alone are gated by the `includeWeightChanges` sub-flag below. |
 | `ecsCredentials` | An ECS credential issued to or by the DID is added, replaced, or invalidated. |
 | `presentations` | A `LinkedVerifiablePresentation` referenced by the DID Document is added or removed, or its `vtcCredentials[]` set changes (entry added/removed, or any entry's `credentialSchemaId` / `ecosystemId` / `participantId` / `issuerParticipantId` changes). Changes confined to `unresolvableCredentialIds[]` or `invalidCredentialIds[]` are **not** notified. |
-| `services` | A non-`LinkedVerifiablePresentation` service entry in the DID Document changes (DIDComm, MCP, A2A, LinkedDomains, …). |
+| `services` | A non-`LinkedVerifiablePresentation` service entry in the DID Document changes (DIDComm, MCP, A2A, VsAgentAdminAPI, …). |
 | `ecosystems` | An `Ecosystem` entry the DID represents is created or archived; its embedded schemas change; **or** its active EGF rotates (`active_version` advances) or any document of the active EGF version changes (URL or `digestSri`). |
 
 Channels that carry Coin-amount fields (`weight`, `deposit`) or high-frequency aggregate counters (`participants[role]`, `issuedCredentials`, `verifiedCredentials`) expose opt-in sub-flags so subscribers can choose whether routine fluctuations of those values trigger notifications:
