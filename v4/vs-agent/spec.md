@@ -153,6 +153,7 @@ See [comparison between VS-REQ-3 and VS-REQ-4](https://verana-labs.github.io/ver
 |---|---|---|
 | `AGENT_MODE` | OPTIONAL | One of `standalone` or `delegated`. Default: `standalone`. See [ECS Standalone Mode](#ecs-standalone-mode). |
 | `AGENT_DELEGATED_PARENT_VS_DID` | CONDITIONAL | DID of the parent Verifiable Service to contact for obtaining a Service credential. REQUIRED when `AGENT_MODE` = `delegated`. |
+| `TRUSTED_ECS_ECOSYSTEM_DIDS` | CONDITIONAL | Comma-separated list of DIDs of the ECS Ecosystems the agent trusts for essential credential schemas, as required by [[WL-ECS]](https://verana-labs.github.io/verifiable-trust-spec/#wl-ecs-ecosystem-whitelists-and-vpr-scheme-resolution). REQUIRED when `AGENT_MODE` = `standalone`. |
 
 ### [VSA-VTI-DIDDOC] DID Document Service Entries
 
@@ -343,8 +344,9 @@ To be a Verifiable Service, an agent MUST obtain `Participant` entries (HOLDER a
 
 In standalone mode:
 
-1. Applicant starts a [new onboarding process flow](#vsa-vti-flow-op-new-new-onboarding-process) to obtain an **ECS-Organization** or **ECS-Persona** HOLDER `Participant` and its corresponding credential via DIDComm from an authorized ISSUER registered under a trusted ECS Ecosystem.
-2. Applicant starts a [new onboarding process flow](#vsa-vti-flow-op-new-new-onboarding-process) to obtain an ISSUER `Participant` for the **Service** credential schema from the same trusted ECS Ecosystem.
+1. Applicant resolves the trusted ECS Ecosystem: the first entry of `TRUSTED_ECS_ECOSYSTEM_DIDS` (see [[WL-ECS]](https://verana-labs.github.io/verifiable-trust-spec/#wl-ecs-ecosystem-whitelists-and-vpr-scheme-resolution)) that corresponds to an active Ecosystem publishing the required ECS credential schemas.
+2. Applicant starts a [new onboarding process flow](#vsa-vti-flow-op-new-new-onboarding-process) to obtain an **ECS-Organization** or **ECS-Persona** HOLDER `Participant` and its corresponding credential via DIDComm from an authorized ISSUER registered under the trusted ECS Ecosystem.
+3. Applicant starts a [new onboarding process flow](#vsa-vti-flow-op-new-new-onboarding-process) to obtain an ISSUER `Participant` for the **Service** credential schema from the same trusted ECS Ecosystem.
 
 > As defined in [[VS-CONN-VS]](https://verana-labs.github.io/verifiable-trust-spec/#vs-conn-vs-requirements-for-a-vs-to-accept-a-connection-from-another-service), a validator agent CAN accept connections from a not-yet-verifiable agent if and only if the purpose of the connection is the issuance of [VT-ECS-ORG-CRED-W3C], [VT-ECS-PERSONA-CRED-W3C], or [VT-ECS-SERVICE-CRED-W3C] credentials.
 
