@@ -1159,7 +1159,7 @@ Return the indexer version and the network environment it is bound to. *Indexer-
 
 `GET /v4/indexer/snapshot`
 
-Return the indexed snapshot of all DID-linked objects (Ecosystems, Credential Schemas, Participants) for a single DID at the block selected by the `At-Block-Height` header (or the latest indexed block when omitted). Only queries current tables that expose a height column; does **not** consult history tables. *Indexer-specific (no VPR equivalent).*
+Return the indexed snapshot of all DID-linked objects (Ecosystems, Credential Schemas, Participants) for a single DID at the block selected by the `At-Block-Height` header (or the latest indexed block when omitted). Only queries current tables that expose a height column. *Indexer-specific (no VPR equivalent).*
 
 | Name | In | Type | Required | Description |
 | --- | --- | --- | --- | --- |
