@@ -71,13 +71,13 @@ This section is the "**always show information the same way**" contract. The ref
    - Plus: the service DID (truncated middle, copyable) and the evaluation time or block.
 2. **Service** — from the **ECS-Service** credential claims: name, type, logo, description. If absent: "No ECS-Service credential presented."
 3. **Operated by** — from the **ECS-Organization** (or **ECS-Persona**) credential claims: legal name, country (flag), registry id, address (org) / name, country (persona). If absent: "No ECS-Organization or ECS-Persona credential presented."
-4. **Other credentials** — **every additional credential presented by the service or its operator** (e.g. an ISO/IEC 42001-style AI-management credential, an ISO 9001-style credential, a sector accreditation): credential name/schema, issuer, and the ecosystem it belongs to. Each entry carries its own valid/invalid mark.
+4. **Other credentials** — **every additional credential presented by the service or its operator** (e.g. an ISO 9001-style certification credential, a sector accreditation): credential name/schema, issuer, and the ecosystem it belongs to. Each entry carries its own valid/invalid mark.
 5. **Trust chain / failures** — for **each presented credential**, an **expandable detail** showing its full trust chain — `issuer → (optional grantor) → ecosystem` — with the **trust status of every link** (from the resolver's `permissionChain`), plus **icon-based links to the corresponding Verana registry entries**: the ecosystem, the credential schema, and the participant entries involved (opening the public network frontend / explorer view, e.g. `app.testnet.verana.network`). When `UNTRUSTED`, the list of **failed credentials with their error reasons** is a first-class block (failures teach verify-first; they are content, not an edge case).
 
 ### Interaction rules
 
 - **[UW-POT-1]** On **first contact** with a service, the wallet MUST display the Proof-of-Trust and obtain an explicit user action (accept / cancel) **before** any message, credential exchange, or session bootstrap.
-- **[UW-POT-2]** On a **credential offer**, the consent screen MUST show the status band plus the Q2 verdict in words: "✅ *Acme CertBody* is an authorized issuer of *Certified AI Management (demo)* in *AI Assurance Ecosystem*" — or the red equivalent. If Q2 fails, the accept action MUST be disabled or demoted behind an explicit "accept anyway (unsafe)" step. [DECISION: hard-block vs. warn-and-allow — default in this draft: **hard-block on testnet playground scenarios**.]
+- **[UW-POT-2]** On a **credential offer**, the consent screen MUST show the status band plus the Q2 verdict in words: "✅ *Acme CertBody* is an authorized issuer of *ISO 9001 (demo)* in *ISO Certification Ecosystem (demo)*" — or the red equivalent. If Q2 fails, the accept action MUST be disabled or demoted behind an explicit "accept anyway (unsafe)" step. [DECISION: hard-block vs. warn-and-allow — default in this draft: **hard-block on testnet playground scenarios**.]
 - **[UW-POT-3]** On a **presentation request**, same as [UW-POT-2] with the Q3 verdict: "✅ *…* is an authorized verifier of *…* in *…*". A failed Q3 MUST NOT default to sharing.
 - **[UW-POT-4]** All claims displayed in blocks 2–4 MUST come from **verified** credentials only. Claims from failed credentials MUST NOT be rendered as facts (they may appear inside the failures block, clearly marked).
 - **[UW-POT-5]** The wallet MUST NOT invent trust signals: no stars, scores, or "verified" wording beyond what resolution returned. (Trust-score display from deposits is a future, resolver-provided field.)
@@ -85,9 +85,9 @@ This section is the "**always show information the same way**" contract. The ref
 
 ## 6. Acceptance test [UW-TEST]
 
-To be listed on the playground, record one uncut run of the **AI Assurance loop** (see [README](../README.md)):
+To be listed on the playground, record one uncut run of the **ISO Certification loop** (see [README](../README.md)):
 
-1. Connect to the playground's demo AI agent → Proof-of-Trust renders `TRUSTED` with ECS-Org + ECS-Service + the ISO-42001-style credential (blocks 1–4).
+1. Connect to the playground's demo AI agent → Proof-of-Trust renders `TRUSTED` with ECS-Org + ECS-Service + the ISO-9001-style credential (blocks 1–4).
 2. Connect to the playground's **untrusted** demo service → `UNTRUSTED` renders with failure reasons; connection is not silently established.
 3. Accept a credential offer from an **authorized** issuer (Q2 pass shown), then receive an offer from an **unauthorized** one (Q2 fail shown, accept blocked/demoted).
 4. Receive a presentation request from an **authorized** verifier (Q3 pass shown), then from an **unauthorized** one (Q3 fail shown, share blocked/demoted).

@@ -22,7 +22,7 @@ An interactive website with two jobs:
 - **Live, not simulated.** Every journey step performs a real testnet interaction (trust resolution, indexer query, chain transaction) and links its on-chain evidence (block, tx, entry) to the explorer. Where verana.io simulates (Query Console), the playground executes.
 - **Bring your own wallet.** Every user-facing step is completable with **any listed user wallet** via QR code / deep link. The playground never requires a specific vendor's wallet; Hologram Messaging is the *reference* wallet, one tile among peers.
 - **Same information, same way.** The site's own trust renderings implement the [Proof-of-Trust presentation pattern](./guidelines/user-wallet-integration.md#5-proof-of-trust-presentation-uw-pot) — the playground is itself the reference implementation of the pattern it asks integrators to follow.
-- **One fictional universe.** The cast continues verana.io's worked examples: **Acme Corp** (organization + its Customer-Support AI Agent), the **AI Assurance Ecosystem (demo)** with accredited **CertBody A/B/C (demo)** issuers, and one deliberately failing actor, **Umbra Corp (demo)**. All demo entities are labeled `(demo)`; ISO-referencing credentials are always "ISO/IEC 42001-**style** (demo)". [DECISION: confirm names.]
+- **One fictional universe.** The cast continues verana.io's worked examples: **Acme Corp** (organization + its Customer-Support AI Agent), the **ISO Certification Ecosystem (demo)** with accredited **CertBody A/B/C (demo)** issuers, and one deliberately failing actor, **Umbra Corp (demo)**. All demo entities are labeled `(demo)`; ISO-referencing credentials are always "ISO 9001-**style** (demo)". [DECISION: confirm names.]
 - **Low barrier.** Browsing requires no account. Doing requires only an anonymous **playground session** (ephemeral, cookie/localStorage-scoped). Chain fees are invisible to visitors (§6.3).
 - **Stay in lane.** Not the network frontend (org/ecosystem management → `app.testnet.verana.network`), not documentation (→ `docs.verana.io`), not marketing (→ `verana.io`). The playground teaches, proves, and showcases.
 
@@ -32,7 +32,7 @@ An interactive website with two jobs:
 | --- | --- | --- |
 | **Playground web** | Next.js site (verana.io stack family: App Router, Tailwind, TypeScript) | Static + server routes; reuses verana.io component recipes (PoT card, explorer widgets) |
 | **Scenario backend** | Thin API in the playground web app | Orchestrates journeys: session state, pooled-account transactions, QR payload generation, webhooks from demo services |
-| **Demo ecosystem services** | vs-agent instances: AI Assurance root, CertBody issuer(s), Acme demo agent, Umbra untrusted service, unauthorized issuer/verifier | Standing services; §6.1. Deployed like other testnet VSs (k8s) |
+| **Demo ecosystem services** | vs-agent instances: ISO Certification root, CertBody issuer(s), Acme demo agent, Umbra untrusted service, unauthorized issuer/verifier | Standing services; §6.1. Deployed like other testnet VSs (k8s) |
 | **Onboarding portal** | The flow from [CW-ECS-1]: delivers ECS credentials to cloud-wallet integrators (DIDComm or hosted portal) | [DECISION: part of playground web vs. separate service] |
 | **Integration registry** | `integrations/` directory in a public repo — one folder per integration: `integration.yaml` + logo + screenshots | PRs from integrators; CI validates schema; site builds tiles from it. [DECISION: host in `verana-labs/verana-playground` app repo] |
 | **Upstream** | Resolver, indexer, chain API/RPC, faucet, `app.testnet` explorer links | Public testnet instances (see [README](./README.md#testnet-endpoints)) |
@@ -63,7 +63,7 @@ Non-functional: same conventions as the other verana-labs sites — open source 
 - **Live counters** (from indexer/registry): integrated wallets · trust resolutions run via the playground · sandbox ecosystems created. Counters are real or absent — never faked.
 - **The triad** — three journey cards (same 1-2-3 sequencing idiom as verana.io).
 - **The wallet wall** — logo strip of every listed integration → `/wallets`. This is the collaboration surface; it must be the most visually prominent block after the hero.
-- **The reference loop** — a 4-step visual of the AI Assurance loop (ecosystem → credentials → PoT in *your* wallet → discovery) with *Run it now*.
+- **The reference loop** — a 4-step visual of the ISO Certification loop (ecosystem → credentials → PoT in *your* wallet → discovery) with *Run it now*.
 - **Footer** — standard family footer + award-window banner (§8).
 
 ### 5.2 Journeys `/learn/*`
@@ -76,15 +76,15 @@ Common journey mechanics:
 
 **Journey 1 — Build a trust ecosystem** `/learn/ecosystems`
 
-1. **Inspect** the AI Assurance Ecosystem (demo): live view of its governance framework entry, credential schema ("Certified AI Management — ISO/IEC 42001-style (demo)"), and participant tree (root → CertBodies → services), read from the indexer.
+1. **Inspect** the ISO Certification Ecosystem (demo): live view of its governance framework entry, credential schema ("ISO 9001 (demo)"), and participant tree (root → CertBodies → services), read from the indexer.
 2. **Create** your own sandbox ecosystem: pick a name; the playground executes the chain transactions (pooled accounts, §6.3); your session becomes its controller.
-3. **Define** a credential schema from a template (clone the ISO-42001-style schema; ISO-9001-style variant available — reusability made visible).
+3. **Define** a credential schema from a template (clone the ISO-9001-style schema; a second sector variant available — reusability made visible).
 4. **Accredit** a demo issuer into your tree (playground-mediated onboarding process).
 5. **See it exist**: your ecosystem in the live registry list and in `app.testnet` — same links any third party would use.
 
 **Journey 2 — Verify first, then connect** `/learn/identity` *(the flagship; also the user-wallet acceptance path [UW-TEST])*
 
-1. **Resolve** Acme's Customer-Support AI Agent (demo): full PoT card — TRUSTED, ECS-Org, ECS-Service, ISO-42001-style credential, trust chain. (No wallet needed yet — the site resolves.)
+1. **Resolve** Acme's Customer-Support AI Agent (demo): full PoT card — TRUSTED, ECS-Org, ECS-Service, ISO-9001-style credential, trust chain. (No wallet needed yet — the site resolves.)
 2. **Connect with your wallet**: QR → your wallet resolves and shows the same PoT → accept → connected. Wallet picker lists every showcase wallet supporting the step, with per-wallet deep links.
 3. **Meet Umbra Corp (demo)**: resolve/connect to the untrusted service → red verdict with failure reasons. Failures are content.
 4. **Credential offer, authorized**: CertBody B issues you a demo credential — wallet shows the Q2 pass verdict.
@@ -102,7 +102,7 @@ Common journey mechanics:
 ### 5.3 Wallet showcase `/wallets` and `/wallets/<slug>`
 
 - **Tile grid** built from the integration registry. Filters: kind (user/cloud) · track (native/bridge, +sidecar for cloud) · license.
-- **Tile anatomy (uniform, fixed order):** logo · name · organization · kind chip · track chip · license chip · "AI Assurance loop ✓" badge (acceptance test passed) · actions: *Get it* (**APK download** for mobile user wallets, **URL** for cloud wallets — from `integration.yaml`'s `download` field) · *Try it* (deep-link into Journey 2 step 2 with this wallet preselected) · *Video* · *Repo*.
+- **Tile anatomy (uniform, fixed order):** logo · name · organization · kind chip · track chip · license chip · "ISO Certification loop ✓" badge (acceptance test passed) · actions: *Get it* (**APK download** for mobile user wallets, **URL** for cloud wallets — from `integration.yaml`'s `download` field) · *Try it* (deep-link into Journey 2 step 2 with this wallet preselected) · *Video* · *Repo*.
 - **Detail page:** the tile data + the integration's acceptance-test recording, screenshots of **its** PoT rendering, `integration.yaml` provenance (PR link), and the org's blurb.
 - **The money shot:** a horizontal strip on `/wallets` showing **the same resolution of the same DID rendered by every integrated user wallet** — one screenshot per wallet, same five blocks visible. This strip is the single image used in award submissions and social posts.
 
@@ -122,9 +122,9 @@ What is real (testnet, real transactions) vs fictional (all `(demo)` entities); 
 
 | Service | Role | State |
 | --- | --- | --- |
-| AI Assurance Ecosystem (demo) | Ecosystem root; controls the ISO-42001-style schema | TRUSTED |
+| ISO Certification Ecosystem (demo) | Ecosystem root; controls the ISO-9001-style schema | TRUSTED |
 | CertBody A/B/C (demo) | Accredited issuers of the demo credential | TRUSTED; ISSUER participant entries |
-| Acme Corp — Customer-Support AI Agent (demo) | The trusted target: ECS-Org + ECS-Service + ISO-42001-style credential; authorized verifier of the demo credential | TRUSTED |
+| Acme Corp — Customer-Support AI Agent (demo) | The trusted target: ECS-Org + ECS-Service + ISO-9001-style credential; authorized verifier of the demo credential | TRUSTED |
 | Umbra Corp (demo) | The refusal path: broken/absent credentials; offers and requests without authorization | UNTRUSTED by construction |
 
 All standing services run vs-agent (or conformant equivalents), are monitored, and their trust state is asserted by CI: **a standing service in the wrong trust state is a paging incident** — the playground's credibility is its live truth.
@@ -163,7 +163,7 @@ Visitors never handle keys or VNA: the scenario backend executes chain transacti
 
 ## 10. Consolidated open items
 
-1. Demo-entity naming (§2) — confirm Acme / CertBody / Umbra / "AI Assurance Ecosystem (demo)".
+1. Demo-entity naming (§2) — confirm Acme / CertBody / Umbra / "ISO Certification Ecosystem (demo)".
 2. Testnet ECS Ecosystem DID (healthy) — blocks M2 ([README TODO](./README.md)).
 3. Onboarding portal placement (§3) — in-app vs separate service.
 4. Integration-registry repo (§3) — recommend `verana-labs/verana-playground`.

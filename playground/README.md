@@ -20,14 +20,14 @@ The Verana Playground is an interactive website for:
 
 ## The reference scenario
 
-All integrations are validated against one end-to-end loop, the **AI Assurance loop**:
+All integrations are validated against one end-to-end loop, the **ISO Certification loop**:
 
-1. A fictional **AI Assurance Ecosystem** registers on the Verana Public Registry (VPR): it publishes its governance framework, defines an *ISO/IEC 42001-style* "Certified AI Management" credential schema (demo), and accredits fictional certification bodies through its participant tree.
-2. An organization operates a **cloud wallet** hosting its AI agent as a **Verifiable Service**: the organization holds **ECS-Organization**, the agent holds **ECS-Service**, and the agent obtains the **ISO-42001-style credential** from an accredited certification body. All credentials are published as Linked Verifiable Presentations in the agent's DID Document.
-3. A person opens any integrated **user wallet** and connects to the agent. Before the first interaction, the wallet trust-resolves the agent's DID and renders the **Proof-of-Trust**: ECS-Organization + ECS-Service + the ISO-42001-style credential, verified recursively up to the ecosystem root.
+1. A fictional **ISO Certification Ecosystem** registers on the Verana Public Registry (VPR): it publishes its governance framework, defines an *ISO 9001-style* quality-management credential schema (demo), and accredits fictional certification bodies through its participant tree.
+2. An organization operates a **cloud wallet** hosting its AI agent as a **Verifiable Service**: the organization holds **ECS-Organization**, the agent holds **ECS-Service**, and the organization obtains the **ISO-9001-style credential** from an accredited certification body. All credentials are published as Linked Verifiable Presentations in the agent's DID Document.
+3. A person opens any integrated **user wallet** and connects to the agent. Before the first interaction, the wallet trust-resolves the agent's DID and renders the **Proof-of-Trust**: ECS-Organization + ECS-Service + the ISO-9001-style credential, verified recursively up to the ecosystem root.
 4. The agent is discoverable in the **Trust Graph** by the credentials it holds.
 
-> **Trademark note:** the playground issues *demo* credentials from *fictional* certification bodies. Public copy MUST describe the credential as an "ISO/IEC 42001-**style** AI management credential (demo)" and MUST NOT imply any real certification.
+> **Trademark note:** the playground issues *demo* credentials from *fictional* certification bodies. Public copy MUST describe the credential as an "ISO 9001-**style** quality-management credential (demo)" and MUST NOT imply any real certification.
 
 ## Shared reference
 
@@ -121,7 +121,7 @@ kind: user-wallet          # user-wallet | cloud-wallet
 repo: https://github.com/animo/paradym-wallet
 license: Apache-2.0        # OSI-approved license required
 track: bridge              # native | bridge (+ sidecar for cloud)
-scenarios: [ai-assurance-loop]
+scenarios: [iso-certification-loop]
 demo_video: https://…
 download: https://…/paradym.apk   # mobile user wallet: direct APK download; cloud wallet: URL of the hosted instance / product page
 contact: …

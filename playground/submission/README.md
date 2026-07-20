@@ -25,7 +25,7 @@ Likes (submission period) select finalists; votes (Aug 24 → Sept 2, one per si
 
 **Narrative (draft, ~150 words for the form):**
 
-> Independent wallet stacks — DIDComm-native (Hologram), OID4VC/DIIP (Paradym, Talao, …), MOSIP Inji, and open-source cloud wallets — issue, hold, and verify credentials against one open, neutral trust registry: the Verana testnet. A fictional AI Assurance Ecosystem accredits certification bodies that issue an ISO/IEC 42001-style credential (demo) to an organization's AI agent. When a person connects with **any** integrated wallet, the wallet trust-resolves the agent **before** the first message and renders the same Proof-of-Trust: the organization (ECS-Org), the service (ECS-Service), and its certification — verified recursively to the ecosystem root. Unauthorized issuers and verifiers are refused, with proof. Every integration follows one published open guideline, so any wallet can join the same way. Live on a public playground; every claim reproducible.
+> Independent wallet stacks — DIDComm-native (Hologram), OID4VC/DIIP (Paradym, Talao, …), MOSIP Inji, and open-source cloud wallets — issue, hold, and verify credentials against one open, neutral trust registry: the Verana testnet. A fictional ISO Certification Ecosystem accredits certification bodies that issue an ISO 9001-style credential (demo) to the organization operating an AI agent. When a person connects with **any** integrated wallet, the wallet trust-resolves the agent **before** the first message and renders the same Proof-of-Trust: the organization (ECS-Org), the service (ECS-Service), and its certification — verified recursively to the ecosystem root. Unauthorized issuers and verifiers are refused, with proof. Every integration follows one published open guideline, so any wallet can join the same way. Live on a public playground; every claim reproducible.
 
 **Criteria mapping (Collaboration Award):**
 
@@ -38,7 +38,7 @@ Likes (submission period) select finalists; votes (Aug 24 → Sept 2, one per si
 | Knowledge sharing & community engagement | The playground itself (journeys), integrator hub, FIDES track participation (Agentic eCommerce), plugfests |
 | Contribution to broader ecosystem | The trust-registry answer to DIIP's open trust-establishment question; open-source everything |
 
-**Form checklist:** title · summary · full description · images (PoT strip, journey screenshots) · video (≤3 min, the AI Assurance loop uncut) · links (playground, guidelines, specs, repos) · linked Explorer entries (§4) · standards used · organizations involved.
+**Form checklist:** title · summary · full description · images (PoT strip, journey screenshots) · video (≤3 min, the ISO Certification loop uncut) · links (playground, guidelines, specs, repos) · linked Explorer entries (§4) · standards used · organizations involved.
 
 ## 3. 2060 use case (supporting lane)
 
@@ -56,7 +56,7 @@ Outline: Hologram AI Agent + VUA + Messaging; agents authenticate humans and oth
 | Use cases | Hologram Agentic AI | 2060 | ☐ |
 | Personal wallets | Hologram Messaging | 2060 | ☐ |
 | Business wallets | vs-agent (Hologram cloud wallet) | 2060 | ☐ |
-| Credential types | ECS-Service · ECS-Organization · ECS-Persona (+ Certified AI Management (demo)) | Verana | ☐ |
+| Credential types | ECS-Service · ECS-Organization · ECS-Persona (+ ISO 9001 (demo)) | Verana | ☐ |
 | Issuers | CertBody demo issuers · ECS onboarding issuer | Verana | ☐ |
 | Relying parties | Acme demo agent (verifier) · Inji Verify | Verana | ☐ |
 | *(per integrated wallet)* | vendor's own wallet entry — ask each vendor to create/claim theirs | vendor | ☐ |

@@ -16,7 +16,7 @@ A Verana-integrated cloud wallet makes each service it hosts a **verifiable, acc
 
 1. The service is identified by a **resolvable DID** whose DID Document declares its endpoints and presents its credentials.
 2. The service (and the organization behind it) holds **ECS credentials** — ECS-Service, plus ECS-Organization or ECS-Persona — so anyone can verify *what it is* and *who operates it* before connecting.
-3. The service attaches **domain credentials** (e.g. an ISO/IEC 42001-style AI-management credential) from the ecosystems it participates in.
+3. The service attaches **domain credentials** (e.g. an ISO 9001-style credential) from the ecosystems it participates in.
 4. The service **verifies its peers** and only issues or requests presentations when **authorized** to do so in the relevant ecosystem.
 
 The result, seen from any integrated user wallet: the uniform Proof-of-Trust — green check, ECS-Org, ECS-Service, and every other credential the org or service presents.
@@ -59,7 +59,7 @@ All three patterns share the requirements below; the DIDComm-conditional ones sa
 
 ## 5. Domain credentials [CW-DOM]
 
-- **[CW-DOM-1]** A service MAY hold any number of additional Verifiable Trust credentials from ecosystems it joins (playground reference: the **ISO/IEC 42001-style "Certified AI Management" demo credential** from the AI Assurance Ecosystem).
+- **[CW-DOM-1]** A service MAY hold any number of additional Verifiable Trust credentials from ecosystems it joins (playground reference: the **ISO 9001-style demo credential** from the ISO Certification Ecosystem (demo)).
 - **[CW-DOM-2]** Each domain credential MUST be published as a Linked VP on the service (or organization) DID Document so user wallets can display it in the "Other credentials" block.
 - **[CW-DOM-3]** The onboarding process for a domain credential runs against the issuing ecosystem's participant tree (application, validation, fees per the VPR spec), with the same acquisition paths as [CW-ECS-1] (out-of-band, or in-band via `vt-flow`). The playground automates this for the demo ecosystem.
 
@@ -81,11 +81,11 @@ The mirror of the user-wallet rules: a cloud wallet only exercises roles it hold
 
 ## 8. Acceptance test [CW-TEST]
 
-To be listed on the playground, record one uncut run of the **AI Assurance loop** from the hosting side:
+To be listed on the playground, record one uncut run of the **ISO Certification loop** from the hosting side:
 
 1. Register a demo organization + one hosted AI-agent service; obtain ECS-Org + ECS-Service via the playground onboarding.
-2. Obtain the ISO-42001-style demo credential from the demo certification body; publish all Linked VPs.
-3. Show the public resolver returning `TRUSTED` for the service DID, and the playground reference user wallet rendering the full Proof-of-Trust (green check, ECS-Org, ECS-Service, ISO-42001-style credential).
+2. Obtain the ISO-9001-style demo credential from the demo certification body; publish all Linked VPs.
+3. Show the public resolver returning `TRUSTED` for the service DID, and the playground reference user wallet rendering the full Proof-of-Trust (green check, ECS-Org, ECS-Service, ISO-9001-style credential).
 4. Accept a connection from an integrated user wallet.
 5. Issue one demo credential to the user wallet as an authorized issuer, and run one presentation request as an authorized verifier — then demonstrate the refusal path (attempt without authorization → peer wallet shows the red verdict).
 
