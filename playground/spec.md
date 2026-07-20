@@ -79,23 +79,25 @@ Cards carry the step number, title, one-liner, and a status chip where relevant 
 
 **Every user wallet gets exactly the same playground page** at `/user-wallets/<slug>`, generated from its `integration.yaml` ([README](./README.md#getting-listed-on-the-playground)). Uniformity is the point: same layout, same two services, same expectations — only the wallet changes.
 
-1. **Header** — logo, name, organization, track/license chips, links: **Download** (APK for a mobile wallet, web link for a web wallet — the `download` field) · repo · demo video.
-2. **Get the wallet** — install instructions for this wallet (store links may complement the APK, never replace it).
-3. **Service 1 — Receive a credential (issuing).** A QR / deep link to the playground's **demo issuer service**, offering the demo credential. Beside it, the **expected wallet rendering**: the Proof-of-Trust plus the Q2 verdict ("✅ … is an authorized issuer of *ISO 9001 (demo)* in *ISO Certification Ecosystem (demo)*") per [UW-POT-2].
-4. **Service 2 — Present the credential (presenting).** A QR / deep link to the playground's **demo verifier service**, requesting presentation of that credential. Beside it, the expected rendering: Proof-of-Trust plus the Q3 verdict per [UW-POT-3].
-5. **Refusal paths (expandable)** — the same two actions against the **unauthorized** demo services (Umbra Corp (demo)): the red verdicts. This completes the [UW-TEST] acceptance loop, so the page doubles as the stage on which the wallet's acceptance recording is made.
+1. **Breadcrumb** — `Playground › User wallets › <Wallet>`: each segment clickable (home, the §3.3 list anchor), so the main page is always one tap away.
+2. **Header** — logo, name, organization, track/license chips, links: **Download** (APK for a mobile wallet, web link for a web wallet — the `download` field) · repo · demo video.
+3. **Get the wallet** — install instructions for this wallet (store links may complement the APK, never replace it).
+4. **Service 1 — Receive a credential (issuing).** A QR / deep link to the playground's **demo issuer service**, offering the demo credential. Beside it, the **expected wallet rendering**: the Proof-of-Trust plus the Q2 verdict ("✅ … is an authorized issuer of *ISO 9001 (demo)* in *ISO Certification Ecosystem (demo)*") per [UW-POT-2].
+5. **Service 2 — Present the credential (presenting).** A QR / deep link to the playground's **demo verifier service**, requesting presentation of that credential. Beside it, the expected rendering: Proof-of-Trust plus the Q3 verdict per [UW-POT-3].
+6. **Refusal paths (expandable)** — the same two actions against the **unauthorized** demo services (Umbra Corp (demo)): the red verdicts. This completes the [UW-TEST] acceptance loop, so the page doubles as the stage on which the wallet's acceptance recording is made.
 
 ## 5. The cloud-wallet playground (identical template)
 
 **Every cloud wallet gets exactly the same playground page** at `/cloud-wallets/<slug>`, generated from its `integration.yaml`. The template is a **use case to test**: the cloud wallet hosts a demo Verifiable Service, and the visitor exercises it end to end.
 
-1. **Header** — logo, name, organization, pattern/license chips, links: **Get it** (URL of the hosted instance / product page) · repo · demo video.
-2. **The hosted demo service** — a standing service run **by this cloud wallet**, Verana-verified: its DID and its live **Proof-of-Trust card** (TRUSTED · ECS-Org · ECS-Service · the demo credential), resolved on page load.
-3. **The use case to test** — the same loop on every cloud-wallet page, run with **any integrated user wallet** (picker linking to the §4 pages):
+1. **Breadcrumb** — `Playground › Cloud wallets › <Wallet>`: each segment clickable (home, the §3.4 list anchor), so the main page is always one tap away.
+2. **Header** — logo, name, organization, pattern/license chips, links: **Get it** (URL of the hosted instance / product page) · repo · demo video.
+3. **The hosted demo service** — a standing service run **by this cloud wallet**, Verana-verified: its DID and its live **Proof-of-Trust card** (TRUSTED · ECS-Org · ECS-Service · the demo credential), resolved on page load.
+4. **The use case to test** — the same loop on every cloud-wallet page, run with **any integrated user wallet** (picker linking to the §4 pages):
    1. **Resolve** the hosted service — see the Proof-of-Trust.
    2. **Receive** a credential issued by the hosted service (it holds the ISSUER participant entry).
    3. **Present** it back to the hosted service's verifier endpoint (it holds the VERIFIER participant entry).
-4. **Under the hood (expandable)** — the integration's pattern (native / sidecar / bridge), its credential-acquisition path ([CW-ECS-1]: out-of-band or `vt-flow`), and registry links (ecosystem, schema, participant entries). This completes the [CW-TEST] acceptance loop.
+5. **Under the hood (expandable)** — the integration's pattern (native / sidecar / bridge), its credential-acquisition path ([CW-ECS-1]: out-of-band or `vt-flow`), and registry links (ecosystem, schema, participant entries). This completes the [CW-TEST] acceptance loop.
 
 ## 6. Shared machinery
 
