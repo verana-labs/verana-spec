@@ -19,7 +19,10 @@ Where the [Verana Playground](../spec.md) is a hands-on surface for testing conc
   1. **The story** — what ACME does, in plain language (2–4 sentences per sub-step).
   2. **What you see** — the concrete artifact: a screenshot or live embed (Verana frontend view, DIDComm exchange, registry entry, trust card).
   3. **Under the hood** — a collapsible box mapping the story to the real mechanics (spec message names, DID Document fragments), linking to the specs.
-- Artifacts are **real testnet artifacts** wherever possible (live registry entries, a resolvable ACME demo DID); screenshots only where liveness adds nothing. [DECISION: watch-only v1, or a "do it yourself" mode reusing the playground's session machinery — proposed: watch-only v1.]
+- Artifacts are **real testnet artifacts** wherever possible (live registry entries, a resolvable ACME demo DID); screenshots only where liveness adds nothing.
+- **Format: hybrid.**
+  - **Organization-side steps are watch-only** (v1): deployments, corporation creation, onboarding processes — the visitor watches ACME do it. Every service shown MUST link the **GitHub repository of the software that runs it** (vs-agent, chatbot, issuer, login service): watch-only never means closed — the visitor can always jump to the source.
+  - **End-user-side steps are hands-on**: the visitor is instructed to download the **Hologram App** to chat with the customer-support service (Step 2.1), and **one of the integrated open-source user wallets (their choice)** to receive the ECS-Badge (Step 2.2) and log in with it (Step 2.3).
 - Every step ends with the ACME state so far ("what ACME now has").
 
 ## 3. The story — Step 1: ACME Corp creates itself in Verana
@@ -71,7 +74,8 @@ One organization, many services: each real-world service ACME runs becomes its o
 
 ACME deploys its customer-support chatbot as a Verifiable Service: a new vs-agent, a new DID, and an **ECS-Service credential issued by the Org anchor**. Anyone who connects can verify, before the first message, that this chatbot really is ACME's.
 
-*What you see:* the new service DID; its trust card (Trusted · service: Customer Support · operated by: ACME Corp); a live chat with the chatbot after accepting the Proof-of-Trust.
+*What you see:* the new service DID; its trust card (Trusted · service: Customer Support · operated by: ACME Corp); the service's source repository link.
+*What you do:* download the **Hologram App** (App Store / Play Store links provided), connect to the chatbot, review the Proof-of-Trust it shows, accept — and chat.
 
 > **Under the hood** — the delegated pattern ([VS-REQ-4]): the chatbot's DID presents an ECS-Service credential whose **issuer** is the anchor DID; the anchor presents ECS-Organization; trust resolution walks that chain, so the chatbot is provably bound to the accountable organization. Linked VP `#vpr-schemas-service-vtc-vp` on the chatbot DID; `MsgTriggerResolver` → `TRUSTED`.
 
@@ -81,7 +85,8 @@ ACME deploys a **badge issuer service** — a new vs-agent, a new DID, ECS-Servi
 
 An employee receives their badge in **one of the open-source user wallets integrated with Verana — the user chooses which**. Before accepting, the wallet verifies two things: that the issuer service is **trusted** (Q1), and that it is **accredited to issue ECS-Badge credentials** (Q2).
 
-*What you see:* the wallet chooser (every integrated wallet from the [showcase](../spec.md#53-wallet-showcase-wallets-and-walletsslug)); the QR; the wallet's consent screen with the Proof-of-Trust and the issuer verdict ("✅ ACME Badge Service is an authorized issuer of ECS-Badge"); the badge in the wallet.
+*What you see:* the badge issuer's service DID, trust card, and source repository link.
+*What you do:* pick a wallet in the **wallet chooser** (every integrated wallet from the [showcase](../spec.md#53-wallet-showcase-wallets-and-walletsslug), with download instructions), scan the QR, review the consent screen — the Proof-of-Trust plus the issuer verdict ("✅ ACME Badge Service is an authorized issuer of ECS-Badge") — and receive the badge in your wallet.
 
 > **Under the hood** — ACME holds an `ISSUER` participant entry on the ECS-Badge schema; issuance runs over OpenID4VCI (the wallet's bridge track); the wallet applies [UW-RES-2] + [UW-POT-2] from the [user-wallet guideline](../guidelines/user-wallet-integration.md). [TODO: confirm the ECS-Badge schema is available in the testnet ECS Ecosystem.]
 
@@ -89,7 +94,8 @@ An employee receives their badge in **one of the open-source user wallets integr
 
 ACME deploys a **login service for its IAM solution**: instead of passwords, it **requests presentation of the Badge credential**. Before sharing, the employee's wallet verifies that the verifier service is **trusted** (Q1) and **accredited to request presentation of ECS-Badge credentials** (Q3). The employee logs in with their badge.
 
-*What you see:* ACME's login page; the QR; the wallet's consent screen with the Proof-of-Trust and the verifier verdict; the signed-in IAM session.
+*What you see:* the login service's DID, trust card, and source repository link.
+*What you do:* open ACME's login page, scan the QR with the **same wallet holding your badge**, review the consent screen — the Proof-of-Trust plus the verifier verdict — share the badge, and land in the signed-in IAM session.
 
 > **Under the hood** — a third vs-agent + DID + delegated ECS-Service; ACME holds a `VERIFIER` participant entry on the ECS-Badge schema; the request runs over OpenID4VP; the wallet applies [UW-RES-3] + [UW-POT-3]. A rogue verifier without the participant entry gets the red verdict — phishing for credentials fails structurally.
 
@@ -116,7 +122,7 @@ Candidate (title only, not committed): **Step 4** — ACME builds its own ecosys
 ## 7. Open items
 
 1. Location of this playground: standalone section of the main playground site vs. its own page tree. [DECISION]
-2. Watch-only v1 vs. do-it-yourself mode (§2). [DECISION]
+2. ~~Watch-only v1 vs. do-it-yourself mode~~ — **resolved (§2): hybrid** — watch-only for organization-side steps (with mandatory source-repo links), hands-on for end-user steps (Hologram App for chat; an integrated open-source user wallet for badge + login).
 3. The ACME demo anchor and services: standing testnet services (kept `TRUSTED`, monitored like the [playground demo services](../spec.md#6-demo-environment-normative-for-the-playground-operators)) vs. artifacts replayed from recordings. Proposed: standing services, shared with the playground's demo cast. [DECISION]
 4. **ECS-Badge schema** availability in the testnet ECS Ecosystem — blocks Steps 2.2/2.3. [TODO]
 5. **Demo-cast unification** — this story uses the ISO Certification Ecosystem (demo) / ISO 9001 (matching the verana.io worked example); the [playground spec](../spec.md) demo environment uses the AI Assurance Ecosystem / ISO-42001-style credential (the award scenario). Decide: host both ecosystems in the shared demo environment, or unify on one. [DECISION]
