@@ -123,9 +123,9 @@ The playground is the living evidence of the *"One trust layer, many wallets"* F
 | # | Milestone | Target |
 | --- | --- | --- |
 | M1 | Specs reviewed/approved | Jul 20 |
-| M2 | Demo cast live (§6, TRUSTED, monitored) | Jul 31 |
-| M3 | Site MVP: Home (§3) + ≥ 3 user-wallet playgrounds (Hologram, Paradym, Talao) + `/integrate` | Aug 8 |
-| M4 | FIDES submission + catalog entries + campaign wave 1 | ~Aug 10 |
+| M2 | Demo cast live (§6, TRUSTED, monitored) | Jul 25 |
+| M3 | Site MVP: Home (§3) + ≥ 3 user-wallet playgrounds (Hologram, Paradym, Talao) + `/integrate` | Jul 27 |
+| M4 | FIDES submission + catalog entries + campaign wave 1 | ~Jul 31 |
 | M5 | Cloud-wallet playgrounds + remaining integrations + Verana Explained pages | Aug 20 |
 | M6 | Award window ops (finalists Aug 24, voting → Sept 2, GDC Sept 1–3) | Sept |
 
