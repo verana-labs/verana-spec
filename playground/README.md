@@ -12,7 +12,7 @@ The Verana Playground is an interactive website for:
 
 | Document | Purpose |
 | --- | --- |
-| [`spec.md`](./spec.md) | The playground website specification (journeys, wallet showcase, demo environment, milestones). |
+| [`spec.md`](./spec.md) | The playground website specification: what-is-Verana intro, Verana Explained step cards, per-wallet playground templates (user + cloud), shared machinery, milestones. |
 | [`verana-explained/spec.md`](./verana-explained/spec.md) | *Verana Explained* — the narrative on-ramp: ACME Corp creates itself in Verana, step by step (Step 1 redacted; next steps TBD). |
 | [`guidelines/user-wallet-integration.md`](./guidelines/user-wallet-integration.md) | Integration guideline for **user wallets** (mobile / web wallets operated by a person). Includes the normative **Proof-of-Trust presentation pattern** so every wallet shows trust the same way. |
 | [`guidelines/cloud-wallet-integration.md`](./guidelines/cloud-wallet-integration.md) | Integration guideline for **cloud wallets** (organizational / enterprise wallets and agent frameworks hosting services). |
