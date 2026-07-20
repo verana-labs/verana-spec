@@ -44,7 +44,11 @@ All three patterns share the requirements below; the DIDComm-conditional ones sa
 
 ## 4. ECS onboarding [CW-ECS]
 
-- **[CW-ECS-1]** The organization MUST obtain an **ECS-Organization** (or **ECS-Persona**) credential, and each hosted service an **ECS-Service** credential, from an authorized issuer of the ECS Ecosystem. On the playground, the onboarding service delivers these over DIDComm **or via the hosted onboarding portal** — no DIDComm capability is required on your side to obtain and publish them. [TODO: link the playground onboarding service once live.]
+- **[CW-ECS-1]** The organization MUST obtain an **ECS-Organization** (or **ECS-Persona**) credential, and each hosted service an **ECS-Service** credential, from an authorized issuer of the ECS Ecosystem. Two acquisition paths:
+  - **Out-of-band** — complete the onboarding process and receive the signed credential out-of-band (e.g. via the playground's hosted onboarding portal), then publish it as a Linked VP. No protocol implementation required.
+  - **In-band** — implement the [**Verifiable Trust Flow Protocol** (`vt-flow`)](../../v4/vt-flow-protocol/spec.md): the DIDComm superprotocol that orchestrates onboarding and credential acquisition between Applicant and Validator (the vs-agent sidecar implements it already — patterns A/B).
+
+  [TODO: link the playground onboarding service once live.]
 - **[CW-ECS-2]** Claim quality is a display contract — these values are what every user wallet renders on the Proof-of-Trust:
   - `name` — the real, public-facing name (org ≤ 512 chars, service ≤ 512 chars);
   - `logoUri` + `logoDigestSri` — a square PNG/JPEG/SVG that renders at 40 px, with a valid SRI digest;
@@ -57,7 +61,7 @@ All three patterns share the requirements below; the DIDComm-conditional ones sa
 
 - **[CW-DOM-1]** A service MAY hold any number of additional Verifiable Trust credentials from ecosystems it joins (playground reference: the **ISO/IEC 42001-style "Certified AI Management" demo credential** from the AI Assurance Ecosystem).
 - **[CW-DOM-2]** Each domain credential MUST be published as a Linked VP on the service (or organization) DID Document so user wallets can display it in the "Other credentials" block.
-- **[CW-DOM-3]** The onboarding process for a domain credential runs against the issuing ecosystem's participant tree (application, validation, fees per the VPR spec). The playground automates this for the demo ecosystem.
+- **[CW-DOM-3]** The onboarding process for a domain credential runs against the issuing ecosystem's participant tree (application, validation, fees per the VPR spec), with the same acquisition paths as [CW-ECS-1] (out-of-band, or in-band via `vt-flow`). The playground automates this for the demo ecosystem.
 
 ## 6. Verifying peers [CW-PEER]
 
