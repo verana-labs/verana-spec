@@ -5,15 +5,15 @@
 
 The Verana Playground is an interactive website for:
 
-1. **Understanding and testing the Verana concepts** — Sovereign Ecosystems, Verifiable Identity, and Discovery — through guided, hands-on scenarios running against the Verana testnet.
-2. **Showcasing integrations of Verana in third-party wallets** — open-source **user wallets** and **cloud wallets** — where every integration follows the same pattern and presents trust information the same way.
+1. **Understanding and testing the Verana concepts** — Sovereign Ecosystems, Verifiable Identity, and Discovery — through the step-by-step **Verana Explained** story (watch-only for organization-side steps, hands-on for end-user steps), running against the Verana testnet.
+2. **Showcasing integrations of Verana in third-party wallets** — open-source **user wallets** and **cloud wallets** — where every integration follows the same pattern, gets an identical per-wallet playground page, and presents trust information the same way.
 
 ## Documents
 
 | Document | Purpose |
 | --- | --- |
 | [`spec.md`](./spec.md) | The playground website specification: what-is-Verana intro, Verana Explained step cards, per-wallet playground templates (user + cloud), shared machinery, milestones. |
-| [`verana-explained/spec.md`](./verana-explained/spec.md) | *Verana Explained* — the narrative on-ramp: ACME Corp creates itself in Verana, step by step (Step 1 redacted; next steps TBD). |
+| [`verana-explained/spec.md`](./verana-explained/spec.md) | *Verana Explained* — the narrative on-ramp: ACME Corp's story, step by step — anchor & verification (1) · services, badges & credential login (2) · ISO 9001 via reusable KYB (3) · its own Partner Ecosystem (4) · Discovery (5, pending). Hybrid watch-only / hands-on format. |
 | [`guidelines/user-wallet-integration.md`](./guidelines/user-wallet-integration.md) | Integration guideline for **user wallets** (mobile / web wallets operated by a person). Includes the normative **Proof-of-Trust presentation pattern** so every wallet shows trust the same way. |
 | [`guidelines/cloud-wallet-integration.md`](./guidelines/cloud-wallet-integration.md) | Integration guideline for **cloud wallets** (organizational / enterprise wallets and agent frameworks hosting services). |
 | [`submission/README.md`](./submission/README.md) | Publication kit: FIDES use-case dossiers (Verana + 2060), catalog-entry checklist, collaborator roster, campaign calendar, UNFOLD. |
@@ -111,7 +111,7 @@ The resolver also exposes a **ToIP TRQP** interface for trust-registry queries. 
 
 ### Getting listed on the playground
 
-Each integration appears as a **tile** on the playground's Wallet Showcase, generated from a machine-readable descriptor submitted by PR:
+Each integration appears in the Home wallet lists and gets its **own playground page** (identical template — [spec §4/§5](./spec.md)), all generated from a machine-readable descriptor submitted by PR:
 
 ```yaml
 # integration.yaml

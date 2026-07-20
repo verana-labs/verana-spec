@@ -21,7 +21,7 @@ Likes (submission period) select finalists; votes (Aug 24 → Sept 2, one per si
 ## 2. Verana use case (primary — Collaboration Award)
 
 **Working title:** *One trust layer, many wallets — the Verana Playground*
-**Submitted by:** Verana org · **URL evidence:** `https://playground.testnet.verana.network` + demo video + the "same PoT, N wallets" strip (spec §5.3).
+**Submitted by:** Verana org · **URL evidence:** `https://playground.testnet.verana.network` + demo video + the "same PoT, N wallets" strip (one screenshot per integrated wallet rendering the same resolution, composed from the per-wallet playground pages).
 
 **Narrative (draft, ~150 words for the form):**
 
@@ -33,12 +33,12 @@ Likes (submission period) select finalists; votes (Aug 24 → Sept 2, one per si
 | --- | --- |
 | Multi-stakeholder collaboration | N independent orgs' products integrated (roster §4); named collaborators with consent |
 | Cross-border / cross-ecosystem interoperability | DIDComm + OID4VC/DIIP + MOSIP stacks on one trust layer; UNFOLD marketplace listing; TRQP interface |
-| Ecosystem growth & participation | Wallet showcase open by PR; FIDES catalog entries for every artifact; sandbox ecosystems anyone can create |
+| Ecosystem growth & participation | Per-wallet playgrounds open to any wallet by PR (integration registry); FIDES catalog entries for every artifact; Verana Explained Step 4 shows anyone how to run their own ecosystem |
 | Open standards & reusability | W3C VC/DID, DIDComm, OpenID4VC, SD-JWT VC, TRQP; guidelines published CC BY-SA; schema templates cloneable |
-| Knowledge sharing & community engagement | The playground itself (journeys), integrator hub, FIDES track participation (Agentic eCommerce), plugfests |
+| Knowledge sharing & community engagement | The playground itself (the Verana Explained story + per-wallet playgrounds), the /integrate hub, FIDES track participation (Agentic eCommerce), plugfests |
 | Contribution to broader ecosystem | The trust-registry answer to DIIP's open trust-establishment question; open-source everything |
 
-**Form checklist:** title · summary · full description · images (PoT strip, journey screenshots) · video (≤3 min, the ISO Certification loop uncut) · links (playground, guidelines, specs, repos) · linked Explorer entries (§4) · standards used · organizations involved.
+**Form checklist:** title · summary · full description · images (PoT strip, Verana Explained + per-wallet playground screenshots) · video (≤3 min, the ISO Certification loop uncut) · links (playground, guidelines, specs, repos) · linked Explorer entries (§4) · standards used · organizations involved.
 
 ## 3. 2060 use case (supporting lane)
 
