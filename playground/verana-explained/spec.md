@@ -147,9 +147,17 @@ The payoff, in the visitor's own hands.
 
 *What ACME now has* — the full circle: a verified organization (Step 1) · verified services with badge-based login (Step 2) · an ISO 9001 certification that travels everywhere it acts (Step 3) · and now **its own governed trust ecosystem**, protecting its brand and its customers. Every step used the same primitives: DIDs, credential schemas, participant trees, trust resolution. What ACME consumed, ACME now provides.
 
-## 7. Next steps — to be defined
+## 7. Next steps
 
-Further steps, if any, to be defined.
+### Step 5 — Discovery with the Trust Graph *(pending — to be redacted later)*
+
+Not part of this revision; will be defined once Steps 1–4 are validated. Summary of how it works, for orientation:
+
+Everything ACME published in Steps 1–4 — the ECS credentials, the ISO 9001 certification, the Authorized Partner credentials — lives in DID Documents and the public registry, so it can be **indexed**. The indexer crawls the registry and the DID Documents; the resolver verifies every artifact; **only verified trust results enter the Trust Graph**, a trust-typed index of services, organizations, ecosystems, schemas, and credentials.
+
+Anyone — a person, a search engine, an AI agent over API/MCP — can then **discover by proof, not keywords**: "ISO 9001-certified organizations", "authorized ACME partners", "ACME's verifiable services", scoped to an ecosystem and ranked by trust signals, with every result carrying verifiable provenance back to the registry.
+
+In this step, the visitor will run those queries live and find ACME's services and Zenith exactly where their credentials put them.
 
 ## 8. Open items
 
