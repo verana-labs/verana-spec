@@ -1,6 +1,6 @@
 # Verana Explained — Playground Specification
 
-**Status:** DRAFT 0.2 · 2026-07-16 — Steps 1–3 redacted; further steps to be defined.
+**Status:** DRAFT 0.3 · 2026-07-16 — Steps 1–4 redacted.
 **Companions:** [playground spec](../spec.md) · [integration guidelines](../guidelines/) · [Verifiable Trust spec v4](https://verana-labs.github.io/verifiable-trust-spec/) · [VPR spec v4](https://verana-labs.github.io/verifiable-trust-vpr-spec/)
 
 ---
@@ -115,14 +115,47 @@ Here is the shortcut that shows the power of the model: **the issuer does not as
 
 *What ACME now has:* everything from Steps 1–2, plus a domain credential that travels with the organization across every service it operates.
 
-## 6. Next steps — to be defined
+## 6. The story — Step 4: ACME creates its own ecosystem
 
-Candidate (title only, not committed): **Step 4** — ACME builds its own ecosystem.
+So far ACME has *joined* ecosystems others govern. But ACME has a trust problem of its own: **who is a genuine ACME partner?** Fake resellers and unauthorized repair shops trade on its name every day. So ACME creates the **ACME Partner Ecosystem** — and becomes a governance authority itself.
 
-## 7. Open items
+### 4.1 Design the partner program
+
+ACME connects to the Verana frontend and **creates its ecosystem**: it publishes the partner program's **governance framework** (who qualifies, obligations, revocation rules) and defines one credential schema — **ACME Authorized Partner**. It configures the permissions deliberately: **issuance is governed** (only ACME can issue), **verification is open** (anyone — a customer's wallet, another business — can check a partner claim, no permission needed).
+
+*What you see:* the new ecosystem entry in the live registry, its governance framework document, and the schema with its permission modes side by side — one governed, one open.
+
+> **Under the hood** — the frontend creates an `Ecosystem` entry (with its governance-framework version and document) and a `CredentialSchema` for the partner credential; ACME creates the schema's root `ECOSYSTEM` participant entry and grants itself the `ISSUER` role. Permission modes are per-schema, per-role — the range from fully open to fully governed the [playground](../spec.md) demonstrates in Journey 1.
+
+### 4.2 Onboard a partner
+
+**Zenith Repairs (demo)**, an independent repair company, wants in. Zenith is already a Verana-verified organization — it went through its own Step 1 with its own anchor and ECS-Organization credential (the pattern replicates; that is the point). Zenith starts the onboarding with ACME; **ACME identifies Zenith by the ECS-Org credential on its DID** — no paperwork exchange — checks its partner criteria, and issues the **ACME Authorized Partner** credential to Zenith's DID. Zenith attaches it to its service.
+
+*What you see:* Zenith's onboarding `PENDING → VALIDATED`; the partner credential landing on Zenith's DID; Zenith's enriched trust card.
+
+> **Under the hood** — a `HOLDER` onboarding on the partner schema with ACME as validator (`MsgStartParticipantOP` → DIDComm evidence session → `MsgSetParticipantOPToValidated`); identification by ECS-Org presentation — the same reusable-KYB shortcut as Step 3, now with ACME on the *issuer* side of it. The credential is published as a Linked VP on Zenith's anchor.
+
+### 4.3 Anyone can verify a partner claim
+
+The payoff, in the visitor's own hands.
+
+*What you do:* with the wallet from Step 2, connect to Zenith's service — the Proof-of-Trust shows Zenith's **ECS-Org + ECS-Service + ACME Authorized Partner** (issued by ACME Corp, chain verified). Then try **Umbra Corp (demo)**, which *claims* on its website to be an ACME partner — its card shows no such credential, and its claim fails verification: **the red verdict. Brand impersonation fails structurally.**
+
+*What you see (discovery):* a live Trust Graph query — "services holding an ACME Authorized Partner credential" — returning exactly the genuine partners, with Zenith in the list.
+
+> **Under the hood** — verification is open on this schema, so any wallet checks a partner claim without asking anyone's permission; only issuance is gated. Revocation works too: if ACME revokes Zenith's credential, re-resolution drops it from Zenith's card and from the query results.
+
+*What ACME now has* — the full circle: a verified organization (Step 1) · verified services with badge-based login (Step 2) · an ISO 9001 certification that travels everywhere it acts (Step 3) · and now **its own governed trust ecosystem**, protecting its brand and its customers. Every step used the same primitives: DIDs, credential schemas, participant trees, trust resolution. What ACME consumed, ACME now provides.
+
+## 7. Next steps — to be defined
+
+Further steps, if any, to be defined.
+
+## 8. Open items
 
 1. Location of this playground: standalone section of the main playground site vs. its own page tree. [DECISION]
 2. ~~Watch-only v1 vs. do-it-yourself mode~~ — **resolved (§2): hybrid** — watch-only for organization-side steps (with mandatory source-repo links), hands-on for end-user steps (Hologram App for chat; an integrated open-source user wallet for badge + login).
 3. The ACME demo anchor and services: standing testnet services (kept `TRUSTED`, monitored like the [playground demo services](../spec.md#6-demo-environment-normative-for-the-playground-operators)) vs. artifacts replayed from recordings. Proposed: standing services, shared with the playground's demo cast. [DECISION]
 4. **ECS-Badge schema** availability in the testnet ECS Ecosystem — blocks Steps 2.2/2.3. [TODO]
 5. **Demo-cast unification** — this story uses the ISO Certification Ecosystem (demo) / ISO 9001 (matching the verana.io worked example); the [playground spec](../spec.md) demo environment uses the AI Assurance Ecosystem / ISO-42001-style credential (the award scenario). Decide: host both ecosystems in the shared demo environment, or unify on one. [DECISION]
+6. Step 4 cast: **Zenith Repairs (demo)** as the onboarded partner; Umbra Corp doubles as the fake-partner claimant. [DECISION: confirm names — Zenith needs its own standing anchor in the demo environment.]
