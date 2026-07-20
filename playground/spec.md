@@ -102,7 +102,7 @@ Common journey mechanics:
 ### 5.3 Wallet showcase `/wallets` and `/wallets/<slug>`
 
 - **Tile grid** built from the integration registry. Filters: kind (user/cloud) · track (native/bridge, +sidecar for cloud) · license.
-- **Tile anatomy (uniform, fixed order):** logo · name · organization · kind chip · track chip · license chip · "AI Assurance loop ✓" badge (acceptance test passed) · actions: *Try it* (deep-link into Journey 2 step 2 with this wallet preselected) · *Video* · *Repo*.
+- **Tile anatomy (uniform, fixed order):** logo · name · organization · kind chip · track chip · license chip · "AI Assurance loop ✓" badge (acceptance test passed) · actions: *Get it* (**APK download** for mobile user wallets, **URL** for cloud wallets — from `integration.yaml`'s `download` field) · *Try it* (deep-link into Journey 2 step 2 with this wallet preselected) · *Video* · *Repo*.
 - **Detail page:** the tile data + the integration's acceptance-test recording, screenshots of **its** PoT rendering, `integration.yaml` provenance (PR link), and the org's blurb.
 - **The money shot:** a horizontal strip on `/wallets` showing **the same resolution of the same DID rendered by every integrated user wallet** — one screenshot per wallet, same five blocks visible. This strip is the single image used in award submissions and social posts.
 

@@ -123,11 +123,12 @@ license: Apache-2.0        # OSI-approved license required
 track: bridge              # native | bridge (+ sidecar for cloud)
 scenarios: [ai-assurance-loop]
 demo_video: https://…
+download: https://…/paradym.apk   # mobile user wallet: direct APK download; cloud wallet: URL of the hosted instance / product page
 contact: …
 logo: ./logo.svg
 ```
 
-Requirements: the product is **open source** (OSI license), the acceptance scenario passes (see each guideline's test section), and the descriptor + a screen recording are submitted by PR. Listed organizations may use the **"Runs on the Verana open trust layer"** badge.
+Requirements: the product is **open source** (OSI license), the acceptance scenario passes (see each guideline's test section), the wallet is **obtainable from its tile** — a mobile user wallet MUST provide a direct **APK download link** (store links MAY complement it), a cloud wallet MUST provide a **URL** — and the descriptor + a screen recording are submitted by PR. Listed organizations may use the **"Runs on the Verana open trust layer"** badge.
 
 ## License
 
