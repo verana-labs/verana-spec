@@ -72,7 +72,7 @@ This section is the "**always show information the same way**" contract. The ref
 2. **Service** — from the **ECS-Service** credential claims: name, type, logo, description. If absent: "No ECS-Service credential presented."
 3. **Operated by** — from the **ECS-Organization** (or **ECS-Persona**) credential claims: legal name, country (flag), registry id, address (org) / name, country (persona). If absent: "No ECS-Organization or ECS-Persona credential presented."
 4. **Other credentials** — **every additional credential presented by the service or its operator** (e.g. an ISO/IEC 42001-style AI-management credential, an ISO 9001-style credential, a sector accreditation): credential name/schema, issuer, and the ecosystem it belongs to. Each entry carries its own valid/invalid mark.
-5. **Trust chain / failures** — collapsible detail: per credential, `issuer → presenter` with the verification result; and, when `UNTRUSTED`, the list of **failed credentials with their error reasons** as a first-class block (failures teach verify-first; they are content, not an edge case).
+5. **Trust chain / failures** — for **each presented credential**, an **expandable detail** showing its full trust chain — `issuer → (optional grantor) → ecosystem` — with the **trust status of every link** (from the resolver's `permissionChain`), plus **icon-based links to the corresponding Verana registry entries**: the ecosystem, the credential schema, and the participant entries involved (opening the public network frontend / explorer view, e.g. `app.testnet.verana.network`). When `UNTRUSTED`, the list of **failed credentials with their error reasons** is a first-class block (failures teach verify-first; they are content, not an edge case).
 
 ### Interaction rules
 
