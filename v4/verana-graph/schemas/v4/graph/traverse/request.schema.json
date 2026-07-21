@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://verana.io/schemas/v4/graph/traverse/request.schema.json",
   "title": "TraverseRequest",
-  "description": "Request payload for the verana-graph canonical traversal queries [TG-QRY-3]. The single endpoint `POST /graph/v1/traverse` dispatches on the `query` selector; the `input` shape is fixed per query. See `### Traversal REST binding` in the verana-graph spec.",
+  "description": "Request payload for the verana-graph canonical traversal queries [TG-QRY-3]. The single endpoint `POST /v4/graph/traverse` dispatches on the `query` selector; the `input` shape is fixed per query. See `### Traversal REST binding` in the verana-graph spec.",
   "type": "object",
   "additionalProperties": false,
   "required": ["query", "input"],
