@@ -77,6 +77,17 @@ Changelog:
 - Q4 2026: mcp-server v5
 - Q4 2026: documentation v5 (docs.verana.io)
 
+### Spec V6 Implementation 2027
+
+- 2027: node (ledger) v6
+- 2027: indexer v6
+- 2027: vs-agent v6
+- 2027: frontend v6
+- 2027: resolver v6
+- 2027: trust graph v6
+- 2027: mcp-server v6
+- 2027: documentation v6 (docs.verana.io)
+
 
 ## Services and Integrations
 
