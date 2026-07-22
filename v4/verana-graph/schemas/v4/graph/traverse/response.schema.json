@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://verana.io/schemas/v4/graph/traverse/response.schema.json",
   "title": "TraverseResponse",
-  "description": "Response payload for the verana-graph canonical traversal queries [TG-QRY-3]. The single endpoint `POST /graph/v1/traverse` returns a per-query `output` shape mirroring the **Output (shape)** column of the [TG-QRY-3] tables. Every entity reference carries its primary key, `lastObservedAtTime`, and the visibility flags applicable to its type (`isTrustExpired` for `Did`, `archived` for `Ecosystem` / `CredentialSchema`). All datetime values are ISO 8601 / RFC 3339 UTC strings (see `#/$defs/Iso8601DateTime`). See `### Traversal REST binding` in the verana-graph spec.",
+  "description": "Response payload for the verana-graph canonical traversal queries [TG-QRY-3]. The single endpoint `POST /v4/graph/traverse` returns a per-query `output` shape mirroring the **Output (shape)** column of the [TG-QRY-3] tables. Every entity reference carries its primary key, `lastObservedAtTime`, and the visibility flags applicable to its type (`isTrustExpired` for `Did`, `archived` for `Ecosystem` / `CredentialSchema`). All datetime values are ISO 8601 / RFC 3339 UTC strings (see `#/$defs/Iso8601DateTime`). See `### Traversal REST binding` in the verana-graph spec.",
   "type": "object",
   "additionalProperties": false,
   "required": ["query", "evaluatedAtTime", "output"],
@@ -31,11 +31,12 @@
     { "if": { "properties": { "query": { "const": "E1" } } }, "then": { "properties": { "output": { "$ref": "#/$defs/E1Output" } } } },
     { "if": { "properties": { "query": { "const": "E2" } } }, "then": { "properties": { "output": { "$ref": "#/$defs/E2Output" } } } },
     { "if": { "properties": { "query": { "const": "E3" } } }, "then": { "properties": { "output": { "$ref": "#/$defs/E3Output" } } } },
-    { "if": { "properties": { "query": { "const": "F1" } } }, "then": { "properties": { "output": { "$ref": "#/$defs/F1Output" } } } }
+    { "if": { "properties": { "query": { "const": "F1" } } }, "then": { "properties": { "output": { "$ref": "#/$defs/F1Output" } } } },
+    { "if": { "properties": { "query": { "const": "G1" } } }, "then": { "properties": { "output": { "$ref": "#/$defs/G1Output" } } } }
   ],
   "$defs": {
     "TraversalQueryId": {
-      "enum": ["A1", "A2", "A3", "A4", "A5", "A6", "A7", "B1", "B2", "C1", "C2", "C3", "D1", "D2", "E1", "E2", "E3", "F1"]
+      "enum": ["A1", "A2", "A3", "A4", "A5", "A6", "A7", "B1", "B2", "C1", "C2", "C3", "D1", "D2", "E1", "E2", "E3", "F1", "G1"]
     },
     "Iso8601DateTime": {
       "type": "string",
@@ -119,8 +120,8 @@
     "DidRef": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["did", "lastObservedAtTime"],
-      "description": "Minimal Did reference. `isTrustExpired` is the [[TG-ACT-3]] visibility flag and MUST be present when known.",
+      "required": ["did", "lastObservedAtTime", "isTrustExpired"],
+      "description": "Minimal Did reference. `isTrustExpired` is the [[TG-ACT-3]] visibility flag; per [[TG-QRY-3]] every entity reference MUST carry the visibility flags applicable to its type, and it is always computable as `expiresAtTime < now`.",
       "properties": {
         "did": { "$ref": "#/$defs/DidString" },
         "lastObservedAtTime": { "$ref": "#/$defs/Iso8601DateTime" },
@@ -263,7 +264,7 @@
       "type": "object",
       "additionalProperties": false,
       "required": ["did", "trusted", "evaluatedAtTime", "evaluatedAtBlock", "expiresAtTime", "pattern", "isTrustExpired", "corporationId", "lastObservedAtTime"],
-      "description": "A1 \u2014 Trust summary. Mirrors the trust-core fields the indexer surfaces under `/vt/v1/resolve` for this DID, plus the graph-level `lastObservedAtTime`.",
+      "description": "A1 \u2014 Trust summary. Mirrors the trust-core fields the indexer surfaces under `/v4/verifiable-trust/resolve` for this DID, plus the graph-level `lastObservedAtTime`.",
       "properties": {
         "did": { "$ref": "#/$defs/DidString" },
         "trusted": { "type": "boolean" },
