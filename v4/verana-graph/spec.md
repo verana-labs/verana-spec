@@ -591,7 +591,7 @@ The normative JSON Schema for the traversal request is published alongside this 
 
 #### Traversal response schema
 
-The normative JSON Schema for the traversal response is published alongside this document at [`schemas/v4/graph/traverse/response.schema.json`](./schemas/v4/graph/traverse/response.schema.json). It defines the envelope fields (`query` echo, `evaluatedAtTime`, `output`) and the per-query `output` shape, which mirrors the **Output (shape)** column of [[TG-QRY-3]] tables. Every entity reference in `output` MUST carry the entity's primary key, its `lastObservedAtTime`, and the visibility flags applicable to its type (`isTrustExpired` for `Did`, `archived` for `Ecosystem` / `CredentialSchema`, `state` for `Participant`).
+The normative JSON Schema for the traversal response is published alongside this document at [`schemas/v4/graph/traverse/response.schema.json`](./schemas/v4/graph/traverse/response.schema.json). It defines the envelope fields (`query` echo, `evaluatedAtTime`, `output`) and the per-query `output` shape, which mirrors the **Output (shape)** column of [[TG-QRY-3]] tables. Every entity reference in `output` MUST carry the entity's primary key, its `lastObservedAtTime`, and the visibility flags applicable to its type (`isTrustExpired` for `Did`, `archived` for `Ecosystem` / `CredentialSchema`, `state` for `Participant`), and its DID binding where its type has one (`did` on `CorporationRef` / `EcosystemRef`, `didId` on `ParticipantRef`). DID bindings are **identity only**: a reference never duplicates the DID's trust state, which is obtained from the `Did` node itself (per [[TG-QRY-2]]).
 
 #### Example traversal request
 

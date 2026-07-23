@@ -134,9 +134,10 @@
     "CorporationRef": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["id", "lastObservedAtTime"],
+      "required": ["id", "did", "lastObservedAtTime"],
       "properties": {
         "id": { "type": "integer", "minimum": 0, "description": "Stable `uint64` primary key of the Corporation (mirrors VPR `Corporation.id`)." },
+        "did": { "$ref": "#/$defs/DidString", "description": "The Corporation's own declared DID (mirrors VPR `Corporation.did`). Identity only — the DID's trust state lives on the `Did` node (A1 / referential lookup)." },
         "policyAddress": { "$ref": "#/$defs/Bech32Address", "description": "On-chain account that signs on behalf of this Corporation (mirrors VPR `Corporation.policy_address`). Globally unique across all Corporation entries. MAY be backed by any signing primitive (single key, multisig, Cosmos SDK group policy, …)." },
         "lastObservedAtTime": { "$ref": "#/$defs/Iso8601DateTime" },
         "deposit": { "$ref": "#/$defs/Coin" },
@@ -149,9 +150,10 @@
     "EcosystemRef": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["id", "corporationId", "archived", "lastObservedAtTime"],
+      "required": ["id", "did", "corporationId", "archived", "lastObservedAtTime"],
       "properties": {
         "id": { "type": "integer", "minimum": 0 },
+        "did": { "$ref": "#/$defs/DidString", "description": "The Ecosystem's DID (mirrors VPR `Ecosystem.did`). Per VPR, several Ecosystem entries MAY share one DID — the primary key remains `id`. Identity only; trust state lives on the `Did` node." },
         "corporationId": { "type": "integer", "minimum": 0, "description": "Stable `uint64` id of the Corporation that controls this Ecosystem (mirrors VPR `Ecosystem.corporation_id`)." },
         "archived": { "type": "boolean" },
         "lastObservedAtTime": { "$ref": "#/$defs/Iso8601DateTime" },
@@ -178,10 +180,11 @@
     "ParticipantRef": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["id", "role", "state", "credentialSchemaId", "ecosystemId", "validatorParticipantId", "lastObservedAtTime"],
+      "required": ["id", "didId", "role", "state", "credentialSchemaId", "ecosystemId", "validatorParticipantId", "lastObservedAtTime"],
       "description": "Minimal Participant reference. `state` carries the current lifecycle state; non-`ACTIVE` records are retained while referenced per [[TG-ACT-1]] and are returned by traversal with their state. `validatorParticipantId` anchors the `VALIDATED_BY: Participant → Participant` edge (the parent node in the permission tree); it is `null` if and only if `role = ECOSYSTEM` (the chain root, per [[TG-EDGE-4]]).",
       "properties": {
         "id": { "type": "integer", "minimum": 0 },
+        "didId": { "$ref": "#/$defs/DidString", "description": "The DID this Participant entry refers to (envelope-derived at ingestion). Identity only; trust state lives on the `Did` node." },
         "vsOperator": { "anyOf": [{ "$ref": "#/$defs/Bech32Address" }, { "type": "null" }], "description": "`null` until a VS Operator Authorization has been granted for this entry." },
         "role": { "$ref": "#/$defs/ParticipantRole" },
         "state": { "$ref": "#/$defs/ParticipantState" },
