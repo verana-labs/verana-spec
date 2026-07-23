@@ -56,7 +56,7 @@ Changelog:
 
 ### Spec V4 Implementation Q2/Q3 2026
 
-- Q3 2026: node (ledger) v4
+- Q3 2026: node (ledger, verifiable public registry implementation) v4
 - Q3 2026: vs-agent v4
 - Q3 2026: indexer v4
 - Q3 2026: resolver v4
