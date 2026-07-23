@@ -27,6 +27,7 @@ Changelog:
 - Schema Authorization Policy extension: limit presentation-requestable attributes (vt-vpr-spec)
 - Council-based governance (vt-vpr-spec)
 - Tokenomics updates
+- Visualizer specification (verana-spec/v5/verana-visualizer)
 
 ### V6 2027
 
@@ -62,7 +63,6 @@ Changelog:
 - Q3 2026: trust graph v4
 - Q3 2026: frontend v4
 - Q3 2026: mcp-server v4
-- Q3 2026: visualizer v4
 - Q3 2026: documentation v4 (docs.verana.io)
 
 ### Spec V5 Implementation
@@ -72,6 +72,7 @@ Changelog:
 - Q4 2026: vs-agent v5
 - Q4 2026: frontend v5
 - Q4 2026: trust graph v5
+- Q4 2026: visualizer v5
 - Q4 2026: mcp-server v5
 - Q4 2026: documentation v5 (docs.verana.io)
 
@@ -82,6 +83,7 @@ Changelog:
 - 2027: vs-agent v6
 - 2027: frontend v6
 - 2027: trust graph v6
+- 2027: visualizer v6
 - 2027: mcp-server v6
 - 2027: documentation v6 (docs.verana.io)
 
