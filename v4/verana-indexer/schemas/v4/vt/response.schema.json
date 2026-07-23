@@ -33,8 +33,8 @@
       "description": "Block height of the evaluation."
     },
     "expiresAtTime": {
-      "$ref": "#/$defs/Iso8601DateTime",
-      "description": "Time after which this resolution result MUST be re-evaluated."
+      "oneOf": [{ "$ref": "#/$defs/Iso8601DateTime" }, { "type": "null" }],
+      "description": "Earliest future boundary at which the DID would cease to be trustable, computed per [IDX-VT-EVAL-2] as the minimum over the trust-evaluation inputs (`effective_until` of the anchoring Participant entries, `validUntil` of the ECS-SERVICE and anchor ECS-ORG/ECS-PERSONA credentials). `null` when no boundary exists — the evaluation then remains valid until a re-evaluation event per [IDX-VT-EVAL-3]. NOT a TTL relative to `evaluatedAtTime`."
     },
     "corporationId": {
       "type": "integer",
