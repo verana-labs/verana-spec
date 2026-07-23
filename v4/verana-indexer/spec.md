@@ -1198,7 +1198,9 @@ When **both** `dids` and `corporation_id` are present, only events matching **bo
 
 `WS /v4/indexer/subscribe`
 
-Real-time push of Ecosystem, Credential Schema, Participant, Trust Deposit, Delegation, Digest, and Exchange Rate events for one or more DIDs. The subscriber opens a WebSocket connection to `/v4/indexer/subscribe` and sends one or more JSON control messages; the first control message MUST be a `subscribe`. *Indexer-specific (no VPR equivalent).*
+Real-time push of Corporation, Governance Framework, Ecosystem, Credential Schema, Participant, Trust Deposit, Delegation, and Digest events for one or more DIDs. The subscriber opens a WebSocket connection to `/v4/indexer/subscribe` and sends one or more JSON control messages; the first control message MUST be a `subscribe`. *Indexer-specific (no VPR equivalent).*
+
+> **Routing model.** Events are routed to scoped subscriptions by DID / Corporation affiliation (`Corporation.did`, `Ecosystem.did`, `Participant.did`, or ownership via `corporation_id` — see the `subscribe` filters below). Entities with neither affiliation — Exchange Rate entries, which are global market data — are therefore not part of any scoped subscription and define no dedicated notification event types; rates are pull-data, queried on demand via the [Exchange Rate methods](#exchange-rate-methods). A **wildcard** subscription (both filters absent) still receives every indexed transaction event, Exchange Rate messages included, since `event_type` is simply the Cosmos action name of the executed message.
 
 ###### Connect / ready
 
