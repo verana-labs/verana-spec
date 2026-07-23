@@ -64,8 +64,8 @@
       "pattern": "^did:"
     },
     "Pattern": {
-      "enum": ["A", "B"],
-      "description": "Architecture pattern per VS-REQ-3 / VS-REQ-4 (A: self-issued; B: delegated)."
+      "enum": ["A", "B", null],
+      "description": "Architecture pattern per VS-REQ-3 / VS-REQ-4 (A: self-issued; B: delegated); null when the DID presents no ServiceCredential (untrusted DID)."
     },
     "ParticipantState": {
       "enum": ["ACTIVE", "FUTURE", "INACTIVE", "EXPIRED", "REVOKED", "SLASHED", "REPAID"]
@@ -179,7 +179,7 @@
       "type": "object",
       "additionalProperties": false,
       "required": ["id", "role", "state", "credentialSchemaId", "ecosystemId", "validatorParticipantId", "lastObservedAtTime"],
-      "description": "Minimal Participant reference. Per [[TG-ACT-1]] only `state = ACTIVE` records are persisted; non-ACTIVE values MUST NOT appear here. `validatorParticipantId` anchors the `VALIDATED_BY: Participant → Participant` edge (the parent node in the permission tree); it is `null` if and only if `role = ECOSYSTEM` (the chain root, per [[TG-EDGE-4]]).",
+      "description": "Minimal Participant reference. `state` carries the current lifecycle state; non-`ACTIVE` records are retained while referenced per [[TG-ACT-1]] and are returned by traversal with their state. `validatorParticipantId` anchors the `VALIDATED_BY: Participant → Participant` edge (the parent node in the permission tree); it is `null` if and only if `role = ECOSYSTEM` (the chain root, per [[TG-EDGE-4]]).",
       "properties": {
         "id": { "type": "integer", "minimum": 0 },
         "vsOperator": { "anyOf": [{ "$ref": "#/$defs/Bech32Address" }, { "type": "null" }], "description": "`null` until a VS Operator Authorization has been granted for this entry." },

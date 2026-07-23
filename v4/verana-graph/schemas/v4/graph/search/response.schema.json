@@ -101,7 +101,7 @@
         "lastObservedAtTime": { "$ref": "#/$defs/Iso8601DateTime" },
         "isTrustExpired": { "type": "boolean" },
         "trusted": { "type": "boolean" },
-        "pattern": { "enum": ["A", "B"] },
+        "pattern": { "enum": ["A", "B", null] },
         "operatorKind": { "enum": ["Organization", "Persona"] },
         "corporationId": { "type": ["integer", "null"], "minimum": 0, "description": "Stable `uint64` id of the Corporation that owns this DID (mirrors VPR `Corporation.id`). `null` while no Corporation has adopted the DID." }
       }
