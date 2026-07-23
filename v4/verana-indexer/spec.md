@@ -1315,6 +1315,14 @@ This subsection normatively defines **what** the trust evaluation depends on, **
 - the **ECS-ORG** or **ECS-PERSONA** credential of the **anchor service** — the DID itself when the Service Credential is self-issued (architecture pattern #1, [VS-REQ-3]), or the issuing parent service when it is issued by another DID (architecture pattern #2, [VS-REQ-4]) — and the `Participant` entry anchoring that credential;
 - a **point-in-time issuance check**: at the issuance instant of the ECS-ORG / ECS-PERSONA credential, its issuer held a valid `Participant` entry granting the right to issue it. This is verified once per evaluation against historical indexed state; it is *not* a future boundary — subsequent expiry of the issuer's `Participant` entry does not invalidate an already-issued credential (revocation and slashing do, and those are signalled on-chain).
 
+The **issuance instant is determined objectively from the credential's VPR-anchored digest** — never from issuer-asserted fields (`validFrom` proves nothing about when a credential was actually issued and can be backdated). Per [W3C VTCs: Determining Credential Issuance Time](https://verana-labs.github.io/verifiable-trust-spec/versions/v4/#w3c-vtcs-determining-credential-issuance-time), the evaluation MUST, for each ECS-ORG / ECS-PERSONA credential:
+
+1. **Canonicalize** the credential with [JCS (RFC 8785)](https://www.rfc-editor.org/rfc/rfc8785) and **recompute** its `digestJCS` using the `digest_algorithm` of the referenced `CredentialSchema`;
+2. **Look up** that digest on the ledger via [Get Digest (MOD-DI-QRY-1)](https://verana-labs.github.io/verifiable-trust-vpr-spec/versions/v4/#mod-di-qry-1-get-digest) (anchored at issuance through `CreateOrUpdateParticipantSession` → `StoreDigest`); the returned `Digest` entry's `created` timestamp is the **effective issuance time**;
+3. **Verify** the issuer's authorization at *that* timestamp against historical indexed state.
+
+A credential whose recomputed digest has **no** ledger entry has no provable issuance time and MUST fail the check (the DID cannot be `trusted` through it).
+
 Other presented credentials (non-ECS VTCs, ECS-UA, ECS-BADGE, additional VP contents) are contextual data surfaced by the opt-in response sections; they MUST NOT influence `trusted` or `expiresAtTime`.
 
 [IDX-VT-EVAL-2] **`expiresAtTime` computation.** `expiresAtTime` MUST be computed as the **minimum** of the following future boundaries, evaluated over the inputs of [[IDX-VT-EVAL-1]]:
