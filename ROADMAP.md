@@ -58,8 +58,7 @@ Changelog:
 
 - Q3 2026: node (ledger, verifiable public registry implementation) v4
 - Q3 2026: vs-agent v4
-- Q3 2026: indexer v4
-- Q3 2026: resolver v4
+- Q3 2026: indexer v4 (incl. resolver module)
 - Q3 2026: trust graph v4
 - Q3 2026: frontend v4
 - Q3 2026: mcp-server v4
@@ -69,10 +68,9 @@ Changelog:
 ### Spec V5 Implementation
 
 - Q4 2026: node (ledger) v5
-- Q4 2026: indexer v5
+- Q4 2026: indexer v5 (incl. resolver module)
 - Q4 2026: vs-agent v5
 - Q4 2026: frontend v5
-- Q4 2026: resolver v5
 - Q4 2026: trust graph v5
 - Q4 2026: mcp-server v5
 - Q4 2026: documentation v5 (docs.verana.io)
@@ -80,10 +78,9 @@ Changelog:
 ### Spec V6 Implementation 2027
 
 - 2027: node (ledger) v6
-- 2027: indexer v6
+- 2027: indexer v6 (incl. resolver module)
 - 2027: vs-agent v6
 - 2027: frontend v6
-- 2027: resolver v6
 - 2027: trust graph v6
 - 2027: mcp-server v6
 - 2027: documentation v6 (docs.verana.io)
