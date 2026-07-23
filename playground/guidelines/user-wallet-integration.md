@@ -6,7 +6,7 @@
 
 The key words MUST, MUST NOT, SHOULD, SHOULD NOT, and MAY are to be interpreted as described in [BCP 14](https://datatracker.ietf.org/doc/html/bcp14).
 
-Normative background: [Verifiable Trust spec v4](https://verana-labs.github.io/verifiable-trust-spec/) (esp. [TR], [VUA-REQ], [VUA-CONN-VS], [CIT], [PRT], [WL]) and the [VPR spec v4](https://verana-labs.github.io/verifiable-trust-vpr-spec/). Shared endpoints and configuration: see the [playground README](../README.md).
+Normative background: [Verifiable Trust spec v4](https://verana-labs.github.io/verifiable-trust-spec/versions/v4/) (esp. [TR], [VUA-REQ], [VUA-CONN-VS], [CIT], [PRT], [WL]) and the [VPR spec v4](https://verana-labs.github.io/verifiable-trust-vpr-spec/versions/v4/). Shared endpoints and configuration: see the [playground README](../README.md).
 
 ---
 
@@ -77,7 +77,7 @@ This section is the "**always show information the same way**" contract. The ref
 ### Interaction rules
 
 - **[UW-POT-1]** On **first contact** with a service, the wallet MUST display the Proof-of-Trust and obtain an explicit user action (accept / cancel) **before** any message, credential exchange, or session bootstrap.
-- **[UW-POT-2]** On a **credential offer**, the consent screen MUST show the status band plus the Q2 verdict in words: "✅ *Acme CertBody* is an authorized issuer of *ISO 9001 (demo)* in *ISO Certification Ecosystem (demo)*" — or the red equivalent. If Q2 fails, the accept action MUST be disabled or demoted behind an explicit "accept anyway (unsafe)" step. [DECISION: hard-block vs. warn-and-allow — default in this draft: **hard-block on testnet playground scenarios**.]
+- **[UW-POT-2]** On a **credential offer**, the consent screen MUST show the status band plus the Q2 verdict in words: "✅ *CertBody (demo)* is an authorized issuer of *ISO 9001 (demo)* in *ISO Certification Ecosystem (demo)*" — or the red equivalent. If Q2 fails, the accept action MUST be disabled or demoted behind an explicit "accept anyway (unsafe)" step. [DECISION: hard-block vs. warn-and-allow — default in this draft: **hard-block on testnet playground scenarios**.]
 - **[UW-POT-3]** On a **presentation request**, same as [UW-POT-2] with the Q3 verdict: "✅ *…* is an authorized verifier of *…* in *…*". A failed Q3 MUST NOT default to sharing.
 - **[UW-POT-4]** All claims displayed in blocks 2–4 MUST come from **verified** credentials only. Claims from failed credentials MUST NOT be rendered as facts (they may appear inside the failures block, clearly marked).
 - **[UW-POT-5]** The wallet MUST NOT invent trust signals: no stars, scores, or "verified" wording beyond what resolution returned. (Trust-score display from deposits is a future, resolver-provided field.)

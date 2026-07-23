@@ -4,7 +4,7 @@
 **Site:** `https://playground.testnet.verana.network`
 **Companions:** [verana-explained](./verana-explained/spec.md) · [user-wallet guideline](./guidelines/user-wallet-integration.md) · [cloud-wallet guideline](./guidelines/cloud-wallet-integration.md) · [shared reference](./README.md)
 
-Source of truth for protocol facts: [Verifiable Trust spec v4](https://verana-labs.github.io/verifiable-trust-spec/) and [VPR spec v4](https://verana-labs.github.io/verifiable-trust-vpr-spec/).
+Source of truth for protocol facts: [Verifiable Trust spec v4](https://verana-labs.github.io/verifiable-trust-spec/versions/v4/) and [VPR spec v4](https://verana-labs.github.io/verifiable-trust-vpr-spec/versions/v4/).
 
 ---
 
