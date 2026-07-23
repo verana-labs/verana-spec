@@ -50,7 +50,7 @@
         "trust": {
           "type": "boolean",
           "default": false,
-          "description": "Trigger on any change to the trust-core fields (`trusted`, `evaluatedAtTime`, `evaluatedAtBlock`, `expiresAtTime`, `corporationId`). The new values are delivered inline (see `changes.schema.json` `#/$defs/TrustChange`). The top-level `corporationId` rotation (DID re-binding to a different Corporation) is signalled here."
+          "description": "Trigger when a re-evaluation event ([IDX-VT-EVAL-3]: state-affecting message, consumed TriggerResolver, or dependency cascade) changes any of the persisted trust-core fields (`trusted`, `evaluatedAtTime`, `evaluatedAtBlock`, `expiresAtTime`, `corporationId`). The new values are delivered inline (see `changes.schema.json` `#/$defs/TrustChange`). The top-level `corporationId` rotation (DID re-binding to a different Corporation) is signalled here. A passive wall-clock crossing of `expiresAtTime` is not a change event."
         },
         "corporation": {
           "oneOf": [

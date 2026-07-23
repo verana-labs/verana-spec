@@ -143,7 +143,7 @@
         "trusted":          { "type": "boolean" },
         "evaluatedAtTime":  { "$ref": "#/$defs/Iso8601DateTime" },
         "evaluatedAtBlock": { "type": "integer", "minimum": 0 },
-        "expiresAtTime":    { "$ref": "#/$defs/Iso8601DateTime" },
+        "expiresAtTime":    { "oneOf": [{ "$ref": "#/$defs/Iso8601DateTime" }, { "type": "null" }], "description": "Earliest trust-flipping boundary per [IDX-VT-EVAL-2]; `null` when no boundary exists. NOT a TTL." },
         "corporationId":    { "type": "integer", "minimum": 0, "description": "Stable `uint64` id of the Corporation that owns the resolved DID (the unique Corporation whose `did` equals the resolved DID, per VPR's per-Corporation `did` uniqueness invariant)." }
       }
     }

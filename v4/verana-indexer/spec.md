@@ -16,7 +16,7 @@ The key words MAY, MUST, MUST NOT, OPTIONAL, RECOMMENDED, REQUIRED, SHOULD, and 
 
 ### Datetime encoding
 
-Every datetime value defined or surfaced by this specification — including but not limited to `atTime`, `evaluatedAtTime`, `expiresAtTime`, `validFrom`, `validUntil`, `lastSlashedAtTime`, `activeSince`, `blockTime`, the TRQP `time` / `time_requested` / `time_evaluated` / `since` / `controlling_since` fields, and any future datetime field added in a backwards-compatible revision — MUST be encoded as an ISO 8601 / RFC 3339 datetime string **in UTC**. Each value MUST include the date, the time (with seconds), and the trailing `Z` UTC designator. Fractional seconds are OPTIONAL. Local times, non-UTC offsets (e.g. `+02:00`), date-only values, and timezone-less times MUST NOT be used. Producers that hold non-UTC times MUST convert them to UTC before serialising. The normative regular expression is:
+Every datetime value defined or surfaced by this specification — including but not limited to `atTime`, `evaluatedAtTime`, `expiresAtTime`, `validFrom`, `validUntil`, `lastSlashedAtTime`, `activeSince`, `blockTime`, the TRQP `time` / `time_requested` / `time_evaluated` / `since` / `controlling_since` fields, and any future datetime field added in a backwards-compatible revision — MUST be encoded as an ISO 8601 / RFC 3339 datetime string **in UTC**. Each value MUST include the date, the time (with seconds), and the trailing `Z` UTC designator. Fractional seconds are OPTIONAL. Local times, non-UTC offsets (e.g. `+02:00`), date-only values, and timezone-less times MUST NOT be used. Producers that hold non-UTC times MUST convert them to UTC before serialising. Fields declared nullable (e.g. `expiresAtTime`) MAY instead be JSON `null`; when non-null they MUST conform. The normative regular expression is:
 
 ```regex
 ^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(\.[0-9]+)?Z$
@@ -1305,6 +1305,40 @@ The point-in-time is controlled by the `At-Block-Height` HTTP request header per
 
 > **Recursive resolution.** To obtain full details about any other DID surfaced in the response (e.g. an ECS credential's subject at `ecsCredentials[].credentialSubject.id`, or any other DID a consumer chooses to inspect), call this same method on that DID. Note that most cross-entity references are surfaced by stable VPR id rather than DID (e.g. `corporationId`, `ecosystemId`, `credentialSchemaId`, `participantId`, `issuerParticipantId`) and do not need re-resolution — they're already directly joinable.
 
+##### Trust Evaluation Lifecycle
+
+This subsection normatively defines **what** the trust evaluation depends on, **when** it is recomputed, and **how** `expiresAtTime` is derived. It exists because the entire downstream trust surface (including the [Verana Graph](../verana-graph/spec.md) query-time gates of [[TG-ACT-3]](../verana-graph/spec.md#visibility-and-retention-model) / [[TG-FCT-2]](../verana-graph/spec.md#faceted-search-queries)) treats `expiresAtTime` as an *exact* horizon: crossing it means the DID is genuinely no longer trustable, not merely that cached data went stale.
+
+[IDX-VT-EVAL-1] **Evaluation inputs.** The `trusted` verdict per [VS-REQ] is derived **exclusively** from:
+
+- the DID's presented **ECS-SERVICE** credential and the `Participant` entries anchoring it;
+- the **ECS-ORG** or **ECS-PERSONA** credential of the **anchor service** — the DID itself when the Service Credential is self-issued (architecture pattern #1, [VS-REQ-3]), or the issuing parent service when it is issued by another DID (architecture pattern #2, [VS-REQ-4]) — and the `Participant` entry anchoring that credential;
+- a **point-in-time issuance check**: at the issuance instant of the ECS-ORG / ECS-PERSONA credential, its issuer held a valid `Participant` entry granting the right to issue it. This is verified once per evaluation against historical indexed state; it is *not* a future boundary — subsequent expiry of the issuer's `Participant` entry does not invalidate an already-issued credential (revocation and slashing do, and those are signalled on-chain).
+
+Other presented credentials (non-ECS VTCs, ECS-UA, ECS-BADGE, additional VP contents) are contextual data surfaced by the opt-in response sections; they MUST NOT influence `trusted` or `expiresAtTime`.
+
+[IDX-VT-EVAL-2] **`expiresAtTime` computation.** `expiresAtTime` MUST be computed as the **minimum** of the following future boundaries, evaluated over the inputs of [[IDX-VT-EVAL-1]]:
+
+- `effective_until` (when non-null) of the `Participant` entries anchoring the DID's ECS-SERVICE credential;
+- `validUntil` (when present) of the DID's ECS-SERVICE credential;
+- `effective_until` (when non-null) of the `Participant` entry anchoring the anchor service's ECS-ORG / ECS-PERSONA credential, and `validUntil` (when present) of that credential.
+
+When the boundary set is empty (all relevant `effective_until` are null and no relevant credential carries `validUntil`), `expiresAtTime` MUST be `null`: the evaluation has no known future boundary and remains valid until a re-evaluation event per [[IDX-VT-EVAL-3]].
+
+`expiresAtTime` is therefore a deterministic function of indexed state at the evaluated block — **not** of the wall-clock time at which a resolve request happens to be served. An implementation MUST NOT substitute a fixed re-check TTL (e.g. `evaluatedAtTime + 1h`): a synthetic TTL manufactures expirations for DIDs whose trust state is provably unchanged, needlessly evicting them from downstream trust surfaces, and at scale (millions of services) would force mass periodic recomputation that this event-driven design exists to avoid.
+
+[IDX-VT-EVAL-3] **Re-evaluation triggers.** The indexer MUST re-evaluate the trust state of a DID (and recompute its `expiresAtTime`) when, and only when:
+
+1. a state-affecting VPR message touches any input of [[IDX-VT-EVAL-1]] for that DID (`Participant` lifecycle messages, revocation, slashing, repayment, `SetParticipantEffectiveUntil`, `SetParticipantOPtoValidated`, …);
+2. a **`TriggerResolver`** event ([VPR MOD-PP-MSG-15](https://verana-labs.github.io/verifiable-trust-vpr-spec/#mod-pp-msg-15-trigger-resolver)) is emitted for a `Participant` entry whose `did` is the DID: the indexer MUST consume this event, re-fetch the DID's off-chain material (DID Document, linked VPs, presented credentials), and re-evaluate. `TriggerResolver` is the **sole** signal for off-chain changes (linked-VP updates, off-chain revocations, a credential entering validity after a future `validFrom`); emitting it is the responsibility of the service / holder side, and the indexer MUST NOT compensate for a missing signal with polling, TTLs, or periodic recomputation — trust-surface staleness caused by an unsignalled off-chain change is attributable to the service that failed to signal it;
+3. the cascade of [[IDX-VT-EVAL-4]] reaches the DID.
+
+Time-driven `Participant` state transitions (`effective_from` / `effective_until` crossing block time) are materialised by the [per-block tick](#per-block-tick-time-driven-every-block) and already fire `participations` change envelopes; they require no additional scheduling here. A **passive crossing of `expiresAtTime` itself requires no indexer action**: by construction of [[IDX-VT-EVAL-2]] the crossing coincides with a genuine loss of trustability, and downstream consumers enforce it with query-time gates against the persisted value.
+
+[IDX-VT-EVAL-4] **Dependency cascade.** After re-evaluating a DID `Y`, the indexer MUST re-evaluate every indexed service whose ECS-SERVICE credential has issuer `Y` (the pattern-#2 child services anchored on `Y`), and emit change envelopes (per the [`trust` channel](#websocket-channels)) for every DID whose trust-core fields changed as a result. No dedicated reverse index is required beyond the ability to query indexed services by ECS-SERVICE credential issuer.
+
+[IDX-VT-EVAL-5] **Persisted trust-core.** The indexer MUST persist the trust-core fields (`trusted`, `evaluatedAtTime`, `evaluatedAtBlock`, `expiresAtTime`, `corporationId`) per DID. This is what makes the [`trust` channel](#websocket-channels)'s "changed" predicate decidable and keeps `expiresAtTime` stable across resolve calls between re-evaluation events. Resolve requests serve the persisted evaluation (re-projected at the requested `At-Block-Height` where applicable); they MUST NOT recompute `expiresAtTime` relative to request time.
+
 ##### IDX-VT-QRY-1 Resolve
 
 `POST /v4/verifiable-trust/resolve`
@@ -1360,13 +1394,15 @@ participation states: REPAID, SLASHED, REVOKED, EXPIRED, ACTIVE, FUTURE, INACTIV
 participation roles: HOLDER, ISSUER, VERIFIER, ISSUER_GRANTOR, VERIFIER_GRANTOR, ECOSYSTEM
 validatorParticipantId: non-null `uint64` pointer to the parent `Participant` in the permission tree for every role except `ECOSYSTEM`; explicitly `null` only when `role = ECOSYSTEM` (the chain root). This example resolves an organization DID, so every surfaced Participant is non-ECOSYSTEM — the `null` case is visible only when resolving a trust-registry-controller DID.
 
+expiresAtTime: derived per [[IDX-VT-EVAL-2]] — here the earliest boundary is the `effective_until` (`2027-01-31T23:59:59.000Z`) of the `Participant` entry anchoring the ECS-SERVICE credential, which precedes the credential's own `validUntil` (`2030-01-01T19:23:24Z`). It is **not** a TTL relative to `evaluatedAtTime`, and it would be `null` if no boundary existed.
+
 ```json
 {
    "did":"did:webvh:QmRhJBzLMF6L3REha9xFpLgxui9X5tFm4TDxHoEHpA8Kpr:organization.vs.hologram.zone",
    "trusted":true,
    "evaluatedAtTime":"2026-05-06T17:00:00.000Z",
    "evaluatedAtBlock":1500000,
-   "expiresAtTime":"2026-05-07T17:00:00.000Z",
+   "expiresAtTime":"2027-01-31T23:59:59.000Z",
    "corporationId":42,
    "corporation":{
       "id":42,
@@ -1598,7 +1634,7 @@ A subscription selects a set of channels. Each channel narrows what counts as a 
 
 | Channel | Triggers a notification when … |
 | --- | --- |
-| `trust` | Any of the trust-core fields (`trusted`, `evaluatedAtTime`, `evaluatedAtBlock`, `expiresAtTime`, `corporationId`) change. The new values are delivered inline. The top-level `corporationId` rotation (DID re-binding to a different Corporation, e.g. as part of an ownership transfer) is signalled here. |
+| `trust` | A **re-evaluation event** ([[IDX-VT-EVAL-3]] — state-affecting message, consumed `TriggerResolver`, or dependency cascade) changes any of the persisted trust-core fields (`trusted`, `evaluatedAtTime`, `evaluatedAtBlock`, `expiresAtTime`, `corporationId`). The new values are delivered inline. The top-level `corporationId` rotation (DID re-binding to a different Corporation, e.g. as part of an ownership transfer) is signalled here. A passive wall-clock crossing of `expiresAtTime` is **not** a change event — per [[IDX-VT-EVAL-2]] the crossing itself is the signal, enforced by consumers at query time. |
 | `corporation` | The `corporation` object (the singular Corporation whose `did` equals the resolved DID) is created or removed (i.e. the DID is bound to a Corporation, or that binding ends — e.g. a `Corporation.did` rotation away from this DID); **or** experiences a slash event; **or** its active CGF rotates (`active_version` advances) or any document of the active CGF version changes (URL or `digestSri`). The top-level `corporationId` scalar itself (the binding "this DID is operated by *that* Corp") is part of the `trust` channel above and is not gated separately. `deposit` fluctuations alone are gated by the `includeDepositChanges` sub-flag below. |
 | `participations` | A `Participant` entry the DID is part of is created or transitions state. `weight` fluctuations alone are gated by the `includeWeightChanges` sub-flag below. |
 | `ecsCredentials` | An ECS credential issued to or by the DID is added, replaced, or invalidated. |
@@ -1698,7 +1734,7 @@ After the first `subscribe` is acknowledged, the server sends one **block messag
             "trusted":          true,
             "evaluatedAtTime":  "2026-05-11T13:00:05Z",
             "evaluatedAtBlock": 1500005,
-            "expiresAtTime":    "2026-05-12T13:00:05Z",
+            "expiresAtTime":    "2027-01-31T23:59:59.000Z",
             "corporationId":    42
          },
          "corporation":    true,

@@ -34,7 +34,7 @@
     "includeUntrusted": {
       "type": "boolean",
       "default": false,
-      "description": "Override the [TG-FCT-2] default `Did.trusted = true` gate. Has no effect on non-`Did` surfaces. The `Did.expiresAtTime >= now` and trust-expired-controller gates of [TG-FCT-2] are NOT overridable, regardless of this flag."
+      "description": "Override the [TG-FCT-2] default `Did.trusted = true` gate. Has no effect on non-`Did` surfaces. The `Did.expiresAtTime` (null OR `>= now`) and trust-expired-controller gates of [TG-FCT-2] are NOT overridable, regardless of this flag."
     },
     "includeArchived": {
       "type": "boolean",
