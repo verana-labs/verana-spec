@@ -1,6 +1,6 @@
 # Indexer v4 Specification
 
-**Latest Draft:** spec v4-draft5
+**Latest Draft:** spec v4-draft6
 
 ## Abstract
 
@@ -1301,6 +1301,8 @@ The Verifiable Trust Resolver answers two complementary questions about a DID at
    - **`ecosystems`** — Aggregate metrics for the Ecosystems (and their underlying Credential Schemas and active Ecosystem Governance Frameworks) **the DID is the controller of** (the Ecosystems whose `did` equals the resolved DID). Sub-flags control whether archived Ecosystems (and their archived embedded Credential Schemas) are included.
 
 The response always carries the core fields (`did`, `trusted`, `evaluatedAtTime`, `evaluatedAtBlock`, `expiresAtTime`, `corporationId`); every other section is gated by its selector. The `vsOperator` account, in contrast, is surfaced **per Participant** (not at envelope level) because each `Participant` entry carries its own VS Operator Authorization grant from its controlling Corporation (`Participant.corporation_id`). The full payload contract is normatively defined by the [Resolution request schema](#resolution-request-schema) and [Resolution response schema](#resolution-response-schema) below.
+
+`corporationId` is the resolved DID's **owner Corporation** per the VPR [DID ownership invariant](https://verana-labs.github.io/verifiable-trust-vpr-spec/versions/v4/#did-ownership-invariant): the Corporation whose own `did` equals the resolved DID or, when none exists, the single Corporation owning the `Participant` / `Ecosystem` entries claiming it — the invariant guarantees all sources agree. Every indexed DID is claimed by at least one entity, so `corporationId` is total and MUST NOT be null (implementations emitting `null` for e.g. Ecosystem DIDs MUST switch to owner derivation). The `corporation` *object*, in contrast, is included only when the resolved DID is the Corporation's own declared `did`. `participations[]` entries do not repeat `corporation_id`: it always equals the envelope `corporationId`.
 
 The point-in-time is controlled by the `At-Block-Height` HTTP request header per [Conventions](#at-block-height-header); when omitted, the resolver evaluates against the latest indexed block. The resolved block is echoed back as `evaluatedAtBlock` (with `evaluatedAtTime` as its wall-clock equivalent) in the response.
 
