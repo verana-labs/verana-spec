@@ -1,6 +1,6 @@
 # Verana Graph spec
 
-**Latest Draft:** spec v4-draft1
+**Latest Draft:** spec v4-draft2
 
 ## Abstract
 
