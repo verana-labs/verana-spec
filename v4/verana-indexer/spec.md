@@ -1,6 +1,6 @@
 # Indexer v4 Specification
 
-**Latest Draft:** spec v4-draft3
+**Latest Draft:** spec v4-draft4
 
 ## Abstract
 
@@ -453,7 +453,7 @@ Retrieve a specific Corporation by its id. *Aligned with VPR [[MOD-CO-QRY-1]](ht
 
 **Response:** `{ corporation: Corporation }`. The `Corporation` object carries:
 
-- **On-chain (VPR `Corporation`):** `id` (uint64 — primary key), `policy_address` (the on-chain account that signs on behalf of this Corporation), `did`, `language`, `active_version`, `created`, `modified`, `archived` (nullable).
+- **On-chain (VPR `Corporation`):** `id` (uint64 — primary key), `policy_address` (the on-chain account that signs on behalf of this Corporation), `did`, `language`, `active_version`, `created`, `modified`.
 - **Indexer-enriched aggregates** (computed; not stored on-chain):
   - `controlled_ecosystems` — count of `Ecosystem` entries whose `corporation_id` equals this Corporation's `id`.
   - `participants` — total count of `Participant` entries owned by this Corporation across all schemas, plus per-role breakdown (`participants_ecosystem`, `participants_issuer_grantor`, …, `participants_holder`).
@@ -471,7 +471,6 @@ Retrieve a paginated, filtered list of Corporations. *Aligned with VPR [[MOD-CO-
 | --- | --- | --- | --- | --- |
 | `gf_data` | query | enum | no | `none` \| `only_active` \| `all` — controls inclusion of CGF `versions[]`. Default: `only_active`. |
 | `preferred_language` | query | string | no | Preferred document language; affects CGF document ordering |
-| `archived` | query | boolean | no | `true` → only archived Corporations; `false` → only not-archived Corporations; null/omitted → both. Default: null. |
 | `did` | query | string | no | Filter by Corporation DID |
 | `modified_after` | query | datetime | no | Only return Corporations modified strictly after this ISO 8601 datetime |
 | `trust_data` | query | enum | no | `null` \| `summary` \| `full` — see [Conventions](#trust_data-query-parameter) |
@@ -502,7 +501,7 @@ Retrieve the activity timeline for a Corporation, ordered by `id` descending (ne
 
 Supports pagination through attributes `max_id`, `min_id`, `limit` and `sort`, as explained in [Pagination](#pagination).
 
-**Response:** `ActivityTimelineResponse` with `entity_type: "Corporation"`. Each `ActivityItem`'s `msg` is one of `CreateCorporation`, `UpdateCorporation`, `ArchiveCorporation`, `AddCGFDocument`, `IncreaseCGFActiveVersion`, etc.
+**Response:** `ActivityTimelineResponse` with `entity_type: "Corporation"`. Each `ActivityItem`'s `msg` is one of `CreateCorporation`, `UpdateCorporation`, `AddCGFDocument`, `IncreaseCGFActiveVersion`, etc.
 
 #### Ecosystem methods
 
