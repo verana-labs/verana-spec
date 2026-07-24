@@ -581,7 +581,7 @@ The graph's traversal surface is for **browsing, discovery, and audit retrospect
 
 ### Traversal REST binding
 
-[TG-QRY-5] **Default REST binding.** Implementations claiming **REST binding conformance** MUST expose the canonical traversal query set of [[TG-QRY-3]] over the single endpoint defined below; the request and response payloads MUST validate against the JSON Schemas referenced. Implementations MAY additionally or alternatively expose the same contract over GraphQL or direct query-language pass-through, in which case only the per-query input/output contracts of [[TG-QRY-3]] apply.
+[TG-QRY-5] **Default REST binding.** Implementations claiming **REST binding conformance** MUST expose the canonical traversal query set of [[TG-QRY-3]] over the single endpoint defined below; requests and successful responses MUST validate against the JSON Schemas referenced, and non-successful responses MUST follow [[TG-ERR-1]](#error-responses). Implementations MAY additionally or alternatively expose the same contract over GraphQL or direct query-language pass-through, in which case only the per-query input/output contracts of [[TG-QRY-3]] apply.
 
 | Module       | Method Name | Relative REST API path | Type  | Requirements | Authz  |
 | ---          | ---         | ---                    | ---   | ---          | ---    |
@@ -796,13 +796,13 @@ Worked example: a `Did`-surface query for *"plumber issuers"* (free-text *"plumb
 
 The `facets` object MUST contain aggregations for at least every `eq` / `in` filter field declared on the queried surface in [[TG-FCT-3]]. Each `hit.snippet` MUST carry the entity's primary key, `lastObservedAtTime`, and the visibility flags applicable to the surface (`isTrustExpired` for `Did`, `archived` for `Ecosystem` / `CredentialSchema`).
 
-[TG-FCT-7] **Pagination.** Implementations MUST use **cursor-based** pagination — the `cursor` returned in one response is opaque to the client and is the only way to fetch subsequent pages. Offset-based pagination (`?offset=...&limit=...`) MUST NOT be used because it is unstable under the live ingestion stream: records appear and disappear from the result set as upstream block events flow in, and offset-based pagination silently skips or duplicates rows under concurrent writes. A cursor MAY become invalid (e.g. its anchor record left the result set); responses to invalid cursors MUST return an explicit error rather than silently re-anchoring.
+[TG-FCT-7] **Pagination.** Implementations MUST use **cursor-based** pagination — the `cursor` returned in one response is opaque to the client and is the only way to fetch subsequent pages. Offset-based pagination (`?offset=...&limit=...`) MUST NOT be used because it is unstable under the live ingestion stream: records appear and disappear from the result set as upstream block events flow in, and offset-based pagination silently skips or duplicates rows under concurrent writes. A cursor MAY become invalid (e.g. its anchor record left the result set); responses to invalid cursors MUST return the `INVALID_CURSOR` error of [[TG-ERR-1]](#error-responses) rather than silently re-anchoring.
 
 [TG-FCT-8] **Composition with traversal.** Faceted-search returns ranked hits with the minimum data needed for a result card; deep enrichment (full governance chain, all held credentials, etc.) is the job of [Graph-traversal Queries](#graph-traversal-queries) from the hit's id. Implementations MAY expose composite façades that fold both layers into a single request (e.g. "search returning top-N hits plus A1 + A2 inlined per hit"), but the contract — [[TG-FCT-1]] through [[TG-FCT-7]] plus the [[TG-QRY-3]] traversal contracts — remains the unit of conformance.
 
 ### Search REST binding
 
-[TG-FCT-9] **Default REST binding.** Implementations claiming **REST binding conformance** MUST expose the faceted-search contract of [[TG-FCT-1]] through [[TG-FCT-7]] over the single endpoint defined below; the request and response payloads MUST validate against the JSON Schemas referenced. Implementations MAY additionally or alternatively expose the same contract over GraphQL or any other wire protocol, in which case only the abstract contract of [[TG-FCT-1]]–[[TG-FCT-7]] applies.
+[TG-FCT-9] **Default REST binding.** Implementations claiming **REST binding conformance** MUST expose the faceted-search contract of [[TG-FCT-1]] through [[TG-FCT-7]] over the single endpoint defined below; requests and successful responses MUST validate against the JSON Schemas referenced, and non-successful responses MUST follow [[TG-ERR-1]](#error-responses). Implementations MAY additionally or alternatively expose the same contract over GraphQL or any other wire protocol, in which case only the abstract contract of [[TG-FCT-1]]–[[TG-FCT-7]] applies.
 
 | Module       | Method Name | Relative REST API path | Type  | Requirements              | Authz  |
 | ---          | ---         | ---                    | ---   | ---                       | ---    |
@@ -985,3 +985,17 @@ The user wants AI-agent VSs operated by a Persona named "@fabrice". Surface: `Di
 ```
 
 `EcsCredential.ServiceCredential.type` is the **declared service category** of the VS — the authoritative ECS-level *"what does this service do?"* facet. The closely-related `Did.serviceTypes` is the DID-Document-level **protocol surface** (e.g. `{ containsAny: ["MCP", "DIDComm"] }` — *"which protocols can I talk to it with?"*) and MAY substitute or supplement `ServiceCredential.type` when the query is phrased in protocol terms rather than service-category terms. The derived `Did.operatorKind` facet (per [[TG-FCT-3]]) splits **personal** (Persona-operated) from **corporate** (Organization-operated) without any traversal at the caller. Free-text `"fabrice"` lands on `PersonaCredential.name` (medium weight, [[TG-FCT-4]]).
+
+## Error Responses
+
+[TG-ERR-1] Every non-successful response of the traversal ([[TG-QRY-5]]) and faceted-search ([[TG-FCT-9]]) REST bindings MUST be an error envelope `{ "error": { "code", "message" } }` validating against the shared schema published at [`schemas/v4/graph/error.schema.json`](./schemas/v4/graph/error.schema.json), with the HTTP status and `code` chosen from the table below. `code` is the programmatic contract; `message` is human-readable, implementation-defined detail.
+
+| `code` | HTTP status | Condition |
+| --- | --- | --- |
+| `INVALID_INPUT` | 400 | The request body does not validate against the request schema, or the `input` shape does not match the selected query / surface |
+| `UNKNOWN_QUERY` | 400 | The traversal `query` selector is not one of the [[TG-QRY-3]] set |
+| `UNKNOWN_FILTER_FIELD` | 400 | A `filters` key is not a declared filter field of the queried surface ([[TG-FCT-3]]) |
+| `INVALID_CURSOR` | 400 | The `cursor` is malformed or no longer valid ([[TG-FCT-7]]) — never silently re-anchored |
+| `UNKNOWN_ID` | 404 | The input's entity identifier (`did`, `credentialId`, `participantId`, `ecosystemId`, `credentialSchemaId`, `corporationId`) resolves to no persisted record |
+
+An empty result is **not** an error: a traversal whose walk yields no records and a search with zero hits return their normal success envelopes. Success responses MUST validate against the corresponding response schema; error responses MUST validate against the error schema — the two are disjoint (`additionalProperties: false` on both sides).
