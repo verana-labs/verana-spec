@@ -11,7 +11,8 @@
     "evaluatedAtTime": { "$ref": "#/$defs/Iso8601DateTime", "description": "Wall-clock evaluation time of the response. Per [[TG-QRY-1]] the graph evaluates against its current persisted state; this timestamp is the moment the call was answered." },
     "output": {
       "description": "Per-query output shape; constrained by the discriminated `allOf` branch matching `query`."
-    }
+    },
+    "nextCursor": { "type": ["string", "null"], "description": "Keyset continuation cursor per [TG-QRY-6]; `null` on the last page and for non-paginated (shape-fixed) queries." }
   },
   "allOf": [
     { "if": { "properties": { "query": { "const": "A1" } } }, "then": { "properties": { "output": { "$ref": "#/$defs/A1Output" } } } },
