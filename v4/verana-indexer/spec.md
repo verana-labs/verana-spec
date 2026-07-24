@@ -1,6 +1,6 @@
 # Indexer v4 Specification
 
-**Latest Draft:** spec v4-draft5
+**Latest Draft:** spec v4-draft7
 
 ## Abstract
 
@@ -1295,7 +1295,7 @@ The Verifiable Trust Resolver answers two complementary questions about a DID at
 
    - **`corporation`** — The on-chain Corporation entry the DID **represents** (the Corporation whose `did` equals the resolved DID). A singular object — by VPR, a DID is the `did` of at most one Corporation; omitted when no such Corporation exists for this `did`. Carries the Corporation's stable `id` (uint64) and `policy_address` (the on-chain account that signs on its behalf), plus `deposit`, slash history, and active CGF.
    - **`participations`** — Credential Schemas the DID participates in, filterable by state (`ACTIVE`, `FUTURE`, `INACTIVE`, `EXPIRED`, `REVOKED`, `SLASHED`, `REPAID`); defaults to `ACTIVE` when no filter is given.
-   - **`ecsCredentials`** — The full ECS credentials extracted from the DID's linked-VPs, with their `credentialSubject` claims.
+   - **`ecsCredentials`** — The full ECS credentials extracted from the DID's linked-VPs, with their `credentialSubject` claims. Each entry carries the credential `id` (required — a VC-mandatory attribute), plus two informational fields the evaluation computes anyway per [[IDX-VT-EVAL-1]]: `digestJCS` (the recomputed, ledger-verified JCS digest) and `issuedAtTime` (the `created` timestamp of the credential's ledger `Digest` entry — its effective issuance time). Two entries with the same `id` in one response MUST NOT occur: the indexer MUST exclude such duplicates as invalid credentials.
    - **`services`** — Non-`LinkedVerifiablePresentation` service entries from the DID Document (DIDComm, MCP, A2A, VsAgentAdminAPI, …), surfaced verbatim.
    - **`presentations`** — Per-VP credential summaries (`vtcCredentials[]`, each entry `{id, credentialSchemaId, ecosystemId}`); sub-flags additionally surface unresolvable and invalid credential IDs per VP.
    - **`ecosystems`** — Aggregate metrics for the Ecosystems (and their underlying Credential Schemas and active Ecosystem Governance Frameworks) **the DID is the controller of** (the Ecosystems whose `did` equals the resolved DID). Sub-flags control whether archived Ecosystems (and their archived embedded Credential Schemas) are included.
@@ -1322,7 +1322,7 @@ The **issuance instant is determined objectively from the credential's VPR-ancho
 2. **Look up** that digest on the ledger via [Get Digest (MOD-DI-QRY-1)](https://verana-labs.github.io/verifiable-trust-vpr-spec/versions/v4/#mod-di-qry-1-get-digest) (anchored at issuance through `CreateOrUpdateParticipantSession` → `StoreDigest`); the returned `Digest` entry's `created` timestamp is the **effective issuance time**;
 3. **Verify** the issuer's authorization at *that* timestamp against historical indexed state.
 
-A credential whose recomputed digest has **no** ledger entry has no provable issuance time and MUST fail the check (the DID cannot be `trusted` through it).
+A credential whose recomputed digest has **no** ledger entry has no provable issuance time and MUST fail the check (the DID cannot be `trusted` through it). The recomputed digest and the effective issuance time are surfaced informationally on each `ecsCredentials[]` entry as `digestJCS` and `issuedAtTime`.
 
 Other presented credentials (non-ECS VTCs, ECS-UA, ECS-BADGE, additional VP contents) are contextual data surfaced by the opt-in response sections; they MUST NOT influence `trusted` or `expiresAtTime`.
 
@@ -1488,6 +1488,8 @@ expiresAtTime: derived per [[IDX-VT-EVAL-2]] — here the earliest boundary is t
          "ecosystemId":1,
          "participantId":601,
          "id":"did:webvh:QmRhJBzLMF6L3REha9xFpLgxui9X5tFm4TDxHoEHpA8Kpr:organization.vs.hologram.zone#cc5c398f-bc64-45df-9482-9cb583cce197",
+         "digestJCS":"sha384-K7x9Qp2mVtR5nW8jL3cD6fH1yB4gS0aE9uZoI2rT7vNqM5xC8bJ4kF6hP1dG3wY",
+         "issuedAtTime":"2026-02-10T09:15:00Z",
          "validFrom":"2010-01-01T19:23:24Z",
          "validUntil":"2030-01-01T19:23:24Z",
          "credentialSubject":{
@@ -1511,6 +1513,9 @@ expiresAtTime: derived per [[IDX-VT-EVAL-2]] — here the earliest boundary is t
          "issuerParticipantId":802,
          "ecosystemId":1,
          "participantId":602,
+         "id":"did:webvh:QmRhJBzLMF6L3REha9xFpLgxui9X5tFm4TDxHoEHpA8Kpr:organization.vs.hologram.zone#8f2a1c04-77de-4b31-a5c9-0e6f4d2b9a11",
+         "digestJCS":"sha384-T2mB8vN5qX1rW4jK7cF9dH3yL6gA0uS8eZ4oI1pR5tVnQ7xC2bM9kJ3hD6fG8wY",
+         "issuedAtTime":"2026-01-22T14:40:00Z",
          "validFrom":"2010-01-01T19:23:24Z",
          "validUntil":"2030-01-01T19:23:24Z",
          "credentialSubject":{

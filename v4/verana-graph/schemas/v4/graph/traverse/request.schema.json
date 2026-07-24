@@ -89,11 +89,12 @@
     "CredentialIdInput": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["credentialId"],
+      "required": ["did", "credentialId"],
       "properties": {
+        "did": { "$ref": "#/$defs/DidString", "description": "The credential's subject/holder DID. `EcsCredential` records are keyed `(subjectDid, id)`; a `Vtc` is matched by `credentialId` among the VTCs presented by this DID." },
         "credentialId": {
           "type": "string",
-          "description": "Identity of the credential record \u2014 either an `EcsCredential.id` or a `Vtc.id`. The graph dispatches on the actual record type internally."
+          "description": "The credential `id` \u2014 either an `EcsCredential.id` or a `Vtc.id`. The graph dispatches on the actual record type internally."
         }
       }
     },

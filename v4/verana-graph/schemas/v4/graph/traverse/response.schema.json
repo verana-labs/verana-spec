@@ -200,7 +200,7 @@
     "EcsCredentialRef": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["ecsSchema", "ecsSchemaVersion", "credentialSchemaId", "issuerParticipantId", "ecosystemId", "participantId", "validFrom", "validUntil", "credentialSubject", "lastObservedAtTime"],
+      "required": ["ecsSchema", "ecsSchemaVersion", "credentialSchemaId", "issuerParticipantId", "ecosystemId", "participantId", "subjectDid", "id", "digestJCS", "issuedAtTime", "validFrom", "validUntil", "credentialSubject", "lastObservedAtTime"],
       "properties": {
         "ecsSchema": { "$ref": "#/$defs/EcsSchemaName" },
         "ecsSchemaVersion": { "type": "string" },
@@ -208,7 +208,10 @@
         "issuerParticipantId": { "type": "integer", "minimum": 0 },
         "ecosystemId": { "type": "integer", "minimum": 0 },
         "participantId": { "type": "integer", "minimum": 0 },
-        "id": { "type": "string" },
+        "subjectDid": { "$ref": "#/$defs/DidString", "description": "The credential's subject/holder DID — part of the `(subjectDid, id)` record key." },
+        "id": { "type": "string", "description": "The credential `id` — part of the `(subjectDid, id)` record key." },
+        "digestJCS": { "type": "string", "description": "Informational: the credential's JCS digest, recomputed and ledger-verified by the indexer per [IDX-VT-EVAL-1]." },
+        "issuedAtTime": { "$ref": "#/$defs/Iso8601DateTime", "description": "Effective issuance time: the `created` timestamp of the credential's ledger Digest entry." },
         "validFrom": { "$ref": "#/$defs/Iso8601DateTime" },
         "validUntil": { "anyOf": [{ "$ref": "#/$defs/Iso8601DateTime" }, { "type": "null" }], "description": "`null` for open-ended credentials, per the entity table (`timestamp | null`)." },
         "credentialSubject": { "type": "object", "description": "ECS-schema-specific subject claims; always includes `id`." },
