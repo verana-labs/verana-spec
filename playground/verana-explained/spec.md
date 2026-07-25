@@ -88,7 +88,7 @@ An employee receives their badge in **one of the open-source user wallets integr
 *What you see:* the badge issuer's service DID, trust card, and source repository link.
 *What you do:* pick a wallet in the **wallet chooser** (every integrated wallet from the [user-wallets list](../spec.md#33-user-wallets), with download instructions), scan the QR, review the consent screen — the Proof-of-Trust plus the issuer verdict ("✅ ACME Badge Service is an authorized issuer of ECS-Badge") — and receive the badge in your wallet.
 
-> **Under the hood** — ACME holds an `ISSUER` participant entry on the ECS-Badge schema; issuance runs over OpenID4VCI (the wallet's bridge track); the wallet applies [UW-RES-2] + [UW-POT-2] from the [user-wallet guideline](../guidelines/user-wallet-integration.md). [TODO: confirm the ECS-Badge schema is available in the testnet ECS Ecosystem.]
+> **Under the hood** — ACME holds an `ISSUER` participant entry on the ECS-Badge schema; issuance runs over OpenID4VCI (the wallet's bridge track); the wallet applies [UW-RES-2] + [UW-POT-2] from the [user-wallet guideline](../guidelines/user-wallet-integration.md). (ECS-Badge schema in creation — see open items.)
 
 ### 2.3 Login with a verifiable credential (IAM)
 
@@ -164,6 +164,6 @@ In this step, the visitor will run those queries live and find ACME's services a
 1. Location of this playground: standalone section of the main playground site vs. its own page tree. [DECISION]
 2. ~~Watch-only v1 vs. do-it-yourself mode~~ — **resolved (§2): hybrid** — watch-only for organization-side steps (with mandatory source-repo links), hands-on for end-user steps (Hologram App for chat; an integrated open-source user wallet for badge + login).
 3. The ACME demo anchor and services: standing testnet services (kept `TRUSTED`, monitored like the [playground demo services](../spec.md#6-shared-machinery)) vs. artifacts replayed from recordings. Proposed: standing services, shared with the playground's demo cast. [DECISION]
-4. **ECS-Badge schema** availability in the testnet ECS Ecosystem — blocks Steps 2.2/2.3. [TODO]
+4. **ECS-Badge schema** — in creation (Verana); unblocks Steps 2.2/2.3 and the per-wallet playground template ([playground spec §4](../spec.md)).
 5. ~~Demo-cast unification~~ — **resolved: unified on the ISO Certification Ecosystem (demo) / ISO 9001** across this story, the [playground spec](../spec.md), the guidelines, and the submission kit (matching the verana.io worked example).
 6. Step 4 cast: **Zenith Repairs (demo)** as the onboarded partner; Umbra Corp doubles as the fake-partner claimant. [DECISION: confirm names — Zenith needs its own standing anchor in the demo environment.]

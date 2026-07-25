@@ -62,14 +62,14 @@ Per the Verifiable Trust spec ([WL-VPR], [WL-ECS]), integrated wallets maintain 
   ],
   "ecsEcosystems": [
     {
-      "did": "TODO: testnet ECS Ecosystem DID (see note)",
+      "did": "did:webvh:QmPXNqN9qj5eeFviA7d1ToPUPiN8KZcn2QwSWFjZXx4dZS:organization-vs.main.demos.testnet.verana.network",
       "vpr": "vna-testnet-1"
     }
   ]
 }
 ```
 
-> **TODO:** publish the canonical testnet ECS Ecosystem DID here once stable. The current testnet entry (`did:webvh:…:ecs-trust-registry.testnet.verana.network`) fails verification at the time of writing; the playground launch requires a healthy ECS trust registry.
+> The ecosystem DID above is the demo organization anchor from [`verana-labs/verana-demos`](https://github.com/verana-labs/verana-demos) (`organization-vs`), resolved from its public DID Document.
 
 ### Trust Resolution API (summary)
 
@@ -111,7 +111,7 @@ The resolver also exposes a **ToIP TRQP** interface for trust-registry queries. 
 
 ### Getting listed on the playground
 
-Each integration appears in the Home wallet lists and gets its **own playground page** (identical template — [spec §4/§5](./spec.md)), all generated from a machine-readable descriptor submitted by PR:
+Each integration appears in the Home wallet lists and gets its **own playground page** (identical template — [spec §4/§5](./spec.md)), all generated from a machine-readable descriptor submitted by PR to [`verana-labs/playground`](https://github.com/verana-labs/playground):
 
 ```yaml
 # integration.yaml
