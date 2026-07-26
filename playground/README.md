@@ -10,7 +10,7 @@ The Verana Playground is an interactive website for:
 
 **Protocol version:** v4 is not fully published yet — the playground targets **v3**, which is what runs on testnet today. These documents keep v4 terminology where concepts are equivalent (v3 **Trust Registry** = v4 *Ecosystem*; v3 **Permission** = v4 *Participant*). Sources of truth for now: [Verifiable Trust spec v3](https://verana-labs.github.io/verifiable-trust-spec/index-v3.html) and [VPR spec v3](https://verana-labs.github.io/verifiable-trust-vpr-spec/index-v3.html); v4 drafts: [VT v4](https://verana-labs.github.io/verifiable-trust-spec/versions/v4/) · [VPR v4](https://verana-labs.github.io/verifiable-trust-vpr-spec/versions/v4/).
 
-> **ECS-Badge on v3:** the v3 Essential Credential Schemas do not include ECS-Badge; it is being **added to the ECS ecosystem** by Verana so the badge flows work.
+> **ECS-Badge on v3:** created — the schema has been **added to the ECS ecosystem**. Badge flows run over **AnonCreds / DIDComm** for now, with **Hologram Messaging as the initial user wallet**; OpenID4VC/OpenID4VP issuance & presentation will be enabled when available.
 
 ## Documents
 

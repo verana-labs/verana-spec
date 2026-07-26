@@ -86,6 +86,8 @@ Cards carry the step number, title, one-liner, and a status chip where relevant 
 5. **Service 2 — Present the credential (presenting).** A QR / deep link to the **ACME login service (demo)** — the same standing service as in [Step 2.3](./verana-explained/spec.md) — requesting presentation of the badge to log in. Beside it, the expected rendering: Proof-of-Trust plus the Q3 verdict per [UW-POT-3].
 6. **Refusal paths (expandable)** — the same two actions against the **unauthorized** demo services (Umbra Corp (demo)): the red verdicts. This completes the [UW-TEST] acceptance loop, so the page doubles as the stage on which the wallet's acceptance recording is made.
 
+> **v3 launch note:** the badge runs over **AnonCreds / DIDComm**; initially **Hologram Messaging** is the only user wallet completing the full badge loop. Other wallets' pages ship with the resolve/connect steps live and the badge steps marked *coming* — they activate per wallet when OpenID4VC lands or the wallet supports the AnonCreds flow.
+
 ## 5. The cloud-wallet playground (identical template)
 
 **Every cloud wallet gets exactly the same playground page** at `/cloud-wallets/<slug>`, generated from its `integration.yaml`. The template is a **use case to test**: the cloud wallet hosts a demo Verifiable Service, and the visitor exercises it end to end.
@@ -134,7 +136,7 @@ The playground is the living evidence of the *"One trust layer, many wallets"* F
 
 1. ~~Demo-entity naming~~ — **resolved:** Acme / CertBody / Umbra / Zenith / "ISO Certification Ecosystem (demo)" confirmed.
 2. ~~Testnet ECS Ecosystem DID~~ — **resolved:** the demo organization anchor from `verana-labs/verana-demos` (`organization-vs`); published in the [README config](./README.md#network-configuration-wl-whitelists).
-3. ~~Demo credential issued to visitors~~ — **resolved: ECS-Badge** (schema in creation, by Verana); used by the §4 issuing/presenting services.
+3. ~~Demo credential issued to visitors~~ — **resolved: ECS-Badge** (schema **created** in the ECS ecosystem); AnonCreds/DIDComm for now, Hologram first; OID4VC/OID4VP when available.
 4. Onboarding portal placement (§6). [DECISION]
 5. ~~Integration-registry repo~~ — **resolved:** [`verana-labs/playground`](https://github.com/verana-labs/playground) (created).
 6. [UW-POT-2] hard-block vs warn — inherited from the user-wallet guideline.
