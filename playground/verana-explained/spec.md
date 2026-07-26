@@ -79,7 +79,7 @@ ACME deploys its customer-support chatbot as a Verifiable Service: a new vs-agen
 
 > **Under the hood** — the delegated pattern ([VS-REQ-4]): the chatbot's DID presents an ECS-Service credential whose **issuer** is the anchor DID; the anchor presents ECS-Organization; trust resolution walks that chain, so the chatbot is provably bound to the accountable organization. Linked VP `#vpr-schemas-service-vtc-vp` on the chatbot DID; `MsgTriggerResolver` → `TRUSTED`.
 
-### 2.2 Employee badge issuer (OpenID4VC)
+### 2.2 Employee badge issuer
 
 ACME deploys a **badge issuer service** — a new vs-agent, a new DID, ECS-Service issued by the Org — to issue **company badges (ECS-Badge)** to its employees — over **AnonCreds / DIDComm** for now (OpenID4VC when available).
 
