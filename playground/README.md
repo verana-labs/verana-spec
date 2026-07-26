@@ -8,6 +8,10 @@ The Verana Playground is an interactive website for:
 1. **Understanding and testing the Verana concepts** — Sovereign Ecosystems, Verifiable Identity, and Discovery — through the step-by-step **Verana Explained** story (watch-only for organization-side steps, hands-on for end-user steps), running against the Verana testnet.
 2. **Showcasing integrations of Verana in third-party wallets** — open-source **user wallets** and **cloud wallets** — where every integration follows the same pattern, gets an identical per-wallet playground page, and presents trust information the same way.
 
+**Protocol version:** v4 is not fully published yet — the playground targets **v3**, which is what runs on testnet today. These documents keep v4 terminology where concepts are equivalent (v3 **Trust Registry** = v4 *Ecosystem*; v3 **Permission** = v4 *Participant*). Sources of truth for now: [Verifiable Trust spec v3](https://verana-labs.github.io/verifiable-trust-spec/index-v3.html) and [VPR spec v3](https://verana-labs.github.io/verifiable-trust-vpr-spec/index-v3.html); v4 drafts: [VT v4](https://verana-labs.github.io/verifiable-trust-spec/versions/v4/) · [VPR v4](https://verana-labs.github.io/verifiable-trust-vpr-spec/versions/v4/).
+
+> **ECS-Badge on v3:** the v3 Essential Credential Schemas do not include ECS-Badge; it is being **added to the ECS ecosystem** by Verana so the badge flows work.
+
 ## Documents
 
 | Document | Purpose |

@@ -6,7 +6,7 @@
 
 The key words MUST, MUST NOT, SHOULD, SHOULD NOT, and MAY are to be interpreted as described in [BCP 14](https://datatracker.ietf.org/doc/html/bcp14).
 
-Normative background: [Verifiable Trust spec v4](https://verana-labs.github.io/verifiable-trust-spec/versions/v4/) (esp. [VS-REQ], [VS-SVC], [VT-ECS-CRED], [CIB], [PRB], [VS-CONN-*], [TR]) and the [VPR spec v4](https://verana-labs.github.io/verifiable-trust-vpr-spec/versions/v4/). Shared endpoints and configuration: see the [playground README](../README.md).
+Normative background: the Verifiable Trust spec ([v3 — current target](https://verana-labs.github.io/verifiable-trust-spec/index-v3.html), [v4 draft](https://verana-labs.github.io/verifiable-trust-spec/versions/v4/) — section tags [VS-REQ], [VS-SVC], [VT-ECS-CRED], [CIB], [PRB], [VS-CONN-*], [TR] cited from v4) and the VPR spec ([v3](https://verana-labs.github.io/verifiable-trust-vpr-spec/index-v3.html), [v4 draft](https://verana-labs.github.io/verifiable-trust-vpr-spec/versions/v4/)). See the protocol-version note in the [playground README](../README.md), incl. the v3↔v4 vocabulary mapping. Shared endpoints and configuration: same README.
 
 ---
 
@@ -46,7 +46,8 @@ All three patterns share the requirements below; the DIDComm-conditional ones sa
 
 - **[CW-ECS-1]** The organization MUST obtain an **ECS-Organization** (or **ECS-Persona**) credential, and each hosted service an **ECS-Service** credential, from an authorized issuer of the ECS Ecosystem. Two acquisition paths:
   - **Out-of-band** — complete the onboarding process and receive the signed credential out-of-band (e.g. via the playground's hosted onboarding portal), then publish it as a Linked VP. No protocol implementation required.
-  - **In-band** — implement the [**Verifiable Trust Flow Protocol** (`vt-flow`)](../../v4/vt-flow-protocol/spec.md): the DIDComm superprotocol that orchestrates onboarding and credential acquisition between Applicant and Validator (the vs-agent sidecar implements it already — patterns A/B).
+  - **In-band (v3 — current)** — `vt-flow` does not exist in v3: drive the **vs-agent Admin API** to obtain credentials and link them as Linked VPs. Working example: [`verana-labs/verana-demos`](https://github.com/verana-labs/verana-demos) — each service's `scripts/setup.sh` with `common/common.sh` (`discover_ecs_vtjsc`, `issue_and_link`, `issue_remote_and_link`, permission helpers).
+  - **In-band (v4 — later)** — implement the [**Verifiable Trust Flow Protocol** (`vt-flow`)](../../v4/vt-flow-protocol/spec.md): the DIDComm superprotocol that orchestrates onboarding and credential acquisition between Applicant and Validator (the vs-agent sidecar will implement it — patterns A/B).
 
   [TODO: link the playground onboarding service once live.]
 - **[CW-ECS-2]** Claim quality is a display contract — these values are what every user wallet renders on the Proof-of-Trust:
@@ -61,7 +62,7 @@ All three patterns share the requirements below; the DIDComm-conditional ones sa
 
 - **[CW-DOM-1]** A service MAY hold any number of additional Verifiable Trust credentials from ecosystems it joins (playground reference: the **ISO 9001-style demo credential** from the ISO Certification Ecosystem (demo)).
 - **[CW-DOM-2]** Each domain credential MUST be published as a Linked VP on the service (or organization) DID Document so user wallets can display it in the "Other credentials" block.
-- **[CW-DOM-3]** The onboarding process for a domain credential runs against the issuing ecosystem's participant tree (application, validation, fees per the VPR spec), with the same acquisition paths as [CW-ECS-1] (out-of-band, or in-band via `vt-flow`). The playground automates this for the demo ecosystem.
+- **[CW-DOM-3]** The onboarding process for a domain credential runs against the issuing ecosystem's participant tree (application, validation, fees per the VPR spec), with the same acquisition paths as [CW-ECS-1]. The playground automates this for the demo ecosystem.
 
 ## 6. Verifying peers [CW-PEER]
 

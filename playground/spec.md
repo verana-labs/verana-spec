@@ -4,7 +4,7 @@
 **Site:** `https://playground.testnet.verana.network`
 **Companions:** [verana-explained](./verana-explained/spec.md) · [user-wallet guideline](./guidelines/user-wallet-integration.md) · [cloud-wallet guideline](./guidelines/cloud-wallet-integration.md) · [shared reference](./README.md)
 
-Source of truth for protocol facts: [Verifiable Trust spec v4](https://verana-labs.github.io/verifiable-trust-spec/versions/v4/) and [VPR spec v4](https://verana-labs.github.io/verifiable-trust-vpr-spec/versions/v4/).
+**Protocol version:** v4 is not fully published yet — the playground targets **v3**, which is what runs on testnet today. These documents keep v4 terminology where concepts are equivalent (v3 **Trust Registry** = v4 *Ecosystem*; v3 **Permission** = v4 *Participant*). Sources of truth for now: [Verifiable Trust spec v3](https://verana-labs.github.io/verifiable-trust-spec/index-v3.html) and [VPR spec v3](https://verana-labs.github.io/verifiable-trust-vpr-spec/index-v3.html); v4 drafts: [VT v4](https://verana-labs.github.io/verifiable-trust-spec/versions/v4/) · [VPR v4](https://verana-labs.github.io/verifiable-trust-vpr-spec/versions/v4/).
 
 ---
 
@@ -103,6 +103,7 @@ Cards carry the step number, title, one-liner, and a status chip where relevant 
 
 | Piece | Definition |
 | --- | --- |
+| **Reference implementation** | [`verana-labs/verana-demos`](https://github.com/verana-labs/verana-demos) — the working v3 demo ecosystem the new [`verana-labs/playground`](https://github.com/verana-labs/playground) builds on: `organization-vs` (anchor: ECS credentials, own Trust Registry + schema + AnonCreds cred def), issuer/verifier chatbot & web VSs, the tutorial playground app (PoT, invitation and session-result APIs), numbered deploy workflows, and the vs-agent API automation (`common/common.sh`). |
 | **Demo cast** | The [ISO Certification Ecosystem (demo)](./README.md#the-reference-scenario): CertBody issuers, Acme Corp and its services, Umbra Corp (untrusted / unauthorized refusal paths), Zenith Repairs. Standing vs-agent services, monitored — a demo service in the wrong trust state is a paging incident. |
 | **Demo issuer / verifier pair** | The **ACME badge issuer** and **ACME login** services from the Verana Explained story (Steps 2.2 / 2.3) — the same standing services serve every §4 page — plus Umbra's unauthorized pair for the refusal paths. §5 pages use each cloud wallet's own hosted service instead. |
 | **Integration registry** | [`verana-labs/playground`](https://github.com/verana-labs/playground): `integrations/<slug>/integration.yaml` + logo, submitted by PR; CI validates; the site generates the §3.3/§3.4 lists and the §4/§5 pages from it. |

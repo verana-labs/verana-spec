@@ -6,7 +6,7 @@
 
 The key words MUST, MUST NOT, SHOULD, SHOULD NOT, and MAY are to be interpreted as described in [BCP 14](https://datatracker.ietf.org/doc/html/bcp14).
 
-Normative background: [Verifiable Trust spec v4](https://verana-labs.github.io/verifiable-trust-spec/versions/v4/) (esp. [TR], [VUA-REQ], [VUA-CONN-VS], [CIT], [PRT], [WL]) and the [VPR spec v4](https://verana-labs.github.io/verifiable-trust-vpr-spec/versions/v4/). Shared endpoints and configuration: see the [playground README](../README.md).
+Normative background: the Verifiable Trust spec ([v3 — current target](https://verana-labs.github.io/verifiable-trust-spec/index-v3.html), [v4 draft](https://verana-labs.github.io/verifiable-trust-spec/versions/v4/) — section tags [TR], [VUA-CONN-VS], [CIT], [PRT], [WL] cited from v4) and the VPR spec ([v3](https://verana-labs.github.io/verifiable-trust-vpr-spec/index-v3.html), [v4 draft](https://verana-labs.github.io/verifiable-trust-vpr-spec/versions/v4/)). See the protocol-version note in the [playground README](../README.md), incl. the v3↔v4 vocabulary mapping. Shared endpoints and configuration: same README.
 
 ---
 
