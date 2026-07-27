@@ -39,7 +39,7 @@
     "corporationId": {
       "type": "integer",
       "minimum": 0,
-      "description": "Stable `uint64` id of the Corporation that owns this DID — the unique Corporation whose `did` equals the resolved DID, well-defined by VPR's per-Corporation `did` uniqueness invariant (at most one Corporation has any given DID). Always surfaced as part of the trust-core fields (not gated by any selector). Equals `corporation.id` whenever the `corporation` object is included."
+      "description": "Stable `uint64` id of the resolved DID's owner Corporation per the VPR DID ownership invariant. Total over the indexed DID universe — MUST NOT be null. Always surfaced (not gated by any selector). Equals `corporation.id` whenever the `corporation` object is included."
     },
 
     "corporation":     { "$ref": "#/$defs/Corporation", "description": "The Corporation the DID *represents* (whose `did` equals the resolved DID). Singular per VPR's per-Corporation `did` uniqueness invariant. The Corporation's `did` is not repeated on the object (it is the envelope's resolved `did`). Omitted when the resolved DID is not the `did` of any Corporation." },
