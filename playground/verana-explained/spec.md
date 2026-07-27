@@ -15,10 +15,11 @@ Where the [Verana Playground](../spec.md) is a hands-on surface for testing conc
 
 ## 2. Format
 
-- One linear story, told in **steps**. Each step is a page (or scroll section) with three layers:
+- One linear story, told in **steps**. Each step is a **separate page** (`/explained/step-N`, with `/explained` as the index of step cards). Each sub-step has four layers:
   1. **The story** — what ACME does, in plain language (2–4 sentences per sub-step).
-  2. **What you see** — the concrete artifact: a screenshot or live embed (Verana frontend view, DIDComm exchange, registry entry, trust card).
-  3. **Under the hood** — a collapsible box mapping the story to the real mechanics (spec message names, DID Document fragments), linking to the specs.
+  2. **The progressive diagram** — one master ACME scene graph (verana.io/ecosystems visual grammar, playground palette) with **fixed positions**, re-rendered at every sub-step: elements declare the stage at which they appear, new elements are highlighted (pulse + "New in x.y" caption). Sub-step 1.1 shows a single node with only the DID — no organization name, no service name; the picture grows until the full graph (4.3).
+  3. **Reproduce it** — a numbered recipe with the real clicks/commands: deploy a vs-agent, open the Verana app, then the current frontend join flow — **ecosystem → credential schema → Participants → permission tree → Join** on the branch to join under (that branch becomes the validator). (The former `/join/[id]` wizard is deprecated.)
+  4. **Under the hood** — a collapsible box mapping the story to the real mechanics (v3 message names: Start Permission VP, Set Permission VP to Validated, Create Root Permission…), linking to the specs.
 - Artifacts are **real testnet artifacts** wherever possible (live registry entries, a resolvable ACME demo DID); screenshots only where liveness adds nothing.
 - **Format: hybrid.**
   - **Organization-side steps are watch-only** (v1): deployments, corporation creation, onboarding processes — the visitor watches ACME do it. Every service shown MUST link the **GitHub repository of the software that runs it** (vs-agent, chatbot, issuer, login service): watch-only never means closed — the visitor can always jump to the source.
