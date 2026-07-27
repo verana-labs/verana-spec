@@ -22,8 +22,8 @@ Everything runs against the **Verana testnet** — real registry entries, real t
 **Design principles (apply to every page):**
 
 - **Clear and visual-oriented** — avoid heavy prose; prefer **diagrams, icons, cards, and live artifacts over text** whenever possible. Each section must communicate at a glance; paragraphs are the fallback, not the default.
-- **verana.io design language** — same look, colors, and component recipes as [verana.io](https://verana.io) (Verana Purple `#763EF0` primary, Electric Blue accent, Signal Green for verified states; Space Grotesk display / Inter body / IBM Plex Mono; the card, chip, and Proof-of-Trust idioms).
-- **Night & light themes** — full support for both, verana.io pattern (stored choice, else OS preference, theme toggle in the nav).
+- **"Alive" tutorial design language** — the [verana-demos playground](https://github.com/verana-labs/verana-demos) idiom, deliberately distinct from the verana.io website: light surfaces, a vibrant purple-blue **gradient hero** (`#764ba2 → #667eea`), **numbered violet section circles** (guided-tutorial rhythm), white cards with **pastel icon chips** (lucide icons), centered reading flow. The Verana logo mark is shared family DNA; the look is its own.
+- **Light-first** — the tutorial personality is light; a night theme is optional future work, not a launch requirement. *(Supersedes the earlier night/light principle.)*
 
 ## 2. URL map
 
