@@ -21,7 +21,7 @@ The story **starts from the business, not the technology**: §1 reads like a com
 | Vesta's online services | Customer **Agentic Support** (AI support chatbot) · **employee badge** service · **staff & partner portal login** — ordinary services in §1, verifiable services by §4. |
 | **Zenith Repairs (demo)** | A genuine independent repair company — becomes Vesta's first credentialed **Authorized Repairer**. |
 | **Umbra Repairs (demo)** | The villain: a fake "Vesta-authorized" repair outfit scamming customers. Fails verification in §5. |
-| **ECS Ecosystem** | The root "identity card" ecosystem: ECS-Organization (who you are), ECS-Service (what this service is), ECS-Badge. |
+| **Verana ECS Ecosystem** | The root "identity card" trust ecosystem: recognized KYB services by accredited issuers: ECS-Organization (who you are), ECS-Service (what this service is), ECS-Badge. |
 | **ISO Certification Ecosystem (demo)** | Fictional certification ecosystem governing an **ISO 9001** credential, issued by accredited certification bodies. |
 | **Vesta Repair Network** | The ecosystem Vesta itself creates in §5, with one credential schema: **Authorized Repairer** (issuance governed, verification open). |
 
@@ -90,7 +90,7 @@ Emphasis strip: **Verana is public, decentralized infrastructure. Any ecosystem 
 
 Two choice cards + one dashed teaser. Each choice card carries a **role badge: "Vesta joins as HOLDER"** (Vesta holds the credentials these ecosystems govern; the dashed teaser has no badge, since there Vesta will be the ecosystem, not a holder):
 
-- **ECS Ecosystem — the identity card.** Governs the essential credentials: ECS-Organization (who you are, verified once by an accredited issuer) and ECS-Service (what each service is). **Why Vesta joins:** this is what turns the check green; without it, nothing else can be proven.
+- **Verana ECS Ecosystem — the identity card.** A trust ecosystem that governs the essential credential schemas; its accredited issuers provide **recognized KYB services** and issue the **certified ECS-Organization credential** to verified organizations; services carry ECS-Service credentials. **Why Vesta joins:** one KYB with a recognized issuer and its identity becomes provable everywhere; this is what turns the check green.
 - **ISO Certification Ecosystem (demo).** Accredited certification bodies issue ISO 9001 credentials to organizations' verified identities. **Why Vesta joins:** today the certificate is a PDF nobody can verify; as a credential it becomes proof that customers and partners see on every Vesta service.
 - *(dashed teaser)* **Authorized repairers? No ecosystem governs that — only Vesta can. Section 5.**
 
