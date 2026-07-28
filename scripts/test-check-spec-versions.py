@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+import importlib.util
 import shutil
 import subprocess
 import sys
@@ -7,6 +8,13 @@ import unittest
 from pathlib import Path
 
 CHECK = Path(__file__).resolve().parent / "check-spec-versions.py"
+
+
+def load():
+    found = importlib.util.spec_from_file_location("check", CHECK)
+    module = importlib.util.module_from_spec(found)
+    found.loader.exec_module(module)
+    return module
 
 
 def spec(version, body="text"):
@@ -35,7 +43,27 @@ ORDER = [
     ("v4-rc1", "v4-draft17", 1),
 ]
 
+MARKERS = [
+    ("**Latest Draft:** spec v4-draft7", "v4-draft7"),
+    ("**Latest draft:** [spec v5-draft0](https://x/)", "v5-draft0"),
+    ("- **Latest Draft:** spec v4-rc2", "v4-rc2"),
+    ("**Latest Draft:** spec v4", "v4"),
+    ("**Latest Draft:**spec v4-draft7", "v4-draft7"),
+    ("**Latest Draft:** v4-draft8", "v4-draft8"),
+    ("**Latest Draft:** spec v4-draft7 (2026-07-16)", "v4-draft7"),
+    ("**Latest Draft:** spec\u00a0v4-draft7", "v4-draft7"),
+    ("**Latest Draft:** spec v4-draft7   ", "v4-draft7"),
+    ("**Specification Status:** Pre-Draft", None),
+    ("- **Status:** DRAFT", None),
+    ("**Status:** DRAFT 0.2 (rebuilt)", None),
+]
+
 SCENARIOS = [
+    ("branch behind main",
+     {"a/spec.md": spec("v4-draft5")},
+     {"a/spec.md": spec("v4-draft6", "mine")},
+     {"a/spec.md": spec("v4-draft7", "theirs")}, 1, "v4-draft8 or later"),
+
     ("schema change obliges a bump",
      {"a/spec.md": spec("v4-draft7"), "a/s.json": "{}"},
      {"a/s.json": '{"x": 1}'}, None, 1, "s.json"),
@@ -148,6 +176,20 @@ class Check(unittest.TestCase):
                 self.assertEqual(code, want, out)
                 if text:
                     self.assertIn(text, out)
+
+    def test_marker_forms(self):
+        check = load()
+        for line, want in MARKERS:
+            with self.subTest(line):
+                got, _, _ = check.marker(f"# T\n\n{line}\n\n## A\n")
+                self.assertEqual(got, want)
+
+    def test_crlf_document(self):
+        check = load()
+        got, _, _ = check.marker(
+            "# T\r\n\r\n**Latest Draft:** spec v4-draft7\r\n\r\n## A\r\n"
+        )
+        self.assertEqual(got, "v4-draft7")
 
     def test_uncommitted_changes_are_checked(self):
         code, out = run(

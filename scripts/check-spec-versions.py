@@ -14,8 +14,8 @@ MARKERLESS_OK = {
 }
 
 MARKER = re.compile(
-    r"^[ \t]*[-*]?[ \t]*\*\*Latest[ \t]+[Dd]raft:?\*\*[ \t]*\[?[ \t]*spec[ \t]+"
-    r"(v(\d+)(?:-(draft|rc)(\d+))?)\b"
+    r"^[^\S\n]*[-*]?[^\S\n]*\*\*Latest[^\S\n]+[Dd]raft:?\*\*[^\S\n]*\[?[^\S\n]*"
+    r"(?:spec[^\S\n]+)?(v(\d+)(?:-(draft|rc)(\d+))?)\b"
 )
 STAGE = {"draft": 0, "rc": 1}
 
