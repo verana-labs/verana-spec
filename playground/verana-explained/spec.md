@@ -110,7 +110,7 @@ Vesta registers as an issuer of the **ECS-Service schema** and self-issues the S
 
 Each real service becomes its own Verifiable Service — its own vs-agent and DID, with an **ECS-Service credential issued by the anchor**. The gray cards from §1 turn verified — and the visitor joins in:
 
-- **Support chat** — install the **Hologram App**, scan the QR, review the Proof-of-Trust (green check · Service · Operated by Vesta), then chat. The fake support line from §1 can't produce that card: it shows **red**.
+- **Agentic Support** — install the **Hologram App**, scan the QR, review the Proof-of-Trust (green check · Service · Operated by Vesta), then chat. The fake support line from §1 can't produce that card: it shows **red**.
 - **Employee badge** — pick an integrated open-source wallet, receive an **ECS-Badge** (AnonCreds/DIDComm for now; Hologram first). The wallet first verifies the issuer is trusted **and** authorized to issue ECS-Badge (Q1+Q2).
 - **Passwordless login** — the portal requests the badge; the wallet verifies the verifier (Q1+Q3), then presents. No password ever existed.
 
@@ -148,5 +148,5 @@ A short closing block (not a full section): everything Vesta published is public
 4. ~~ECS-Badge schema~~ — **created** in the ECS ecosystem; §5.2 and the per-wallet playground template are unblocked (AnonCreds/DIDComm first, Hologram first).
 5. ~~Demo-cast unification~~ — **resolved: unified on the ISO Certification Ecosystem (demo) / ISO 9001**.
 6. ~~Story cast~~ — **resolved (0.4): Vesta Appliances** · **Zenith Repairs (demo)** (needs its own standing anchor) · **Umbra Repairs (demo)** · credential **Authorized Repairer**.
-7. **Deploy the Vesta demo cast**: separate vs-agent instances for every story participant — Vesta anchor + support chat + badge service + portal login, KYB issuer, ISO certification body, Zenith Repairs (own anchor), Umbra Repairs (untrusted). Dedicated to this playground; not a reuse/rebrand of the verana-demos ACME cast. Until deployed, the verana-demos anchor stands in for live cards. [ACTION]
+7. **Deploy the Vesta demo cast**: separate vs-agent instances for every story participant — Vesta anchor + Agentic Support + badge service + portal login, KYB issuer, ISO certification body, Zenith Repairs (own anchor), Umbra Repairs (untrusted). Dedicated to this playground; not a reuse/rebrand of the verana-demos ACME cast. Until deployed, the verana-demos anchor stands in for live cards. [ACTION]
 8. Vesta brand kit for the playground: logo mark, tagline, service icons — first version generated in-app (SVG); replace with designed assets later. [ACTION]
