@@ -1,170 +1,190 @@
 # Verana Explained — Playground Specification
 
-**Status:** DRAFT 0.3 · 2026-07-16 — Steps 1–4 redacted.
-**Companions:** [playground spec](../spec.md) · [integration guidelines](../guidelines/) · [Verifiable Trust spec v4](https://verana-labs.github.io/verifiable-trust-spec/versions/v4/) · [VPR spec v4](https://verana-labs.github.io/verifiable-trust-vpr-spec/versions/v4/)
+**Status:** DRAFT 0.4 · 2026-07-28 — restructured: business-first story, six chapters, cast renamed (ACME Corp → **Vesta Appliances**).
+**Companions:** [playground spec](../spec.md) · [integration guidelines](../guidelines/) · [Verifiable Trust spec (v3)](https://verana-labs.github.io/verifiable-trust-spec/index-v3.html) · [VPR spec (v3)](https://verana-labs.github.io/verifiable-trust-vpr-spec/index-v3.html)
 
 ---
 
 ## 1. Purpose
 
-A playground that **explains the basics of Verana** through one continuous story: a fictional corporation, **ACME Corp**, creates itself in Verana and becomes a verified, resolvable participant of the trust layer.
+A playground that **explains the basics of Verana** through one continuous story a non-technical reader can follow: a fictional company with a problem everyone recognizes — impostors trading on its name — discovers Verana, joins it, and ends up governing trust for its own partner network.
 
-Where the [Verana Playground](../spec.md) is a hands-on surface for testing concepts and showcasing wallet integrations, *Verana Explained* is the **narrative on-ramp**: a visitor follows ACME step by step and, at each step, sees both the plain-language story and what actually happened on the network.
+The story must **start from the business, not the technology**: who the company is, what it runs, what hurts, why Verana — and only then, how. All protocol mechanics live in collapsible layers for readers who want them.
 
-**Audience:** first-time visitors, ecosystem-builder prospects, evaluators. No prior SSI knowledge assumed.
+Where the [Verana Playground](../spec.md) is a hands-on surface for testing concepts and showcasing wallet integrations, *Verana Explained* is the **narrative on-ramp**.
 
-## 2. Format
+**Audience:** normal people first — customers, business owners, evaluators. No prior SSI knowledge assumed. Technical readers get their depth in the "Reproduce it" and "Under the hood" layers.
 
-- One linear story, told in **steps**. Each step is a **separate page** (`/explained/step-N`, with `/explained` as the index of step cards). Each sub-step has four layers:
-  1. **The story** — what ACME does, in plain language (2–4 sentences per sub-step).
-  2. **The progressive diagram** — one master ACME scene graph (verana.io/ecosystems visual grammar, playground palette) with **fixed positions**, re-rendered at every sub-step: elements declare the stage at which they appear, new elements are highlighted (pulse + "New in x.y" caption). Sub-step 1.1 shows a single node with only the DID — no organization name, no service name; the picture grows until the full graph (4.3).
-  3. **Reproduce it** — a numbered recipe with the real clicks/commands: deploy a vs-agent, open the Verana app, then the current frontend join flow — **ecosystem → credential schema → Participants → permission tree → Join** on the branch to join under (that branch becomes the validator). (The former `/join/[id]` wizard is deprecated.)
-  4. **Under the hood** — a collapsible box mapping the story to the real mechanics (v3 message names: Start Permission VP, Set Permission VP to Validated, Create Root Permission…), linking to the specs.
-- Artifacts are **real testnet artifacts** wherever possible (live registry entries, a resolvable ACME demo DID); screenshots only where liveness adds nothing.
-- **Format: hybrid.**
-  - **Organization-side steps are watch-only** (v1): deployments, corporation creation, onboarding processes — the visitor watches ACME do it. Every service shown MUST link the **GitHub repository of the software that runs it** (vs-agent, chatbot, issuer, login service): watch-only never means closed — the visitor can always jump to the source.
-  - **End-user-side steps are hands-on**: the visitor is instructed to download the **Hologram App** to chat with the customer-support service (Step 2.1), and **one of the integrated open-source user wallets (their choice)** to receive the ECS-Badge (Step 2.2) and log in with it (Step 2.3).
-- Every step ends with the ACME state so far ("what ACME now has").
+## 2. The cast
 
-## 3. The story — Step 1: ACME Corp creates itself in Verana
+| Name | Role in the story |
+|---|---|
+| **Vesta Appliances** | The protagonist: a household-appliance manufacturer (washing machines, ovens), ~200 employees, selling worldwide, with a network of independent repair partners. |
+| Vesta's online services | Customer **support chat** · **employee badge** service · **staff & partner portal login** — ordinary services in Chapter 1, verifiable services by Chapter 4. |
+| **Zenith Repairs (demo)** | A genuine independent repair company — becomes Vesta's first credentialed **Authorized Repairer**. |
+| **Umbra Repairs (demo)** | The villain: a fake "Vesta-authorized" repair outfit scamming customers. Fails verification in Chapter 5. |
+| **ECS Ecosystem** | The root "identity card" ecosystem: ECS-Organization (who you are), ECS-Service (what this service is), ECS-Badge. |
+| **ISO Certification Ecosystem (demo)** | Fictional certification ecosystem governing an **ISO 9001** credential, issued by accredited certification bodies. |
+| **Vesta Repair Network** | The ecosystem Vesta itself creates in Chapter 5, with one credential schema: **Authorized Repairer** (issuance governed, verification open). |
 
-### 1.1 Create the Organization anchor
+> **Demo cast note:** the standing testnet services (verana-demos: organization-vs, issuer/verifier services) currently carry ACME branding. They play the role of Vesta in this story until rebranded — see open items.
 
-ACME deploys a **Verifiable Service** using the [vs-agent](https://github.com/verana-labs/vs-agent): its **Organization anchor**. Deploying the vs-agent creates a **DID** for ACME — the identity everything else attaches to.
+## 3. Format
 
-*What you see:* the vs-agent coming online; the fresh DID (`did:webvh:…acme…`) and its DID Document.
+- One linear story told in **six chapters**. Each chapter is a **separate page** (`/explained/chapter-N`, with `/explained` as the index of chapter cards). Chapters 1–3 are context (business situation, motivation, choices); Chapters 4–5 are action; Chapter 6 is the outlook.
+- Each sub-step has up to four layers:
+  1. **The story** — what happens, in plain language (2–4 sentences). This layer must be readable by someone who has never heard of DIDs or credentials.
+  2. **The progressive diagram** — one master Vesta scene graph (verana.io/ecosystems visual grammar, playground palette) with **fixed positions**, re-rendered at every sub-step. Elements declare the stage at which they appear (and may change tone or disappear at a later stage — e.g. gray "unverifiable" services turning verified, the customer's "?" resolving). New elements are highlighted (pulse + "New in x.y" caption). The Chapter 1 "today" picture — gray services, red impostors, a customer who cannot tell — **returns in 5.3 with the verdicts in place**: the full-circle payoff.
+  3. **Reproduce it** *(optional; action chapters only)* — a numbered recipe with the real clicks/commands: deploy a vs-agent, open the Verana app, then the current frontend join flow — **ecosystem → credential schema → Participants → permission tree → Join** on the branch to join under (that branch becomes the validator).
+  4. **Under the hood** *(optional)* — a collapsible box mapping the story to the real mechanics (v3 message names: Start Permission VP, Set Permission VP to Validated, Create Root Permission…), linking to the specs.
+- Sub-steps carry a chip: **story** (context, just read) · **watch** (Vesta does it; every service shown MUST link the GitHub repository of the software that runs it) · **hands-on** (the visitor does it with their own wallet).
+- Artifacts are **real testnet artifacts** wherever possible (live registry entries, a resolvable demo DID); screenshots only where liveness adds nothing.
+- Every chapter ends with the state so far ("what Vesta now has").
 
-> **Under the hood** — the vs-agent generates the DID (`did:webvh` recommended) and publishes its DID Document with a `DIDCommMessaging` service endpoint. This anchor will hold and present ACME's credentials as Linked Verifiable Presentations ([VT-ECS-CRED]).
+## 4. Chapter 1 — Meet Vesta Appliances *(story)*
 
-### 1.2 Become a corporation and get verified as an Organization
+### 1.1 The company
 
-ACME connects to the **Verana frontend** (`app.testnet.verana.network`), creates itself as a **Corporation**, and **joins the ECS Ecosystem**: it selects the **Organization credential schema** from the ecosystem and starts an **onboarding process** with an **Issuer** of the Organization schema to verify its business.
+Vesta Appliances has made washing machines and ovens for forty years. It sells worldwide through resellers, employs ~200 people, and relies on a network of independent repair companies to service machines in customers' homes.
 
-ACME provides its DID and the required documentation (KYB / KYC) so the issuer can verify the company and its representative. When the issuer has verified the company, it sets the onboarding process to **validated** and **issues the Verifiable Credential representing the Organization** to the DID of ACME's Verifiable Service anchor.
+*Diagram:* Vesta at the center, plain and gray — no checks, no proofs. Just a company.
 
-*What you see:* the corporation entry in the frontend; the onboarding process moving `PENDING → VALIDATED`; the DIDComm exchange where documents are provided; the ECS-Organization credential landing on the anchor DID.
+### 1.2 What Vesta runs online
 
-> **Under the hood** — creating the Corporation registers a `Corporation` entry on the VPR (its on-chain identity and governance anchor). Starting the onboarding creates a `HOLDER` participant entry on the Organization schema, with the chosen issuer as validator (`MsgStartParticipantOP`, state `PENDING`). Evidence is exchanged over a DIDComm session with the issuer's Verifiable Service. On approval the issuer submits `MsgSetParticipantOPToValidated`, then issues the **ECS-Organization** credential to ACME's anchor DID; the anchor publishes it as a Linked VP (`#vpr-schemas-org-vtc-vp`).
+Like any company, Vesta runs online services: a **customer support chat**, an **employee badge** system, and a **staff & partner portal**. They work — but nothing about them can be *proven*. They are names on a screen.
 
-### 1.3 Self-issue the Service credential
+*Diagram:* the three services attach to Vesta, all gray. A customer node connects to support.
 
-ACME now registers itself as an **Issuer of the ECS-Service schema** and **self-issues its Service credential** to its anchor: the anchor is not just an organization — it is a verifiable *service* of that organization.
+### 1.3 The problems
 
-*What you see:* the issuer registration on the Service schema; the self-issued ECS-Service credential appearing on the anchor DID.
+- Customers googling "Vesta support" land on **fake support lines**; impostor accounts on social media "help" with refunds — and harvest card numbers.
+- Vans labeled "Vesta-authorized repair" that Vesta has never heard of ring doorbells. Customers get scammed; **Vesta gets blamed**.
+- Portal passwords are phished and reset endlessly; the support team drowns.
+- Every marketplace, bank, and certifier asks Vesta for the **same company documents, again and again**.
+- The root cause of all four: online, **Vesta's word looks exactly like the scammers' word**. There is no way to prove anything.
 
-> **Under the hood** — ACME obtains an `ISSUER` participant entry on the ECS-Service schema, then issues the **ECS-Service** credential to its own DID and publishes it (`#vpr-schemas-service-vtc-vp`). Self-issuance is valid precisely because the same DID also presents the ECS-Organization credential ([VS-REQ-3]): every service traces to an accountable organization. The anchor triggers re-resolution (`MsgTriggerResolver`) so the public resolver picks up the new state.
+*Diagram:* red dashed impostors appear — **Fake support line**, **Umbra Repairs** ("claims: Vesta-authorized") — and the customer node gains a **?**: *which one is real? Nobody can tell.*
 
-### 1.4 ACME is verified
+*What Vesta has:* a real business, real services — and no way to prove any of it.
 
-**ACME Corp is now verified, and its DID is verifiable and resolvable by anyone.**
+## 5. Chapter 2 — Why Verana *(story)*
 
-*What you see:* the **trust card** — the same Proof-of-Trust card as on [verana.io](https://verana.io/identity) and in the [presentation pattern](../guidelines/user-wallet-integration.md#5-proof-of-trust-presentation-uw-pot):
+### 2.1 What if services could prove who runs them?
 
-- ✅ **Trusted** — the DID, evaluated live against the public registry
-- **Service** — ACME's anchor service (name, logo, description) from ECS-Service
-- **Operated by** — ACME Corp (legal name, country, registry id) from ECS-Organization
-- **Trust chain** — each credential's issuer, verified recursively up to the ECS Ecosystem root
+What if, before you connect to anything — a support chat, a repair company, a login page — your wallet could **check who really operates it**, and show a green check only when there is proof? Not a claim, not a logo: a verification that scammers cannot fake. That is what Verana makes possible: **trust before contact**.
 
-*What ACME now has:* a resolvable DID · a Corporation entry · a verified ECS-Organization credential · a self-issued ECS-Service credential · `TRUSTED` status from the public resolver — the anchor from which everything in the next steps grows.
+*Diagram:* a wallet appears next to the customer, with a dashed "checks before connecting" edge toward the services — the *idea*, previewed.
 
-## 4. The story — Step 2: ACME deploys its services
+### 2.2 Verana in one picture
 
-One organization, many services: each real-world service ACME runs becomes its own **Verifiable Service** — its own vs-agent, its own DID — with an **ECS-Service credential issued by the Organization anchor**. This is why ACME registered as an ECS-Service issuer in Step 1.3: the anchor now identifies everything the company operates.
+Three concepts carry the whole system:
 
-### 2.1 Customer support service (Hologram Chatbot)
+- **Ecosystems** — communities that set the rules: *who* may issue *which* proofs, and how. Public, governed, on a public registry (the VPR).
+- **Credentials** — the proofs themselves: "this is organization X", "this service belongs to X", "X is ISO 9001-certified". Issued once, verifiable everywhere.
+- **Wallets** — where verification happens: every integrated wallet checks the same public registry and shows the same verdict, the same way.
 
-ACME deploys its customer-support chatbot as a Verifiable Service: a new vs-agent, a new DID, and an **ECS-Service credential issued by the Org anchor**. Anyone who connects can verify, before the first message, that this chatbot really is ACME's.
+Open source, public, no gatekeeper — no single company decides who is trustworthy.
 
-*What you see:* the new service DID; its trust card (Trusted · service: Customer Support · operated by: ACME Corp); the service's source repository link.
-*What you do:* download the **Hologram App** (App Store / Play Store links provided), connect to the chatbot, review the Proof-of-Trust it shows, accept — and chat.
+### 2.3 Vesta's decision
 
-> **Under the hood** — the delegated pattern ([VS-REQ-4]): the chatbot's DID presents an ECS-Service credential whose **issuer** is the anchor DID; the anchor presents ECS-Organization; trust resolution walks that chain, so the chatbot is provably bound to the accountable organization. Linked VP `#vpr-schemas-service-vtc-vp` on the chatbot DID; `MsgTriggerResolver` → `TRUSTED`.
+Vesta decides to join, with a three-part plan: **prove** (become verifiable, so customers can tell real from fake) → **certify** (attach its ISO 9001 certification so it travels everywhere Vesta acts) → **govern** (later: control who counts as an authorized repairer).
 
-### 2.2 Employee badge issuer
+*Diagram:* the plan pinned to Vesta: *prove → certify → govern*.
 
-ACME deploys a **badge issuer service** — a new vs-agent, a new DID, ECS-Service issued by the Org — to issue **company badges (ECS-Badge)** to its employees — over **AnonCreds / DIDComm** for now (OpenID4VC when available).
+## 6. Chapter 3 — Choosing ecosystems *(story)*
 
-An employee receives their badge in **one of the open-source user wallets integrated with Verana — the user chooses which** (initially **Hologram Messaging**; more wallets as the badge flow lands in each). Before accepting, the wallet verifies two things: that the issuer service is **trusted** (Q1), and that it is **accredited to issue ECS-Badge credentials** (Q2).
+### 3.1 The ECS Ecosystem — the identity card
 
-*What you see:* the badge issuer's service DID, trust card, and source repository link.
-*What you do:* pick a wallet in the **wallet chooser** (every integrated wallet from the [user-wallets list](../spec.md#33-user-wallets), with download instructions), scan the QR, review the consent screen — the Proof-of-Trust plus the issuer verdict ("✅ ACME Badge Service is an authorized issuer of ECS-Badge") — and receive the badge in your wallet.
+Every verifiable organization starts here. The ECS Ecosystem governs the **essential credentials**: **ECS-Organization** (*who you are* — legal name, country, registry id, verified once by an accredited issuer) and **ECS-Service** (*what this service is* — name, type, description). Together they are what turns the check **green**. Why Vesta joins: without this, nothing else can be proven.
 
-> **Under the hood** — ACME holds an `ISSUER` participant entry on the ECS-Badge schema; issuance runs over AnonCreds/DIDComm for now (OpenID4VCI when available); the wallet applies [UW-RES-2] + [UW-POT-2] from the [user-wallet guideline](../guidelines/user-wallet-integration.md). (ECS-Badge schema in creation — see open items.)
+*Diagram:* the ECS Ecosystem node appears (violet) — "proves who you are & what your services are".
 
-### 2.3 Login with a verifiable credential (IAM)
+### 3.2 The ISO Certification Ecosystem (demo)
 
-ACME deploys a **login service for its IAM solution**: instead of passwords, it **requests presentation of the Badge credential**. Before sharing, the employee's wallet verifies that the verifier service is **trusted** (Q1) and **accredited to request presentation of ECS-Badge credentials** (Q3). The employee logs in with their badge.
+Vesta is ISO 9001-certified — today that is a **PDF nobody can verify**. In the ISO Certification Ecosystem (a demo, not the real ISO), accredited certification bodies issue **ISO 9001 credentials** to organizations' verified identities. Why Vesta joins: the certificate becomes a proof customers and business partners see on every Vesta service, verified.
 
-*What you see:* the login service's DID, trust card, and source repository link.
-*What you do:* open ACME's login page, scan the QR with the **same wallet holding your badge**, review the consent screen — the Proof-of-Trust plus the verifier verdict — share the badge, and land in the signed-in IAM session.
+*Diagram:* the ISO Certification Ecosystem node appears (violet).
 
-> **Under the hood** — a third vs-agent + DID + delegated ECS-Service; ACME holds a `VERIFIER` participant entry on the ECS-Badge schema; the request runs over DIDComm presentation for now (OpenID4VP when available); the wallet applies [UW-RES-3] + [UW-POT-3]. A rogue verifier without the participant entry gets the red verdict — phishing for credentials fails structurally.
+### 3.3 The gap — and the foreshadowing
 
-*What ACME now has:* the anchor plus three services — support, badge issuance, credential login — each with its own DID, each resolvable, each provably ACME's; employees holding badges they use to log in.
+No ecosystem anywhere governs "who is an authorized Vesta repairer" — only Vesta can know that. The repair-fraud problem from 1.3 has no existing ecosystem to join. **Vesta will have to create its own.** (Chapter 5.)
 
-## 5. The story — Step 3: ACME gets certified (ISO 9001)
+*Diagram:* a red pill near Umbra: *"authorized repairers? — no proof exists"*.
 
-ACME joins the fictional **ISO Certification Ecosystem (demo)**: it selects an accredited **issuer of the ISO 9001 credential** from that ecosystem and executes the onboarding.
+## 7. Chapter 4 — Joining, in practice *(watch + hands-on)*
 
-Here is the shortcut that shows the power of the model: **the issuer does not ask ACME to prove who it is again.** ACME simply presents the **ECS-Organization credential on its DID** — the KYB already done in Step 1 — and the issuer, after its certification checks, issues the **ISO 9001 credential directly to ACME's Organization DID**.
+### 4.1 Vesta gets its digital identity *(watch)*
 
-**Now, every time a user connects to any of ACME's services, or exchanges a credential with them, they see — in addition to the ECS-Org and ECS-Service — the ISO 9001 credential: the company is provably ISO 9001-certified, everywhere it acts.**
+Vesta deploys a **vs-agent** — a small cloud-wallet service — as its **Organization anchor**. A **DID** is born: the identifier everything else attaches to. At this point it proves nothing; it is the empty identity card.
 
-*What you see:* the onboarding with no document upload (identity carried by the ECS-Org presentation); the ISO 9001 credential on the Organization DID; the **enriched trust card** on the chatbot, the badge issuer, and the login service — same card as before, now with the ISO 9001 credential in the "Other credentials" block.
+> **Under the hood** — the vs-agent generates the DID (`did:webvh` recommended) and publishes its DID Document with a `DIDCommMessaging` endpoint at `https://<host>/.well-known/did.json`. The anchor will hold and present Vesta's credentials as Linked Verifiable Presentations.
 
-> **Under the hood** — a `HOLDER` onboarding on the ISO 9001 schema with the certification body as validator; identification by presenting ECS-Organization over the DIDComm session (**reusable organizational identity** — the ECS layer is the KYB other ecosystems build on); the credential is published as a Linked VP on the anchor DID. Because every ACME service's trust chain resolves through the anchor, org-level credentials surface on **all** of its services' Proof-of-Trust cards ([UW-POT] block 4).
+*Reproduce:* deploy a vs-agent ([verana-labs/vs-agent](https://github.com/verana-labs/vs-agent); the verana-demos organization-vs is a working template); check `/.well-known/did.json`; resolve the DID at the public resolver → `UNTRUSTED` — the starting line.
 
-*What ACME now has:* everything from Steps 1–2, plus a domain credential that travels with the organization across every service it operates.
+### 4.2 Proving who they are — once *(watch)*
 
-## 6. The story — Step 4: ACME creates its own ecosystem
+Vesta joins the ECS Ecosystem on the **Organization schema** and passes **Know-Your-Business once**, over DIDComm, with an accredited issuer. The issuer verifies the company and issues the **ECS-Organization credential** to Vesta's DID. The anchor finally has a name that is proven, not claimed.
 
-So far ACME has *joined* ecosystems others govern. But ACME has a trust problem of its own: **who is a genuine ACME partner?** Fake resellers and unauthorized repair shops trade on its name every day. So ACME creates the **ACME Partner Ecosystem** — and becomes a governance authority itself.
+> **Under the hood** — in the Verana app: ECS Ecosystem → Organization schema → **Participants** → permission tree → **Join** under an active Issuer branch (that issuer becomes the validator). `Start Permission VP` creates the HOLDER permission (`PENDING`); evidence over a DIDComm session; `Set Permission VP to Validated`; credential issued and published as Linked VP (`#vpr-schemas-org-vtc-vp`).
 
-### 4.1 Design the partner program
+### 4.3 Describing the service — the check turns green *(watch)*
 
-ACME connects to the Verana frontend and **creates its ecosystem**: it publishes the partner program's **governance framework** (who qualifies, obligations, revocation rules) and defines one credential schema — **ACME Authorized Partner**. It configures the permissions deliberately: **issuance is governed** (only ACME can issue), **verification is open** (anyone — a customer's wallet, another business — can check a partner claim, no permission needed).
+Vesta registers as an issuer of the **ECS-Service schema** and self-issues the Service credential on its anchor (valid because the same DID presents the proven ECS-Organization). Resolve the DID now: **TRUSTED**. The trust card — the same card every integrated wallet shows — has its green check, the Service block, and the Operated-by block.
 
-*What you see:* the new ecosystem entry in the live registry, its governance framework document, and the schema with its permission modes side by side — one governed, one open.
+*Live artifact:* the standing anchor's trust card, resolved on page load.
 
-> **Under the hood** — the frontend creates an `Ecosystem` entry (with its governance-framework version and document) and a `CredentialSchema` for the partner credential; ACME creates the schema's root `ECOSYSTEM` participant entry and grants itself the `ISSUER` role. Permission modes are per-schema, per-role — ranging from fully open to fully governed.
+> **Under the hood** — ISSUER permission on ECS-Service (per the schema's permission-management mode), self-issue via the vs-agent Admin API, publish `#vpr-schemas-service-vtc-vp`. Self-issuance is valid because the same DID presents ECS-Org — every service traces to an accountable organization.
 
-### 4.2 Onboard a partner
+### 4.4 Rolling it out: support, badges, login *(hands-on)*
 
-**Zenith Repairs (demo)**, an independent repair company, wants in. Zenith is already a Verana-verified organization — it went through its own Step 1 with its own anchor and ECS-Organization credential (the pattern replicates; that is the point). Zenith starts the onboarding with ACME; **ACME identifies Zenith by the ECS-Org credential on its DID** — no paperwork exchange — checks its partner criteria, and issues the **ACME Authorized Partner** credential to Zenith's DID. Zenith attaches it to its service.
+Each real service becomes its own Verifiable Service — own vs-agent, own DID, **ECS-Service issued by the anchor** (this is why 4.3 registered Vesta as an ECS-Service issuer):
 
-*What you see:* Zenith's onboarding `PENDING → VALIDATED`; the partner credential landing on Zenith's DID; Zenith's enriched trust card.
+- **Support chat** — *you*: install the **Hologram App**, scan the QR, review the Proof-of-Trust (green check · Service · Operated by Vesta), then chat. The fake support line from 1.3 can't produce that card: it shows **red**.
+- **Employee badge** — Vesta's badge service issues **ECS-Badge** credentials (AnonCreds/DIDComm for now; OpenID4VC when available). *You*: pick an integrated open-source wallet (wallet chooser), receive a badge. Your wallet first verifies the issuer is trusted **and** authorized to issue ECS-Badge (Q1+Q2).
+- **Passwordless login** — the portal requests presentation of the badge. Your wallet verifies the verifier is trusted **and** authorized to request ECS-Badge (Q1+Q3), then presents. No password ever existed; phishing for credentials fails structurally.
 
-> **Under the hood** — a `HOLDER` onboarding on the partner schema with ACME as validator (`MsgStartParticipantOP` → DIDComm evidence session → `MsgSetParticipantOPToValidated`); identification by ECS-Org presentation — the same reusable-KYB shortcut as Step 3, now with ACME on the *issuer* side of it. The credential is published as a Linked VP on Zenith's anchor.
+> **Under the hood** — delegated ECS-Service pattern: each service DID presents an ECS-Service credential issued by the anchor; trust chains resolve through the anchor's ECS-Org. Vesta holds ISSUER and VERIFIER permissions on the ECS-Badge schema. Wallet rules: [UW-RES-2/3] + [UW-POT-2/3] from the [user-wallet guideline](../guidelines/user-wallet-integration.md).
 
-### 4.3 Anyone can verify a partner claim
+### 4.5 The certification credential *(watch)*
 
-The payoff, in the visitor's own hands.
+Vesta executes its Chapter 3 choice: it joins the ISO Certification Ecosystem, and here is the shortcut that shows the model's power — **the certification body never asks Vesta to prove who it is again.** Vesta presents the ECS-Organization credential on its DID (the KYB from 4.2, reused), the body runs its certification checks, and issues **ISO 9001 directly to Vesta's Organization DID**. Instantly, the credential surfaces on **every** Vesta service's trust card.
 
-*What you do:* with the wallet from Step 2, connect to Zenith's service — the Proof-of-Trust shows Zenith's **ECS-Org + ECS-Service + ACME Authorized Partner** (issued by ACME Corp, chain verified). Then try **Umbra Corp (demo)**, which *claims* on its website to be an ACME partner — its card shows no such credential, and its claim fails verification: **the red verdict. Brand impersonation fails structurally.**
+> **Under the hood** — HOLDER permission on the ISO 9001 schema, certification body as validator; identification by ECS-Org presentation over DIDComm (**reusable organizational identity** — the ECS layer is the KYB other ecosystems build on); Linked VP on the anchor; org-level credentials surface on all services' cards ([UW-POT] block 4).
 
-*What you see (discovery):* a live Trust Graph query — "services holding an ACME Authorized Partner credential" — returning exactly the genuine partners, with Zenith in the list.
+*What Vesta now has:* a proven identity · three verifiable services with badge login · a certification that travels everywhere it acts. Two of the four Chapter 1 problems are dead (fake support, password phishing); the paperwork problem is dying (KYB once). One villain remains.
 
-> **Under the hood** — verification is open on this schema, so any wallet checks a partner claim without asking anyone's permission; only issuance is gated. Revocation works too: if ACME revokes Zenith's credential, re-resolution drops it from Zenith's card and from the query results.
+## 8. Chapter 5 — Vesta's own ecosystem *(watch + hands-on)*
 
-*What ACME now has* — the full circle: a verified organization (Step 1) · verified services with badge-based login (Step 2) · an ISO 9001 certification that travels everywhere it acts (Step 3) · and now **its own governed trust ecosystem**, protecting its brand and its customers. Every step used the same primitives: DIDs, credential schemas, participant trees, trust resolution. What ACME consumed, ACME now provides.
+### 5.1 Why: the last problem standing *(story)*
 
-## 7. Next steps
+Umbra Repairs is still out there, ringing doorbells. No existing ecosystem can say who a genuine Vesta repairer is — **only Vesta can**. In Verana, an organization that consumed trust can also *produce* it: Vesta becomes a governance authority.
 
-### Step 5 — Discovery with the Trust Graph *(pending — to be redacted later)*
+### 5.2 The Vesta Repair Network *(watch)*
 
-Not part of this revision; will be defined once Steps 1–4 are validated. Summary of how it works, for orientation:
+Vesta publishes a one-page **governance framework** (who qualifies as a repairer, obligations, revocation) and creates its ecosystem with a single credential schema: **Authorized Repairer**. The design choice that matters: **issuance is governed** (only Vesta issues) — **verification is open** (anyone checks, no permission needed).
 
-Everything ACME published in Steps 1–4 — the ECS credentials, the ISO 9001 certification, the Authorized Partner credentials — lives in DID Documents and the public registry, so it can be **indexed**. The indexer crawls the registry and the DID Documents; the resolver verifies every artifact; **only verified trust results enter the Trust Graph**, a trust-typed index of services, organizations, ecosystems, schemas, and credentials.
+Then Vesta onboards **Zenith Repairs** — itself a verifiable organization (it went through its own Chapter 4; the pattern replicates, that is the point). Vesta identifies Zenith by the **ECS-Org credential on its DID** — the reusable-KYB shortcut again, with Vesta now on the issuer side — and issues **Authorized Repairer to Zenith's organization DID**. The credential surfaces on Zenith's services next to its own ECS credentials.
 
-Anyone — a person, a search engine, an AI agent over API/MCP — can then **discover by proof, not keywords**: "ISO 9001-certified organizations", "authorized ACME partners", "ACME's verifiable services", scoped to an ecosystem and ranked by trust signals, with every result carrying verifiable provenance back to the registry.
+> **Under the hood** — Create New Trust Registry (+ EGF document) → Create New Credential Schema (issuer mode `ECOSYSTEM`, verifier mode `OPEN`) → Create Root Permission. Zenith joins the tree as HOLDER under Vesta's root; validation by ECS-Org presentation; Linked VP on Zenith's anchor. Extension (one line in the story): Zenith can in turn issue **technician badges** to its own employees — so the technician at your door proves they are from an authorized repairer.
 
-In this step, the visitor will run those queries live and find ACME's services and Zenith exactly where their credentials put them.
+### 5.3 Full circle — anyone can tell *(hands-on)*
 
-## 8. Open items
+The Chapter 1 picture returns, with verdicts. *You*: resolve Zenith's service with your wallet — **green**: ECS-Org, ECS-Service, **Authorized Repairer** (issued by Vesta Appliances, chain verified to the Vesta Repair Network). Then Umbra Repairs, which still *claims* to be authorized — **red verdict**: no credential Vesta ever issued exists for its DID, and the claim cannot be forged. **Brand impersonation fails structurally.** And if a partner goes rogue, Vesta revokes — re-resolution drops the credential from every card.
+
+*What Vesta now has* — the full circle: proven identity · verifiable services · portable certification · **its own governed trust ecosystem** protecting its brand, its partners, and its customers. What Vesta consumed, Vesta now provides.
+
+## 9. Chapter 6 — Being found *(pending — to be redacted later)*
+
+Not part of this revision; will be defined once Chapters 1–5 are validated. Summary for orientation:
+
+Everything Vesta published — the ECS credentials, the ISO 9001 certification, the Authorized Repairer credentials — lives in DID Documents and the public registry, so it can be **indexed**. The indexer crawls; the resolver verifies; **only verified trust results enter the Trust Graph**. Anyone — a person, a search engine, an AI agent over API/MCP — then **discovers by proof, not keywords**: "ISO 9001-certified manufacturers", "authorized Vesta repairers" — with every result carrying verifiable provenance. The visitor will run those queries live and find Vesta's services and Zenith exactly where their credentials put them.
+
+## 10. Open items
 
 1. Location of this playground: standalone section of the main playground site vs. its own page tree. [DECISION]
-2. ~~Watch-only v1 vs. do-it-yourself mode~~ — **resolved (§2): hybrid** — watch-only for organization-side steps (with mandatory source-repo links), hands-on for end-user steps (Hologram App for chat; an integrated open-source user wallet for badge + login).
-3. The ACME demo anchor and services: standing testnet services (kept `TRUSTED`, monitored like the [playground demo services](../spec.md#6-shared-machinery)) vs. artifacts replayed from recordings. Proposed: standing services, shared with the playground's demo cast. [DECISION]
-4. ~~ECS-Badge schema~~ — **created** in the ECS ecosystem; Steps 2.2/2.3 and the per-wallet playground template are unblocked (AnonCreds/DIDComm first, Hologram first).
-5. ~~Demo-cast unification~~ — **resolved: unified on the ISO Certification Ecosystem (demo) / ISO 9001** across this story, the [playground spec](../spec.md), the guidelines, and the submission kit (matching the verana.io worked example).
-6. Step 4 cast: **Zenith Repairs (demo)** as the onboarded partner; Umbra Corp doubles as the fake-partner claimant. [DECISION: confirm names — Zenith needs its own standing anchor in the demo environment.]
+2. ~~Watch-only v1 vs. do-it-yourself mode~~ — **resolved (§3): hybrid** — story chips: story / watch (with mandatory source-repo links) / hands-on (Hologram App for chat; an integrated open-source user wallet for badge + login).
+3. The demo anchor and services: standing testnet services (kept `TRUSTED`, monitored like the [playground demo services](../spec.md#6-shared-machinery)) vs. artifacts replayed from recordings. Proposed: standing services, shared with the playground's demo cast. [DECISION]
+4. ~~ECS-Badge schema~~ — **created** in the ECS ecosystem; 4.4 and the per-wallet playground template are unblocked (AnonCreds/DIDComm first, Hologram first).
+5. ~~Demo-cast unification~~ — **resolved: unified on the ISO Certification Ecosystem (demo) / ISO 9001** across this story, the [playground spec](../spec.md), the guidelines, and the submission kit.
+6. ~~Story cast~~ — **resolved (0.4): Vesta Appliances** (protagonist) · **Zenith Repairs (demo)** (authorized partner — needs its own standing anchor in the demo environment) · **Umbra Repairs (demo)** (fake repairer) · credential renamed **Authorized Repairer**.
+7. **Rebrand the standing demo cast** (verana-demos services) from ACME to Vesta Appliances so live trust cards match the story. Until then, the playground notes that the testnet cast "plays the role of Vesta". [ACTION]

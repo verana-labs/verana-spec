@@ -17,7 +17,7 @@ The Verana Playground is an interactive website for:
 | Document | Purpose |
 | --- | --- |
 | [`spec.md`](./spec.md) | The playground website specification: what-is-Verana intro, Verana Explained step cards, per-wallet playground templates (user + cloud), shared machinery, milestones. |
-| [`verana-explained/spec.md`](./verana-explained/spec.md) | *Verana Explained* — the narrative on-ramp: ACME Corp's story, step by step — anchor & verification (1) · services, badges & credential login (2) · ISO 9001 via reusable KYB (3) · its own Partner Ecosystem (4) · Discovery (5, pending). Hybrid watch-only / hands-on format. |
+| [`verana-explained/spec.md`](./verana-explained/spec.md) | *Verana Explained* — the narrative on-ramp: the **Vesta Appliances** story in six chapters — the business & its impostor problem (1) · why Verana (2) · choosing ecosystems (3) · joining in practice (4) · the Vesta Repair Network, Zenith ✓ / Umbra ✗ (5) · being found (6, pending). Story / watch / hands-on format. |
 | [`guidelines/user-wallet-integration.md`](./guidelines/user-wallet-integration.md) | Integration guideline for **user wallets** (mobile / web wallets operated by a person). Includes the normative **Proof-of-Trust presentation pattern** so every wallet shows trust the same way. |
 | [`guidelines/cloud-wallet-integration.md`](./guidelines/cloud-wallet-integration.md) | Integration guideline for **cloud wallets** (organizational / enterprise wallets and agent frameworks hosting services). |
 | [`submission/README.md`](./submission/README.md) | Publication kit: FIDES use-case dossiers (Verana + 2060), catalog-entry checklist, collaborator roster, campaign calendar, UNFOLD. |

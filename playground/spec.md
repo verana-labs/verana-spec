@@ -29,7 +29,7 @@ Everything runs against the **Verana testnet** — real registry entries, real t
 
 ```
 /                        Home: the four sections (§3)
-/explained/…             Verana Explained (the ACME story, per its spec)
+/explained/…             Verana Explained (the Vesta Appliances story, per its spec)
 /user-wallets/<slug>     Per-user-wallet playground (template §4)
 /cloud-wallets/<slug>    Per-cloud-wallet playground (template §5)
 /integrate               Add your wallet: guidelines + integration.yaml PR + PoT UI kit
@@ -53,17 +53,18 @@ Link row: [verana.io](https://verana.io) · [docs.verana.io](https://docs.verana
 
 ### 3.2 Learn step by step (→ Verana Explained)
 
-One card per step of the [ACME story](./verana-explained/spec.md), each linking to the corresponding page/section:
+One card per chapter of the [Vesta Appliances story](./verana-explained/spec.md), each linking to the corresponding chapter page:
 
 | Card | Title | One-liner |
 | --- | --- | --- |
-| 1 | ACME Corp creates itself in Verana | Deploy an Organization anchor, get verified (KYB → ECS-Organization), self-issue ECS-Service: a resolvable, trusted DID. |
-| 2 | ACME deploys its services | Support chatbot, employee badge issuer (OpenID4VC), credential login (OpenID4VP) — each its own DID, provably ACME's. |
-| 3 | ACME gets certified (ISO 9001) | No re-KYB: the ECS-Org credential *is* the identification; the certification travels everywhere ACME acts. |
-| 4 | ACME creates its own ecosystem | The ACME Partner Ecosystem: governed issuance, open verification — brand impersonation fails structurally. |
-| 5 | Discovery with the Trust Graph | *(pending)* Find services by what they prove, not what they claim. |
+| 1 | Meet Vesta Appliances | A real business, real services — and impostors trading on its name: fake support lines, fake "authorized" repairers. Nothing can be proven. |
+| 2 | Why Verana | What if services could prove who runs them? Ecosystems, credentials, wallets — trust before contact. |
+| 3 | Choosing ecosystems | The ECS Ecosystem (the identity card) and the ISO Certification Ecosystem (demo) — and the gap only Vesta can fill. |
+| 4 | Joining, in practice | Anchor → KYB once → the check turns green; support chat, badges, passwordless login (hands-on); ISO 9001 with no re-KYB. |
+| 5 | Vesta's own ecosystem | The Vesta Repair Network: only Vesta issues Authorized Repairer, anyone verifies — Zenith ✓, Umbra ✗. |
+| 6 | Being found | *(pending)* Find services by what they prove, not what they claim. |
 
-Cards carry the step number, title, one-liner, and a status chip where relevant (`pending` for step 5).
+Cards carry the chapter number, title, one-liner, and a status chip where relevant (`pending` for chapter 6).
 
 ### 3.3 User wallets
 
@@ -82,8 +83,8 @@ Cards carry the step number, title, one-liner, and a status chip where relevant 
 1. **Breadcrumb** — `Playground › User wallets › <Wallet>`: each segment clickable (home, the §3.3 list anchor), so the main page is always one tap away.
 2. **Header** — logo, name, organization, track/license chips, links: **Download** (APK for a mobile wallet, web link for a web wallet — the `download` field) · repo · demo video.
 3. **Get the wallet** — install instructions for this wallet (store links may complement the APK, never replace it).
-4. **Service 1 — Receive a credential (issuing).** A QR / deep link to the **ACME badge issuer service (demo)** — the same standing service as in the [Verana Explained story, Step 2.2](./verana-explained/spec.md) — offering the **ECS-Badge** credential. Beside it, the **expected wallet rendering**: the Proof-of-Trust plus the Q2 verdict ("✅ ACME Badge Service is an authorized issuer of *ECS-Badge*") per [UW-POT-2].
-5. **Service 2 — Present the credential (presenting).** A QR / deep link to the **ACME login service (demo)** — the same standing service as in [Step 2.3](./verana-explained/spec.md) — requesting presentation of the badge to log in. Beside it, the expected rendering: Proof-of-Trust plus the Q3 verdict per [UW-POT-3].
+4. **Service 1 — Receive a credential (issuing).** A QR / deep link to the **Vesta badge issuer service (demo)** — the same standing service as in the [Verana Explained story, Chapter 4.4](./verana-explained/spec.md) — offering the **ECS-Badge** credential. Beside it, the **expected wallet rendering**: the Proof-of-Trust plus the Q2 verdict ("✅ Vesta Badge Service is an authorized issuer of *ECS-Badge*") per [UW-POT-2].
+5. **Service 2 — Present the credential (presenting).** A QR / deep link to the **Vesta login service (demo)** — the same standing service as in [Chapter 4.4](./verana-explained/spec.md) — requesting presentation of the badge to log in. Beside it, the expected rendering: Proof-of-Trust plus the Q3 verdict per [UW-POT-3].
 6. **Refusal paths (expandable)** — the same two actions against the **unauthorized** demo services (Umbra Corp (demo)): the red verdicts. This completes the [UW-TEST] acceptance loop, so the page doubles as the stage on which the wallet's acceptance recording is made.
 
 > **v3 launch note:** the badge runs over **AnonCreds / DIDComm**; initially **Hologram Messaging** is the only user wallet completing the full badge loop. Other wallets' pages ship with the resolve/connect steps live and the badge steps marked *coming* — they activate per wallet when OpenID4VC lands or the wallet supports the AnonCreds flow.
@@ -106,8 +107,8 @@ Cards carry the step number, title, one-liner, and a status chip where relevant 
 | Piece | Definition |
 | --- | --- |
 | **Reference implementation** | [`verana-labs/verana-demos`](https://github.com/verana-labs/verana-demos) — the working v3 demo ecosystem the new [`verana-labs/playground`](https://github.com/verana-labs/playground) builds on: `organization-vs` (anchor: ECS credentials, own Trust Registry + schema + AnonCreds cred def), issuer/verifier chatbot & web VSs, the tutorial playground app (PoT, invitation and session-result APIs), numbered deploy workflows, and the vs-agent API automation (`common/common.sh`). |
-| **Demo cast** | The [ISO Certification Ecosystem (demo)](./README.md#the-reference-scenario): CertBody issuers, Acme Corp and its services, Umbra Corp (untrusted / unauthorized refusal paths), Zenith Repairs. Standing vs-agent services, monitored — a demo service in the wrong trust state is a paging incident. |
-| **Demo issuer / verifier pair** | The **ACME badge issuer** and **ACME login** services from the Verana Explained story (Steps 2.2 / 2.3) — the same standing services serve every §4 page — plus Umbra's unauthorized pair for the refusal paths. §5 pages use each cloud wallet's own hosted service instead. |
+| **Demo cast** | The [ISO Certification Ecosystem (demo)](./README.md#the-reference-scenario): CertBody issuers, Vesta Appliances and its services, Umbra Repairs (untrusted / unauthorized refusal paths), Zenith Repairs. Standing vs-agent services, monitored — a demo service in the wrong trust state is a paging incident. |
+| **Demo issuer / verifier pair** | The **Vesta badge issuer** and **Vesta login** services from the Verana Explained story (Chapter 4.4) — the same standing services serve every §4 page — plus Umbra's unauthorized pair for the refusal paths. §5 pages use each cloud wallet's own hosted service instead. |
 | **Integration registry** | [`verana-labs/playground`](https://github.com/verana-labs/playground): `integrations/<slug>/integration.yaml` + logo, submitted by PR; CI validates; the site generates the §3.3/§3.4 lists and the §4/§5 pages from it. |
 | **Sessions & fees** | Anonymous browser session only; chain transactions run from pooled playground accounts (faucet-refilled) — visitors never touch keys or VNA. |
 | **Onboarding portal** | For cloud-wallet integrators: delivers ECS credentials per [CW-ECS-1]. [DECISION: in-app vs separate service] |
@@ -134,7 +135,7 @@ The playground is the living evidence of the *"One trust layer, many wallets"* F
 
 ## 10. Open items
 
-1. ~~Demo-entity naming~~ — **resolved:** Acme / CertBody / Umbra / Zenith / "ISO Certification Ecosystem (demo)" confirmed.
+1. ~~Demo-entity naming~~ — **resolved (rev 2026-07-28):** **Vesta Appliances** (protagonist, formerly Acme) / CertBody / **Umbra Repairs** / Zenith Repairs / "ISO Certification Ecosystem (demo)"; standing demo services to be rebranded from ACME to Vesta (see verana-explained open item 7).
 2. ~~Testnet ECS Ecosystem DID~~ — **resolved:** the demo organization anchor from `verana-labs/verana-demos` (`organization-vs`); published in the [README config](./README.md#network-configuration-wl-whitelists).
 3. ~~Demo credential issued to visitors~~ — **resolved: ECS-Badge** (schema **created** in the ECS ecosystem); AnonCreds/DIDComm for now, Hologram first; OID4VC/OID4VP when available.
 4. Onboarding portal placement (§6). [DECISION]

@@ -58,7 +58,7 @@ Outline: Hologram AI Agent + VUA + Messaging; agents authenticate humans and oth
 | Business wallets | vs-agent (Hologram cloud wallet) | 2060 | ☐ |
 | Credential types | ECS-Service · ECS-Organization · ECS-Persona (+ ISO 9001 (demo)) | Verana | ☐ |
 | Issuers | CertBody demo issuers · ECS onboarding issuer | Verana | ☐ |
-| Relying parties | Acme demo agent (verifier) · Inji Verify | Verana | ☐ |
+| Relying parties | Vesta demo agent (verifier) · Inji Verify | Verana | ☐ |
 | *(per integrated wallet)* | vendor's own wallet entry — ask each vendor to create/claim theirs | vendor | ☐ |
 
 ## 5. Collaborator roster & consent
