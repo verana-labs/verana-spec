@@ -41,22 +41,20 @@ The story **starts from the business, not the technology**: §1 reads like a com
 
 ## 4. Section 1 — Meet Vesta Appliances *(marketing article)*
 
-**Look:** company page. Logo mark + wordmark, tagline ("Quality home appliances since 1985"), meta chips (HQ, ~200 employees, worldwide resellers, independent repair partners). Two or three short article paragraphs:
+**Look:** company page. Ordered subsections:
 
-Vesta Appliances has made washing machines and ovens for forty years. It sells worldwide through resellers and relies on a network of independent repair companies to service machines in customers' homes.
+1. **Brand header** — logo mark, name, tagline ("Quality home appliances since 1985"), meta chips (HQ, ~200 employees, 40+ countries, 120 repair partners), and the **ISO 9001 certification seal** ("ISO 9001 certified · since 2003").
+2. **The product line** — product promise copy ("machines that last — and get repaired, not replaced") + unbranded product lineup image.
+3. **The factory** — manufacturing/heritage copy + assembly-line image.
+4. **The certified repair network** — hub-and-spoke business diagram: Vesta (logo) at the center ("trains · audits · certifies"), the independent repair companies around it (Zenith Repairs among them), **each carrying the green "Vesta Certified Repair Company" badge** — the real-world paper certification (training, yearly audits, signed contract). Closing line bridges to the problems: the badge lives on van doors and PDF certificates — online, anyone can print one.
+5. **Online services** — ownership diagram: the Vesta company card on top, connectors down to three service cards — **Support chat** · **Employee badges** · **Staff & partner portal**. The visual states the ownership: *all of this is Vesta's*.
+6. **The problems — and what they cost the brand**, in two groups, each with a consequence line:
+   - **Online**: fake support lines · password pain · paperwork, again and again. *Consequence: refund scams run in Vesta's name; the brand takes the blame.*
+   - **On-site**: fake "authorized" repairers — illustrated by the impostor-van photo (unmarked van with a **printed Vesta panel**). *Consequence: customers scammed at their own front door; honest certified partners lose the work; Vesta blamed either way.*
+   - Root-cause banner: **Online or at the front door, Vesta's word looks exactly like the scammers' word. Nothing can be proven.**
+7. **The word of the CEO** — closes the section: *"Our machines earn trust in people's homes every day. Yet online, we can't prove a support chat is really ours — and at the front door, we can't prove a technician is really one of our certified partners. **That has to change.**"* (Elena Vasquez, CEO) — the segue into Section 2.
 
-**The services (business diagram, not protocol):** the Vesta company card on top; connectors down to three service cards — **Support chat** (help with your machine), **Employee badges** (company IDs for staff), **Staff & partner portal** (orders, manuals, warranty claims). The visual states the ownership: *all of this is Vesta's*.
-
-**The certified repair network (business diagram, not protocol):** a hub-and-spoke visual — Vesta (logo) at the center ("trains · audits · certifies"), the independent repair companies around it (Zenith Repairs among them), **each carrying the green "Vesta Certified Repair Company" badge** — the real-world paper certification (training, yearly audits, signed contract). Closing line bridges to the problems: the badge lives on van doors and PDF certificates — online, anyone can print one.
-
-**The problems (grid of four + root-cause banner):**
-
-1. **Fake support lines** — customers googling "Vesta support" land on scammers; impostor accounts "help" with refunds and harvest card numbers.
-2. **Fake "authorized" repairers** — vans Vesta has never heard of ring doorbells; customers get scammed, Vesta gets blamed.
-3. **Password pain** — portal passwords phished and reset endlessly; the support team drowns.
-4. **Paperwork, again and again** — every marketplace, bank, and certifier asks for the same company documents.
-
-Banner: **Online, Vesta's word looks exactly like the scammers' word. Nothing can be proven.**
+No DIDs, no protocol vocabulary anywhere in Section 1.
 
 ## 5. Section 2 — Why Verana *(short, pillar cards)*
 
