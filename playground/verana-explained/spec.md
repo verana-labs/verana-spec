@@ -167,7 +167,7 @@ A short closing block (not a full section): everything Vesta published is public
 
 ## 10. Open items
 
-1. ~~Location~~ — **resolved (0.5): one single page** `/explained` with section anchors; home cards deep-link to anchors.
+1. ~~Location~~ — **resolved (0.5): one single page**, now at `/usecases/vesta` (renamed from `/explained`; permanent redirect in place); home cards and the Use Cases nav submenu deep-link to it.
 2. ~~Watch-only v1 vs. do-it-yourself mode~~ — **resolved (§3): hybrid** — story / watch (with mandatory source-repo links) / hands-on chips.
 3. The demo anchor and services: standing testnet services (kept `TRUSTED`, monitored like the [playground demo services](../spec.md#6-shared-machinery)) vs. artifacts replayed from recordings. Proposed: standing services, shared with the playground's demo cast. [DECISION]
 4. ~~ECS-Badge schema~~ — **created** in the ECS ecosystem; §5.2 and the per-wallet playground template are unblocked (AnonCreds/DIDComm first, Hologram first).
