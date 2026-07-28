@@ -88,7 +88,7 @@ Emphasis strip: **Verana is public, decentralized infrastructure. Any ecosystem 
 
 ### Subsection 3 — The ecosystems Vesta wants to join
 
-Two choice cards, each carrying a **role badge: "Vesta joins as HOLDER"** (Vesta holds the credentials these ecosystems govern):
+Two choice cards, each carrying a **role badge: "Vesta joins as HOLDER"** (Vesta holds the credentials these ecosystems govern), the ecosystem`s **did:webvh DID** (placeholder until the demo cast is deployed), and an **"Open in Verana" link** (deep link to the trust-registry page in the app, to be connected):
 
 - **Verana ECS Ecosystem — the identity card.** A trust ecosystem that governs the essential credential schemas; its accredited issuers provide **recognized KYB services** and issue the **certified ECS-Organization credential** to verified organizations; services carry ECS-Service credentials. **Why Vesta joins:** one KYB with a recognized issuer and its identity becomes provable everywhere; this is what turns the check green.
 - **ISO Certification Ecosystem (demo).** Accredited certification bodies issue ISO 9001 credentials to organizations' verified identities. **Why Vesta joins:** today the certificate is a PDF nobody can verify; as a credential it becomes proof that customers and partners see on every Vesta service.
