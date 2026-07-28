@@ -62,7 +62,7 @@ The section opens on a **CTO quote card** (Marc Keller, CTO, Vesta Appliances �
 
 Two subsections:
 
-### Subsection 1 — Possible thanks to Verana
+### Subsection 1 — What is Verana?
 
 Intro line: *Verana is a public infrastructure that generalizes the use of verifiable credentials, and provides out of the box:* — followed by the three Verana pillars, exactly as on [verana.io](https://verana.io):
 
