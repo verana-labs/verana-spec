@@ -66,6 +66,10 @@ def main():
         name, rank, line = marker(Path(path).read_text(encoding="utf-8"))
         if rank:
             roots[path.rpartition("/")[0]] = (path, name, rank, line)
+            tree = re.match(r"v(\d+)/", path)
+            if tree and int(tree.group(1)) != rank[0]:
+                problems.append(f"  ✗ {path}\n      lives under v{tree.group(1)}/ but is marked {name}")
+                annotate(path, line, f"under v{tree.group(1)}/ but marked {name}")
         elif path not in MARKERLESS_OK:
             problems.append(f"  ✗ {path}\n      no '**Latest Draft:** spec vN-draftM' marker")
             annotate(path, 1, "no Latest Draft marker; add one or list it in MARKERLESS_OK")

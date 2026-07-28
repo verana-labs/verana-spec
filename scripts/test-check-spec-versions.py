@@ -109,6 +109,18 @@ SCENARIOS = [
      {"a/spec.md": prose("one")},
      {"a/spec.md": prose("two")}, None, 1, "v4-draft8 or later"),
 
+    ("v5 cut keeping the v4 marker fails",
+     {"v4/a/spec.md": spec("v4-draft7")},
+     {"v5/a/spec.md": spec("v4-draft7")}, None, 1, "lives under v5/ but is marked v4-draft7"),
+
+    ("v5 cut with the right marker passes",
+     {"v4/a/spec.md": spec("v4-draft7")},
+     {"v5/a/spec.md": spec("v5-draft1")}, None, 0, "new spec at v5-draft1"),
+
+    ("v5 spec bumped on v4 numbering fails",
+     {"v4/a/spec.md": spec("v4-draft7"), "v5/a/spec.md": spec("v5-draft1")},
+     {"v5/a/spec.md": spec("v4-draft8", "edited")}, None, 1, "lives under v5/"),
+
     ("root spec governs the whole repo",
      {"spec.md": spec("v4-draft7"), ".github/w.yml": "on: push"},
      {".github/w.yml": "on: pull_request"}, None, 1, ".github/w.yml"),
