@@ -18,7 +18,7 @@ The story **starts from the business, not the technology**: §1 reads like a com
 | Name | Role in the story |
 |---|---|
 | **Vesta Appliances** | The protagonist: a household-appliance manufacturer (washing machines, ovens), ~200 employees, selling worldwide, with a network of independent repair partners. Has a logo, a tagline, a company profile — presented like a real brand. |
-| Vesta's online services | Customer **support chat** · **employee badge** service · **staff & partner portal login** — ordinary services in §1, verifiable services by §5. |
+| Vesta's online services | Customer **Agentic Support** (AI support chatbot) · **employee badge** service · **staff & partner portal login** — ordinary services in §1, verifiable services by §5. |
 | **Zenith Repairs (demo)** | A genuine independent repair company — becomes Vesta's first credentialed **Authorized Repairer**. |
 | **Umbra Repairs (demo)** | The villain: a fake "Vesta-authorized" repair outfit scamming customers. Fails verification in §6. |
 | **ECS Ecosystem** | The root "identity card" ecosystem: ECS-Organization (who you are), ECS-Service (what this service is), ECS-Badge. |
@@ -47,7 +47,7 @@ The story **starts from the business, not the technology**: §1 reads like a com
 2. **The product line** — product promise copy ("machines that last — and get repaired, not replaced") + unbranded product lineup image.
 3. **The factory** — manufacturing/heritage copy + assembly-line image.
 4. **The certified repair network** — hub-and-spoke business diagram: Vesta (logo) at the center ("trains · audits · certifies"), the independent repair companies around it (Zenith Repairs among them), **each carrying the green "Vesta Certified Repair Company" badge** — the real-world paper certification (training, yearly audits, signed contract). Closing line bridges to the problems: the badge lives on van doors and PDF certificates — online, anyone can print one.
-5. **Online services** — ownership diagram: the Vesta company card on top, connectors down to three service cards — **Support chat** · **Employee badges** · **Staff & partner portal**. The visual states the ownership: *all of this is Vesta's*.
+5. **Online services** — ownership diagram: the Vesta company card on top, connectors down to three service cards — **Agentic Support** · **Employee badges** · **Staff & partner portal**. The visual states the ownership: *all of this is Vesta's*.
 6. **The problems — and what they cost the brand**, in two groups, each with a consequence line:
    - **Online**: fake support lines · password pain · paperwork, again and again. *Consequence: refund scams run in Vesta's name; the brand takes the blame.*
    - **On-site**: fake "authorized" repairers — illustrated by the impostor-van photo (unmarked van with a **printed Vesta panel**). *Consequence: customers scammed at their own front door; honest certified partners lose the work; Vesta blamed either way.*

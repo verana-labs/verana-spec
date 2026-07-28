@@ -61,7 +61,7 @@ One card per section of the [Vesta Appliances story](./verana-explained/spec.md)
 | 2 | Why Verana | The three pillars: Trust Ecosystems, Verifiable Trust, The Trust Graph — public, decentralized, no gatekeeper. |
 | 3 | The ecosystems Vesta wants to join | ECS (the identity card) and ISO Certification (demo) — and the gap only Vesta can fill. |
 | 4 | Joining the ecosystems | A DID is born; KYB once → ECS-Organization; ISO 9001 with no re-KYB. |
-| 5 | Making the services verifiable | The check turns green; support chat, badges, passwordless login — hands-on with your wallet. |
+| 5 | Making the services verifiable | The check turns green; Agentic Support, badges, passwordless login — hands-on with your wallet. |
 | 6 | Vesta creates its own ecosystem | The Vesta Repair Network: only Vesta issues Authorized Repairer, anyone verifies — Zenith ✓, Umbra ✗. |
 
 Cards carry the section number, title, and one-liner. The "Being found" Trust-Graph outlook is a closing teaser on the page (pending), not a card.
