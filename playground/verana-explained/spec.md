@@ -56,7 +56,7 @@ The story **starts from the business, not the technology**: §1 reads like a com
 
 No DIDs, no protocol vocabulary anywhere in Section 1.
 
-## 5. Section 2 — Elena's solution to Vesta's issues *(pillar cards + choice cards)*
+## 5. Section 2 — The solution: become verifiable *(CTO quote + pillar cards + choice cards)*
 
 The section opens on a **CTO quote card** (Marc Keller, CTO, Vesta Appliances — portrait slot like the CEO's): *"Today, open source software exists for user and cloud wallets, and there is Verana, a public trust infrastructure. We have everything we need to make Vesta and its partner network a network of verifiable organizations, providing verifiable services."*
 
