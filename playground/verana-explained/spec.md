@@ -88,11 +88,16 @@ Emphasis strip: **Verana is public, decentralized infrastructure. Any ecosystem 
 
 ### Subsection 3 — The ecosystems Vesta wants to join
 
-Two choice cards + one dashed teaser. Each choice card carries a **role badge: "Vesta joins as HOLDER"** (Vesta holds the credentials these ecosystems govern; the dashed teaser has no badge, since there Vesta will be the ecosystem, not a holder):
+Two choice cards, each carrying a **role badge: "Vesta joins as HOLDER"** (Vesta holds the credentials these ecosystems govern):
 
 - **Verana ECS Ecosystem — the identity card.** A trust ecosystem that governs the essential credential schemas; its accredited issuers provide **recognized KYB services** and issue the **certified ECS-Organization credential** to verified organizations; services carry ECS-Service credentials. **Why Vesta joins:** one KYB with a recognized issuer and its identity becomes provable everywhere; this is what turns the check green.
 - **ISO Certification Ecosystem (demo).** Accredited certification bodies issue ISO 9001 credentials to organizations' verified identities. **Why Vesta joins:** today the certificate is a PDF nobody can verify; as a credential it becomes proof that customers and partners see on every Vesta service.
-- *(dashed teaser)* **Authorized repairers? No ecosystem governs that — only Vesta can. Section 5.**
+
+### Subsection 4 — The ecosystems Vesta wants to build
+
+Intro: *One need remains: no existing ecosystem can answer "who is an authorized Vesta repairer". Only Vesta can. So Vesta will build its own.* One card, mirroring the choice cards but with the **role badge "Vesta operates as ECOSYSTEM"**:
+
+- **Vesta Repair Network — the Authorized Repairer credential.** Vesta's own trust ecosystem, one credential schema: Authorized Repairer; issuance governed (only Vesta issues), verification open (anyone checks). The paper Vesta Certified Repair Company badge from Section 1 becomes verifiable, revocable proof. **Why Vesta builds it:** brand protection as a structural property — real partners green, impostors red, rogue partners revocable. Chip: → Section 5.
 
 ## 6. Section 3 — Joining the ecosystems *(watch; scene graph starts here, pre-populated with the business world)*
 
