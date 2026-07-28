@@ -88,7 +88,7 @@ Emphasis strip: **Verana is public, decentralized infrastructure. Any ecosystem 
 
 ### Subsection 3 — The ecosystems Vesta wants to join
 
-Two choice cards + one dashed teaser:
+Two choice cards + one dashed teaser. Each choice card carries a **role badge: "Vesta joins as HOLDER"** (Vesta holds the credentials these ecosystems govern; the dashed teaser has no badge, since there Vesta will be the ecosystem, not a holder):
 
 - **ECS Ecosystem — the identity card.** Governs the essential credentials: ECS-Organization (who you are, verified once by an accredited issuer) and ECS-Service (what each service is). **Why Vesta joins:** this is what turns the check green; without it, nothing else can be proven.
 - **ISO Certification Ecosystem (demo).** Accredited certification bodies issue ISO 9001 credentials to organizations' verified identities. **Why Vesta joins:** today the certificate is a PDF nobody can verify; as a credential it becomes proof that customers and partners see on every Vesta service.
