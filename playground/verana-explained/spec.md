@@ -58,7 +58,7 @@ No DIDs, no protocol vocabulary anywhere in Section 1.
 
 ## 5. Section 2 — Elena's solution to Vesta's issues *(pillar cards + choice cards)*
 
-Section statement (the heading's subtitle): **Make Vesta and its partner network a network of verifiable organizations, providing verifiable services.**
+The section opens on a **CTO quote card** (Marc Keller, CTO, Vesta Appliances — portrait slot like the CEO's): *"Make Vesta and its partner network a network of verifiable organizations, providing verifiable services."*
 
 Two subsections:
 
