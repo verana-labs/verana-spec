@@ -29,14 +29,14 @@ Everything runs against the **Verana testnet** — real registry entries, real t
 
 ```
 /                        Home: the four sections (§3)
-/explained               Verana Explained (the Vesta Appliances story — one single page, section anchors)
+/usecases/vesta          The Vesta Appliances use case (one single page, section anchors; more use cases later)
 /user-wallets/<slug>     Per-user-wallet playground (template §4)
 /cloud-wallets/<slug>    Per-cloud-wallet playground (template §5)
 /integrate               Add your wallet: guidelines + integration.yaml PR + PoT UI kit
 /about                   Who runs it, what is real vs (demo), legal, links
 ```
 
-Persistent header: logo · the four section anchors · network chip (`TESTNET · resolver OK`) · one CTA: **Add your wallet** → `/integrate`.
+Persistent header: logo · What is Verana · **Use Cases submenu** (one entry per use case; currently Vesta Appliances → `/usecases/vesta`) · wallets anchors · network chip (`TESTNET · resolver OK`) · one CTA: **Add your wallet** → `/integrate`.
 
 ## 3. Home sections
 
@@ -53,7 +53,7 @@ Link row: [verana.io](https://verana.io) · [docs.verana.io](https://docs.verana
 
 ### 3.2 Learn step by step (→ Verana Explained)
 
-One card per section of the [Vesta Appliances story](./verana-explained/spec.md), each deep-linking to the corresponding **anchor on the single `/explained` page**:
+One card per section of the [Vesta Appliances story](./verana-explained/spec.md), each deep-linking to the corresponding **anchor on the single `/usecases/vesta` page**:
 
 | Card | Title | One-liner |
 | --- | --- | --- |

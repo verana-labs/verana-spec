@@ -29,7 +29,7 @@ The story **starts from the business, not the technology**: §1 reads like a com
 
 ## 3. Format & look-and-feel
 
-- **Everything on one single page**: `/explained`, five sections with anchors (`#section-1` … `#section-5`), a closing "Being found" teaser, and a sticky/linked table of chapters from the home page cards.
+- **Everything on one single page**: `/usecases/vesta`, five sections with anchors (`#section-1` … `#section-5`), a closing "Being found" teaser, and a sticky/linked table of chapters from the home page cards.
 - **The page changes register as it progresses** — that is the design:
   - **§1 is a marketing-style article** — company logo, profile, article prose, a **business services diagram** (the company card above, connectors down to one card per service: ownership at a glance), and an attractive **problems grid**. **No DIDs, no protocol diagram, no Verana vocabulary.** It must feel like a page from Vesta's own website / a business magazine profile.
   - **§2 is Elena's solution: pillar cards + ecosystem choice cards.
