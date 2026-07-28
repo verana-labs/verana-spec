@@ -76,7 +76,7 @@ Bridge line (violet strip): *All of this needs wallets to hold and check the pro
 
 The checklist doubles as a map of Sections 3–5. Optional later extension: re-show it with items ticked at the end of each fulfilling section.
 
-### Subsection 2 — What is Verana?
+### Subsection 2 — Let's build on Verana
 
 Intro line: *Verana is a public infrastructure that generalizes the use of verifiable credentials, and provides out of the box:* — followed by the three Verana pillars, exactly as on [verana.io](https://verana.io):
 
