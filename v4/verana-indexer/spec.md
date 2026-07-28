@@ -2119,5 +2119,3 @@ Both endpoints accept an optional `context.session_id` extension to bind the ans
 - If the session does not exist, the answer is `false` with `message: "session not found"`.
 
 When `session_id` is omitted, the answer is point-in-time per the standard `time` argument; if both are omitted, the answer is computed against the latest block.
-
-A deliberate edit to prove the check fails. This commit gets reverted.
