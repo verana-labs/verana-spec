@@ -1,0 +1,25 @@
+# Fails a PR that changes a spec without bumping its draft version.
+# Deliberately has no `paths:` filter: a required check that is skipped stays
+# "Expected — waiting for status" forever and blocks the merge.
+name: spec-version
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  spec-version:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          fetch-depth: 0
+
+      - name: Test the checker
+        run: python3 scripts/test-check-spec-versions.py
+
+      - name: Check spec draft versions
+        run: python3 scripts/check-spec-versions.py --base "origin/${{ github.base_ref }}"
