@@ -62,7 +62,21 @@ The section opens on a **CTO quote card** (Marc Keller, CTO, Vesta Appliances �
 
 Two subsections:
 
-### Subsection 1 — What is Verana?
+### Subsection 1 — What Marc needs *(mission checklist)*
+
+Intro: *To make every organization and every service verifiable, Marc's list is short:* — five checklist cards (empty checkbox squares, to-do style), each with a clickable chip pointing to the section that fulfills it:
+
+1. **Verifiable identities for organizations** — provable "who we are", checkable by anyone, no paperwork. *(→ Section 3 · ECS-Organization)*
+2. **Verifiable identities for services** — every service proves what it is and who operates it. *(→ Section 4 · ECS-Service)*
+3. **Credentials people can hold** — badges in a wallet: passwordless login, and proof at the customer's door. *(→ Section 4 · ECS-Badge)*
+4. **Certifications as proof, not PDFs** — ISO 9001 travels with Vesta's identity. *(→ Section 3 · ISO 9001)*
+5. **Vesta's own rules for its network** — only Vesta says who is an Authorized Repairer, revocable. *(→ Section 5 · Vesta Repair Network)*
+
+Bridge line (violet strip): *All of this needs wallets to hold and check the proofs (they exist, open source, for people and for organizations) and one neutral, public place where every proof anchors. That place is Verana.*
+
+The checklist doubles as a map of Sections 3–5. Optional later extension: re-show it with items ticked at the end of each fulfilling section.
+
+### Subsection 2 — What is Verana?
 
 Intro line: *Verana is a public infrastructure that generalizes the use of verifiable credentials, and provides out of the box:* — followed by the three Verana pillars, exactly as on [verana.io](https://verana.io):
 
@@ -72,7 +86,7 @@ Intro line: *Verana is a public infrastructure that generalizes the use of verif
 
 Emphasis strip: **Verana is public, decentralized infrastructure. Any ecosystem can self-create. Any organization can join the ecosystems it is interested in as a participant, or create its own.** No gatekeeper; no single company decides who is trustworthy.
 
-### Subsection 2 — The ecosystems Vesta wants to join
+### Subsection 3 — The ecosystems Vesta wants to join
 
 Two choice cards + one dashed teaser:
 
