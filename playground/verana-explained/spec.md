@@ -27,7 +27,7 @@ Where the [Verana Playground](../spec.md) is a hands-on surface for testing conc
 | **ISO Certification Ecosystem (demo)** | Fictional certification ecosystem governing an **ISO 9001** credential, issued by accredited certification bodies. |
 | **Vesta Repair Network** | The ecosystem Vesta itself creates in Chapter 5, with one credential schema: **Authorized Repairer** (issuance governed, verification open). |
 
-> **Demo cast note:** the standing testnet services (verana-demos: organization-vs, issuer/verifier services) currently carry ACME branding. They play the role of Vesta in this story until rebranded — see open items.
+> **Demo cast note:** for this playground we **create separate vs-agent instances for every participant of the story** — the Vesta anchor and its three services, the KYB issuer, the certification body, Zenith Repairs, Umbra Repairs. A dedicated cast, not a reuse of the existing verana-demos (ACME-branded) services; until the Vesta cast is deployed, the verana-demos anchor stands in for live cards. See open items.
 
 ## 3. Format
 
@@ -187,4 +187,4 @@ Everything Vesta published — the ECS credentials, the ISO 9001 certification, 
 4. ~~ECS-Badge schema~~ — **created** in the ECS ecosystem; 4.4 and the per-wallet playground template are unblocked (AnonCreds/DIDComm first, Hologram first).
 5. ~~Demo-cast unification~~ — **resolved: unified on the ISO Certification Ecosystem (demo) / ISO 9001** across this story, the [playground spec](../spec.md), the guidelines, and the submission kit.
 6. ~~Story cast~~ — **resolved (0.4): Vesta Appliances** (protagonist) · **Zenith Repairs (demo)** (authorized partner — needs its own standing anchor in the demo environment) · **Umbra Repairs (demo)** (fake repairer) · credential renamed **Authorized Repairer**.
-7. **Rebrand the standing demo cast** (verana-demos services) from ACME to Vesta Appliances so live trust cards match the story. Until then, the playground notes that the testnet cast "plays the role of Vesta". [ACTION]
+7. **Deploy the Vesta demo cast**: separate vs-agent instances for every story participant — Vesta anchor + support chat + badge service + portal login, KYB issuer, ISO certification body, Zenith Repairs (own anchor), Umbra Repairs (untrusted). Dedicated to this playground; not a reuse/rebrand of the verana-demos ACME cast. Until deployed, the verana-demos anchor stands in for live cards. [ACTION]
