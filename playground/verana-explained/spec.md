@@ -47,6 +47,8 @@ Vesta Appliances has made washing machines and ovens for forty years. It sells w
 
 **The services (business diagram, not protocol):** the Vesta company card on top; connectors down to three service cards — **Support chat** (help with your machine), **Employee badges** (company IDs for staff), **Staff & partner portal** (orders, manuals, warranty claims). The visual states the ownership: *all of this is Vesta's*.
 
+**The certified repair network (business diagram, not protocol):** a hub-and-spoke visual — Vesta (logo) at the center ("trains · audits · certifies"), the independent repair companies around it (Zenith Repairs among them), **each carrying the amber "Vesta Certified Repair Company" badge** — the real-world paper certification (training, yearly audits, signed contract). Closing line bridges to the problems: the badge lives on van doors and PDF certificates — online, anyone can print one.
+
 **The problems (grid of four + root-cause banner):**
 
 1. **Fake support lines** — customers googling "Vesta support" land on scammers; impostor accounts "help" with refunds and harvest card numbers.
