@@ -97,7 +97,7 @@ Two choice cards, each carrying a **role badge: "Vesta joins as HOLDER"** (Vesta
 
 Intro: *One need remains: no existing ecosystem can answer "who is an authorized Vesta repairer". Only Vesta can. So Vesta will build its own.* One card, mirroring the choice cards but with the **role badge "Vesta operates as ECOSYSTEM"**:
 
-- **Vesta Repair Network — the Authorized Repairer credential.** Vesta's own trust ecosystem, one credential schema: Authorized Repairer; issuance governed (only Vesta issues), verification open (anyone checks). The paper Vesta Certified Repair Company badge from Section 1 becomes verifiable, revocable proof. **Why Vesta builds it:** brand protection as a structural property — real partners green, impostors red, rogue partners revocable. Chip: → Section 5.
+- **Vesta Repair Network — the Authorized Repairer credential.** Vesta's own trust ecosystem, one credential schema: Authorized Repairer; issuance governed (only Vesta and its subsidiaries issue: several entities can be registered as issuers under Vesta's root), verification open (anyone checks). The paper Vesta Certified Repair Company badge from Section 1 becomes verifiable, revocable proof. **Why Vesta builds it:** brand protection as a structural property — real partners green, impostors red, rogue partners revocable. Chip: → Section 5.
 
 ## 6. Section 3 — Joining the ecosystems *(watch; scene graph starts here, pre-populated with the business world)*
 
@@ -153,7 +153,7 @@ Umbra Repairs is still ringing doorbells — because "who is an authorized Vesta
 
 ### 5.2 The Vesta Repair Network *(watch)*
 
-Vesta publishes a one-page governance framework and creates its ecosystem with a single credential schema: **Authorized Repairer** — **issuance governed** (only Vesta issues), **verification open** (anyone checks). Then Vesta onboards **Zenith Repairs** — itself a verifiable organization (it went through its own §3–4; the pattern replicates) — identifying it by the ECS-Org credential on its DID, and issues **Authorized Repairer to Zenith's organization DID**.
+Vesta publishes a one-page governance framework and creates its ecosystem with a single credential schema: **Authorized Repairer** — **issuance governed** (only Vesta and its subsidiaries issue), **verification open** (anyone checks). Then Vesta onboards **Zenith Repairs** — itself a verifiable organization (it went through its own §3–4; the pattern replicates) — identifying it by the ECS-Org credential on its DID, and issues **Authorized Repairer to Zenith's organization DID**.
 
 > **Under the hood** — Create New Trust Registry (+ EGF document) → Create New Credential Schema (issuer mode `ECOSYSTEM`, verifier mode `OPEN`) → Create Root Permission. Zenith joins the tree as HOLDER under Vesta's root; validation by ECS-Org presentation; Linked VP on Zenith's anchor. Extension: Zenith can in turn issue **technician badges** to its employees — the technician at your door proves they're from an authorized repairer.
 

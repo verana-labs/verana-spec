@@ -61,7 +61,7 @@ One card per section of the [Vesta Appliances story](./verana-explained/spec.md)
 | 2 | The solution: become verifiable | Make Vesta and its partner network a network of verifiable organizations: Verana's three pillars, and the ecosystems Vesta picks. |
 | 3 | Joining the ecosystems | A DID is born; KYB once, then ECS-Organization; ISO 9001 with no re-KYB. |
 | 4 | Making the services verifiable | The check turns green; Agentic Support, badges, passwordless login: hands-on with your wallet. |
-| 5 | Vesta creates its own ecosystem | The Vesta Repair Network: only Vesta issues Authorized Repairer, anyone verifies. Zenith ✓, Umbra ✗. |
+| 5 | Vesta creates its own ecosystem | The Vesta Repair Network: only Vesta and its subsidiaries issue Authorized Repairer, anyone verifies. Zenith ✓, Umbra ✗. |
 
 Cards carry the section number, title, and one-liner. The "Being found" Trust-Graph outlook is a closing teaser on the page (pending), not a card.
 
