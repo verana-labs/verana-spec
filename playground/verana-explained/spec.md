@@ -130,11 +130,11 @@ Subsection intro carries the "last problem standing" beat (fake support dead, ph
 
 Section outro: *Every box on Marc's list, checked. What Vesta consumed, Vesta now provides.*
 
-## 9. Closing teaser — Being found *(pending)*
+## 7. Closing teaser — Being found *(pending)*
 
 A short closing block (not a full section): everything Vesta published is public, resolvable, indexable. The Trust Graph turns that into discovery — only verified trust results are indexed; people, search engines, and AI agents find services by what they prove ("ISO 9001-certified manufacturers", "authorized Vesta repairers"). Full walkthrough ships later.
 
-## 10. Open items
+## 8. Open items
 
 1. ~~Location~~ — **resolved (0.5): one single page**, now at `/usecases/vesta` (renamed from `/explained`; permanent redirect in place); home cards and the Use Cases nav submenu deep-link to it.
 2. ~~Watch-only v1 vs. do-it-yourself mode~~ — **resolved (§3): hybrid** — story / watch (with mandatory source-repo links) / hands-on chips.
