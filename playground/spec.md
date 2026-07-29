@@ -60,6 +60,7 @@ One card per section of the [Vesta Appliances story](./verana-explained/spec.md)
 | 1 | Meet Vesta Appliances | A real business, real services, and impostors trading on its name. Nothing can be proven. |
 | 2 | The solution: become verifiable | Marc's five needs, Verana's three pillars, and the ecosystems Vesta joins or builds. |
 | 3 | Marc's journey | Five needs, five builds: identity, verifiable services, badges, certification as proof, and Vesta's own ecosystem. Zenith ✓, Umbra ✗. |
+| 4 | Run the demos | Get a badge (from Vesta, from Zenith, or from an impostor), log in to the portal with it, and search the directory of Authorized Repairers. |
 
 Cards carry the section number, title, and one-liner. The "Being found" Trust-Graph outlook is a closing teaser on the page (pending), not a card.
 

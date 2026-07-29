@@ -29,7 +29,7 @@ The story **starts from the business, not the technology**: §1 reads like a com
 
 ## 3. Format & look-and-feel
 
-- **Everything on one single page**: `/usecases/vesta`, three sections with anchors (`#section-1` … `#section-3`) plus per-need anchors (`#need-1` … `#need-5`), a closing "Being found" teaser, and a sticky/linked table of chapters from the home page cards.
+- **Everything on one single page**: `/usecases/vesta`, four sections with anchors (`#section-1` … `#section-4`) plus per-need anchors (`#need-1` … `#need-5`), a closing "Being found" teaser, and a sticky/linked table of chapters from the home page cards.
 - **The page changes register as it progresses** — that is the design:
   - **§1 is a marketing-style article** — company logo, profile, article prose, a **business services diagram** (the company card above, connectors down to one card per service: ownership at a glance), and an attractive **problems grid**. **No DIDs, no protocol diagram, no Verana vocabulary.** It must feel like a page from Vesta's own website / a business magazine profile.
   - **§2 is Elena's solution: pillar cards + ecosystem choice cards.
@@ -130,11 +130,22 @@ Subsection intro carries the "last problem standing" beat (fake support dead, ph
 
 Section outro: *Every box on Marc's list, checked. What Vesta consumed, Vesta now provides.*
 
-## 7. Closing teaser — Being found *(pending)*
+## 7. Section 4 — Run the demos *(hands-on; placeholders until the Vesta cast ships)*
+
+**Source of truth: [`examples.md`](./examples.md)** (Fabrice's draft). Structure:
+
+- Intro: download one of the **integrated user wallets** to run the demos.
+- **Standing rule** (amber callout, applies to every demo): *Always verify the certified Organization name and data shown in the Proof-of-Trust card in your wallet before proceeding.*
+- **Demo 1 — Obtain an ECS-Badge.** Three offer tiles (QR placeholders): from **Vesta** (green, accept) · from **Zenith Repairs** (green, presents Authorized Repairer, accept) · from **an organization that is not an Authorized Repairer** (wallet warns, red verdict, do not accept).
+- **Demo 2 — Log in as a repair employee with the ECS-Badge.** The Vesta portal decides from the badge's issuer chain: issued by Vesta → access as **Vesta employee**; issued by an organization presenting an **Authorized Repairer** credential → access as **Authorized Repairer employee**; anything else → **denied**.
+- **Demo 3 — Search the directory of Authorized Repairers.** Query tiles: all organizations presenting an Authorized Repairer credential (choose whom to contact) · organizations presenting Authorized Repairer **AND** ISO 9001.
+- All demo links/QRs are `demo coming` placeholders until the dedicated Vesta cast (open item 7) ships.
+
+## 8. Closing teaser — Being found *(pending)*
 
 A short closing block (not a full section): everything Vesta published is public, resolvable, indexable. The Trust Graph turns that into discovery — only verified trust results are indexed; people, search engines, and AI agents find services by what they prove ("ISO 9001-certified manufacturers", "authorized Vesta repairers"). Full walkthrough ships later.
 
-## 8. Open items
+## 9. Open items
 
 1. ~~Location~~ — **resolved (0.5): one single page**, now at `/usecases/vesta` (renamed from `/explained`; permanent redirect in place); home cards and the Use Cases nav submenu deep-link to it.
 2. ~~Watch-only v1 vs. do-it-yourself mode~~ — **resolved (§3): hybrid** — story / watch (with mandatory source-repo links) / hands-on chips.
