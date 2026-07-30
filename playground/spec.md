@@ -29,7 +29,7 @@ Everything runs against the **Verana testnet** — real registry entries, real t
 
 ```
 /                        Home: the four sections (§3)
-/usecases/vesta          The Vesta Appliances use case (one single page, section anchors; more use cases later)
+/usecases/vesta(/…)      The Vesta use case: four chapter routes with a persistent stepper (more use cases later)
 /user-wallets/<slug>     Per-user-wallet playground (template §4)
 /cloud-wallets/<slug>    Per-cloud-wallet playground (template §5)
 /integrate               Add your wallet: guidelines + integration.yaml PR + PoT UI kit
@@ -53,16 +53,16 @@ Link row: [verana.io](https://verana.io) · [docs.verana.io](https://docs.verana
 
 ### 3.2 Learn step by step (→ Verana Explained)
 
-One card per section of the [Vesta Appliances story](./verana-explained/spec.md), each deep-linking to the corresponding **anchor on the single `/usecases/vesta` page**:
+One card per **chapter** of the [Vesta use case](./verana-explained/spec.md), each linking to its chapter route (four routes with a persistent stepper):
 
-| Card | Title | One-liner |
+| Card | Chapter | Route |
 | --- | --- | --- |
-| 1 | Meet Vesta Appliances | A real business, real services, and impostors trading on its name. Nothing can be proven. |
-| 2 | The solution: become verifiable | Marc's five needs, Verana's three pillars, and the ecosystems Vesta joins or builds. |
-| 3 | Marc's journey | Five needs, five builds: identity, verifiable services, badges, certification as proof, and Vesta's own ecosystem. Zenith ✓, Umbra ✗. |
-| 4 | Run the demos | Get a badge (from Vesta, from Zenith, or from an impostor), log in to the portal with it, and search the directory of Authorized Repairers. |
+| 1 | Meet Vesta Appliances | `/usecases/vesta` |
+| 2 | The solution: become verifiable | `/usecases/vesta/solution` |
+| 3 | Marc's journey | `/usecases/vesta/journey` |
+| 4 | Run the demos | `/usecases/vesta/demos` |
 
-Cards carry the section number, title, and one-liner. The "Being found" Trust-Graph outlook is a closing teaser on the page (pending), not a card.
+The "Being found" Trust-Graph outlook is a closing teaser on the demos chapter (pending), not a card.
 
 ### 3.3 User wallets
 
