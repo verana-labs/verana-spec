@@ -14,7 +14,7 @@ One site, four sections, in this order:
 
 1. **What is Verana** — a short explanation of the infrastructure and what you can do with it.
 2. **Learn step by step** — cards linking into the [Verana Explained](./verana-explained/spec.md) story.
-3. **Personal wallets** — the integrated personal wallets, each with its own playground page (identical template: a service for issuing, a service for presenting, a download link) + *Add your wallet*.
+3. **Personal wallets** — the integrated personal wallets on one shared playground page (wallet picker, issuing and presenting demos, download links) + *Add your wallet*.
 4. **Business wallets** — the integrated business wallets, each with its own playground page (identical template: a use case to test) + *Add your wallet*.
 
 Everything runs against the **Verana testnet** — real registry entries, real trust resolution, nothing simulated.
@@ -30,7 +30,7 @@ Everything runs against the **Verana testnet** — real registry entries, real t
 ```
 /                        Home: the four sections (§3)
 /usecases/vesta(/…)      The Vesta use case: four chapter routes with a persistent stepper (more use cases later)
-/personal-wallets/<slug>     Per-personal-wallet playground (template §4)
+/personal-wallets            The single personal-wallet playground, ?wallet=<id> selects (template §4)
 /business-wallets/<slug>    Per-business-wallet playground (template §5)
 /integrate               Add your wallet: guidelines + integration.yaml PR + PoT UI kit
 /about                   Who runs it, what is real vs (demo), legal, links
