@@ -1,6 +1,6 @@
 # Verana Playground
 
-**Status:** DRAFT 0.1 · 2026-07-16
+**Status:** DRAFT 0.2 (shared demo cast) · 2026-07-30
 **Site:** `https://playground.testnet.verana.network` (target)
 
 The Verana Playground is an interactive website for:
@@ -10,7 +10,7 @@ The Verana Playground is an interactive website for:
 
 **Protocol version:** v4 is not fully published yet — the playground targets **v3**, which is what runs on testnet today. These documents keep v4 terminology where concepts are equivalent (v3 **Trust Registry** = v4 *Ecosystem*; v3 **Permission** = v4 *Participant*). Sources of truth for now: [Verifiable Trust spec v3](https://verana-labs.github.io/verifiable-trust-spec/index-v3.html) and [VPR spec v3](https://verana-labs.github.io/verifiable-trust-vpr-spec/index-v3.html); v4 drafts: [VT v4](https://verana-labs.github.io/verifiable-trust-spec/versions/v4/) · [VPR v4](https://verana-labs.github.io/verifiable-trust-vpr-spec/versions/v4/).
 
-> **ECS-Badge on v3:** created — the schema has been **added to the ECS ecosystem**. Badge flows run over **AnonCreds / DIDComm** for now, with **Hologram Messaging as the initial user wallet**; OpenID4VC/OpenID4VP issuance & presentation will be enabled when available.
+> **ECS-Badge on v3:** created — the schema has been **added to the ECS ecosystem**. Badge flows run over **AnonCreds / DIDComm** for now, with **Hologram Messaging as the initial user wallet**; OpenID4VC/OpenID4VP issuance & presentation will be enabled when available. (ECS-Badge is the **story** credential of `/usecases/vesta`; the user-wallet playground pages use the **DemoCredential** of the Playground Ecosystem (demo) — see [the reference scenario](#the-reference-scenario).)
 
 ## Documents
 
@@ -24,14 +24,21 @@ The Verana Playground is an interactive website for:
 
 ## The reference scenario
 
-All integrations are validated against one end-to-end loop, the **ISO Certification loop**:
+All **user-wallet** integrations are validated against one shared cast — the **Playground demo cast** — and its six **DemoCredential scenarios**. Every user-wallet playground page runs the same logic against the same services; only the wallet changes.
 
-1. A fictional **ISO Certification Ecosystem** registers on the Verana Public Registry (VPR): it publishes its governance framework, defines an *ISO 9001-style* quality-management credential schema (demo), and accredits fictional certification bodies through its participant tree.
-2. An organization operates a **cloud wallet** hosting its AI agent as a **Verifiable Service**: the organization holds **ECS-Organization**, the agent holds **ECS-Service**, and the organization obtains the **ISO-9001-style credential** from an accredited certification body. All credentials are published as Linked Verifiable Presentations in the agent's DID Document.
-3. A person opens any integrated **user wallet** and connects to the agent. Before the first interaction, the wallet trust-resolves the agent's DID and renders the **Proof-of-Trust**: ECS-Organization + ECS-Service + the ISO-9001-style credential, verified recursively up to the ecosystem root.
-4. The agent is discoverable in the **Trust Graph** by the credentials it holds.
+**The cast.** The **Playground Organization (demo)** — a corporation created on testnet for all demo services of the user-wallet and cloud-wallet playgrounds — controls an anchor Verifiable Service, **Playground Demo**, which owns the **Playground Ecosystem (demo)** and defines its single **DemoCredential** schema (AnonCreds; minimal claims: `name`, `demoId`; issued instantly, no evidence step). The ecosystem is deliberately reusable by other playground sections. Five standing demo services run against it:
 
-> **Trademark note:** the playground issues *demo* credentials from *fictional* certification bodies. Public copy MUST describe the credential as an "ISO 9001-**style** quality-management credential (demo)" and MUST NOT imply any real certification.
+| Service (slug) | Trust state (Q1) | DemoCredential accreditation |
+| --- | --- | --- |
+| `demo-issuer-accredited` | TRUSTED | ISSUER |
+| `demo-issuer-unaccredited` | TRUSTED | none |
+| `demo-verifier-accredited` | TRUSTED | VERIFIER |
+| `demo-verifier-unaccredited` | TRUSTED | none |
+| `demo-untrusted` | UNTRUSTED | n/a — no ECS credentials; used in both the issuer and verifier trios |
+
+**The loop.** A person installs the wallet's **modified APK** (the Verana-integrated, testnet-configured build, downloaded from the wallet's playground page), then runs the six scenarios: the three issuer demos (Q2 pass · Q2 fail · Q1 fail) and the three verifier demos (Q3 pass · Q3 fail · Q1 fail), presenting the DemoCredential received from the accredited issuer. The wallet renders each verdict per the [user-wallet guideline](./guidelines/user-wallet-integration.md); the recorded run is the [UW-TEST] acceptance evidence and the source of the page's screen captures.
+
+> **Cloud-wallet note:** the cloud-wallet acceptance loop ([CW-TEST]) still references the earlier *ISO Certification* scenario until the §5 template is aligned with the shared cast (see [spec §5](./spec.md#5-the-cloud-wallet-playground-identical-template)). Where ISO-style demo credentials appear, public copy MUST describe them as "ISO 9001-**style** quality-management credential (demo)" and MUST NOT imply any real certification.
 
 ## Shared reference
 

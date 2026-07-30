@@ -1,6 +1,6 @@
 # Verana Integration Guideline — User Wallets
 
-**Status:** DRAFT 0.1 · 2026-07-16
+**Status:** DRAFT 0.2 (shared demo cast) · 2026-07-30
 **Audience:** developers of open-source **user wallets** (mobile or web software operated by a person: identity wallets, DIDComm messengers, agentic browsers).
 **Goal:** every user wallet integrates Verana **the same way** and presents trust information **the same way**.
 
@@ -77,7 +77,7 @@ This section is the "**always show information the same way**" contract. The ref
 ### Interaction rules
 
 - **[UW-POT-1]** On **first contact** with a service, the wallet MUST display the Proof-of-Trust and obtain an explicit user action (accept / cancel) **before** any message, credential exchange, or session bootstrap.
-- **[UW-POT-2]** On a **credential offer**, the consent screen MUST show the status band plus the Q2 verdict in words: "✅ *CertBody (demo)* is an authorized issuer of *ISO 9001 (demo)* in *ISO Certification Ecosystem (demo)*" — or the red equivalent. If Q2 fails, the accept action MUST be disabled or demoted behind an explicit "accept anyway (unsafe)" step. [DECISION: hard-block vs. warn-and-allow — default in this draft: **hard-block on testnet playground scenarios**.]
+- **[UW-POT-2]** On a **credential offer**, the consent screen MUST show the status band plus the Q2 verdict in words: "✅ *Accredited Issuer (demo)* is an authorized issuer of *DemoCredential* in *Playground Ecosystem (demo)*" — or the red equivalent. If Q2 fails, the accept action MUST be disabled or demoted behind an explicit "accept anyway (unsafe)" step. [DECISION: hard-block vs. warn-and-allow — default in this draft: **hard-block on testnet playground scenarios**.]
 - **[UW-POT-3]** On a **presentation request**, same as [UW-POT-2] with the Q3 verdict: "✅ *…* is an authorized verifier of *…* in *…*". A failed Q3 MUST NOT default to sharing.
 - **[UW-POT-4]** All claims displayed in blocks 2–4 MUST come from **verified** credentials only. Claims from failed credentials MUST NOT be rendered as facts (they may appear inside the failures block, clearly marked).
 - **[UW-POT-5]** The wallet MUST NOT invent trust signals: no stars, scores, or "verified" wording beyond what resolution returned. (Trust-score display from deposits is a future, resolver-provided field.)
@@ -85,14 +85,16 @@ This section is the "**always show information the same way**" contract. The ref
 
 ## 6. Acceptance test [UW-TEST]
 
-To be listed on the playground, record one uncut run of the **ISO Certification loop** (see [README](../README.md)):
+To be listed on the playground, record one uncut run of the **six DemoCredential scenarios** against the shared Playground demo cast (see [README](../README.md#the-reference-scenario) and [playground spec §4](../spec.md#4-the-user-wallet-playground-identical-template)) — the same six cards every user-wallet playground page shows:
 
-1. Connect to the playground's demo AI agent → Proof-of-Trust renders `TRUSTED` with ECS-Org + ECS-Service + the ISO-9001-style credential (blocks 1–4).
-2. Connect to the playground's **untrusted** demo service → `UNTRUSTED` renders with failure reasons; connection is not silently established.
-3. Accept a credential offer from an **authorized** issuer (Q2 pass shown), then receive an offer from an **unauthorized** one (Q2 fail shown, accept blocked/demoted).
-4. Receive a presentation request from an **authorized** verifier (Q3 pass shown), then from an **unauthorized** one (Q3 fail shown, share blocked/demoted).
+1. Connect to `demo-issuer-accredited` → Proof-of-Trust renders `TRUSTED` with ECS-Org + ECS-Service (blocks 1–3); accept its **DemoCredential** offer (Q2 pass shown per [UW-POT-2]) and receive the credential.
+2. Connect to `demo-issuer-unaccredited` → `TRUSTED` renders, but its DemoCredential offer shows the Q2 **fail** verdict and accept is blocked/demoted.
+3. Attempt to connect to `demo-untrusted` → `UNTRUSTED` renders with failure reasons; the connection is not silently established.
+4. Connect to `demo-verifier-accredited` → `TRUSTED`; its presentation request shows the Q3 pass verdict per [UW-POT-3]; present the DemoCredential received in step 1.
+5. Connect to `demo-verifier-unaccredited` → `TRUSTED`, but its presentation request shows the Q3 **fail** verdict and sharing is blocked/demoted.
+6. Attempt the verifier flow against `demo-untrusted` → `UNTRUSTED` again; no request is ever surfaced.
 
-Submit the recording with your `integration.yaml` (see [README — Getting listed](../README.md#getting-listed-on-the-playground)).
+The recording doubles as the source of the six per-scenario **screen captures** shown on the wallet's playground page. Submit both with your `integration.yaml` (see [README — Getting listed](../README.md#getting-listed-on-the-playground)).
 
 ## 7. References
 
