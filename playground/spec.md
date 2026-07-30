@@ -88,7 +88,7 @@ The "Being found" Trust-Graph outlook is a closing teaser on the demos chapter (
 | `demo-verifier-unaccredited` | TRUSTED | none | Q3 fail — sharing blocked |
 | `demo-untrusted` | UNTRUSTED | n/a | Q1 fail — no connection (used in **both** trios) |
 
-**`personal-wallets.yaml`** — the configuration entry per wallet: `id` · `name` · `vendor` · `icon` (stored in the repo under `wallets/<id>/`) · **`formats`** (the credential formats the wallet passed the loop with: `anoncreds` and/or `openid4vc-sdjwt`) · `download` (direct APK of the modified build, or the store link when `verana_builtin: true`) · `playstore`/`appstore`/`web` · `repo`/`license`/`contact`/`notes` · optional `captures` (screen captures) and `videos` (recordings, with a note disclosing editing/speed).
+**`personal-wallets.yaml`** — the configuration entry per wallet: `id` · `name` · `vendor` · `icon` (stored in the repo under `wallets/<id>/`) · **`formats`** (the credential formats the wallet passed the loop with: `anoncreds` and/or `openid4vc-sdjwt`) · `download` (direct APK of the modified build, or the store link when `verana_builtin: true`) · `playstore`/`appstore`/`web` · `repo`/`license`/`contact`/`notes` · optional **`captures`** (up to ONE screen capture per demo scenario, keyed by scenario id — rendered inside the corresponding demo card: beside it for handset-like portrait captures, below it for square/landscape, stacked on mobile) and an optional single **`video`** (rendered in Get-the-wallet right after the download link; its note MUST disclose editing/speed).
 
 Page sections:
 

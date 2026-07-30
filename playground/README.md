@@ -135,10 +135,10 @@ The resolver also exposes a **ToIP TRQP** interface for trust-registry queries. 
   verana_builtin: false             #   store link when Verana is built in
   repo: https://github.com/your-org/your-wallet
   license: Apache-2.0               # OSI-approved license required
-  captures:                         # optional
-    - { src: ./your-wallet/captures/1.webp, caption: "…" }
-  videos:                           # optional; disclose editing/speed
-    - { src: ./your-wallet/demo.mp4, note: "Real device. Silent." }
+  captures:                         # optional: up to one per demo scenario
+    issue-accredited: { src: ./your-wallet/captures/issue-ok.webp, caption: "…" }
+  video:                            # optional single video; disclose editing/speed
+    { src: ./your-wallet/demo.mp4, note: "Real device. Silent." }
 ```
 
 **Business wallets** keep the per-wallet descriptor: `integrations/<slug>/integration.yaml` + logo, submitted by PR; each gets its own playground page ([spec §5](./spec.md)).

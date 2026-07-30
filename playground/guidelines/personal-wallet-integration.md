@@ -94,7 +94,7 @@ To be listed on the playground, run the **six DemoCredential scenarios** against
 5. Connect to `demo-verifier-unaccredited` → `TRUSTED`, but its presentation request shows the Q3 **fail** verdict and sharing is blocked/demoted.
 6. Attempt the verifier flow against `demo-untrusted` → `UNTRUSTED` again; no request is ever surfaced.
 
-Submission is a PR to [`verana-labs/playground`](https://github.com/verana-labs/playground) with your **`personal-wallets.yaml` entry** (listing the tested `formats`), your **icon** under `wallets/<id>/`, and **optional screen captures and videos** of the run (recommended as evidence; video notes MUST disclose editing/speed). See [README — Getting listed](../README.md#getting-listed-on-the-playground).
+Submission is a PR to [`verana-labs/playground`](https://github.com/verana-labs/playground) with your **`personal-wallets.yaml` entry** (listing the tested `formats`), your **icon** under `wallets/<id>/`, and optional media of the run (recommended as evidence): up to **one screen capture per demo scenario** and a **single video** (its note MUST disclose editing/speed). See [README — Getting listed](../README.md#getting-listed-on-the-playground).
 
 ## 7. References
 
