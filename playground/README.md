@@ -122,24 +122,28 @@ The resolver also exposes a **ToIP TRQP** interface for trust-registry queries. 
 
 ### Getting listed on the playground
 
-Each integration appears in the Home wallet lists and gets its **own playground page** (identical template — [spec §4/§5](./spec.md)), all generated from a machine-readable descriptor submitted by PR to [`verana-labs/playground`](https://github.com/verana-labs/playground):
+**Personal wallets** all share the single playground page ([spec §4](./spec.md)), generated from **`wallets.yaml`** in [`verana-labs/playground`](https://github.com/verana-labs/playground). To get listed: test the six DemoCredential scenarios with **AnonCreds and/or OpenID4VC SD-JWT** (see the [personal-wallet guideline](./guidelines/personal-wallet-integration.md), [PW-TEST]), then open a PR containing your entry, your icon under `wallets/<id>/`, and optional screen captures and videos:
 
 ```yaml
-# integration.yaml
-name: Paradym Wallet
-organization: Animo Solutions
-kind: personal-wallet          # personal-wallet | business-wallet
-repo: https://github.com/animo/paradym-wallet
-license: Apache-2.0        # OSI-approved license required
-track: bridge              # native | bridge (+ sidecar for cloud)
-scenarios: [iso-certification-loop]
-demo_video: https://…
-download: https://…/paradym.apk   # mobile personal wallet: direct APK download; business wallet: URL of the hosted instance / product page
-contact: …
-logo: ./logo.svg
+# wallets.yaml — one entry per wallet
+- id: your-wallet
+  name: Your Wallet
+  vendor: Your Org
+  icon: ./your-wallet/logo.webp     # stored in the repo (wallets/<id>/)
+  formats: [anoncreds]              # anoncreds | openid4vc-sdjwt (tested)
+  download: https://…               # direct APK (modified build) — or the
+  verana_builtin: false             #   store link when Verana is built in
+  repo: https://github.com/your-org/your-wallet
+  license: Apache-2.0               # OSI-approved license required
+  captures:                         # optional
+    - { src: ./your-wallet/captures/1.webp, caption: "…" }
+  videos:                           # optional; disclose editing/speed
+    - { src: ./your-wallet/demo.mp4, note: "Real device. Silent." }
 ```
 
-Requirements: the product is **open source** (OSI license), the acceptance scenario passes (see each guideline's test section), the wallet is **obtainable from its tile** — a mobile personal wallet MUST provide a direct **APK download link** (store links MAY complement it), a business wallet MUST provide a **URL** — and the descriptor + a screen recording are submitted by PR. Listed organizations may use the **"Runs on the Verana open trust layer"** badge.
+**Business wallets** keep the per-wallet descriptor: `integrations/<slug>/integration.yaml` + logo, submitted by PR; each gets its own playground page ([spec §5](./spec.md)).
+
+Requirements for both: the product is **open source** (OSI license) and the wallet is **obtainable from its entry** — a mobile personal wallet MUST provide a direct **APK download link** unless its standard build carries the integration (`verana_builtin`), a business wallet MUST provide a **URL**. Listed organizations may use the **"Runs on the Verana open trust layer"** badge.
 
 ## License
 

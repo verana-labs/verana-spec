@@ -66,7 +66,7 @@ The "Being found" Trust-Graph outlook is a closing teaser on the demos chapter (
 
 ### 3.3 Personal wallets
 
-- **The list**: one tile per integrated personal wallet — logo · name · organization · track chip (native / bridge) · license chip · **Get it** (APK download; web link for a web wallet) · **Open its playground** → `/personal-wallets/<slug>`.
+- **The list**: one tile per integrated personal wallet — icon · name · vendor — opening the single playground page pre-selected on that wallet → `/personal-wallets?wallet=<id>`.
 - Closing card: **Add your wallet** → `/integrate`.
 
 ### 3.4 Business wallets
@@ -74,11 +74,11 @@ The "Being found" Trust-Graph outlook is a closing teaser on the demos chapter (
 - **The list**: one tile per integrated business wallet — logo · name · organization · pattern chip (native / sidecar / bridge) · license chip · **Get it** (URL) · **Open its playground** → `/business-wallets/<slug>`.
 - Closing card: **Add your wallet** → `/integrate`.
 
-## 4. The personal-wallet playground (identical template)
+## 4. The personal-wallet playground (one page for all wallets)
 
-**Every personal wallet gets exactly the same playground page** at `/personal-wallets/<slug>`, generated from its `integration.yaml` ([README](./README.md#getting-listed-on-the-playground)). Uniformity is the point: **same logic, same services, same six scenarios** — only the wallet (and its captures) changes.
+**All personal wallets share a single playground page** at `/personal-wallets`, generated from **`wallets.yaml`** — one configuration file with one entry per wallet ([README](./README.md#getting-listed-on-the-playground)). Uniformity is the point: same logic, same services, same six scenarios for every wallet. The visitor **picks a wallet** on the page; the QR codes are then minted for that wallet's **credential format** — `anoncreds` (AnonCreds over DIDComm) or `openid4vc-sdjwt` (OpenID4VCI / OpenID4VP with SD-JWT VC).
 
-**The shared demo cast.** All personal-wallet pages exercise the same standing services, run by the **Playground Organization (demo)** under the **Playground Ecosystem (demo)** and its single **DemoCredential** schema (§6 — the [Playground demo cast](#6-shared-machinery)). Each scenario isolates exactly one of the three questions of the [personal-wallet guideline §1](./guidelines/personal-wallet-integration.md#1-what-the-integration-does):
+**The shared demo cast.** The page exercises the same standing services for every wallet, run by the **Playground Organization (demo)** under the **Playground Ecosystem (demo)** and its single **DemoCredential** schema (§6 — the [Playground demo cast](#6-shared-machinery)). Each scenario isolates exactly one of the three questions of the [personal-wallet guideline §1](./guidelines/personal-wallet-integration.md#1-what-the-integration-does):
 
 | Service (slug) | Trust state (Q1) | DemoCredential accreditation | Teaches |
 | --- | --- | --- | --- |
@@ -88,16 +88,16 @@ The "Being found" Trust-Graph outlook is a closing teaser on the demos chapter (
 | `demo-verifier-unaccredited` | TRUSTED | none | Q3 fail — sharing blocked |
 | `demo-untrusted` | UNTRUSTED | n/a | Q1 fail — no connection (used in **both** trios) |
 
-Template sections:
+**`wallets.yaml`** — the configuration entry per wallet: `id` · `name` · `vendor` · `icon` (stored in the repo under `wallets/<id>/`) · **`formats`** (the credential formats the wallet passed the loop with: `anoncreds` and/or `openid4vc-sdjwt`) · `download` (direct APK of the modified build, or the store link when `verana_builtin: true`) · `playstore`/`appstore`/`web` · `repo`/`license`/`contact`/`notes` · optional `captures` (screen captures) and `videos` (recordings, with a note disclosing editing/speed).
 
-1. **Breadcrumb** — `Playground › Personal wallets › <Wallet>`: each segment clickable (home, the §3.3 list anchor), so the main page is always one tap away.
-2. **Header** — logo, name, organization, track/license chips, links: **Download** (APK for a mobile wallet, web link for a web wallet — the `download` field) · repo · demo video.
-3. **What you'll test** — the intro that installs the mental model *before any QR*: the three questions a Verana-integrated wallet answers — **Q1** is this service trusted and who operates it (on connect) · **Q2** is it authorized to *issue* this credential (on offer) · **Q3** is it authorized to *verify* it (on presentation request) — rendered as three visual cards (guideline §1 table), plus one line naming the cast: every demo below is a service of the Playground Organization (demo), resolved live against the testnet.
-4. **Get the wallet** — the visitor MUST be told to **download the modified APK by clicking the page's link** (the Verana-integrated build, configured for testnet): store builds may not carry the integration; store links MAY complement the APK link, never replace it (for a web wallet: the integrated instance URL). **Exception:** when the wallet's standard published build supports Verana **out of the box** (descriptor `verana_builtin: true` — e.g. Hologram Messaging), the page says so instead and store installs work as-is.
-5. **Issuer demos — three services, three verdicts.** One card per issuer scenario (`demo-issuer-accredited`, `demo-issuer-unaccredited`, `demo-untrusted`). Each card shows: state chips (TRUSTED/UNTRUSTED · accredited/not) · the **expected wallet behavior as a screen capture** (per-wallet, from `integration.yaml`; at launch a **placeholder** — the generic verdict line per [PW-POT-2] — until the wallet's captures are submitted) · a **"Show QR" button** that reveals the QR / deep link and lets the visitor execute the demo · for the trusted services, their live Proof-of-Trust. The accredited card ends with the payoff: the visitor now **holds a DemoCredential**.
-6. **Verifier demos — three services, three verdicts.** Same trio shape for Q3 (`demo-verifier-accredited`, `demo-verifier-unaccredited`, `demo-untrusted`), presenting the DemoCredential received in section 5 — which is why the issuer trio comes first. The accredited card's payoff: logged in with a credential, no password, no account — the trust chain did the work.
+Page sections:
 
-> **v3 launch note:** the demo services run `veranalabs/vs-agent:v1.12.0-oidc4vc.2`, so the DemoCredential loop is served over **both rails**: **AnonCreds / DIDComm** for Track N wallets (Hologram Messaging) and **OpenID4VCI / OpenID4VP** for Track B wallets. Each wallet's page runs the six scenarios over its own track's rail; a scenario is marked *coming* only if the wallet supports neither rail for it yet.
+1. **What you'll test** — the intro that installs the mental model *before any QR*: the three questions a Verana-integrated wallet answers — **Q1** is this service trusted and who operates it (on connect) · **Q2** is it accredited to *issue* this credential (on offer) · **Q3** is it accredited to *request the presentation* of this credential — rendered as three visual cards (guideline §1 table), plus one line naming the cast: every demo below is a service of the Playground Organization (demo), resolved live against the testnet.
+2. **Get the wallet** — the **wallet picker** (icon · name · vendor · format chips; deep-linkable via `?wallet=<id>`). Selecting a wallet shows its install block — the visitor MUST be told to **download the modified APK by clicking the page's link** (store builds may not carry the integration; store links MAY complement it), with the **exception** of wallets whose standard published build supports Verana **out of the box** (`verana_builtin: true` — e.g. Hologram Messaging), where the page says so and store installs work as-is — plus the wallet's captures and videos.
+3. **Issuer demos — three services, three verdicts.** One card per issuer scenario (`demo-issuer-accredited`, `demo-issuer-unaccredited`, `demo-untrusted`): state chips (TRUSTED/UNTRUSTED · accredited/not) · a **QR symbol** that reveals the live artifact minted for the selected wallet's format (AnonCreds: OOB credential offer · OpenID4VC: OID4VCI credential offer) · the service's **Proof-of-Trust in the Vesta trust-card format, fully expanded**. The accredited card's payoff: the visitor now **holds a DemoCredential**.
+4. **Verifier demos — three services, three verdicts.** Same trio shape for Q3 (`demo-verifier-accredited`, `demo-verifier-unaccredited`, `demo-untrusted`) — presentation requests (AnonCreds OOB / OID4VP) for the DemoCredential received in section 3. On the accredited card, the QR **flips into the presented credential** once the wallet shares it: logged in, no password, no account — the trust chain did the work.
+
+> **v3 launch note:** the demo services run `veranalabs/vs-agent:v1.12.0-oidc4vc.2`, serving both rails. The **AnonCreds** rail is live (Hologram Messaging); the **OpenID4VC SD-JWT** rail activates when the cast agents carry the OID4VC plugin configuration — until then the page shows a being-enabled placeholder for `openid4vc-sdjwt` wallets' credential scenarios.
 
 ## 5. The business-wallet playground (identical template)
 
