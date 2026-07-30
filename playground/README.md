@@ -26,7 +26,7 @@ The Verana Playground is an interactive website for:
 
 All **user-wallet** integrations are validated against one shared cast — the **Playground demo cast** — and its six **DemoCredential scenarios**. Every user-wallet playground page runs the same logic against the same services; only the wallet changes.
 
-**The cast.** The **Playground Organization (demo)** — a corporation created on testnet for all demo services of the user-wallet and cloud-wallet playgrounds — controls an anchor Verifiable Service, **Playground Demo**, which owns the **Playground Ecosystem (demo)** and defines its single **DemoCredential** schema (AnonCreds; minimal claims: `name`, `demoId`; issued instantly, no evidence step). The ecosystem is deliberately reusable by other playground sections. Five standing demo services run against it:
+**The cast.** The **Playground Organization (demo)** — a corporation created on testnet for all demo services of the user-wallet and cloud-wallet playgrounds — controls an anchor Verifiable Service, **Playground Demo**, which owns the **Playground Ecosystem (demo)** and defines its single **DemoCredential** schema (minimal claims: `name`, `demoId`; issued instantly, no evidence step). The demo services run `veranalabs/vs-agent:v1.12.0-oidc4vc.2` and serve the DemoCredential over **both rails**: AnonCreds/DIDComm (Track N — Hologram Messaging) and OpenID4VCI/OpenID4VP (Track B wallets). The ecosystem is deliberately reusable by other playground sections. Five standing demo services run against it:
 
 | Service (slug) | Trust state (Q1) | DemoCredential accreditation |
 | --- | --- | --- |

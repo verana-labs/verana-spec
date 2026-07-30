@@ -85,7 +85,7 @@ This section is the "**always show information the same way**" contract. The ref
 
 ## 6. Acceptance test [UW-TEST]
 
-To be listed on the playground, record one uncut run of the **six DemoCredential scenarios** against the shared Playground demo cast (see [README](../README.md#the-reference-scenario) and [playground spec §4](../spec.md#4-the-user-wallet-playground-identical-template)) — the same six cards every user-wallet playground page shows:
+To be listed on the playground, record one uncut run of the **six DemoCredential scenarios** against the shared Playground demo cast (see [README](../README.md#the-reference-scenario) and [playground spec §4](../spec.md#4-the-user-wallet-playground-identical-template)) — the same six cards every user-wallet playground page shows. The demo services expose both rails: Track N wallets run the scenarios over DIDComm/AnonCreds, Track B wallets over OpenID4VCI/OpenID4VP.
 
 1. Connect to `demo-issuer-accredited` → Proof-of-Trust renders `TRUSTED` with ECS-Org + ECS-Service (blocks 1–3); accept its **DemoCredential** offer (Q2 pass shown per [UW-POT-2]) and receive the credential.
 2. Connect to `demo-issuer-unaccredited` → `TRUSTED` renders, but its DemoCredential offer shows the Q2 **fail** verdict and accept is blocked/demoted.
