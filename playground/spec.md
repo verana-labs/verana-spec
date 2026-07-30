@@ -1,6 +1,6 @@
 # Verana Playground — Website Specification
 
-**Status:** DRAFT 0.2 (rebuilt) · 2026-07-16
+**Status:** DRAFT 0.3 (shared demo cast) · 2026-07-30
 **Site:** `https://playground.testnet.verana.network`
 **Companions:** [verana-explained](./verana-explained/spec.md) · [user-wallet guideline](./guidelines/user-wallet-integration.md) · [cloud-wallet guideline](./guidelines/cloud-wallet-integration.md) · [shared reference](./README.md)
 
@@ -76,20 +76,34 @@ The "Being found" Trust-Graph outlook is a closing teaser on the demos chapter (
 
 ## 4. The user-wallet playground (identical template)
 
-**Every user wallet gets exactly the same playground page** at `/user-wallets/<slug>`, generated from its `integration.yaml` ([README](./README.md#getting-listed-on-the-playground)). Uniformity is the point: same layout, same two services, same expectations — only the wallet changes.
+**Every user wallet gets exactly the same playground page** at `/user-wallets/<slug>`, generated from its `integration.yaml` ([README](./README.md#getting-listed-on-the-playground)). Uniformity is the point: **same logic, same services, same six scenarios** — only the wallet (and its captures) changes.
+
+**The shared demo cast.** All user-wallet pages exercise the same standing services, run by the **Playground Organization (demo)** under the **Playground Ecosystem (demo)** and its single **DemoCredential** schema (§6 — the [Playground demo cast](#6-shared-machinery)). Each scenario isolates exactly one of the three questions of the [user-wallet guideline §1](./guidelines/user-wallet-integration.md#1-what-the-integration-does):
+
+| Service (slug) | Trust state (Q1) | DemoCredential accreditation | Teaches |
+| --- | --- | --- | --- |
+| `demo-issuer-accredited` | TRUSTED | ISSUER | Q2 pass — accept the offer |
+| `demo-issuer-unaccredited` | TRUSTED | none | Q2 fail — offer blocked |
+| `demo-verifier-accredited` | TRUSTED | VERIFIER | Q3 pass — share the credential |
+| `demo-verifier-unaccredited` | TRUSTED | none | Q3 fail — sharing blocked |
+| `demo-untrusted` | UNTRUSTED | n/a | Q1 fail — no connection (used in **both** trios) |
+
+Template sections:
 
 1. **Breadcrumb** — `Playground › User wallets › <Wallet>`: each segment clickable (home, the §3.3 list anchor), so the main page is always one tap away.
 2. **Header** — logo, name, organization, track/license chips, links: **Download** (APK for a mobile wallet, web link for a web wallet — the `download` field) · repo · demo video.
-3. **Get the wallet** — install instructions for this wallet (store links may complement the APK, never replace it).
-4. **Service 1 — Receive a credential (issuing).** A QR / deep link to the **Vesta badge issuer service (demo)** — the same standing service as in the [Verana Explained story, Chapter 4.4](./verana-explained/spec.md) — offering the **ECS-Badge** credential. Beside it, the **expected wallet rendering**: the Proof-of-Trust plus the Q2 verdict ("✅ Vesta Badge Service is an authorized issuer of *ECS-Badge*") per [UW-POT-2].
-5. **Service 2 — Present the credential (presenting).** A QR / deep link to the **Vesta login service (demo)** — the same standing service as in [Chapter 4.4](./verana-explained/spec.md) — requesting presentation of the badge to log in. Beside it, the expected rendering: Proof-of-Trust plus the Q3 verdict per [UW-POT-3].
-6. **Refusal paths (expandable)** — the same two actions against the **unauthorized** demo services (Umbra Corp (demo)): the red verdicts. This completes the [UW-TEST] acceptance loop, so the page doubles as the stage on which the wallet's acceptance recording is made.
+3. **What you'll test** — the intro that installs the mental model *before any QR*: the three questions a Verana-integrated wallet answers — **Q1** is this service trusted and who operates it (on connect) · **Q2** is it authorized to *issue* this credential (on offer) · **Q3** is it authorized to *verify* it (on presentation request) — rendered as three visual cards (guideline §1 table), plus one line naming the cast: every demo below is a service of the Playground Organization (demo), resolved live against the testnet.
+4. **Get the wallet** — the visitor MUST be told to **download the modified APK by clicking the page's link** (the Verana-integrated build, configured for testnet): store builds may not carry the integration; store links MAY complement the APK link, never replace it (for a web wallet: the integrated instance URL). **Exception:** when the wallet's standard published build supports Verana **out of the box** (descriptor `verana_builtin: true` — e.g. Hologram Messaging), the page says so instead and store installs work as-is.
+5. **Issuer demos — three services, three verdicts.** One card per issuer scenario (`demo-issuer-accredited`, `demo-issuer-unaccredited`, `demo-untrusted`). Each card shows: state chips (TRUSTED/UNTRUSTED · accredited/not) · the **expected wallet behavior as a screen capture** (per-wallet, from `integration.yaml`; at launch a **placeholder** — the generic verdict line per [UW-POT-2] — until the wallet's captures are submitted) · a **"Show QR" button** that reveals the QR / deep link and lets the visitor execute the demo · for the trusted services, their live Proof-of-Trust. The accredited card ends with the payoff: the visitor now **holds a DemoCredential**.
+6. **Verifier demos — three services, three verdicts.** Same trio shape for Q3 (`demo-verifier-accredited`, `demo-verifier-unaccredited`, `demo-untrusted`), presenting the DemoCredential received in section 5 — which is why the issuer trio comes first. The accredited card's payoff: logged in with a credential, no password, no account — the trust chain did the work.
 
-> **v3 launch note:** the badge runs over **AnonCreds / DIDComm**; initially **Hologram Messaging** is the only user wallet completing the full badge loop. Other wallets' pages ship with the resolve/connect steps live and the badge steps marked *coming* — they activate per wallet when OpenID4VC lands or the wallet supports the AnonCreds flow.
+> **v3 launch note:** the demo services run `veranalabs/vs-agent:v1.12.0-oidc4vc.2`, so the DemoCredential loop is served over **both rails**: **AnonCreds / DIDComm** for Track N wallets (Hologram Messaging) and **OpenID4VCI / OpenID4VP** for Track B wallets. Each wallet's page runs the six scenarios over its own track's rail; a scenario is marked *coming* only if the wallet supports neither rail for it yet.
 
 ## 5. The cloud-wallet playground (identical template)
 
 **Every cloud wallet gets exactly the same playground page** at `/cloud-wallets/<slug>`, generated from its `integration.yaml`. The template is a **use case to test**: the cloud wallet hosts a demo Verifiable Service, and the visitor exercises it end to end.
+
+> **Alignment note:** a future revision of this template reuses the **Playground Ecosystem (demo)** and its **DemoCredential** schema (§6) — the ecosystem is deliberately shared across playground sections; each hosted demo service gets its participant entries there instead of a per-wallet ecosystem.
 
 1. **Breadcrumb** — `Playground › Cloud wallets › <Wallet>`: each segment clickable (home, the §3.4 list anchor), so the main page is always one tap away.
 2. **Header** — logo, name, organization, pattern/license chips, links: **Get it** (URL of the hosted instance / product page) · repo · demo video.
@@ -105,8 +119,8 @@ The "Being found" Trust-Graph outlook is a closing teaser on the demos chapter (
 | Piece | Definition |
 | --- | --- |
 | **Reference implementation** | [`verana-labs/verana-demos`](https://github.com/verana-labs/verana-demos) — the working v3 demo ecosystem the new [`verana-labs/playground`](https://github.com/verana-labs/playground) builds on: `organization-vs` (anchor: ECS credentials, own Trust Registry + schema + AnonCreds cred def), issuer/verifier chatbot & web VSs, the tutorial playground app (PoT, invitation and session-result APIs), numbered deploy workflows, and the vs-agent API automation (`common/common.sh`). |
-| **Demo cast** | The [ISO Certification Ecosystem (demo)](./README.md#the-reference-scenario): CertBody issuers, Vesta Appliances and its services, Umbra Repairs (untrusted / unauthorized refusal paths), Zenith Repairs. **Each story participant runs its own dedicated vs-agent instance** (not a reuse of the verana-demos cast). Standing services, monitored — a demo service in the wrong trust state is a paging incident. |
-| **Demo issuer / verifier pair** | The **Vesta badge issuer** and **Vesta login** services from the Verana Explained story (Chapter 4.4) — the same standing services serve every §4 page — plus Umbra's unauthorized pair for the refusal paths. §5 pages use each cloud wallet's own hosted service instead. |
+| **Playground demo cast (§4/§5)** | The **Playground Organization (demo)** — a corporation on testnet, created for all demo services of the user-wallet and cloud-wallet playgrounds — controls the anchor VS **Playground Demo**, which owns the **Playground Ecosystem (demo)** and its single **DemoCredential** schema (minimal claims: `name`, `demoId`; issued instantly, no evidence step; served over both AnonCreds/DIDComm and OpenID4VCI/OpenID4VP). Five standing services (each its own vs-agent instance, image `veranalabs/vs-agent:v1.12.0-oidc4vc.2`): `demo-issuer-accredited` (ISSUER participant entry), `demo-verifier-accredited` (VERIFIER entry), `demo-issuer-unaccredited` and `demo-verifier-unaccredited` (TRUSTED VSs, no DemoCredential entries), and `demo-untrusted` (no ECS credentials — fails Q1; shared by both trios). The ecosystem is reusable by other playground sections. Monitored — a demo service in the wrong trust state is a paging incident, **including `demo-untrusted` resolving as anything but UNTRUSTED**. |
+| **Story cast (Vesta)** | The [Vesta Appliances story cast](./verana-explained/spec.md): CertBody issuers, Vesta Appliances and its services, Umbra Repairs, Zenith Repairs — serves the `/usecases/vesta` chapters only (see the story spec's deployment inventory). **Each story participant runs its own dedicated vs-agent instance.** Standing services, monitored. |
 | **Integration registry** | [`verana-labs/playground`](https://github.com/verana-labs/playground): `integrations/<slug>/integration.yaml` + logo, submitted by PR; CI validates; the site generates the §3.3/§3.4 lists and the §4/§5 pages from it. |
 | **Sessions & fees** | Anonymous browser session only; chain transactions run from pooled playground accounts (faucet-refilled) — visitors never touch keys or VNA. |
 | **Onboarding portal** | For cloud-wallet integrators: delivers ECS credentials per [CW-ECS-1]. [DECISION: in-app vs separate service] |
@@ -135,8 +149,9 @@ The playground is the living evidence of the *"One trust layer, many wallets"* F
 
 1. ~~Demo-entity naming~~ — **resolved (rev 2026-07-28):** **Vesta Appliances** (protagonist, formerly Acme) / CertBody / **Umbra Repairs** / Zenith Repairs / "ISO Certification Ecosystem (demo)"; standing demo services to be rebranded from ACME to Vesta (see verana-explained open item 7).
 2. ~~Testnet ECS Ecosystem DID~~ — **resolved:** the demo organization anchor from `verana-labs/verana-demos` (`organization-vs`); published in the [README config](./README.md#network-configuration-wl-whitelists).
-3. ~~Demo credential issued to visitors~~ — **resolved: ECS-Badge** (schema **created** in the ECS ecosystem); AnonCreds/DIDComm for now, Hologram first; OID4VC/OID4VP when available.
+3. ~~Demo credential issued to visitors~~ — **superseded (rev 2026-07-30):** the §4 pages issue the **DemoCredential** of the Playground Ecosystem (demo) (§6); AnonCreds/DIDComm for now, Hologram first; OID4VC/OID4VP when available. (ECS-Badge remains the story credential in `/usecases/vesta`.)
 4. Onboarding portal placement (§6). [DECISION]
 5. ~~Integration-registry repo~~ — **resolved:** [`verana-labs/playground`](https://github.com/verana-labs/playground) (created).
 6. [UW-POT-2] hard-block vs warn — inherited from the user-wallet guideline.
 7. Integrator support channel for `/integrate`. [TODO]
+8. Playground demo cast display names — working proposal: **Accredited Issuer (demo)** · **Unaccredited Issuer (demo)** · **Accredited Verifier (demo)** · **Unaccredited Verifier (demo)** · **Untrusted Service (demo)**; anchor **Playground Demo**; confirm at provisioning time. [DECISION]
