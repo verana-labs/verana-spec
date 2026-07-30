@@ -122,10 +122,10 @@ The resolver also exposes a **ToIP TRQP** interface for trust-registry queries. 
 
 ### Getting listed on the playground
 
-**Personal wallets** all share the single playground page ([spec §4](./spec.md)), generated from **`wallets.yaml`** in [`verana-labs/playground`](https://github.com/verana-labs/playground). To get listed: test the six DemoCredential scenarios with **AnonCreds and/or OpenID4VC SD-JWT** (see the [personal-wallet guideline](./guidelines/personal-wallet-integration.md), [PW-TEST]), then open a PR containing your entry, your icon under `wallets/<id>/`, and optional screen captures and videos:
+**Personal wallets** all share the single playground page ([spec §4](./spec.md)), generated from **`personal-wallets.yaml`** in [`verana-labs/playground`](https://github.com/verana-labs/playground). To get listed: test the six DemoCredential scenarios with **AnonCreds and/or OpenID4VC SD-JWT** (see the [personal-wallet guideline](./guidelines/personal-wallet-integration.md), [PW-TEST]), then open a PR containing your entry, your icon under `wallets/<id>/`, and optional screen captures and videos:
 
 ```yaml
-# wallets.yaml — one entry per wallet
+# personal-wallets.yaml — one entry per wallet
 - id: your-wallet
   name: Your Wallet
   vendor: Your Org

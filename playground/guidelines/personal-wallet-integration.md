@@ -85,7 +85,7 @@ This section is the "**always show information the same way**" contract. The ref
 
 ## 6. Acceptance test [PW-TEST]
 
-To be listed on the playground, run the **six DemoCredential scenarios** against the shared Playground demo cast (see [README](../README.md#the-reference-scenario) and [playground spec §4](../spec.md#4-the-personal-wallet-playground-one-page-for-all-wallets)) — the same six cards the single personal-wallets page shows — with **each credential format you claim in your `wallets.yaml` entry** (`anoncreds` over DIDComm and/or `openid4vc-sdjwt` over OpenID4VCI/OpenID4VP):
+To be listed on the playground, run the **six DemoCredential scenarios** against the shared Playground demo cast (see [README](../README.md#the-reference-scenario) and [playground spec §4](../spec.md#4-the-personal-wallet-playground-one-page-for-all-wallets)) — the same six cards the single personal-wallets page shows — with **each credential format you claim in your `personal-wallets.yaml` entry** (`anoncreds` over DIDComm and/or `openid4vc-sdjwt` over OpenID4VCI/OpenID4VP):
 
 1. Connect to `demo-issuer-accredited` → Proof-of-Trust renders `TRUSTED` with ECS-Org + ECS-Service (blocks 1–3); accept its **DemoCredential** offer (Q2 pass shown per [PW-POT-2]) and receive the credential.
 2. Connect to `demo-issuer-unaccredited` → `TRUSTED` renders, but its DemoCredential offer shows the Q2 **fail** verdict and accept is blocked/demoted.
@@ -94,7 +94,7 @@ To be listed on the playground, run the **six DemoCredential scenarios** against
 5. Connect to `demo-verifier-unaccredited` → `TRUSTED`, but its presentation request shows the Q3 **fail** verdict and sharing is blocked/demoted.
 6. Attempt the verifier flow against `demo-untrusted` → `UNTRUSTED` again; no request is ever surfaced.
 
-Submission is a PR to [`verana-labs/playground`](https://github.com/verana-labs/playground) with your **`wallets.yaml` entry** (listing the tested `formats`), your **icon** under `wallets/<id>/`, and **optional screen captures and videos** of the run (recommended as evidence; video notes MUST disclose editing/speed). See [README — Getting listed](../README.md#getting-listed-on-the-playground).
+Submission is a PR to [`verana-labs/playground`](https://github.com/verana-labs/playground) with your **`personal-wallets.yaml` entry** (listing the tested `formats`), your **icon** under `wallets/<id>/`, and **optional screen captures and videos** of the run (recommended as evidence; video notes MUST disclose editing/speed). See [README — Getting listed](../README.md#getting-listed-on-the-playground).
 
 ## 7. References
 

@@ -76,7 +76,7 @@ The "Being found" Trust-Graph outlook is a closing teaser on the demos chapter (
 
 ## 4. The personal-wallet playground (one page for all wallets)
 
-**All personal wallets share a single playground page** at `/personal-wallets`, generated from **`wallets.yaml`** — one configuration file with one entry per wallet ([README](./README.md#getting-listed-on-the-playground)). Uniformity is the point: same logic, same services, same six scenarios for every wallet. The visitor **picks a wallet** on the page; the QR codes are then minted for that wallet's **credential format** — `anoncreds` (AnonCreds over DIDComm) or `openid4vc-sdjwt` (OpenID4VCI / OpenID4VP with SD-JWT VC).
+**All personal wallets share a single playground page** at `/personal-wallets`, generated from **`personal-wallets.yaml`** — one configuration file with one entry per wallet ([README](./README.md#getting-listed-on-the-playground)). Uniformity is the point: same logic, same services, same six scenarios for every wallet. The visitor **picks a wallet** on the page; the QR codes are then minted for that wallet's **credential format** — `anoncreds` (AnonCreds over DIDComm) or `openid4vc-sdjwt` (OpenID4VCI / OpenID4VP with SD-JWT VC).
 
 **The shared demo cast.** The page exercises the same standing services for every wallet, run by the **Playground Organization (demo)** under the **Playground Ecosystem (demo)** and its single **DemoCredential** schema (§6 — the [Playground demo cast](#6-shared-machinery)). Each scenario isolates exactly one of the three questions of the [personal-wallet guideline §1](./guidelines/personal-wallet-integration.md#1-what-the-integration-does):
 
@@ -88,7 +88,7 @@ The "Being found" Trust-Graph outlook is a closing teaser on the demos chapter (
 | `demo-verifier-unaccredited` | TRUSTED | none | Q3 fail — sharing blocked |
 | `demo-untrusted` | UNTRUSTED | n/a | Q1 fail — no connection (used in **both** trios) |
 
-**`wallets.yaml`** — the configuration entry per wallet: `id` · `name` · `vendor` · `icon` (stored in the repo under `wallets/<id>/`) · **`formats`** (the credential formats the wallet passed the loop with: `anoncreds` and/or `openid4vc-sdjwt`) · `download` (direct APK of the modified build, or the store link when `verana_builtin: true`) · `playstore`/`appstore`/`web` · `repo`/`license`/`contact`/`notes` · optional `captures` (screen captures) and `videos` (recordings, with a note disclosing editing/speed).
+**`personal-wallets.yaml`** — the configuration entry per wallet: `id` · `name` · `vendor` · `icon` (stored in the repo under `wallets/<id>/`) · **`formats`** (the credential formats the wallet passed the loop with: `anoncreds` and/or `openid4vc-sdjwt`) · `download` (direct APK of the modified build, or the store link when `verana_builtin: true`) · `playstore`/`appstore`/`web` · `repo`/`license`/`contact`/`notes` · optional `captures` (screen captures) and `videos` (recordings, with a note disclosing editing/speed).
 
 Page sections:
 
