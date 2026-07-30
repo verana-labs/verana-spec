@@ -50,7 +50,7 @@ CTO quote card (Marc Keller, portrait): *"Today, verifiable credential open sour
 
 Checkpoint strip on top (five stations). Sub-steps are unnumbered blocks (story · optional points/DID display · diagram · Reproduce it · Under the hood). Scene stages `3.0` (baseline world) to `3.8`:
 
-- **3.1 Vesta Organization identity** — Marc deploys the **Business Wallet** (vs-agent; generated DID shown, link to vs-agent home; solo "Unverifiable Organization" diagram) · **KYB with an accredited issuer**: Helvetia chosen, KYB over DIDComm, credential received (trio diagram: Vesta / ECS / Helvetia).
+- **3.1 Vesta Organization identity** — Marc deploys the **Business Wallet** (vs-agent; generated DID shown, link to vs-agent home; solo "Unverifiable Organization" diagram) · **KYB with an accredited issuer**: Helvetia chosen; KYB runs out-of-band, and the credential is issued and linked through the Business Wallet's Admin API (trio diagram: Vesta / ECS / Helvetia).
 - **3.2 Service identity** — any service needs a controller organization and an ECS-Service credential; Vesta **self-accredits as ECS-Service issuer** and self-issues (trio diagram + ECS-Service pill + TRUSTED; Vesta earns its green check).
 - **3.3 Vesta employee badges** — Vesta self-accredits as **ECS-Badge issuer** (issuer accreditation only) and issues badges for digital *and* physical access · a **dedicated verifiable login service** (own Business Wallet; ECS-Service issued by the anchor — inheriting ECS-Org from the parent per the Verifiable Trust spec; **VERIFIER ECS-Badge** accreditation, accepted issuer pinned to the anchor DID; Bluetooth/NFC/QR at the door, wallet permitting). Diagram: trio + the login service turning verifiable.
 - **3.4 ISO 9001 credential** — NormaCert, recently accredited in the ISO Certification Ecosystem (demo), instantly issues ISO 9001 to Vesta's Organization DID (identified by its Organization credential; no paperwork). Diagram: + ISO ecosystem + NormaCert.
@@ -67,6 +67,8 @@ One master scene graph, fixed positions; elements declare `appears`/`until`/tone
 ## 5. Deployment inventory — what must exist, per organization
 
 Everything below is a **separate vs-agent (Business Wallet) instance per participant** (decided 2026-07-28; not a reuse of the verana-demos ACME cast). Status: ✔ exists · ◐ partial · ☐ to build.
+
+> **v3 constraint — no DIDComm between verifiable services.** Every org-to-org exchange in this cast (Helvetia's KYB issuance, NormaCert's ISO 9001, Vesta Iberia → Zenith) is provisioned **the way verana-demos does it: CI/CD pipelines drive the vs-agents' Admin APIs** (discover the schema, issue the credential, publish it as a Linked VP, create the permissions). DIDComm is used only between **Personal Wallets and services** (badge issuance, login presentations).
 
 ### Platform (Verana testnet)
 
@@ -86,7 +88,7 @@ Everything below is a **separate vs-agent (Business Wallet) instance per partici
 | Business Wallet (vs-agent) + did:webvh | ☐ | `helvetia-trust.demos.testnet.verana.network` (placeholder in UI) |
 | ECS-Organization (own) + self-issued ECS-Service | ☐ | org credential from a bootstrap/peer issuer |
 | ISSUER accreditation on ECS-Organization (ECS tree) | ☐ | via join or bootstrap grant |
-| KYB issuance flow (DIDComm) | ☐ | issues ECS-Org to Vesta, subsidiaries, Zenith |
+| KYB issuance flow (out-of-band KYB; issuance via Admin API, CI/CD-provisioned) | ☐ | issues ECS-Org to Vesta, subsidiaries, Zenith |
 
 ### ISO Certification Ecosystem (demo) + NormaCert (demo)
 
@@ -96,7 +98,7 @@ Everything below is a **separate vs-agent (Business Wallet) instance per partici
 | Registry operator service (vs-agent, ECS-Org + ECS-Service) | ☐ | ecosystems are verifiable services too |
 | NormaCert vs-agent + ECS-Org + ECS-Service | ☐ | `normacert.demos…` |
 | NormaCert ISSUER accreditation on ISO 9001 | ☐ | under the ISO registry |
-| Instant issuance flow to Vesta's org DID | ☐ | identification by ECS-Org presentation |
+| Instant issuance flow to Vesta's org DID (Admin API, CI/CD) | ☐ | identification by resolving Vesta's DID and its linked ECS-Org |
 
 ### Vesta Appliances — anchor + login service + Repair Network
 
