@@ -1,6 +1,6 @@
 # Verana MCP Server v4 Specification
 
-**Latest Draft:** spec v4-draft1
+**Latest Draft:** spec v4-draft2
 
 ## Abstract
 
@@ -37,6 +37,15 @@ As well as sections marked as non-normative, all authoring guidelines, diagrams,
 The key words MAY, MUST, MUST NOT, OPTIONAL, RECOMMENDED, REQUIRED, SHOULD, and SHOULD NOT in this document are to be interpreted as described in [BCP 14](https://datatracker.ietf.org/doc/html/bcp14) [RFC2119](https://w3c.github.io/vc-data-model/#bib-rfc2119) [RFC8174](https://w3c.github.io/vc-data-model/#bib-rfc8174) when, and only when, they appear in all capitals, as shown here.
 
 Normative requirements are prefixed `[VMS-]` (Verana MCP Server).
+
+### [VMS-PROFILES] Conformance profiles
+
+This specification defines two conformance profiles:
+
+- **Core profile**: the minimum a conformant server MUST implement. It covers the single-principal model, configuration, both transports, MCP client authentication, on-chain authorization, the transaction flow, the `ledger`, `idx`, `cosmos` and `wallet` tool catalogs, resources, prompts, the error model, and logging.
+- **Full profile**: everything in Core plus the sections carrying a *Full profile.* note: the graph surface and its block-progress subscription, the VS Agent surface, fee-grant discovery, mandatory persistent WebSocket connections, the normative metrics catalog, and tracing.
+
+A section without a profile marker belongs to the Core profile. Wherever this specification offers a WebSocket-based and a polling-based way to obtain the same information, both are conformant in the Core profile; the Full profile requires the WebSocket path.
 
 ### [VMS-OVR-DT] Datetime encoding
 
@@ -120,7 +129,7 @@ The following environment variables MUST be provided when the Verana MCP Server 
 |---|---|---|
 | `VERANA_RPC` | REQUIRED | Verana CometBFT RPC endpoint URL (e.g. `https://rpc.testnet.verana.network`). The MCP server uses this for transaction broadcast, gas simulation, Cosmos SDK queries, and the CometBFT WebSocket subscription described in [[VMS-TX-WS]](#vms-tx-ws-persistent-websocket-connections). The endpoint MUST expose both the HTTPS RPC API and the corresponding WebSocket at `/websocket`. |
 | `VERANA_INDEXER` | REQUIRED | Verana indexer REST API URL (e.g. `https://idx.testnet.verana.network`). The MCP server uses this for all `verana.idx.*` tool calls and for the indexer WebSocket subscription described in [[VMS-TX-WS]](#vms-tx-ws-persistent-websocket-connections). The endpoint MUST conform to [Indexer v4](../verana-indexer/spec.md). |
-| `VERANA_GRAPH` | REQUIRED | Verana Graph origin URL (e.g. `https://graph.testnet.verana.network`). The MCP server uses this as the base origin for all `verana.graph.*` tool calls (resolved against the REST traversal endpoint of [[TG-QRY-5]](../verana-graph/spec.md#traversal-rest-binding) and the faceted-search REST endpoint) and for the graph block-progress WebSocket subscription described in [[VMS-TX-WS]](#vms-tx-ws-persistent-websocket-connections). The endpoint MUST conform to [Verana Graph](../verana-graph/spec.md). |
+| `VERANA_GRAPH` | OPTIONAL (Full profile) | Verana Graph origin URL (e.g. `https://graph.testnet.verana.network`). The MCP server uses this as the base origin for all `verana.graph.*` tool calls (resolved against the REST traversal endpoint of [[TG-QRY-5]](../verana-graph/spec.md#traversal-rest-binding) and the faceted-search REST endpoint) and for the graph block-progress WebSocket subscription described in [[VMS-TX-WS]](#vms-tx-ws-persistent-websocket-connections). The endpoint MUST conform to [Verana Graph](../verana-graph/spec.md). When unset, the server MUST NOT advertise `verana.graph.*` tools. |
 | `VERANA_CHAIN_ID` | OPTIONAL | Cosmos chain id. If unset, the MCP server SHOULD discover it via the RPC's `/status` endpoint at startup. |
 | `VERANA_DENOM` | OPTIONAL | Default fee denom (e.g. `uvna`). Default: as advertised by the chain. |
 | `VERANA_GAS_PRICE` | OPTIONAL | Default gas price (e.g. `0.025uvna`). Default: chain minimum. |
@@ -172,13 +181,15 @@ The MCP server's authority on the Verana ledger is bounded entirely by the [`Ope
 
 [VMS-AUTH-CHAIN-2] For every delegable Msg tool invocation, the MCP server MUST check, before signing or broadcasting, that the corresponding `msg_type` is present in the cached authorization set. If it is not, the tool MUST fail fast with a `NOT_AUTHORIZED` error and MUST NOT submit a transaction.
 
-[VMS-AUTH-CHAIN-3] Each delegable Msg is built with `corporation` set to the bound Corporation's `policy_address` and `operator` set to the operator account's address. Signing and broadcasting follow the chain implementation's required pattern for delegated execution (typically wrapping the inner Msg in `cosmos.authz.v1beta1.MsgExec` signed by the operator alone). The resulting on-chain checks performed by the chain are described by [[AUTHZ-CHECK]](https://verana-labs.github.io/verifiable-trust-vpr-spec/#authz-check-common-authorization-and-fee-grant-precondition-checks); the MCP server itself does not duplicate those checks beyond [VMS-AUTH-CHAIN-2].
+[VMS-AUTH-CHAIN-3] Each delegable Msg is built with `corporation` set to the bound Corporation's `policy_address` and `operator` set to the operator account's address. The `operator` field is the message's only signer (`cosmos.msg.v1.signer`), so the transaction is signed directly by the operator key; no `cosmos.authz` grant and no `MsgExec` wrapping are involved. The corporation's consent is proven by the stored `OperatorAuthorization`, which the chain checks inside the message handler at execution time per [[AUTHZ-CHECK]](https://verana-labs.github.io/verifiable-trust-vpr-spec/#authz-check-common-authorization-and-fee-grant-precondition-checks); the MCP server itself does not duplicate those checks beyond [VMS-AUTH-CHAIN-2].
 
-[VMS-AUTH-CHAIN-4] If a `FeeGrant` from the bound Corporation to the operator account exists for the Msg type at hand, the MCP server SHOULD broadcast the transaction with the fee grant set as the fee payer, so that gas is paid by the bound Corporation. Discovery follows [[AUTHZ-CHECK-2]](https://verana-labs.github.io/verifiable-trust-vpr-spec/#authz-check-2-fee-grant-checks).
+[VMS-AUTH-CHAIN-4] (Full profile) If a `FeeGrant` from the bound Corporation to the operator account exists for the Msg type at hand, the MCP server SHOULD broadcast the transaction with the fee grant set as the fee payer, so that gas is paid by the bound Corporation. Discovery follows [[AUTHZ-CHECK-2]](https://verana-labs.github.io/verifiable-trust-vpr-spec/#authz-check-2-fee-grant-checks). In the Core profile the operator account pays its own fees and this section does not apply.
 
 [VMS-AUTH-CHAIN-5] The MCP server MUST refuse any tool invocation whose target Corporation is not the bound one, even when the operator account holds an applicable `OperatorAuthorization` from another Corporation. This is a defensive boundary against accidental cross-Corporation action.
 
 ### [VMS-AUTH-VSA] VS Agent Admin API Authentication
+
+*Full profile.*
 
 For every `verana.vsa.*` tool invocation, the MCP server addresses one specific VS Agent identified by its DID, authenticates as the operator account, and forwards the call.
 
@@ -186,7 +197,7 @@ For every `verana.vsa.*` tool invocation, the MCP server addresses one specific 
 
 [VMS-AUTH-VSA-2] If the agent's DID Document does not expose a `VsAgentAdminAPI` service entry, the tool MUST fail fast with a `VSA_ADMIN_URL_NOT_FOUND` error.
 
-[VMS-AUTH-VSA-3] Authentication to the Admin API uses an [ADR-036 signed message](https://docs.cosmos.network/main/build/architecture/adr-036-arbitrary-signature) challenge issued by the operator account, per the VS Agent's [Authentication](../vs-agent/spec.md#authentication-and-authorization) section. The MCP server MUST NOT cache long-lived bearer tokens issued by the agent across distinct tool invocations beyond their server-declared expiry.
+[VMS-AUTH-VSA-3] Authentication to the Admin API uses the account challenge/response protocol defined in the VS Agent specification's [Authentication](../vs-agent/spec.md#authentication-and-authorization) section, signed by the operator account. The MCP server MUST NOT cache bearer tokens issued by the agent across distinct tool invocations beyond their server-declared expiry.
 
 [VMS-AUTH-VSA-4] The MCP server MUST refuse to address any VS Agent whose containing `VSOperatorAuthorization` is not owned by the bound Corporation, regardless of whether the agent's DID Document is reachable.
 
@@ -196,7 +207,7 @@ This section specifies the contract by which delegable Msg tools build, sign, br
 
 ### [VMS-TX-WS] Persistent WebSocket Connections
 
-The MCP server MUST maintain three long-lived WebSocket connections at all times:
+In the Full profile, the MCP server MUST maintain three long-lived WebSocket connections at all times. In the Core profile, the CometBFT and indexer connections are RECOMMENDED but MAY be replaced by the polling alternatives named in [[VMS-TX-BCAST]](#vms-tx-bcast-broadcast-and-chain-confirmation) and [[VMS-TX-BARRIER]](#vms-tx-barrier-indexer-read-after-write-barrier); the graph connection applies only when `VERANA_GRAPH` is configured.
 
 - **CometBFT RPC WebSocket** — `wss://VERANA_RPC/websocket`. Used to subscribe, per transaction, to `tm.event='Tx' AND tx.hash='<HEX_HASH>'` filters and receive the corresponding `tx_result` event when the tx is included in a block.
 - **Indexer WebSocket** — `WS VERANA_INDEXER/v4/indexer/subscribe` per [`IDX-INDEXER-SUB-1`](../verana-indexer/spec.md#idx-indexer-sub-1-subscribe-indexer-events). After the server's `ready` message, the MCP server sends `{ "action": "subscribe", "corporationId": bound_corp.id }`, where `bound_corp.id` is the stable numeric `id` of the bound `Corporation` resolved at startup. The corporation-scoped subscription delivers events for the Corporation itself, every `Ecosystem` and `Participant` it owns (transitively including their embedded sub-entities), and every `Participant` whose `validator_participant_id` resolves to a Participant owned by the bound Corporation — without any client-side DID enumeration or churn handling. Multiple MCP-server instances bound to the same Corporation therefore observe the same stream. Used as the primary signal for indexer catch-up (read-after-write barrier).
@@ -212,9 +223,9 @@ All three connections MUST be re-established on failure with exponential backoff
 - `operator` set to the operator account's bech32 address;
 - all tool-specific fields populated from the tool's input arguments.
 
-[VMS-TX-BUILD-2] The MCP server MUST sign the resulting transaction using the operator account's private key, following the chain implementation's required signing pattern for delegated execution. For chains that implement delegated execution through `cosmos.authz.v1beta1.MsgExec`, the inner Msg is wrapped in a `MsgExec` whose `grantee` is the operator account, the outer transaction is signed by the operator alone, and the chain's antehandler enforces [[AUTHZ-CHECK-1]](https://verana-labs.github.io/verifiable-trust-vpr-spec/#authz-check-1-operator-authorization-checks) on the inner Msg.
+[VMS-TX-BUILD-2] The MCP server MUST sign the transaction directly with the operator account's private key. Delegable Msgs declare `operator` as their only signer; the chain enforces [[AUTHZ-CHECK-1]](https://verana-labs.github.io/verifiable-trust-vpr-spec/#authz-check-1-operator-authorization-checks) inside the message handler at execution time, so no `cosmos.authz` grant and no `MsgExec` wrapping are required or useful. Two Msgs deviate from the common field layout: `MsgCreateCorporation` is open to any account and signs with its `signer` field, and `MsgStoreDigest` carries the corporation policy address in a field named `authority`.
 
-[VMS-TX-BUILD-3] Fee grant. Before signing, the MCP server SHOULD determine whether the bound `Corporation` has granted the operator account a fee allowance covering the current inner Msg's type, per the VPR [`FeeGrant`](https://verana-labs.github.io/verifiable-trust-vpr-spec/#feegrant) entity and the [[AUTHZ-CHECK-2]](https://verana-labs.github.io/verifiable-trust-vpr-spec/#authz-check-2-fee-grant-checks) precondition. A relevant grant exists iff a `FeeGrant` `fg` satisfies all of:
+[VMS-TX-BUILD-3] Fee grant (Full profile). In the Core profile the operator account pays its own fees and this section does not apply. In the Full profile, before signing, the MCP server SHOULD determine whether the bound `Corporation` has granted the operator account a fee allowance covering the current inner Msg's type, per the VPR [`FeeGrant`](https://verana-labs.github.io/verifiable-trust-vpr-spec/#feegrant) entity and the [[AUTHZ-CHECK-2]](https://verana-labs.github.io/verifiable-trust-vpr-spec/#authz-check-2-fee-grant-checks) precondition. A relevant grant exists iff a `FeeGrant` `fg` satisfies all of:
 
 - `fg.grantor_corporation_id` equals `bound_corp.id`;
 - `fg.grantee` equals the operator account;
@@ -222,17 +233,17 @@ All three connections MUST be re-established on failure with exponential backoff
 - `fg` is currently active — either `fg.expiration` is unset, or `fg.expiration` is strictly greater than `now()` (after the auto-renewal that `[AUTHZ-CHECK-2]` performs when `fg.period` is set);
 - if `fg.spend_limit` is set, `fg.remaining_spend` covers the estimated transaction fees for the chosen denom.
 
-If a relevant grant exists, the MCP server MUST set the outer transaction's `Tx.AuthInfo.Fee.granter` to `bound_corp.policy_address`. The chain's antehandler then runs `[AUTHZ-CHECK-2]` and deducts the fees from the Corporation's account. No additional Msg is added to the transaction — the Cosmos `granter`-field convention is what triggers the VPR fee-grant check.
+If a relevant grant exists, the MCP server MUST set the transaction's `Tx.AuthInfo.Fee.granter` to `bound_corp.policy_address`. Fee deduction then goes through the standard Cosmos SDK `x/feegrant` allowance that the Delegation module maintains for the grant. No additional Msg is added to the transaction: the Cosmos `granter`-field convention is what triggers the fee-grant path.
 
 If no relevant grant exists, the MCP server MUST leave `Tx.AuthInfo.Fee.granter` unset; the operator account pays the fees from its own balance, subject to `OperatorAuthorization.fee_spend_limit` if set.
 
 **Discovery and freshness.** The MCP server SHOULD maintain its view of the active `FeeGrant` for `(bound_corp.id, operator)` from the indexer event stream, applying [`[MOD-DE-MSG-1]`](https://verana-labs.github.io/verifiable-trust-vpr-spec/#mod-de-msg-1-grant-fee-allowance) Grant Fee Allowance and [`[MOD-DE-MSG-2]`](https://verana-labs.github.io/verifiable-trust-vpr-spec/#mod-de-msg-2-revoke-fee-allowance) Revoke Fee Allowance events delivered by [`IDX-INDEXER-SUB-1`](../verana-indexer/spec.md#idx-indexer-sub-1-subscribe-indexer-events) to refresh the cached value. At startup the MCP server MAY bootstrap the cache from a chain-side query or from the indexer's catch-up endpoint (`/v4/indexer/events?corporation_id=<bound_corp.id>` filtered to the two Delegation-module event types).
 
-**Fallback on antehandler rejection.** If a broadcast with `granter` set fails at the antehandler with an error indicating the grant has expired, has exhausted its `remaining_spend`, or no longer covers the message type, the MCP server SHOULD retry the same transaction exactly once with `Tx.AuthInfo.Fee.granter` unset (so the operator pays from its own balance) before returning a structured error to the caller. The retry MUST NOT recompute `tx_hash` against a different signed-body shape that has already been broadcast: the granter field is part of the signed bytes, so the retry produces a distinct `tx_hash` and a distinct CometBFT subscription per [[VMS-TX-BCAST]](#vms-tx-bcast-broadcast-and-chain-confirmation).
+**Fallback on fee-grant rejection.** If a broadcast with `granter` set fails with an error indicating the grant has expired, has exhausted its allowance, or no longer covers the message type, the MCP server SHOULD retry the same transaction exactly once with `Tx.AuthInfo.Fee.granter` unset (so the operator pays from its own balance) before returning a structured error to the caller. The retry MUST NOT recompute `tx_hash` against a different signed-body shape that has already been broadcast: the granter field is part of the signed bytes, so the retry produces a distinct `tx_hash` and a distinct CometBFT subscription per [[VMS-TX-BCAST]](#vms-tx-bcast-broadcast-and-chain-confirmation).
 
 > The parallel `with_feegrant` path on `ParticipantAuthorizationRecord` (per [[AUTHZ-CHECK-4]](https://verana-labs.github.io/verifiable-trust-vpr-spec/#authz-check-4-vs-operator-fee-grant-checks)) applies only to vs-operator-authorized messages and is out of scope for the MCP server's general-purpose `OperatorAuthorization` flow; vs-operator-authorized broadcasting is the concern of the VS Agent.
 
-[VMS-TX-BUILD-4] Gas estimation SHOULD use the chain's transaction simulation endpoint (`/cosmos/tx/v1beta1/simulate`). The transaction's `gas_wanted` SHOULD be set to `simulated_gas × gas_adjustment` with `gas_adjustment = 1.5` by default. Simulation MUST be performed with `Tx.AuthInfo.Fee.granter` set to the same value the broadcast will use (per [[VMS-TX-BUILD-3]](#vms-tx-build-message-construction-and-signing)) so the simulated gas reflects the fee-grant antehandler path actually exercised on broadcast.
+[VMS-TX-BUILD-4] Gas estimation SHOULD use the chain's transaction simulation endpoint (`/cosmos/tx/v1beta1/simulate`). The transaction's `gas_wanted` SHOULD be set to `simulated_gas × gas_adjustment` with `gas_adjustment = 1.5` by default. Simulation MUST be performed with `Tx.AuthInfo.Fee.granter` set to the same value the broadcast will use (per [[VMS-TX-BUILD-3]](#vms-tx-build-message-construction-and-signing)) so the simulated gas reflects the fee path actually exercised on broadcast.
 
 ### [VMS-TX-BCAST] Broadcast and Chain Confirmation
 
@@ -240,8 +251,8 @@ For each delegable Msg tool invocation, the MCP server MUST execute the followin
 
 1. Compute the canonical `tx_hash` of the signed transaction bytes.
 2. **Pre-arm chain confirmation:** issue a `subscribe` JSON-RPC call on the CometBFT WebSocket with query `tm.event='Tx' AND tx.hash='<tx_hash>'`. This subscription MUST be in place before step 3.
-3. **Broadcast** the transaction with `BROADCAST_MODE_SYNC`. If the immediate response carries a non-zero `code` (mempool rejection — for example, sequence mismatch, insufficient fees, or AUTHZ-CHECK failure detected by the antehandler), unsubscribe and return the error to the MCP client immediately, without further waiting.
-4. **Wait** on the CometBFT WebSocket subscription for the tx event. The event payload includes `result.code`, `result.gas_used`, `result.gas_wanted`, `result.events`, `result.log`, and `block.height` (renamed `block_height` in the tool response). If no event arrives within `VERANA_TX_TIMEOUT_MS`, return a `BCAST_TIMEOUT` error.
+3. **Broadcast** the transaction with `BROADCAST_MODE_SYNC`. If the immediate response carries a non-zero `code` (mempool rejection — for example, sequence mismatch or insufficient fees), unsubscribe and return the error to the MCP client immediately, without further waiting. Note that AUTHZ-CHECK failures are raised by the message handler and therefore surface at execution (step 5) or during simulation, not at mempool admission.
+4. **Wait** on the CometBFT WebSocket subscription for the tx event. The event payload includes `result.code`, `result.gas_used`, `result.gas_wanted`, `result.events`, `result.log`, and `block.height` (renamed `block_height` in the tool response). In the Core profile the server MAY instead poll the RPC `tx` endpoint for the hash at block-interval cadence. If no event or poll result arrives within `VERANA_TX_TIMEOUT_MS`, return a `BCAST_TIMEOUT` error.
 5. **If `result.code != 0`** (chain rejected the tx during execution), return the error to the MCP client. No indexer barrier is required: nothing was committed.
 6. **If `result.code == 0`**, proceed to [[VMS-TX-BARRIER]](#vms-tx-barrier-indexer-read-after-write-barrier).
 
@@ -249,14 +260,14 @@ For each delegable Msg tool invocation, the MCP server MUST execute the followin
 
 After chain confirmation at block height `B`, the MCP server MUST guarantee that any subsequent `verana.idx.*` or `verana.graph.*` tool call issued by the same MCP client through the same MCP session reflects state at height `B` or later, before returning to the MCP client.
 
-The barrier is **WebSocket-only**, satisfied as soon as the MCP server's tracked **indexer height cursor** is `>= B`. The cursor is maintained from the running indexer WS subscription (see [[VMS-TX-WS]](#vms-tx-ws-persistent-websocket-connections) and [`IDX-INDEXER-SUB-1`](../verana-indexer/spec.md#idx-indexer-sub-1-subscribe-indexer-events)) via two signals:
+The barrier is satisfied as soon as the MCP server's tracked **indexer height cursor** is `>= B`. In the Full profile the cursor MUST be maintained from the running indexer WS subscription (see [[VMS-TX-WS]](#vms-tx-ws-persistent-websocket-connections) and [`IDX-INDEXER-SUB-1`](../verana-indexer/spec.md#idx-indexer-sub-1-subscribe-indexer-events)) via two signals:
 
 - Each `block` envelope received advances the cursor to `envelope.block`. Block envelopes are emitted for **every** processed block — with empty `events[]` acting as heartbeat when no event in the bound Corporation's scope occurred at that block — so the cursor advances at the chain's block-time cadence independent of the transaction's content.
 - Each `ready` message received on (re)connect advances the cursor to `ready.block - 1` (because `ready.block` is the *next* block the server will deliver, so the indexer has already finished `ready.block - 1`).
 
 The barrier completes the first moment the cursor is `>= B`. In typical operation the cursor has already passed `B` by the time the CometBFT `tx_result` event arrives, and the barrier completes with no wait.
 
-While the indexer WebSocket is disconnected the MCP server MUST reconnect with the exponential backoff specified in [[VMS-TX-WS]](#vms-tx-ws-persistent-websocket-connections); each successful reconnect's `ready` message refreshes the cursor and may by itself satisfy the barrier. **Polling is not an alternative**: there is no HTTP fallback path, the WebSocket is the sole signal, and ledger Msg tools simply wait on the reconnect.
+While the indexer WebSocket is disconnected the MCP server MUST reconnect with the exponential backoff specified in [[VMS-TX-WS]](#vms-tx-ws-persistent-websocket-connections); each successful reconnect's `ready` message refreshes the cursor and may by itself satisfy the barrier. In the Core profile the server MAY instead advance the cursor by polling [`IDX-INDEXER-QRY-1`](../verana-indexer/spec.md#idx-indexer-qry-1-get-block-height) (`GET /v4/indexer/block-height`) at block-interval cadence; the guarantee is identical.
 
 If `VERANA_INDEXER_TIMEOUT_MS` elapses without the cursor reaching `B`, the MCP server MUST return the tool's normal success response with the additional field `indexer_synced: false`, indicating that the chain transaction itself succeeded but the read-after-write guarantee is degraded. It MUST NOT raise an error in this case: the chain has already committed the tx and degrading silently is preferable to misleading the LLM into believing the write failed.
 
@@ -295,7 +306,7 @@ When the Verana MCP Server container starts, it MUST execute the following steps
 3. **Connect to chain RPC.** Issue a `/status` call against `VERANA_RPC` to validate connectivity and resolve `chain_id` (overrides `VERANA_CHAIN_ID` if both are present and consistent; aborts on mismatch). Fetch the operator account's `account_number` and current `sequence` and cache them.
 4. **Resolve bound Corporation.** Call [`IDX-CO-QRY-1` Get Corporation](../verana-indexer/spec.md#idx-co-qry-1-get-corporation) with `id = VERANA_CORPORATION` against `VERANA_INDEXER`. Cache `policy_address`, `did`, `active_version`, and `language`. If no Corporation exists with that id, exit immediately with a clear diagnostic.
 5. **Resolve operator capabilities.** Call [`IDX-DE-QRY-1` List Operator Authorizations](../verana-indexer/spec.md#idx-de-qry-1-list-operator-authorizations) with `corporation_id = VERANA_CORPORATION` and `operator = own_address`. If no authorization exists, log a `warn`-level message ("MCP server is unauthorised: every delegable Msg tool will fail until an `OperatorAuthorization` is granted") but continue; read-only tools (indexer, graph, Cosmos read-only) remain available.
-6. **Open persistent WebSocket connections** per [[VMS-TX-WS]](#vms-tx-ws-persistent-websocket-connections). All three connections (CometBFT RPC, indexer, graph block-progress) MUST reach the `connected` state before proceeding; if any of them fails after the bootstrap retry budget, exit with a non-zero status code.
+6. **Open persistent WebSocket connections** per [[VMS-TX-WS]](#vms-tx-ws-persistent-websocket-connections). In the Full profile, all configured connections MUST reach the `connected` state before proceeding; if any of them fails after the bootstrap retry budget, exit with a non-zero status code. In the Core profile, WebSocket connections are attempted when used but their absence MUST NOT block bootstrap. Bootstrap MUST NOT depend on services that are not configured (e.g. the graph when `VERANA_GRAPH` is unset).
 7. **Start MCP transport.** Per `MCP_TRANSPORT`, start either the Streamable HTTP listener on `MCP_HTTP_BIND:MCP_HTTP_PORT` or the stdio transport on `stdin`/`stdout`. Once the transport accepts its first MCP `initialize` request, the server is in the `serving` state.
 
 After bootstrap, the MCP server SHOULD continuously refresh its caches (bound Corporation, operator capabilities, enumerated VS Agents) on indexer WebSocket events whose `payload.entity_type` indicates a relevant change.
@@ -338,6 +349,8 @@ This section catalogs every MCP tool exposed by the Verana MCP Server. Tools are
 - `<module>` is the upstream module identifier (e.g. `co`, `es`, `gf`, `cs`, `pp`, `td`, `de`, `di` for ledger and indexer surfaces; the entity surface for graph; the agent module for VS Agent; the Cosmos module for cosmos);
 - `<verb>` is camelCase and reflects the upstream method name without redundant prefixes (e.g. `createCredentialSchema`, not `csCreateCredentialSchema`).
 
+Note on naming: the `es` surface maps to the chain module `verana.ec.v1`, and `co.createNewCorporation` maps to the chain Msg `MsgCreateCorporation`. Tool names follow this specification; proto type URLs follow the chain.
+
 [VMS-TOOLS-NAMING-2] The set of tool names exposed by a conformant MCP server is exactly the union of the catalogs in [[VMS-TOOLS-LEDGER]](#vms-tools-ledger-ledger-tools-vpr-msgs), [[VMS-TOOLS-IDX]](#vms-tools-idx-indexer-tools), [[VMS-TOOLS-GRAPH]](#vms-tools-graph-graph-tools), [[VMS-TOOLS-VSA]](#vms-tools-vsa-vs-agent-tools), [[VMS-TOOLS-COSMOS]](#vms-tools-cosmos-cosmos-read-only-tools), and [[VMS-TOOLS-WALLET]](#vms-tools-wallet-wallet-tools), filtered by the operator-capability gate of [[VMS-TOOLS-ENV-FILTER]](#vms-tools-env-filter-tool-availability).
 
 ### [VMS-TOOLS-ENV] Request and Response Envelope
@@ -362,9 +375,9 @@ This section catalogs every MCP tool exposed by the Verana MCP Server. Tools are
 
 [VMS-TOOLS-ENV-FILTER-1] The MCP server MUST advertise (via MCP `tools/list`) only those `verana.ledger.*` tools whose `msg_type` is present in the cached set of `OperatorAuthorization.msg_types` resolved per [[VMS-AUTH-CHAIN-1]](#vms-auth-chain-on-chain-authorization). Tools for non-authorized Msgs MUST NOT appear in `tools/list`. The server MUST refresh the advertised set on every `OperatorAuthorization` indexer event affecting the operator account.
 
-[VMS-TOOLS-ENV-FILTER-2] Read-only tools (`verana.idx.*`, `verana.graph.*`, `verana.cosmos.*`, `verana.wallet.*`) MUST always be advertised: they require no on-chain authorization.
+[VMS-TOOLS-ENV-FILTER-2] Read-only tools (`verana.idx.*`, `verana.cosmos.*`, `verana.wallet.*`) MUST always be advertised: they require no on-chain authorization. `verana.graph.*` tools MUST be advertised iff `VERANA_GRAPH` is configured.
 
-[VMS-TOOLS-ENV-FILTER-3] `verana.vsa.*` tools MUST always be advertised. Discovery of the addressable VS Agent set is the caller's responsibility, surfaced through `verana.idx.de.listVSOperatorAuthorizations` and `verana://own/vs-agents` per [[VMS-RES-CATALOG]](#vms-res-catalog-resource-catalog).
+[VMS-TOOLS-ENV-FILTER-3] In the Full profile, `verana.vsa.*` tools MUST always be advertised. Discovery of the addressable VS Agent set is the caller's responsibility, surfaced through `verana.idx.de.listVSOperatorAuthorizations` and `verana://own/vs-agents` per [[VMS-RES-CATALOG]](#vms-res-catalog-resource-catalog).
 
 ### [VMS-TOOLS-LEDGER] Ledger Tools (VPR Msgs)
 
@@ -403,6 +416,9 @@ Msgs marked `module call` (e.g. `MOD-DE-MSG-1` Grant Fee Allowance, `MOD-DE-MSG-
 | `verana.ledger.cs.createCredentialSchema` | [`MOD-CS-MSG-1`](https://verana-labs.github.io/verifiable-trust-vpr-spec/#mod-cs-msg-1-create-new-credential-schema) | Create a new `CredentialSchema` owned by an Ecosystem of the bound Corporation. |
 | `verana.ledger.cs.updateCredentialSchema` | [`MOD-CS-MSG-2`](https://verana-labs.github.io/verifiable-trust-vpr-spec/#mod-cs-msg-2-update-credential-schema) | Update a `CredentialSchema` owned by an Ecosystem of the bound Corporation. |
 | `verana.ledger.cs.archiveCredentialSchema` | [`MOD-CS-MSG-3`](https://verana-labs.github.io/verifiable-trust-vpr-spec/#mod-cs-msg-3-archive-credential-schema) | Archive a `CredentialSchema` owned by an Ecosystem of the bound Corporation. |
+| `verana.ledger.cs.createSchemaAuthorizationPolicy` | [`MOD-CS-MSG-5`](https://verana-labs.github.io/verifiable-trust-vpr-spec/#mod-cs-msg-5-create-schema-authorization-policy) | Create a versioned schema authorization policy document for a schema role. |
+| `verana.ledger.cs.increaseActiveSchemaAuthorizationPolicyVersion` | [`MOD-CS-MSG-6`](https://verana-labs.github.io/verifiable-trust-vpr-spec/#mod-cs-msg-6-increase-active-schema-authorization-policy-version) | Advance the active schema authorization policy version. |
+| `verana.ledger.cs.revokeSchemaAuthorizationPolicy` | [`MOD-CS-MSG-7`](https://verana-labs.github.io/verifiable-trust-vpr-spec/#mod-cs-msg-7-revoke-schema-authorization-policy) | Revoke a specific schema authorization policy version. |
 
 #### [VMS-TOOLS-LEDGER-PP] Participant Module
 
@@ -415,7 +431,7 @@ Msgs marked `module call` (e.g. `MOD-DE-MSG-1` Grant Fee Allowance, `MOD-DE-MSG-
 | `verana.ledger.pp.createRootParticipant` | [`MOD-PP-MSG-7`](https://verana-labs.github.io/verifiable-trust-vpr-spec/#mod-pp-msg-7-create-root-participant) | Bootstrap a permission-tree root Participant for an Ecosystem under the bound Corporation. |
 | `verana.ledger.pp.setParticipantEffectiveUntil` | [`MOD-PP-MSG-8`](https://verana-labs.github.io/verifiable-trust-vpr-spec/#mod-pp-msg-8-set-participant-effective-until) | Update a Participant's `effective_until`. |
 | `verana.ledger.pp.revokeParticipant` | [`MOD-PP-MSG-9`](https://verana-labs.github.io/verifiable-trust-vpr-spec/#mod-pp-msg-9-revoke-participant) | Revoke a Participant. |
-| `verana.ledger.pp.createOrUpdateParticipantSession` | [`MOD-PP-MSG-10`](https://verana-labs.github.io/verifiable-trust-vpr-spec/#mod-pp-msg-10-create-or-update-participant-session) | Create or update a `ParticipantSession`. |
+| `verana.ledger.pp.createOrUpdateParticipantSession` | [`MOD-PP-MSG-10`](https://verana-labs.github.io/verifiable-trust-vpr-spec/#mod-pp-msg-10-create-or-update-participant-session) | Create or update a `ParticipantSession`. Only executable when the operator account is the target Participant's `vs_operator` (AUTHZ-CHECK-3); it cannot be granted through an `OperatorAuthorization`, so this tool is available only to servers whose operator also acts as a VS operator. |
 | `verana.ledger.pp.slashParticipantTrustDeposit` | [`MOD-PP-MSG-12`](https://verana-labs.github.io/verifiable-trust-vpr-spec/#mod-pp-msg-12-slash-participant-trust-deposit) | Slash a Participant's trust deposit. |
 | `verana.ledger.pp.repayParticipantSlashedTrustDeposit` | [`MOD-PP-MSG-13`](https://verana-labs.github.io/verifiable-trust-vpr-spec/#mod-pp-msg-13-repay-participant-slashed-trust-deposit) | Repay a previously-slashed Participant trust deposit. |
 | `verana.ledger.pp.selfCreateParticipant` | [`MOD-PP-MSG-14`](https://verana-labs.github.io/verifiable-trust-vpr-spec/#mod-pp-msg-14-self-create-participant) | OPEN-mode self-creation of a Participant. |
@@ -553,14 +569,16 @@ Indexer tools issue HTTP GET requests against the configured `VERANA_INDEXER` en
 | `verana.idx.vt.resolve` | [`IDX-VT-QRY-1`](../verana-indexer/spec.md#idx-vt-qry-1-resolve) | `POST /v4/verifiable-trust/resolve` — full trust resolution for a DID. |
 | `verana.idx.vt.listChanges` | [`IDX-VT-QRY-2`](../verana-indexer/spec.md#idx-vt-qry-2-list-changes) | `GET /v4/verifiable-trust/changes`. |
 | `verana.idx.vt.listIndexedDids` | [`IDX-VT-QRY-3`](../verana-indexer/spec.md#idx-vt-qry-3-list-indexed-dids) | `GET /v4/verifiable-trust/dids`. |
-| `verana.idx.trqp.authorize` | [`IDX-TRQP-QRY-1`](../verana-indexer/spec.md#idx-trqp-qry-1-trqp-authorize) | `POST /v4/trqp/v2/authorization` — TRQP authorization decision. |
-| `verana.idx.trqp.recognize` | [`IDX-TRQP-QRY-2`](../verana-indexer/spec.md#idx-trqp-qry-2-trqp-recognize) | `POST /v4/trqp/v2/recognition` — TRQP recognition decision. |
+| `verana.idx.trqp.authorize` | [`IDX-TRQP-QRY-1`](../verana-indexer/spec.md#idx-trqp-qry-1-trqp-authorize) | `POST /v4/trqp/v2/authorization` — TRQP authorization decision. Availability depends on the indexer deployment implementing the TRQP routes. |
+| `verana.idx.trqp.recognize` | [`IDX-TRQP-QRY-2`](../verana-indexer/spec.md#idx-trqp-qry-2-trqp-recognize) | `POST /v4/trqp/v2/recognition` — TRQP recognition decision. Availability depends on the indexer deployment implementing the TRQP routes. |
 
 > Indexer WebSocket subscriptions (`IDX-INDEXER-SUB-1`, `IDX-VT-SUB-1`) are NOT exposed as MCP tools. The MCP server consumes `IDX-INDEXER-SUB-1` internally for cache-refresh and the read-after-write barrier per [[VMS-TX-WS]](#vms-tx-ws-persistent-websocket-connections) and [[VMS-TX-BARRIER]](#vms-tx-barrier-indexer-read-after-write-barrier); the resolver-changes subscription `IDX-VT-SUB-1` is not subscribed to by the MCP server. Live event delivery to MCP clients is out of scope for this revision.
 
 ### [VMS-TOOLS-GRAPH] Graph Tools
 
-Graph tools are PUBLIC and require no on-chain authorization. They are proxied to the configured `VERANA_GRAPH` origin as named queries against the REST traversal endpoint of [[TG-QRY-5]](../verana-graph/spec.md#traversal-rest-binding) and the faceted-search REST endpoint; implementations MAY use GraphQL or direct query-language pass-through when the upstream graph implementation exposes them. Each traversal tool maps to one of the canonical query selectors `A1`–`G1` defined by the [Verana Graph specification](../verana-graph/spec.md#graph-traversal-queries); each search tool maps to one of the faceted-search surfaces.
+*Full profile.*
+
+Graph tools are PUBLIC and require no on-chain authorization. They are advertised only when `VERANA_GRAPH` is configured. They are proxied to the configured `VERANA_GRAPH` origin as named queries against the REST traversal endpoint of [[TG-QRY-5]](../verana-graph/spec.md#traversal-rest-binding) and the faceted-search REST endpoint; implementations MAY use GraphQL or direct query-language pass-through when the upstream graph implementation exposes them. Each traversal tool maps to one of the canonical query selectors `A1`–`G1` defined by the [Verana Graph specification](../verana-graph/spec.md#graph-traversal-queries); each search tool maps to one of the faceted-search surfaces.
 
 #### [VMS-TOOLS-GRAPH-DID] DID-rooted Traversals
 
@@ -630,7 +648,9 @@ Graph tools are PUBLIC and require no on-chain authorization. They are proxied t
 
 ### [VMS-TOOLS-VSA] VS Agent Tools
 
-VS Agent tools authenticate to the target VS Agent's [Administration API](../vs-agent/spec.md#administration-api) using ADR-036 challenges signed by the operator account, per [[VMS-AUTH-VSA]](#vms-auth-vsa-vs-agent-admin-api-authentication). Every tool MUST accept an `agent_did` argument identifying the target VS Agent.
+*Full profile.*
+
+VS Agent tools authenticate to the target VS Agent's [Administration API](../vs-agent/spec.md#administration-api) using the challenge/response protocol defined in its [Authentication](../vs-agent/spec.md#authentication-and-authorization) section, signed by the operator account, per [[VMS-AUTH-VSA]](#vms-auth-vsa-vs-agent-admin-api-authentication). Every tool MUST accept an `agent_did` argument identifying the target VS Agent.
 
 [VMS-TOOLS-VSA-1] If the supplied `agent_did` is not the `vs_operator` of any `VSOperatorAuthorization` owned by the bound Corporation, the tool MUST fail with `VSA_NOT_AUTHORIZED` and MUST NOT contact the VS Agent.
 
@@ -738,6 +758,20 @@ This catalog deliberately omits resources for arbitrary on-chain entities (corpo
 | `verana://own/authorizations` | The cached set of `OperatorAuthorization` entries granted by the bound Corporation to the operator account: `[{ id, msg_types[], expiration, fee_grant_state }]`. Used by `tools/list` filtering per [[VMS-TOOLS-ENV-FILTER]](#vms-tools-env-filter-tool-availability). | Bootstrap; indexer events on `OperatorAuthorization` entries where `grantee = operator.address`. |
 | `verana://own/vs-agents` | The enumerated set of VS Agents under the bound Corporation: `[{ vs_operator, did, participants[], admin_url, admin_url_resolved_at, unreachable_reason? }]`. The `admin_url` field is resolved lazily per [[VMS-AUTH-VSA-2]](#vms-auth-vsa-vs-agent-admin-api-authentication); failed resolutions populate `unreachable_reason`. | Bootstrap; indexer events on `VSOperatorAuthorization` entries owned by the bound Corporation; periodic re-resolution of `admin_url`. |
 | `verana://own/status` | The MCP server's runtime status: `{ bootstrap_complete, rpc_ws: { connected, last_height, last_event_at }, indexer_ws: { connected, last_height, last_event_at }, graph_ws: { connected, last_height, last_event_at }, capability_cache_refreshed_at, build_version }`. The indexer WS's `last_height` is the indexer height cursor used by [[VMS-TX-BARRIER]](#vms-tx-barrier-indexer-read-after-write-barrier) (advanced from block envelopes and from each reconnect's `ready` message). The graph WS's `last_height` is the graph's `lastAppliedBlock` per [[TG-BPS-3]](../verana-graph/spec.md#block-progress-subscription) (advanced from each `block` notification and from each reconnect's `ready` message); it is informational only. | Continuous; emitted on every WS heartbeat and on every capability-cache refresh. |
+
+## [VMS-PROMPTS] Prompts
+
+The MCP server SHOULD expose [MCP prompts](https://modelcontextprotocol.io/specification/2025-06-18/server/prompts) that guide an LLM client through common multi-step Verana workflows. Prompts are advisory: they change no state by themselves and require no authorization.
+
+[VMS-PROMPTS-1] The RECOMMENDED minimum set is:
+
+| Prompt | Guides the client through |
+|---|---|
+| `onboard-participant` | Start a Participant Onboarding Process, drive validation, set it to validated, and verify the resulting Participant. |
+| `create-ecosystem-with-schema` | Create an Ecosystem, add a governance framework document, activate the version, and create a credential schema. |
+| `diagnose-server` | Use `verana://own/status` and the `verana.wallet.*` tools to troubleshoot connectivity and authorization. |
+
+[VMS-PROMPTS-2] Prompt content MUST reference tools by their canonical names from [[VMS-TOOLS-NAMING]](#vms-tools-naming-naming-convention) and MUST instruct verification reads after state-changing steps.
 
 ## [VMS-ERR] Error Model
 
@@ -859,7 +893,9 @@ The `data.stage` field localises the failure to a specific phase of the tool's e
 
 ### [VMS-OBS-METRICS] Metrics
 
-[VMS-OBS-METRICS-1] A conformant server SHOULD expose Prometheus-formatted metrics at `GET /metrics` on the same port and bind as the MCP HTTP transport (when `MCP_TRANSPORT=streamable-http`) — but on a path NOT subject to the bearer-token gate of [[VMS-AUTH-MCP]](#vms-auth-mcp-mcp-client-authentication), allowing scraping by side-car collectors. When `MCP_TRANSPORT=stdio`, the server SHOULD expose `/metrics` on a separate optional listener controlled by an implementation-defined env var; if no such listener is configured, the server MUST NOT expose metrics over the network.
+*Full profile.*
+
+[VMS-OBS-METRICS-1] A Full-profile server SHOULD expose Prometheus-formatted metrics at `GET /metrics` on the same port and bind as the MCP HTTP transport (when `MCP_TRANSPORT=http`), on a path NOT subject to the bearer-token gate of [[VMS-AUTH-MCP]](#vms-auth-mcp-mcp-client-authentication), allowing scraping by side-car collectors. Core-profile servers MAY omit metrics entirely; logging per [[VMS-OBS-LOG]](#vms-obs-log-logging) is sufficient. When `MCP_TRANSPORT=stdio`, the server SHOULD expose `/metrics` on a separate optional listener controlled by an implementation-defined env var; if no such listener is configured, the server MUST NOT expose metrics over the network.
 
 [VMS-OBS-METRICS-2] The following metric names are normative when metrics are exposed. Implementations MAY define additional metrics; the namespace `verana_mcp_*` is reserved for future spec additions.
 
@@ -873,7 +909,7 @@ The `data.stage` field localises the failure to a specific phase of the tool's e
 | `verana_mcp_tx_broadcast_duration_seconds` | histogram | `msg_type` | Build + sign + broadcast + confirmation duration. |
 | `verana_mcp_barrier_lag_blocks` | histogram | — | Distribution of `indexer_height − tx_height` at the moment the barrier converges. |
 | `verana_mcp_barrier_outcome_total` | counter | `outcome` | `outcome` ∈ `{ converged, timeout }`. |
-| `verana_mcp_ws_connected` | gauge | `endpoint` | `1` if the named WS (`endpoint` ∈ `rpc`, `indexer`) is connected, `0` otherwise. |
+| `verana_mcp_ws_connected` | gauge | `endpoint` | `1` if the named WS (`endpoint` ∈ `rpc`, `indexer`, `graph`) is connected, `0` otherwise. |
 | `verana_mcp_ws_reconnects_total` | counter | `endpoint` | Cumulative WS reconnect count. |
 | `verana_mcp_ws_last_block_height` | gauge | `endpoint` | Last block height observed on each WS. |
 | `verana_mcp_authz_cache_size` | gauge | — | Number of `OperatorAuthorization` entries in the local cache. |
@@ -883,6 +919,8 @@ The `data.stage` field localises the failure to a specific phase of the tool's e
 | `verana_mcp_upstream_request_duration_seconds` | histogram | `kind` | |
 
 ### [VMS-OBS-TRACE] Tracing
+
+*Full profile.*
 
 [VMS-OBS-TRACE-1] Implementations MAY emit OpenTelemetry traces. When tracing is enabled, every MCP request MUST start a root span named `mcp.<method>` (e.g. `mcp.tools/call`); every tool invocation inside MUST create a child span named after the canonical tool name; every upstream HTTP call MUST create a grandchild span with the standard `http.*` semantic attributes plus `verana.upstream.kind` ∈ `{ rpc, indexer, graph, vs-agent }`.
 
