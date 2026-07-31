@@ -40,7 +40,7 @@ Brand header (logo, tagline, meta chips, ISO 9001 seal since 2003) · numbered "
 
 ### Chapter 2 — The solution: become verifiable
 
-CTO quote card (Marc Keller, portrait): *"Today, verifiable credential open source software exists for user and cloud wallets, and there is Verana, a public trust infrastructure. We have everything we need to make Vesta and its partner network a network of verifiable organizations, providing verifiable services."* Then:
+CTO quote card (Marc Keller, portrait): *"Today, verifiable credential open source software exists for personal and business wallets, and there is Verana, a public trust infrastructure. We have everything we need to make Vesta and its partner network a network of verifiable organizations, providing verifiable services."* Then:
 - **What Marc needs** — five-checkpoint checklist; each chip deep-links to the matching journey subsection.
 - **Let's build on Verana** — the three verana.io pillars + facts strip (public, decentralized; any ecosystem self-creates; any organization joins or creates its own).
 - **The ecosystems Vesta wants to join** — Verana ECS Ecosystem (recognized KYB, certified Organization credential) and ISO Certification (demo); each card: HOLDER role badge, did:webvh (placeholder), "Open in Verana" link.

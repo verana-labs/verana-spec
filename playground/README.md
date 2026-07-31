@@ -6,11 +6,11 @@
 The Verana Playground is an interactive website for:
 
 1. **Understanding and testing the Verana concepts** — Sovereign Ecosystems, Verifiable Identity, and Discovery — through the step-by-step **Verana Explained** story (watch-only for organization-side steps, hands-on for end-user steps), running against the Verana testnet.
-2. **Showcasing integrations of Verana in third-party wallets** — open-source **user wallets** and **cloud wallets** — where every integration follows the same pattern, gets an identical per-wallet playground page, and presents trust information the same way.
+2. **Showcasing integrations of Verana in third-party wallets** — open-source **personal wallets** and **business wallets** — where every integration follows the same pattern, gets an identical per-wallet playground page, and presents trust information the same way.
 
 **Protocol version:** v4 is not fully published yet — the playground targets **v3**, which is what runs on testnet today. These documents keep v4 terminology where concepts are equivalent (v3 **Trust Registry** = v4 *Ecosystem*; v3 **Permission** = v4 *Participant*). Sources of truth for now: [Verifiable Trust spec v3](https://verana-labs.github.io/verifiable-trust-spec/index-v3.html) and [VPR spec v3](https://verana-labs.github.io/verifiable-trust-vpr-spec/index-v3.html); v4 drafts: [VT v4](https://verana-labs.github.io/verifiable-trust-spec/versions/v4/) · [VPR v4](https://verana-labs.github.io/verifiable-trust-vpr-spec/versions/v4/).
 
-> **ECS-Badge on v3:** created — the schema has been **added to the ECS ecosystem**. Badge flows run over **AnonCreds / DIDComm** for now, with **Hologram Messaging as the initial user wallet**; OpenID4VC/OpenID4VP issuance & presentation will be enabled when available. (ECS-Badge is the **story** credential of `/usecases/vesta`; the user-wallet playground pages use the **DemoCredential** of the Playground Ecosystem (demo) — see [the reference scenario](#the-reference-scenario).)
+> **ECS-Badge on v3:** created — the schema has been **added to the ECS ecosystem**. Badge flows run over **AnonCreds / DIDComm** for now, with **Hologram Messaging as the initial personal wallet**; OpenID4VC/OpenID4VP issuance & presentation will be enabled when available. (ECS-Badge is the **story** credential of `/usecases/vesta`; the personal-wallet playground pages use the **DemoCredential** of the Playground Ecosystem (demo) — see [the reference scenario](#the-reference-scenario).)
 
 ## Documents
 
@@ -18,15 +18,15 @@ The Verana Playground is an interactive website for:
 | --- | --- |
 | [`spec.md`](./spec.md) | The playground website specification: what-is-Verana intro, Verana Explained step cards, per-wallet playground templates (user + cloud), shared machinery, milestones. |
 | [`verana-explained/spec.md`](./verana-explained/spec.md) | *Verana Explained* — the narrative on-ramp: the **Vesta Appliances** story in six chapters — the business & its impostor problem (1) · why Verana (2) · choosing ecosystems (3) · joining in practice (4) · the Vesta Repair Network, Zenith ✓ / Umbra ✗ (5) · being found (6, pending). Story / watch / hands-on format. |
-| [`guidelines/user-wallet-integration.md`](./guidelines/user-wallet-integration.md) | Integration guideline for **user wallets** (mobile / web wallets operated by a person). Includes the normative **Proof-of-Trust presentation pattern** so every wallet shows trust the same way. |
-| [`guidelines/cloud-wallet-integration.md`](./guidelines/cloud-wallet-integration.md) | Integration guideline for **cloud wallets** (organizational / enterprise wallets and agent frameworks hosting services). |
+| [`guidelines/personal-wallet-integration.md`](./guidelines/personal-wallet-integration.md) | Integration guideline for **personal wallets** (mobile / web wallets operated by a person). Includes the normative **Proof-of-Trust presentation pattern** so every wallet shows trust the same way. |
+| [`guidelines/business-wallet-integration.md`](./guidelines/business-wallet-integration.md) | Integration guideline for **business wallets** (organizational / enterprise wallets and agent frameworks hosting services). |
 | [`submission/README.md`](./submission/README.md) | Publication kit: FIDES use-case dossiers (Verana + 2060), catalog-entry checklist, collaborator roster, campaign calendar, UNFOLD. |
 
 ## The reference scenario
 
-All **user-wallet** integrations are validated against one shared cast — the **Playground demo cast** — and its six **DemoCredential scenarios**. Every user-wallet playground page runs the same logic against the same services; only the wallet changes.
+All **personal-wallet** integrations are validated against one shared cast — the **Playground demo cast** — and its six **DemoCredential scenarios**. Every personal-wallet playground page runs the same logic against the same services; only the wallet changes.
 
-**The cast.** The **Playground Organization (demo)** — a corporation created on testnet for all demo services of the user-wallet and cloud-wallet playgrounds — controls an anchor Verifiable Service, **Playground Demo**, which owns the **Playground Ecosystem (demo)** and defines its single **DemoCredential** schema (minimal claims: `name`, `demoId`; issued instantly, no evidence step). The demo services run `veranalabs/vs-agent:v1.12.0-oidc4vc.2` and serve the DemoCredential over **both rails**: AnonCreds/DIDComm (Track N — Hologram Messaging) and OpenID4VCI/OpenID4VP (Track B wallets). The ecosystem is deliberately reusable by other playground sections. Five standing demo services run against it:
+**The cast.** The **Playground Organization (demo)** — a corporation created on testnet for all demo services of the personal-wallet and business-wallet playgrounds — controls an anchor Verifiable Service, **Playground Demo**, which owns the **Playground Ecosystem (demo)** and defines its single **DemoCredential** schema (minimal claims: `name`, `demoId`; issued instantly, no evidence step). The demo services run `veranalabs/vs-agent:v1.12.0-oidc4vc.2` and serve the DemoCredential over **both rails**: AnonCreds/DIDComm (Track N — Hologram Messaging) and OpenID4VCI/OpenID4VP (Track B wallets). The ecosystem is deliberately reusable by other playground sections. Five standing demo services run against it:
 
 | Service (slug) | Trust state (Q1) | DemoCredential accreditation |
 | --- | --- | --- |
@@ -36,9 +36,9 @@ All **user-wallet** integrations are validated against one shared cast — the *
 | `demo-verifier-unaccredited` | TRUSTED | none |
 | `demo-untrusted` | UNTRUSTED | n/a — no ECS credentials; used in both the issuer and verifier trios |
 
-**The loop.** A person installs the wallet's **modified APK** (the Verana-integrated, testnet-configured build, downloaded from the wallet's playground page) — or its **standard build** when Verana support is built in (descriptor `verana_builtin: true`, e.g. Hologram Messaging) — then runs the six scenarios: the three issuer demos (Q2 pass · Q2 fail · Q1 fail) and the three verifier demos (Q3 pass · Q3 fail · Q1 fail), presenting the DemoCredential received from the accredited issuer. The wallet renders each verdict per the [user-wallet guideline](./guidelines/user-wallet-integration.md); the recorded run is the [UW-TEST] acceptance evidence and the source of the page's screen captures.
+**The loop.** A person installs the wallet's **modified APK** (the Verana-integrated, testnet-configured build, downloaded from the wallet's playground page) — or its **standard build** when Verana support is built in (descriptor `verana_builtin: true`, e.g. Hologram Messaging) — then runs the six scenarios: the three issuer demos (Q2 pass · Q2 fail · Q1 fail) and the three verifier demos (Q3 pass · Q3 fail · Q1 fail), presenting the DemoCredential received from the accredited issuer. The wallet renders each verdict per the [personal-wallet guideline](./guidelines/personal-wallet-integration.md); the recorded run is the [PW-TEST] acceptance evidence and the source of the page's screen captures.
 
-> **Cloud-wallet note:** the cloud-wallet acceptance loop ([CW-TEST]) still references the earlier *ISO Certification* scenario until the §5 template is aligned with the shared cast (see [spec §5](./spec.md#5-the-cloud-wallet-playground-identical-template)). Where ISO-style demo credentials appear, public copy MUST describe them as "ISO 9001-**style** quality-management credential (demo)" and MUST NOT imply any real certification.
+> **Business-wallet note:** the business-wallet acceptance loop ([BW-TEST]) still references the earlier *ISO Certification* scenario until the §5 template is aligned with the shared cast (see [spec §5](./spec.md#5-the-business-wallet-playground-identical-template)). Where ISO-style demo credentials appear, public copy MUST describe them as "ISO 9001-**style** quality-management credential (demo)" and MUST NOT imply any real certification.
 
 ## Shared reference
 
@@ -122,24 +122,28 @@ The resolver also exposes a **ToIP TRQP** interface for trust-registry queries. 
 
 ### Getting listed on the playground
 
-Each integration appears in the Home wallet lists and gets its **own playground page** (identical template — [spec §4/§5](./spec.md)), all generated from a machine-readable descriptor submitted by PR to [`verana-labs/playground`](https://github.com/verana-labs/playground):
+**Personal wallets** all share the single playground page ([spec §4](./spec.md)), generated from **`personal-wallets.yaml`** in [`verana-labs/playground`](https://github.com/verana-labs/playground). To get listed: test the six DemoCredential scenarios with **AnonCreds and/or OpenID4VC SD-JWT** (see the [personal-wallet guideline](./guidelines/personal-wallet-integration.md), [PW-TEST]), then open a PR containing your entry, your icon under `wallets/<id>/`, and optional screen captures and videos:
 
 ```yaml
-# integration.yaml
-name: Paradym Wallet
-organization: Animo Solutions
-kind: user-wallet          # user-wallet | cloud-wallet
-repo: https://github.com/animo/paradym-wallet
-license: Apache-2.0        # OSI-approved license required
-track: bridge              # native | bridge (+ sidecar for cloud)
-scenarios: [iso-certification-loop]
-demo_video: https://…
-download: https://…/paradym.apk   # mobile user wallet: direct APK download; cloud wallet: URL of the hosted instance / product page
-contact: …
-logo: ./logo.svg
+# personal-wallets.yaml — one entry per wallet
+- id: your-wallet
+  name: Your Wallet
+  vendor: Your Org
+  icon: ./your-wallet/logo.webp     # stored in the repo (wallets/<id>/)
+  formats: [anoncreds]              # anoncreds | openid4vc-sdjwt (tested)
+  download: https://…               # direct APK (modified build) — or the
+  verana_builtin: false             #   store link when Verana is built in
+  repo: https://github.com/your-org/your-wallet
+  license: Apache-2.0               # OSI-approved license required
+  captures:                         # optional: up to one per demo scenario
+    issue-accredited: { src: ./your-wallet/captures/issue-ok.webp, caption: "…" }
+  video:                            # optional single video; disclose editing/speed
+    { src: ./your-wallet/demo.mp4, note: "Real device. Silent." }
 ```
 
-Requirements: the product is **open source** (OSI license), the acceptance scenario passes (see each guideline's test section), the wallet is **obtainable from its tile** — a mobile user wallet MUST provide a direct **APK download link** (store links MAY complement it), a cloud wallet MUST provide a **URL** — and the descriptor + a screen recording are submitted by PR. Listed organizations may use the **"Runs on the Verana open trust layer"** badge.
+**Business wallets** keep the per-wallet descriptor: `integrations/<slug>/integration.yaml` + logo, submitted by PR; each gets its own playground page ([spec §5](./spec.md)).
+
+Requirements for both: the product is **open source** (OSI license) and the wallet is **obtainable from its entry** — a mobile personal wallet MUST provide a direct **APK download link** unless its standard build carries the integration (`verana_builtin`), a business wallet MUST provide a **URL**. Listed organizations may use the **"Runs on the Verana open trust layer"** badge.
 
 ## License
 
