@@ -22,7 +22,7 @@ The playground's flagship use case: **learn with Vesta how to make an organizati
 | **ISO Certification Ecosystem (demo)** · **NormaCert (demo)** | Demo certification registry and its accredited issuer; NormaCert certified Vesta since 2003 and issues the ISO 9001 (demo) credential with no re-identification. |
 | **Vesta Repair Network** · **Vesta Iberia / Vesta Nordics (demo)** | Vesta's own ecosystem (issuance governed, verification open) and its two subsidiary issuers of the **Authorized Repairer** credential. |
 | **Zenith Repairs (demo)** | Genuine partner: verifiable org, holds Authorized Repairer (issued by Vesta Iberia), issues ECS-Badges to its technicians. |
-| **Umbra Repairs (demo)** | The impostor: a DID with no credentials; every check ends red. |
+| **Umbra Repairs (demo)** | The impostor with real credentials: a verifiable organization (ECS-Org, ECS-Service) that holds no Authorized Repairer credential - trust is not membership; the red verdict comes from the missing credential. |
 
 ## 3. Information architecture (as implemented)
 
@@ -117,7 +117,7 @@ Everything below is a **separate vs-agent (Business Wallet) instance per partici
 |---|---|---|
 | Vesta Iberia + Vesta Nordics: vs-agents, ECS-Org (Helvetia), ECS-Service, ISSUER Authorized Repairer | ☐ | Iberia issues to Zenith |
 | Zenith Repairs: vs-agent anchor, ECS-Org, ECS-Service, HOLDER Authorized Repairer, ISSUER ECS-Badge + technician badges | ☐ | badge offer for demo 1; scanned badge for the door demo |
-| Umbra Repairs: vs-agent with DID and **no credentials** + unauthorized badge offer | ☐ | the refusal paths (demo 1 red case) |
+| Umbra Repairs: vs-agent, ECS-Org (Helvetia) + ECS-Service + ECS-Badge issuer - deliberately **no Authorized Repairer** | ☐ | the refusal paths: badges refused at the portal, no seal at the door |
 | Personal wallets: Hologram (badge + login demos) | ✔ | more integrated wallets as their badge loops land |
 
 ## 6. Open items
