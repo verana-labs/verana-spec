@@ -906,7 +906,7 @@ Each Admin API method declares which **access modes** can invoke it:
 - **INTERNAL** — reachable only via the [internal listener](#listeners). No authentication, no authorization check. Used for methods that are unsafe or meaningless to expose externally (process diagnostics, raw connection management, etc.).
 - **CORPORATION** — reachable via either listener. On the internal listener, no authorization check is performed (the caller is already trusted). On the external listener, the authenticated caller MUST hold, from the `VERANA_CORPORATION_ID` Corporation, an authorization whose `msg_types` include the VPR `Msg` type required by the method.
 
-An authenticated request that fails any of these checks (an INTERNAL method reached on the external listener, an account excluded by `ADMIN_API_CORPORATION_ALLOWED_ACCOUNTS`, or a missing grant) MUST be rejected with HTTP `403`. `401` means the caller is not authenticated and SHOULD retry after obtaining a token; `403` means the token is valid but the account may not invoke the method, and retrying without a new grant will not help.
+An authenticated request that fails any of these checks (an INTERNAL method reached on the external listener, or an account excluded by `ADMIN_API_CORPORATION_ALLOWED_ACCOUNTS`) MUST be rejected with HTTP `403`. `401` means the caller is not authenticated and SHOULD retry after obtaining a token. `403` means the token is valid but the account may not invoke the method.
 
 ##### Two-layer authorization model
 
