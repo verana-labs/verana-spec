@@ -936,7 +936,7 @@ Look up a previously stored `Digest` entry by its digest string. *Aligned with V
 
 | Name | In | Type | Required | Description |
 | --- | --- | --- | --- | --- |
-| `digest` | path | string | yes | The digest to look up (typically an SRI digest such as `sha384-…`) |
+| `digest` | path | string | yes | The digest to look up, byte-for-byte as anchored (for a credential, its `digestJCS`) |
 
 **Response:** `{ digest: Digest }` — `{ digest: string, created: timestamp }`. Returns HTTP 404 if no `Digest` entry exists for the supplied value.
 
@@ -1492,7 +1492,7 @@ expiresAtTime: derived per [[IDX-VT-EVAL-2]] — here the earliest boundary is t
          "ecosystemId":1,
          "participantId":601,
          "id":"urn:uuid:cc5c398f-bc64-45df-9482-9cb583cce197",
-         "digestJCS":"sha384-K7x9Qp2mVtR5nW8jL3cD6fH1yB4gS0aE9uZoI2rT7vNqM5xC8bJ4kF6hP1dG3wY",
+         "digestJCS":"NsQMTn9itZLmRkNs574oDPojGA2Z16QzAC74xXIDrnzpuEvGvF2ReGkXycm2NNRl",
          "issuedAtTime":"2026-02-10T09:15:00Z",
          "validFrom":"2010-01-01T19:23:24Z",
          "validUntil":"2030-01-01T19:23:24Z",
@@ -1518,7 +1518,7 @@ expiresAtTime: derived per [[IDX-VT-EVAL-2]] — here the earliest boundary is t
          "ecosystemId":1,
          "participantId":602,
          "id":"urn:uuid:8f2a1c04-77de-4b31-a5c9-0e6f4d2b9a11",
-         "digestJCS":"sha384-T2mB8vN5qX1rW4jK7cF9dH3yL6gA0uS8eZ4oI1pR5tVnQ7xC2bM9kJ3hD6fG8wY",
+         "digestJCS":"4gXBGI8rCgbPbB0t9KPgG4vvOxKiaWaR2ARbObScE9xU6uKCJl5nFttjw2s0Ro6Z",
          "issuedAtTime":"2026-01-22T14:40:00Z",
          "validFrom":"2010-01-01T19:23:24Z",
          "validUntil":"2030-01-01T19:23:24Z",
