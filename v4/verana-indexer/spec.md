@@ -1,6 +1,6 @@
 # Indexer v4 Specification
 
-**Latest Draft:** spec v4-draft7
+**Latest Draft:** spec v4-draft8
 
 ## Abstract
 
@@ -936,7 +936,7 @@ Look up a previously stored `Digest` entry by its digest string. *Aligned with V
 
 | Name | In | Type | Required | Description |
 | --- | --- | --- | --- | --- |
-| `digest` | path | string | yes | The digest to look up (typically an SRI digest such as `sha384-…`) |
+| `digest` | path | string | yes | The digest to look up, byte-for-byte as anchored (for a credential, its `digestJCS`) |
 
 **Response:** `{ digest: Digest }` — `{ digest: string, created: timestamp }`. Returns HTTP 404 if no `Digest` entry exists for the supplied value.
 
@@ -1295,7 +1295,7 @@ The Verifiable Trust Resolver answers two complementary questions about a DID at
 
    - **`corporation`** — The on-chain Corporation entry the DID **represents** (the Corporation whose `did` equals the resolved DID). A singular object — by VPR, a DID is the `did` of at most one Corporation; omitted when no such Corporation exists for this `did`. Carries the Corporation's stable `id` (uint64) and `policy_address` (the on-chain account that signs on its behalf), plus `deposit`, slash history, and active CGF.
    - **`participations`** — Credential Schemas the DID participates in, filterable by state (`ACTIVE`, `FUTURE`, `INACTIVE`, `EXPIRED`, `REVOKED`, `SLASHED`, `REPAID`); defaults to `ACTIVE` when no filter is given.
-   - **`ecsCredentials`** — The full ECS credentials extracted from the DID's linked-VPs, with their `credentialSubject` claims. Each entry carries the credential `id` (required — a VC-mandatory attribute), plus two informational fields the evaluation computes anyway per [[IDX-VT-EVAL-1]]: `digestJCS` (the recomputed, ledger-verified JCS digest) and `issuedAtTime` (the `created` timestamp of the credential's ledger `Digest` entry — its effective issuance time). Two entries with the same `id` in one response MUST NOT occur: the indexer MUST exclude such duplicates as invalid credentials.
+   - **`ecsCredentials`** — The full ECS credentials extracted from the DID's linked-VPs, with their `credentialSubject` claims. Each entry carries the credential `id` (required — a VC-mandatory attribute), plus two informational fields the evaluation computes anyway per [[IDX-VT-EVAL-1]]: `digestJCS` (the recomputed, ledger-verified JCS digest) and `issuedAtTime` (the `created` timestamp of the credential's ledger `Digest` entry — its effective issuance time). Two entries with the same `digestJCS` in one response MUST NOT occur: the indexer MUST exclude such duplicates.
    - **`services`** — Non-`LinkedVerifiablePresentation` service entries from the DID Document (DIDComm, MCP, A2A, VsAgentAdminAPI, …), surfaced verbatim.
    - **`presentations`** — Per-VP credential summaries (`vtcCredentials[]`, each entry `{id, credentialSchemaId, ecosystemId}`); sub-flags additionally surface unresolvable and invalid credential IDs per VP.
    - **`ecosystems`** — Aggregate metrics for the Ecosystems (and their underlying Credential Schemas and active Ecosystem Governance Frameworks) **the DID is the controller of** (the Ecosystems whose `did` equals the resolved DID). Sub-flags control whether archived Ecosystems (and their archived embedded Credential Schemas) are included.
@@ -1318,13 +1318,15 @@ This subsection normatively defines **what** the trust evaluation depends on, **
 - the **ECS-ORG** or **ECS-PERSONA** credential of the **anchor service** — the DID itself when the Service Credential is self-issued (architecture pattern #1, [VS-REQ-3]), or the issuing parent service when it is issued by another DID (architecture pattern #2, [VS-REQ-4]) — and the `Participant` entry anchoring that credential;
 - a **point-in-time issuance check**: at the issuance instant of the ECS-ORG / ECS-PERSONA credential, its issuer held a valid `Participant` entry granting the right to issue it. This is verified once per evaluation against historical indexed state; it is *not* a future boundary — subsequent expiry of the issuer's `Participant` entry does not invalidate an already-issued credential (revocation and slashing do, and those are signalled on-chain).
 
-The **issuance instant is determined objectively from the credential's VPR-anchored digest** — never from issuer-asserted fields (`validFrom` proves nothing about when a credential was actually issued and can be backdated). Per [W3C VTCs: Determining Credential Issuance Time](https://verana-labs.github.io/verifiable-trust-spec/versions/v4/#w3c-vtcs-determining-credential-issuance-time), the evaluation MUST, for each ECS-ORG / ECS-PERSONA credential:
+The **issuance instant is determined objectively from the credential's VPR-anchored digest** — never from issuer-asserted fields (`validFrom` proves nothing about when a credential was actually issued and can be backdated).
 
-1. **Canonicalize** the credential with [JCS (RFC 8785)](https://www.rfc-editor.org/rfc/rfc8785) and **recompute** its `digestJCS` using the `digest_algorithm` of the referenced `CredentialSchema`;
-2. **Look up** that digest on the ledger via [Get Digest (MOD-DI-QRY-1)](https://verana-labs.github.io/verifiable-trust-vpr-spec/versions/v4/#mod-di-qry-1-get-digest) (anchored at issuance through `CreateOrUpdateParticipantSession` → `StoreDigest`); the returned `Digest` entry's `created` timestamp is the **effective issuance time**;
-3. **Verify** the issuer's authorization at *that* timestamp against historical indexed state.
+How a credential's `digestJCS` is computed, how its `digest_algorithm` is resolved, and how the effective issuance time is obtained from the VPR are normatively defined by [W3C VTCs: Determining Credential Issuance Time](https://verana-labs.github.io/verifiable-trust-spec/versions/v4/#w3c-vtcs-determining-credential-issuance-time). This document does not restate that procedure, and an implementation MUST NOT vary it.
 
-A credential whose recomputed digest has **no** ledger entry has no provable issuance time and MUST fail the check (the DID cannot be `trusted` through it). The recomputed digest and the effective issuance time are surfaced informationally on each `ecsCredentials[]` entry as `digestJCS` and `issuedAtTime`.
+For each ECS-ORG / ECS-PERSONA credential named above, the evaluation MUST obtain the effective issuance time per that section, then **verify the issuer's authorization at that instant**. The issuer's grant window is evaluated at the effective issuance time; the issuer's `participant_state` is evaluated at the evaluated block.
+
+The digest lookup is performed against ledger state at the evaluated block, per [Conventions → `At-Block-Height` header](#at-block-height-header), and its result yields the effective issuance time. A credential with no corresponding `Digest` entry at that block has no provable issuance time, and the DID MUST NOT be `trusted` through it.
+
+The recomputed digest and the effective issuance time are surfaced informationally on each `ecsCredentials[]` entry as `digestJCS` and `issuedAtTime`.
 
 Other presented credentials (non-ECS VTCs, ECS-UA, ECS-BADGE, additional VP contents) are contextual data surfaced by the opt-in response sections; they MUST NOT influence `trusted` or `expiresAtTime`.
 
@@ -1490,7 +1492,7 @@ expiresAtTime: derived per [[IDX-VT-EVAL-2]] — here the earliest boundary is t
          "ecosystemId":1,
          "participantId":601,
          "id":"urn:uuid:cc5c398f-bc64-45df-9482-9cb583cce197",
-         "digestJCS":"sha384-K7x9Qp2mVtR5nW8jL3cD6fH1yB4gS0aE9uZoI2rT7vNqM5xC8bJ4kF6hP1dG3wY",
+         "digestJCS":"NsQMTn9itZLmRkNs574oDPojGA2Z16QzAC74xXIDrnzpuEvGvF2ReGkXycm2NNRl",
          "issuedAtTime":"2026-02-10T09:15:00Z",
          "validFrom":"2010-01-01T19:23:24Z",
          "validUntil":"2030-01-01T19:23:24Z",
@@ -1516,7 +1518,7 @@ expiresAtTime: derived per [[IDX-VT-EVAL-2]] — here the earliest boundary is t
          "ecosystemId":1,
          "participantId":602,
          "id":"urn:uuid:8f2a1c04-77de-4b31-a5c9-0e6f4d2b9a11",
-         "digestJCS":"sha384-T2mB8vN5qX1rW4jK7cF9dH3yL6gA0uS8eZ4oI1pR5tVnQ7xC2bM9kJ3hD6fG8wY",
+         "digestJCS":"4gXBGI8rCgbPbB0t9KPgG4vvOxKiaWaR2ARbObScE9xU6uKCJl5nFttjw2s0Ro6Z",
          "issuedAtTime":"2026-01-22T14:40:00Z",
          "validFrom":"2010-01-01T19:23:24Z",
          "validUntil":"2030-01-01T19:23:24Z",
