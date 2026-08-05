@@ -1,6 +1,6 @@
 # Indexer v4 Specification
 
-**Latest Draft:** spec v4-draft7
+**Latest Draft:** spec v4-draft8
 
 ## Abstract
 
