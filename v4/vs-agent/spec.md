@@ -801,7 +801,7 @@ The VS Agent MUST expose a secure Administration API that allows authenticated a
 The Admin API can be served through two distinct listeners:
 
 - **Internal listener** — bound to the loopback interface or to a pod-internal address (e.g. a Unix socket or a private container network). Reachable only from inside the agent's pod or deployment. No authentication is performed; trust is established by network reachability.
-- **External listener** — bound to a publicly reachable interface at `ADMIN_API_PUBLIC_URL`. Every request MUST be authenticated as a Verana account using a signature challenge (e.g. ADR-036) and authorized per [Authorization](#authorization).
+- **External listener** — bound to a publicly reachable interface at `ADMIN_API_PUBLIC_URL`. Every request MUST be authenticated as a Verana account per [[VSA-ADM-AUTH-PROTO]](#vsa-adm-auth-proto-account-challengeresponse) and authorized per [Authorization](#authorization).
 
 Which listeners are active is controlled by the `ADMIN_API_AUTH_MODE` environment variable, which holds a comma-separated, non-empty list of auth modes. Each mode enables one listener:
 
@@ -812,6 +812,8 @@ Which listeners are active is controlled by the `ADMIN_API_AUTH_MODE` environmen
 
 Examples: `ADMIN_API_AUTH_MODE=internal`, `ADMIN_API_AUTH_MODE=corporation`, `ADMIN_API_AUTH_MODE=internal,corporation`.
 
+When both modes are active the two listeners MUST bind distinct ports, so that the unauthenticated internal surface is never reachable on the externally exposed one.
+
 If a mode is not listed, its listener MUST NOT be activated. If `corporation` is not listed, methods declared as INTERNAL-only (see [Authorization](#authorization)) become the only invocable methods; conversely, if `internal` is not listed, those INTERNAL-only methods are unreachable and operators choosing this configuration accept that trade-off.
 
 Future revisions of this specification MAY add additional modes (e.g. an OAuth-backed or mTLS-backed listener). Each new mode declares its own listener and authentication contract; existing modes are unaffected.
@@ -821,7 +823,78 @@ Future revisions of this specification MAY add additional modes (e.g. an OAuth-b
 Authentication is enforced **per listener**, not per method:
 
 1. Requests arriving on the **internal listener** are not authenticated. The deployment is responsible for ensuring that this listener is unreachable from outside the trust boundary (pod, deployment, host).
-2. Requests arriving on the **external listener** MUST be authenticated using a Verana-account-based mechanism (e.g. ADR-036 signature challenge) before any other check.
+2. Requests arriving on the **external listener** MUST be authenticated as a Verana account, using the challenge/response protocol defined below, before any other check.
+
+##### [VSA-ADM-AUTH-PROTO] Account challenge/response
+
+The caller proves control of a Verana account by signing an agent-issued nonce with that account's key, using an [ADR-036 signed message](https://docs.cosmos.network/main/build/architecture/adr-036-arbitrary-signature). A valid signature is exchanged for a short-lived bearer token, which the caller then presents on every subsequent Admin API request.
+
+The exchange has three steps:
+
+1. **Request a challenge.** The caller posts its account address to [`challenge`](#vsa-adm-auth-challenge-challenge). The agent returns a single-use `nonce` and its expiry.
+2. **Sign the challenge.** The caller builds the sign doc described below over the challenge payload, and signs it with the private key of that account.
+3. **Exchange for a token.** The caller posts the account, public key, signature and nonce to [`token`](#vsa-adm-auth-token-token). The agent verifies the signature and returns a bearer token and its expiry.
+
+Both endpoints are declared PUBLIC (see [Authorization](#authorization)), since a caller cannot hold a token before completing the exchange. They MUST be served by the external listener only: the internal listener performs no authentication and therefore has no use for them.
+
+###### Challenge payload
+
+The `data` string that MUST be signed is a fixed prefix concatenated with the issued nonce:
+
+```
+vs-agent-admin-auth:<nonce>
+```
+
+A signature computed over any other payload MUST be rejected.
+
+###### Sign doc
+
+The signature MUST be produced over the canonical ADR-036 sign doc, whose fields are fixed as follows:
+
+| Field | Value |
+|---|---|
+| `chain_id` | `""` (empty string) |
+| `account_number` | `0` |
+| `sequence` | `0` |
+| `fee` | `{ "gas": "0", "amount": [] }` |
+| `memo` | `""` (empty string) |
+| `msgs` | exactly one message, of type `sign/MsgSignData` |
+
+The single message MUST be:
+
+```json
+{
+  "type": "sign/MsgSignData",
+  "value": {
+    "signer": "<account address>",
+    "data": "<base64 of the UTF-8 challenge payload>"
+  }
+}
+```
+
+The signer serialises the sign doc with sorted keys, hashes it with SHA-256, and signs that digest with the account's `secp256k1` key. This is the same sign doc that browser wallets produce for `signArbitrary`, so a wallet-based caller needs no custom signing code.
+
+###### Verification
+
+The agent MUST reject the exchange unless all of the following hold:
+
+1. The `nonce` is known, has not expired, and was issued to the same `account`.
+2. The supplied `pubKey` derives to `account`: the bech32 encoding, with the `verana` prefix, of the address derived from `pubKey` MUST equal the supplied account address.
+3. The `signature` verifies as a `secp256k1` signature over the SHA-256 digest of the serialised sign doc, under `pubKey`.
+
+A nonce MUST be single-use: the agent MUST invalidate it as soon as it is presented, whether or not verification then succeeds. Nonces MUST expire; the RECOMMENDED lifetime is 120 seconds. An agent MAY bound the number of outstanding nonces and evict the oldest.
+
+###### Presenting the token
+
+The token MUST be sent on every external-listener request in the HTTP `Authorization` header, using the `Bearer` scheme:
+
+```
+Authorization: Bearer <token>
+```
+
+The agent resolves the token to the authenticated account, and uses that account for the `ADMIN_API_CORPORATION_ALLOWED_ACCOUNTS` filter and for the per-method authorization check described in [Authorization](#authorization). A request whose token is missing, unknown, or expired MUST be rejected with HTTP `401`, before any authorization check.
+
+Tokens MUST expire; the RECOMMENDED lifetime is 900 seconds. Tokens are bearer credentials: the external listener MUST be served over TLS, and the agent MUST NOT log token values.
 
 #### Authorization
 
@@ -829,8 +902,11 @@ The Admin API does not define a standalone authorization model. Instead, it **re
 
 Each Admin API method declares which **access modes** can invoke it:
 
+- **PUBLIC** — reachable without authentication. Reserved for the [authentication](#authentication) methods themselves, which a caller MUST be able to reach before it holds a token. No other method may declare PUBLIC.
 - **INTERNAL** — reachable only via the [internal listener](#listeners). No authentication, no authorization check. Used for methods that are unsafe or meaningless to expose externally (process diagnostics, raw connection management, etc.).
 - **CORPORATION** — reachable via either listener. On the internal listener, no authorization check is performed (the caller is already trusted). On the external listener, the authenticated caller MUST hold, from the `VERANA_CORPORATION_ID` Corporation, an authorization whose `msg_types` include the VPR `Msg` type required by the method.
+
+An authenticated request that fails any of these checks (an INTERNAL method reached on the external listener, or an account excluded by `ADMIN_API_CORPORATION_ALLOWED_ACCOUNTS`) MUST be rejected with HTTP `403`. `401` means the caller is not authenticated and SHOULD retry after obtaining a token. `403` means the token is valid but the account may not invoke the method.
 
 ##### Two-layer authorization model
 
@@ -874,7 +950,52 @@ The following environment variables MUST be provided when the VS Agent container
 |---|---|---|
 | `ADMIN_API_AUTH_MODE` | REQUIRED | Comma-separated, non-empty list of Admin API auth modes to enable. Currently defined values: `internal`, `corporation`. See [Listeners](#listeners). |
 | `ADMIN_API_PUBLIC_URL` | CONDITIONAL | Public `https://` origin (scheme + host + optional port, no trailing path) at which the external listener is exposed. REQUIRED when `ADMIN_API_AUTH_MODE` includes `corporation`; MUST NOT be set otherwise. When set, the agent also publishes a `VsAgentAdminAPI` entry in its DID Document per [[VSA-VTI-DIDDOC]](#vsa-vti-diddoc-did-document-service-entries). |
+| `ADMIN_API_EXTERNAL_PORT` | OPTIONAL | Port on which the external listener accepts requests. It MUST differ from the port serving the internal listener. Has no effect when `corporation` is not in `ADMIN_API_AUTH_MODE`. |
 | `ADMIN_API_CORPORATION_ALLOWED_ACCOUNTS` | OPTIONAL | Comma-separated list of Verana account addresses (the same identifiers that authenticate via [Authentication](#authentication) — e.g. the `operator` / `vs_operator` of an `OperatorAuthorization` / `VSOperatorAuthorization`). When set, the external listener accepts only callers whose authenticated account is in this list, applied **before** the per-method authorization check. The bound Corporation is already fixed by `VERANA_CORPORATION_ID`, so this filter narrows callers within that Corporation's authorized operators. Has no effect when `corporation` is not in `ADMIN_API_AUTH_MODE`. |
+
+### [VSA-ADM-AUTH] Authentication
+
+Methods that exchange an account signature for a bearer token, per [[VSA-ADM-AUTH-PROTO]](#vsa-adm-auth-proto-account-challengeresponse). They are served by the external listener only, and are the sole methods declared PUBLIC.
+
+| Module | Method Name | HTTP Method | Relative REST API path | Requirements | Authz |
+| --- | --- | --- | --- | --- | --- |
+| Authentication | `challenge` | `POST` | `/v1/auth/challenge` | [see](#vsa-adm-auth-challenge-challenge) | PUBLIC |
+| Authentication | `token` | `POST` | `/v1/auth/token` | [see](#vsa-adm-auth-token-token) | PUBLIC |
+
+#### [VSA-ADM-AUTH-CHALLENGE] challenge
+
+Issues a single-use nonce for the supplied Verana account.
+
+**Inputs**:
+
+- `account` (REQUIRED) — the Verana account the caller will authenticate as. MUST be a `verana`-prefixed bech32 address.
+
+**Output**:
+
+- `nonce` — the challenge to sign. Opaque, single-use, and unpredictable.
+- `expiresAt` — ISO 8601 UTC datetime after which the nonce is no longer accepted.
+
+**Errors**: HTTP `400` when `account` is absent or is not a `verana` address.
+
+Issuing a challenge MUST NOT reveal whether the account is known to the agent or authorized by the Corporation: an unauthorized account still receives a nonce, and is refused later at the [authorization](#authorization) check.
+
+#### [VSA-ADM-AUTH-TOKEN] token
+
+Verifies a signature over a previously issued challenge and returns a bearer token.
+
+**Inputs**:
+
+- `account` (REQUIRED) — the signing account, which MUST be the one the nonce was issued to.
+- `pubKey` (REQUIRED) — base64-encoded compressed `secp256k1` public key of `account`.
+- `signature` (REQUIRED) — base64-encoded 64-byte signature over the sign doc digest.
+- `nonce` (REQUIRED) — the nonce returned by [`challenge`](#vsa-adm-auth-challenge-challenge).
+
+**Output**:
+
+- `token` — the bearer token to present in the `Authorization` header.
+- `expiresAt` — ISO 8601 UTC datetime after which the token is rejected.
+
+**Errors**: HTTP `401` when the nonce is unknown, expired, or was issued to a different account, or when the signature does not verify. The agent MUST NOT distinguish these cases in the response, so that a caller cannot probe which nonces or accounts exist.
 
 ### [VSA-ADM-AG] Agent
 
