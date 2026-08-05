@@ -1,6 +1,6 @@
 # VS Agent v4 Specification
 
-**Latest Draft:** spec v4-draft3
+**Latest Draft:** spec v4-draft4
 
 ## Abstract
 
@@ -412,10 +412,10 @@ sequenceDiagram
 
     Validator->>Applicant Agent: 6a. Credential offer
     Applicant Agent->>Validator: 6b. Credential request
-    Note over Validator: 6c. Sign credential<br/>+ compute digest
+    Note over Validator: 6c. Sign credential<br/>+ compute digestJCS
     Validator->>VPR: 7. CreateOrUpdateParticipantSession
     Validator->>Applicant Agent: 8. Deliver signed credential (issue-credential)
-    Applicant Agent->>VPR: 9. Verify validator + digest
+    Applicant Agent->>VPR: 9. Verify validator + session + digestJCS
     Applicant Agent->>Validator: 10. Accept Credential
     Note over Applicant Agent: 11. Store credential
     Note over Applicant Agent: 12. (optional) VP in DID Doc
@@ -442,16 +442,17 @@ sequenceDiagram
 
 All steps below are optional and executed only if the validator issues a credential.
 
-6. The validator offers the credential to the applicant via the Issue Credential V2 subprotocol. Upon receiving the applicant's credential request, the validator generates and signs the credential, and computes the digest.
+6. The validator offers the credential to the applicant via the Issue Credential V2 subprotocol. Upon receiving the applicant's credential request, the validator generates and signs the credential, and computes its `digestJCS` as specified in [W3C VTCs: Determining Credential Issuance Time](https://verana-labs.github.io/verifiable-trust-spec/versions/v4/#w3c-vtcs-determining-credential-issuance-time).
 
-7. The **validator** calls `CreateOrUpdateParticipantSession` ([[MOD-PP-MSG-10]](https://verana-labs.github.io/verifiable-trust-vpr-spec/#mod-pp-msg-10-create-or-update-participant-session)) on-chain (see [Agent Account Authorizations](#agent-account-authorizations)). The credential MUST NOT be delivered until this transaction succeeds.
+7. The **validator** calls `CreateOrUpdateParticipantSession` ([[MOD-PP-MSG-10]](https://verana-labs.github.io/verifiable-trust-vpr-spec/#mod-pp-msg-10-create-or-update-participant-session)) on-chain, passing the computed `digestJCS` as the `digest` parameter (see [Agent Account Authorizations](#agent-account-authorizations)). The VPR anchors the digest in its `Digest` store via [Store Digest](https://verana-labs.github.io/verifiable-trust-vpr-spec/versions/v4/#mod-di-msg-1-store-digest); the `created` block timestamp of that `Digest` entry is the credential's effective issuance time. The credential MUST NOT be delivered until this transaction succeeds.
 
 8. The validator delivers the signed credential (`issue-credential`) to the applicant via the existing DIDComm session.
 
 9. The applicant MUST verify the received credential before accepting it:
    - Verify the validator is authorized by the ecosystem to issue credentials for this schema (`validator_participant.role` is `ISSUER` and the `Participant` is active).
-   - Recompute the credential's digest and verify it matches the digest recorded on-chain in the `ParticipantSession` updated in step 7.
-   - If either check fails, the applicant MUST reject the credential and log the error.
+   - Verify that the `ParticipantSession` created in step 7 exists on-chain and references the validator's ISSUER `Participant` entry (see [[MOD-PP-QRY-5]](https://verana-labs.github.io/verifiable-trust-vpr-spec/versions/v4/#mod-pp-qry-5-get-participantsession)).
+   - Recompute the credential's `digestJCS` as specified in [W3C VTCs: Determining Credential Issuance Time](https://verana-labs.github.io/verifiable-trust-spec/versions/v4/#w3c-vtcs-determining-credential-issuance-time) and locate the corresponding `Digest` entry via [Get Digest](https://verana-labs.github.io/verifiable-trust-vpr-spec/versions/v4/#mod-di-qry-1-get-digest). The entry MUST exist — the digest is anchored in the `Digest` store by the transaction of step 7, not on the `ParticipantSession` entry — and its `created` timestamp is the credential's effective issuance time.
+   - If any check fails, the applicant MUST reject the credential and log the error.
 
 10.  The applicant sends a **CRED_ACCEPT** message to the validator, confirming that the credential has been verified and accepted.
 
@@ -640,10 +641,10 @@ sequenceDiagram
     Validator-->>Applicant: 3. (optional) out-of-band info collection
     Validator->>Applicant: 4a. Credential offer
     Applicant->>Validator: 4b. Credential request
-    Note over Validator: 4c. Sign credential<br/>+ compute digest
+    Note over Validator: 4c. Sign credential<br/>+ compute digestJCS
     Validator->>VPR: 5. CreateOrUpdateParticipantSession
     Validator->>Applicant: 6. Deliver signed credential (issue-credential)
-    Applicant->>VPR: 7. Verify validator + digest
+    Applicant->>VPR: 7. Verify validator + session + digestJCS
     Applicant->>Validator: 8. Accept Credential
     Note over Applicant: 9. Store credential
     Note over Applicant: 10. (optional) VP in DID Doc
@@ -661,16 +662,17 @@ sequenceDiagram
 
 3. If the validator requires additional information to generate the credential (e.g., missing claims or proofs), the validator MAY send a link to the applicant for an out-of-DIDComm flow (such as a web form or portal) to collect the missing data.
 
-4. The validator offers the credential to the applicant via the Issue Credential V2 subprotocol. Upon receiving the applicant's credential request, the validator generates and signs the credential, and computes the digest.
+4. The validator offers the credential to the applicant via the Issue Credential V2 subprotocol. Upon receiving the applicant's credential request, the validator generates and signs the credential, and computes its `digestJCS` as specified in [W3C VTCs: Determining Credential Issuance Time](https://verana-labs.github.io/verifiable-trust-spec/versions/v4/#w3c-vtcs-determining-credential-issuance-time).
 
-5. The **validator** calls `CreateOrUpdateParticipantSession` ([[MOD-PP-MSG-10]](https://verana-labs.github.io/verifiable-trust-vpr-spec/#mod-pp-msg-10-create-or-update-participant-session)) on-chain (see [Agent Account Authorizations](#agent-account-authorizations)). The credential MUST NOT be delivered until this transaction succeeds.
+5. The **validator** calls `CreateOrUpdateParticipantSession` ([[MOD-PP-MSG-10]](https://verana-labs.github.io/verifiable-trust-vpr-spec/#mod-pp-msg-10-create-or-update-participant-session)) on-chain, passing the computed `digestJCS` as the `digest` parameter (see [Agent Account Authorizations](#agent-account-authorizations)). The VPR anchors the digest in its `Digest` store via [Store Digest](https://verana-labs.github.io/verifiable-trust-vpr-spec/versions/v4/#mod-di-msg-1-store-digest); the `created` block timestamp of that `Digest` entry is the credential's effective issuance time. The credential MUST NOT be delivered until this transaction succeeds.
 
 6. The validator delivers the signed credential (`issue-credential`) to the applicant via the existing DIDComm session.
 
 7. The applicant MUST verify the received credential before accepting it:
    - Verify the validator is authorized by the ecosystem to issue credentials for this schema (query the VPR via the indexer to confirm the validator has an active ISSUER `Participant` entry).
-   - Recompute the credential's digest and verify it matches the digest recorded on-chain in the `ParticipantSession` updated in step 5.
-   - If either check fails, the applicant MUST reject the credential and log the error.
+   - Verify that the `ParticipantSession` created in step 5 exists on-chain and references the validator's ISSUER `Participant` entry (see [[MOD-PP-QRY-5]](https://verana-labs.github.io/verifiable-trust-vpr-spec/versions/v4/#mod-pp-qry-5-get-participantsession)).
+   - Recompute the credential's `digestJCS` as specified in [W3C VTCs: Determining Credential Issuance Time](https://verana-labs.github.io/verifiable-trust-spec/versions/v4/#w3c-vtcs-determining-credential-issuance-time) and locate the corresponding `Digest` entry via [Get Digest](https://verana-labs.github.io/verifiable-trust-vpr-spec/versions/v4/#mod-di-qry-1-get-digest). The entry MUST exist — the digest is anchored in the `Digest` store by the transaction of step 5, not on the `ParticipantSession` entry — and its `created` timestamp is the credential's effective issuance time.
+   - If any check fails, the applicant MUST reject the credential and log the error.
 
 8. The applicant sends a **CRED_ACCEPT** message to the validator, confirming that the credential has been verified and accepted.
 
@@ -1441,10 +1443,19 @@ Issues a Verifiable Trust Credential bound to a JSON Schema Credential. The agen
 - `jsonSchemaCredentialId` (REQUIRED) — URL of the JSON Schema Credential governing the credential structure.
 - `claims` (REQUIRED) — credential claims as a flat object of key/value pairs.
 
+**Requirements**:
+
+- For `format = jsonld`, after signing the credential and before returning it, the agent MUST anchor the credential's `digestJCS` in the VPR: compute the `digestJCS` as specified in [W3C VTCs: Determining Credential Issuance Time](https://verana-labs.github.io/verifiable-trust-spec/versions/v4/#w3c-vtcs-determining-credential-issuance-time), then call `CreateOrUpdateParticipantSession` ([[MOD-PP-MSG-10]](https://verana-labs.github.io/verifiable-trust-vpr-spec/#mod-pp-msg-10-create-or-update-participant-session)) with the `digest` parameter, referencing the agent's active ISSUER `Participant` entry for the governing `CredentialSchema`. The credential MUST NOT be returned until this transaction succeeds: a W3C VTC whose digest is not anchored has no provable issuance time and fails trust resolution ([[TR-4]](https://verana-labs.github.io/verifiable-trust-spec/versions/v4/#tr-trust-resolution)).
+- For `format = anoncreds`, digest anchoring does not apply (see [AnonCreds VTCs: Issuance Time](https://verana-labs.github.io/verifiable-trust-spec/versions/v4/#anoncreds-vtcs-issuance-time)); the on-chain `ParticipantSession` steps are performed as part of the DIDComm issuance flow that delivers the credential.
+
 **Output**:
 
-- For `jsonld`: the signed W3C Verifiable Credential, ready to be transmitted to the recipient.
+- For `jsonld`: the signed W3C Verifiable Credential, digest-anchored per the requirement above and ready to be transmitted to the recipient.
 - For `anoncreds`: a DIDComm invitation and the associated `credentialExchangeId` for further tracking through the events interface.
+
+**Errors**:
+
+- `ANCHORING_FAILED` — the transaction anchoring the credential's `digestJCS` did not succeed; no credential is returned.
 
 #### [VSA-ADM-VTC-REVOKE] revokeCredential
 
@@ -1606,7 +1617,7 @@ Lists and inspects existing credential-acquisition flows handled by the agent.
 - last-event timestamp;
 - submitted credential claims and proofs;
 - any outstanding `OOB_LINK` URL;
-- once a credential has been generated: the offered credential identifier, its digest, and the on-chain `ParticipantSession` reference.
+- once a credential has been generated: the offered credential identifier, its `digestJCS`, and the on-chain `ParticipantSession` reference.
 
 **Requirements**: none beyond caller authentication and corporation-scoped authorization.
 
