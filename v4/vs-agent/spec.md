@@ -155,6 +155,13 @@ See [comparison between VS-REQ-3 and VS-REQ-4](https://verana-labs.github.io/ver
 | `AGENT_DELEGATED_PARENT_VS_DID` | CONDITIONAL | DID of the parent Verifiable Service to contact for obtaining a Service credential. REQUIRED when `AGENT_MODE` = `delegated`. |
 | `TRUSTED_ECS_ECOSYSTEM_DIDS` | CONDITIONAL | Comma-separated list of DIDs of the ECS Ecosystems the agent trusts for essential credential schemas, as required by [[WL-ECS]](https://verana-labs.github.io/verifiable-trust-spec/#wl-ecs-ecosystem-whitelists-and-vpr-scheme-resolution). REQUIRED when `AGENT_MODE` = `standalone`. |
 
+##### [VSA-VTI-CFG-ENV-RT] Agent Runtime
+
+| Variable | Required | Description |
+|---|---|---|
+| `AGENT_DIDCOMM_VERSIONS` | OPTIONAL | Comma-separated list of DIDComm protocol versions the agent supports. Allowed values: `v1`, `v2`. Constrains the `didCommVersion` values accepted by the [Invitations](#vsa-adm-in-invitations) methods; when a method omits `didCommVersion`, the agent infers the version from this configuration. If unset, the default is implementation-defined. |
+| `VS_AGENT_PLUGINS` | OPTIONAL | Comma-separated list of enabled agent plugins. Determines the set of message `type` values accepted by [`sendMessage`](#vsa-adm-ms-send-sendmessage) (e.g. `text`, `credential-issuance`, `credential-revocation`, `identity-proof-request`, `contextual-menu-update`, `profile`, `terminate-connection`). If unset, the default plugin set is implementation-defined. |
+
 ### [VSA-VTI-DIDDOC] DID Document Service Entries
 
 In addition to the `DIDCommMessaging` entry mandated by [[VS-SVC-2]](https://verana-labs.github.io/verifiable-trust-spec/#vs-svc-service-declaration) and the `LinkedVerifiablePresentation` entries produced by the credential-acquisition flows and by [[VSA-VTI-VTJSC] VTJSC Management](#vsa-vti-vtjsc-vtjsc-management), the VS Agent MAY publish a `VsAgentAdminAPI` service entry in its DID Document.
@@ -1528,7 +1535,7 @@ Deletes a stored Verifiable Trust Credential identified by its schema URL.
 
 ### [VSA-ADM-JSC] Verifiable Trust JSON Schema Credentials
 
-Methods that manage Verifiable Trust JSON Schema Credentials (VTJSCs) — credentials by which a Trust Registry binds an on-chain `CredentialSchema` to the Ecosystem DID that governs it. The issuer DID of a VTJSC MUST equal the Ecosystem DID of the Trust Registry that created the referenced `CredentialSchema`.
+Methods that manage Verifiable Trust JSON Schema Credentials (VTJSCs) — credentials by which an Ecosystem binds an on-chain `CredentialSchema` to the Ecosystem DID that governs it. The issuer DID of a VTJSC MUST equal the `did` of the Ecosystem that owns the referenced `CredentialSchema`.
 
 | Module | Method Name | HTTP Method | Relative REST API path | Requirements | Authz |
 | --- | --- | --- | --- | --- | --- |
@@ -1557,14 +1564,14 @@ Creates or updates a VTJSC.
 **Inputs** (request body):
 
 - `schemaBaseId` (REQUIRED) — short identifier used to construct the resulting VTJSC URL, e.g. `organization` produces `https://<agent>/vt/schemas-organization-jsc.json`.
-- `jsonSchemaRef` (REQUIRED) — VPR URI of the corresponding `CredentialSchema` entry, e.g. `vpr:verana:vna-testnet-1/cs/v1/js/12345678`.
+- `jsonSchemaRef` (REQUIRED) — VPR URI of the corresponding `CredentialSchema` entry, in the canonical form `vpr:verana:<network>:cs:<schema-id>`, e.g. `vpr:verana:vna-testnet-1:cs:12345678`.
 
 **Output**: confirmation that the VTJSC was created or updated.
 
 **Errors**:
 
 - `INVALID_INPUT` — schema parameters are malformed or missing.
-- `ISSUER_MISMATCH` — the agent's DID does not match the Ecosystem DID of the Trust Registry that owns the referenced `CredentialSchema`.
+- `ISSUER_MISMATCH` — the agent's DID does not match the `did` of the Ecosystem that owns the referenced `CredentialSchema`.
 
 #### [VSA-ADM-JSC-DELETE] deleteJsonSchemaCredential
 
