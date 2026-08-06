@@ -133,7 +133,7 @@ The following environment variables MUST be provided when the VS Agent container
 | Variable | Required | Description |
 |---|---|---|
 | `VERANA_CORPORATION_ID` | REQUIRED | The VPR `Corporation.id` (uint64) of the Corporation this agent belongs to. All on-chain resources (Ecosystems, Credential Schemas, Participants, Participant Sessions, ...) are owned by this Corporation. The agent SHOULD resolve the Corporation's `policy_address`, `did`, and `active_version` from the indexer at startup. |
-| `VERANA_ACCOUNT_MNEMONIC` | REQUIRED | BIP-39 mnemonic used to derive the agent's Verana blockchain account (the agent's `vs_operator`). This account MUST have been granted a `VSOperatorAuthorization` by the `VERANA_CORPORATION_ID` Corporation, with one `ParticipantAuthorizationRecord` per `Participant` it operates under. |
+| `VERANA_ACCOUNT_MNEMONIC` | REQUIRED | BIP-39 mnemonic used to derive the agent's Verana blockchain account (the agent's `vs_operator`). This account SHOULD have been granted a `VSOperatorAuthorization` by the `VERANA_CORPORATION_ID` Corporation, with one `ParticipantAuthorizationRecord` per `Participant` it operates under; without one, the agent operates in the fallback mode described in [Agent Account Authorizations](#agent-account-authorizations) (funded `vs_operator` account, Corporation co-signature for every message targeting the `Participant`). |
 
 ##### [VSA-VTI-CFG-ENV-NET] Network Configuration
 
@@ -581,7 +581,7 @@ The two messages differ only on-chain:
 | On-chain state change | `p1.revoked = now` | `p1.slashed = now`; `slashed_deposit += amount`; trust deposit burned |
 | Authorized initiators | ancestor validator, grantee `corporation`, or Ecosystem controller | ancestor validator or Ecosystem controller (NOT the grantee) |
 | `Participant` must be active | yes | no — MAY be applied to expired or revoked Participants |
-| VS Operator Authorization (ISSUER / VERIFIER only) | revoked | revoked |
+| VS Operator Authorization record (any role; no-op if none exists) | revoked | revoked |
 
 When `p1` is revoked or slashed, an indexer event (see [Participant Notifications](#vsa-vti-notif-pp-participant-notifications)) is delivered to:
 
