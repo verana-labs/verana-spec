@@ -1466,7 +1466,9 @@ Issues a Verifiable Trust Credential bound to a JSON Schema Credential. The agen
 
 #### [VSA-ADM-VTC-REVOKE] revokeCredential
 
-Revokes a previously issued Verifiable Trust Credential. Currently only the AnonCreds format is supported.
+Revokes a previously issued Verifiable Trust Credential, addressed at registry level by revocation registry definition and index. Currently only the AnonCreds format is supported.
+
+> Not to be confused with [[VSA-ADM-FL-REVOKE] `revokeFlowCredential`](#vsa-adm-fl-revoke-revokeflowcredential), which revokes the credential of a given flow and additionally notifies the applicant and updates Flow State. This method performs registry-level revocation only, with no DIDComm or Flow State side effects.
 
 **Inputs** (request body):
 
@@ -1597,7 +1599,7 @@ The following methods list and progress credential-acquisition flows handled by 
 | Flow Management | `editCredentialClaims` | `PUT` | `/v1/vt/flows/{participant_session_id}/claims` | [see](#vsa-adm-fl-edit-editcredentialclaims) | INTERNAL, CORPORATION (`VSOperatorAuthorization`, msg_types ⊇ {`SetParticipantOPtoValidated`}, scope: validator `Participant` of the flow) |
 | Flow Management | `sendOobLink` | `POST` | `/v1/vt/flows/{participant_session_id}/oob-link` | [see](#vsa-adm-fl-send-sendooblink) | INTERNAL, CORPORATION (`VSOperatorAuthorization`, msg_types ⊇ {`SetParticipantOPtoValidated`}, scope: validator `Participant` of the flow) |
 | Flow Management | `validateFlow` | `POST` | `/v1/vt/flows/{participant_session_id}/validate` | [see](#vsa-adm-fl-validate-validateflow) | INTERNAL, CORPORATION (`VSOperatorAuthorization`, msg_types ⊇ {`SetParticipantOPtoValidated`}, scope: validator `Participant` of the flow) |
-| Flow Management | `revokeCredential` | `POST` | `/v1/vt/flows/{participant_session_id}/revoke-credential` | [see](#vsa-adm-fl-revoke-revokecredential) | INTERNAL, CORPORATION (`VSOperatorAuthorization`, msg_types ⊇ {`RevokeParticipant`}, scope: validator `Participant` of the flow) |
+| Flow Management | `revokeFlowCredential` | `POST` | `/v1/vt/flows/{participant_session_id}/revoke-credential` | [see](#vsa-adm-fl-revoke-revokeflowcredential) | INTERNAL, CORPORATION (`VSOperatorAuthorization`, msg_types ⊇ {`RevokeParticipant`}, scope: validator `Participant` of the flow) |
 
 > Note: some VS Agent implementations may not support all actions, or may prefer sending the user to a portal for providing proofs, etc., using the OOB link.
 
@@ -1699,9 +1701,11 @@ Marks the applicant's documentation as validated for a given flow. When an Onboa
 - `NOT_FOUND` — no flow with the given `participant_session_id`.
 - `INVALID_STATE` — the flow is not in a state where validation is expected.
 
-#### [VSA-ADM-FL-REVOKE] revokeCredential
+#### [VSA-ADM-FL-REVOKE] revokeFlowCredential
 
-Revokes a previously issued credential for a given flow. The agent MUST notify the applicant via a `CRED_STATE_CHANGE` message over DIDComm (see [[VSA-VTI-FLOW-UPD] Validator Updates](#vsa-vti-flow-upd-validator-updates)).
+Revokes a previously issued credential for a given flow, addressed by the flow rather than by revocation registry coordinates. The agent MUST notify the applicant via a `CRED_STATE_CHANGE` message over DIDComm (see [[VSA-VTI-FLOW-UPD] Validator Updates](#vsa-vti-flow-upd-validator-updates)).
+
+> Distinct from [[VSA-ADM-VTC-REVOKE] `revokeCredential`](#vsa-adm-vtc-revoke-revokecredential), which is the registry-level revocation method: it is addressed by (`anoncredsRevocationRegistryDefinitionId`, `anoncredsRevocationRegistryIndex`) and has no DIDComm or Flow State side effects.
 
 **Path parameters**:
 
