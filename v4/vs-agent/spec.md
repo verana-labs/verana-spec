@@ -1,6 +1,6 @@
 # VS Agent v4 Specification
 
-**Latest Draft:** spec v4-draft4
+**Latest Draft:** spec v4-draft5
 
 ## Abstract
 
@@ -1451,15 +1451,18 @@ Issues a Verifiable Trust Credential bound to a JSON Schema Credential. The agen
 - `did` (REQUIRED for `jsonld`) — DID of the credential subject (the holder).
 - `jsonSchemaCredentialId` (REQUIRED) — URL of the JSON Schema Credential governing the credential structure.
 - `claims` (REQUIRED) — credential claims as a flat object of key/value pairs.
+- `participantSessionId` (REQUIRED for `jsonld`) — the session `uuid` supplied by the recipient's agent. Per [[MOD-PP-MSG-10]](https://verana-labs.github.io/verifiable-trust-vpr-spec/#mod-pp-msg-10-create-or-update-participant-session) the recipient issues this identifier and later calls [[MOD-PP-QRY-5]](https://verana-labs.github.io/verifiable-trust-vpr-spec/#mod-pp-qry-5-get-participantsession) on it to confirm the session before accepting the credential, so the agent MUST NOT generate it.
+- `agentParticipantId` (OPTIONAL) — `Participant` id of the agent that will receive the credential. Set only when the recipient is a **Verifiable User Agent**. It MUST NOT be set when the recipient is a **Verifiable Service**.
+- `walletAgentParticipantId` (OPTIONAL) — `Participant` id of the wallet agent that will store the credential. Same restriction as `agentParticipantId`.
 
 **Requirements**:
 
-- For `format = jsonld`, after signing the credential and before returning it, the agent MUST anchor the credential's `digestJCS` in the VPR: compute the `digestJCS` as specified in [W3C VTCs: Determining Credential Issuance Time](https://verana-labs.github.io/verifiable-trust-spec/versions/v4/#w3c-vtcs-determining-credential-issuance-time), then call `CreateOrUpdateParticipantSession` ([[MOD-PP-MSG-10]](https://verana-labs.github.io/verifiable-trust-vpr-spec/#mod-pp-msg-10-create-or-update-participant-session)) with the `digest` parameter, referencing the agent's active ISSUER `Participant` entry for the governing `CredentialSchema`. The credential MUST NOT be returned until this transaction succeeds: a W3C VTC whose digest is not anchored has no provable issuance time and fails trust resolution ([[TR-4]](https://verana-labs.github.io/verifiable-trust-spec/versions/v4/#tr-trust-resolution)).
+- For `format = jsonld`, after signing the credential and before returning it, the agent MUST anchor the credential's `digestJCS` in the VPR: compute the `digestJCS` as specified in [W3C VTCs: Determining Credential Issuance Time](https://verana-labs.github.io/verifiable-trust-spec/versions/v4/#w3c-vtcs-determining-credential-issuance-time), then call `CreateOrUpdateParticipantSession` ([[MOD-PP-MSG-10]](https://verana-labs.github.io/verifiable-trust-vpr-spec/#mod-pp-msg-10-create-or-update-participant-session)) with `id` set to the supplied `participantSessionId`, the `digest` parameter, and `agent_participant_id` / `wallet_agent_participant_id` when supplied, referencing the agent's active ISSUER `Participant` entry for the governing `CredentialSchema`. The credential MUST NOT be returned until this transaction succeeds: a W3C VTC whose digest is not anchored has no provable issuance time and fails trust resolution ([[TR-4]](https://verana-labs.github.io/verifiable-trust-spec/versions/v4/#tr-trust-resolution)).
 - For `format = anoncreds`, digest anchoring does not apply (see [AnonCreds VTCs: Issuance Time](https://verana-labs.github.io/verifiable-trust-spec/versions/v4/#anoncreds-vtcs-issuance-time)); the on-chain `ParticipantSession` steps are performed as part of the DIDComm issuance flow that delivers the credential.
 
 **Output**:
 
-- For `jsonld`: the signed W3C Verifiable Credential, digest-anchored per the requirement above and ready to be transmitted to the recipient.
+- For `jsonld`: the signed W3C Verifiable Credential, digest-anchored per the requirement above and ready to be transmitted to the recipient, together with the anchored `digestJCS` so the caller can correlate the credential with the on-chain `ParticipantSession` without recomputing it.
 - For `anoncreds`: a DIDComm invitation and the associated `credentialExchangeId` for further tracking through the events interface.
 
 **Errors**:
