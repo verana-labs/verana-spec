@@ -72,6 +72,7 @@ The JSON Schemas published alongside this document expose this constraint as the
 | Delegation | List VS Operator Authorizations | `/v4/delegation/vs-operator-authorizations` | Query | [`IDX-DE-QRY-2`](#idx-de-qry-2-list-vs-operator-authorizations) | PUBLIC |
 | Delegation | Get Operator Authorization | `/v4/delegation/operator-authorization/{id}` | Query | [`IDX-DE-QRY-3`](#idx-de-qry-3-get-operator-authorization) | PUBLIC |
 | Delegation | Get VS Operator Authorization | `/v4/delegation/vs-operator-authorization/{id}` | Query | [`IDX-DE-QRY-4`](#idx-de-qry-4-get-vs-operator-authorization) | PUBLIC |
+| Delegation | List Fee Grants | `/v4/delegation/fee-grants` | Query | [`IDX-DE-QRY-5`](#idx-de-qry-5-list-fee-grants) | PUBLIC |
 | Digest | Get Digest | `/v4/di/get/{digest}` | Query | [`IDX-DI-QRY-1`](#idx-di-qry-1-get-digest) | PUBLIC |
 | Exchange Rate | Get Exchange Rate | `/v4/exchange-rate/get` | Query | [`IDX-XR-QRY-1`](#idx-xr-qry-1-get-exchange-rate) | PUBLIC |
 | Exchange Rate | List Exchange Rates | `/v4/exchange-rate/list` | Query | [`IDX-XR-QRY-2`](#idx-xr-qry-2-list-exchange-rates) | PUBLIC |
@@ -864,7 +865,7 @@ Supports pagination through attributes `max_id`, `min_id`, `limit` and `sort`, a
 
 #### Delegation methods
 
-The Delegation module surfaces the two on-chain authorization entities that replaced the old `Participant.vs_operator_authz_*` fields: `OperatorAuthorization` (corporation-to-operator grants over module message types) and `VSOperatorAuthorization` (corporation-to-VS-operator grant container holding one `ParticipantAuthorizationRecord` per controlled `Participant`).
+The Delegation module surfaces the two on-chain authorization entities that replaced the old `Participant.vs_operator_authz_*` fields: `OperatorAuthorization` (corporation-to-operator grants over module message types) and `VSOperatorAuthorization` (corporation-to-VS-operator grant container holding one `ParticipantAuthorizationRecord` per controlled `Participant`) — plus the `FeeGrant` entries through which a Corporation pays transaction fees on behalf of its grantees.
 
 ##### IDX-DE-QRY-1 List Operator Authorizations
 
@@ -925,6 +926,26 @@ Retrieve a specific `VSOperatorAuthorization` entry by its id, including its nes
 | `id` | path | uint64 | yes | The VSOperatorAuthorization ID |
 
 **Response:** `{ authorization: VSOperatorAuthorization }` — same shape as an entry returned by [`listVSOperatorAuthorizations`](#idx-de-qry-2-list-vs-operator-authorizations): `id`, `corporation_id`, `vs_operator`, and `records[]: ParticipantAuthorizationRecord[]` (each record carries `participant_id`, `msg_types[]`, `spend_limit[]` and `remaining_spend[]`, `fee_spend_limit[]` and `remaining_fee_spend[]`, `with_feegrant`, `expiration`, `period`).
+
+##### IDX-DE-QRY-5 List Fee Grants
+
+`GET /v4/delegation/fee-grants`
+
+Retrieve a paginated, filtered list of `FeeGrant` entries — the grants through which a Corporation pays network transaction fees on behalf of a grantee account (an `operator` or a `vs_operator`). *Aligned with the VPR [FeeGrant](https://verana-labs.github.io/verifiable-trust-vpr-spec/versions/v4/#feegrant) entity and [Delegation Module](https://verana-labs.github.io/verifiable-trust-vpr-spec/versions/v4/#delegation-module) fee-grant model; no dedicated VPR query exists (grants are realized as `x/feegrant` allowances).*
+
+The primary consumer use case is a client deciding, before broadcasting a delegable Msg, whether the signing grantee can elect corporation-paid fees by setting the transaction's fee `granter` to the Corporation's `policy_address`: a single call with `grantor_corporation_id=<acting corporation>&grantee=<signing account>&msg_type=<Msg type>&only_active=true` answers it (the `(grantor_corporation_id, grantee)` pair is the FeeGrant's composite key, so at most one entry matches).
+
+| Name | In | Type | Required | Description |
+| --- | --- | --- | --- | --- |
+| `grantor_corporation_id` | query | uint64 | no | Filter by the granting Corporation id |
+| `grantee` | query | string | no | Filter by the grantee account |
+| `msg_type` | query | string | no | Filter to grants whose `msg_types[]` includes this message type |
+| `only_active` | query | boolean | no | If true, only return non-expired grants (`expiration > now` or null; for periodic grants, the auto-renewing cycle boundary never makes the grant inactive) |
+| `modified_after` | query | datetime | no | Only return grants modified strictly after this datetime |
+
+Supports pagination through attributes `max_id`, `min_id`, `limit` and `sort`, as explained in [Pagination](#pagination). Since the VPR `FeeGrant` has a composite primary key `(grantor_corporation_id, grantee)` and no `id` of its own, the cursor key is an indexer-assigned per-row monotonic uint64 `id` surfaced on each entry (same mechanic as `ActivityItem.id`), distinct from any on-chain identifier.
+
+**Response:** `{ fee_grants: FeeGrant[] }` — each entry carries `id` (indexer-assigned per-row uint64, the pagination cursor), `grantor_corporation_id`, `grantee`, `msg_types[]`, `spend_limit[]` (optional `DenomAmount[]`), `remaining_spend[]` (when `spend_limit` is set — sourced from the underlying `x/feegrant` allowance's running balance, per the VPR Delegation module realization note), `expiration` (optional timestamp), and `period` (optional duration).
 
 #### Digest methods
 
