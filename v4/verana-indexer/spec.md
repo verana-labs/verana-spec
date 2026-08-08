@@ -73,6 +73,11 @@ The JSON Schemas published alongside this document expose this constraint as the
 | Delegation | Get Operator Authorization | `/v4/delegation/operator-authorization/{id}` | Query | [`IDX-DE-QRY-3`](#idx-de-qry-3-get-operator-authorization) | PUBLIC |
 | Delegation | Get VS Operator Authorization | `/v4/delegation/vs-operator-authorization/{id}` | Query | [`IDX-DE-QRY-4`](#idx-de-qry-4-get-vs-operator-authorization) | PUBLIC |
 | Digest | Get Digest | `/v4/di/get/{digest}` | Query | [`IDX-DI-QRY-1`](#idx-di-qry-1-get-digest) | PUBLIC |
+| Group | Get Corporation Group | `/v4/group/get/{corporation_id}` | Query | [`IDX-GR-QRY-1`](#idx-gr-qry-1-get-corporation-group) | PUBLIC |
+| Group | List Corporations By Member | `/v4/group/corporations-by-member` | Query | [`IDX-GR-QRY-2`](#idx-gr-qry-2-list-corporations-by-member) | PUBLIC |
+| Group | List Proposals | `/v4/group/proposals` | Query | [`IDX-GR-QRY-3`](#idx-gr-qry-3-list-proposals) | PUBLIC |
+| Group | Get Proposal | `/v4/group/proposal/{id}` | Query | [`IDX-GR-QRY-4`](#idx-gr-qry-4-get-proposal) | PUBLIC |
+| Group | List Votes | `/v4/group/votes` | Query | [`IDX-GR-QRY-5`](#idx-gr-qry-5-list-votes) | PUBLIC |
 | Exchange Rate | Get Exchange Rate | `/v4/exchange-rate/get` | Query | [`IDX-XR-QRY-1`](#idx-xr-qry-1-get-exchange-rate) | PUBLIC |
 | Exchange Rate | List Exchange Rates | `/v4/exchange-rate/list` | Query | [`IDX-XR-QRY-2`](#idx-xr-qry-2-list-exchange-rates) | PUBLIC |
 | Exchange Rate | Get Price | `/v4/exchange-rate/price` | Query | [`IDX-XR-QRY-3`](#idx-xr-qry-3-get-price) | PUBLIC |
@@ -98,7 +103,7 @@ All methods are specified in [Method Specification](#method-specification) below
 
 ### Method Specification
 
-This section specifies the raw indexer methods that expose VPR ledger entities (Corporations, Ecosystems, Governance Framework versions, Credential Schemas, Participants, Trust Deposits, Operator Authorizations, Digests, Exchange Rates) and the aggregate / statistical / operational state derived from them. They are pure query views; none mutate state. Per-method request and response JSON Schemas are published alongside this document at [`schemas/v4/idx/`](./schemas/v4/idx/) *(schemas to be added in a follow-up commit)*.
+This section specifies the raw indexer methods that expose VPR ledger entities (Corporations, Ecosystems, Governance Framework versions, Credential Schemas, Participants, Trust Deposits, Operator Authorizations, Digests, Exchange Rates), the Cosmos SDK `x/group` state anchoring Corporations (groups, members, policies, proposals, votes), and the aggregate / statistical / operational state derived from them. They are pure query views; none mutate state. Per-method request and response JSON Schemas are published alongside this document at [`schemas/v4/idx/`](./schemas/v4/idx/) *(schemas to be added in a follow-up commit)*.
 
 #### Conventions
 
@@ -940,6 +945,97 @@ Look up a previously stored `Digest` entry by its digest string. *Aligned with V
 
 **Response:** `{ digest: Digest }` — `{ digest: string, created: timestamp }`. Returns HTTP 404 if no `Digest` entry exists for the supplied value.
 
+#### Group methods
+
+The Verana chain uses the Cosmos SDK `x/group` module for Corporation governance: every Corporation is anchored on a group policy account (its `policy_address`), and corporation-level decisions — operator grants, member changes, every non-delegable Msg — are taken through group proposals (see the VPR [Corporation Module](https://verana-labs.github.io/verifiable-trust-vpr-spec/versions/v4/#corporation-module) group-lifecycle note). The Group module surfaces this `x/group` state **scoped to Corporation-anchored groups** — the group whose policy is some Corporation's `policy_address` — so that clients can implement membership discovery, member lists, and the full proposal/vote lifecycle without querying a chain LCD node. Groups and group policies that anchor no Corporation are out of scope and MUST NOT be surfaced.
+
+Write operations remain out of scope: submitting, voting on, executing, and withdrawing proposals (`MsgSubmitProposal`, `MsgVote`, `MsgExec`, `MsgWithdrawProposal`) are ordinary transactions broadcast to the chain; this module provides the read view, and [`IDX-INDEXER-SUB-1`](#idx-indexer-sub-1-subscribe-indexer-events) delivers the corresponding events in real time (see its routing model).
+
+*All methods in this module are indexer-specific (no VPR equivalent; they mirror Cosmos SDK `x/group` queries, joined with Corporation entries).*
+
+##### IDX-GR-QRY-1 Get Corporation Group
+
+`GET /v4/group/get/{corporation_id}`
+
+Retrieve the `x/group` state backing a Corporation: the group, the group policy anchoring the Corporation, and the full member list.
+
+| Name | In | Type | Required | Description |
+| --- | --- | --- | --- | --- |
+| `corporation_id` | path | uint64 | yes | The Corporation ID |
+
+**Response:** `{ group: CorporationGroup }`. The `CorporationGroup` object carries:
+
+- `corporation_id` — echo of the path parameter.
+- **Group:** `group_id` (uint64), `version` (bumped on membership changes), `total_weight` (decimal string), `created_at`.
+- **Policy:** `policy: { address, version, decision_policy }` — `address` equals the Corporation's `policy_address`; `decision_policy` is the `x/group` decision policy surfaced verbatim (a `ThresholdDecisionPolicy` `{ threshold, windows: { voting_period, min_execution_period } }` or a `PercentageDecisionPolicy` `{ percentage, windows: { … } }`).
+- **Members:** `members[]` — each `{ address, weight (decimal string), metadata, added_at }`. The full list is returned inline, not paginated: corporation groups are small by construction.
+
+The group and policy admin is not surfaced separately: per [[MOD-CO-MSG-1]](https://verana-labs.github.io/verifiable-trust-vpr-spec/versions/v4/#mod-co-msg-1-create-new-corporation), `group_policy_as_admin` is always `true`, so the admin of both the group and the group policy is the `policy.address` itself.
+
+##### IDX-GR-QRY-2 List Corporations By Member
+
+`GET /v4/group/corporations-by-member`
+
+Retrieve the Corporations whose backing group has the supplied account as a current member. This is the single-call **group-membership discovery** method: it replaces the LCD walk `GroupsByMember` → `GroupPoliciesByGroup` → Corporation reverse-mapping, and is the group-member counterpart of the operator-side discovery served by [`listOperatorAuthorizations`](#idx-de-qry-1-list-operator-authorizations) with `operator=<addr>`.
+
+| Name | In | Type | Required | Description |
+| --- | --- | --- | --- | --- |
+| `account` | query | string | yes | Member account address |
+
+Supports pagination through attributes `max_id`, `min_id`, `limit` and `sort`, as explained in [Pagination](#pagination); the cursor key is `corporation_id`.
+
+**Response:** `{ memberships: CorporationMembership[] }` — each entry carries `corporation_id`, `weight` (the member's weight in that group, decimal string), `metadata`, and `added_at`.
+
+##### IDX-GR-QRY-3 List Proposals
+
+`GET /v4/group/proposals`
+
+Retrieve a paginated, filtered list of `x/group` proposals targeting Corporation-anchored group policies.
+
+| Name | In | Type | Required | Description |
+| --- | --- | --- | --- | --- |
+| `corporation_id` | query | uint64 | no | Filter by the Corporation whose group policy the proposal targets |
+| `status` | query | enum | no | `SUBMITTED` \| `ACCEPTED` \| `REJECTED` \| `ABORTED` \| `WITHDRAWN` — short forms of the `x/group` `PROPOSAL_STATUS_*` values |
+| `proposer` | query | string | no | Filter to proposals whose `proposers[]` includes this account |
+| `pending_voter` | query | string | no | Only proposals with `status = SUBMITTED` whose voting period has not ended, where this account is a current member of the backing group and has not yet cast a vote. This is the "proposals awaiting my vote" badge query |
+| `modified_after` | query | datetime | no | Only return proposals modified (submitted, voted on, tallied, executed, withdrawn) strictly after this datetime |
+
+Supports pagination through attributes `max_id`, `min_id`, `limit` and `sort`, as explained in [Pagination](#pagination); the cursor key is the proposal `id` (`x/group` proposal ids are globally unique and monotonic).
+
+**Response:** `{ proposals: Proposal[] }`. Each `Proposal` carries:
+
+- **On-chain (`x/group`):** `id` (uint64), `group_policy_address`, `metadata`, `proposers[]`, `submit_time`, `group_version`, `group_policy_version`, `status` (enum above), `voting_period_end`, `executor_result` (`NOT_RUN` \| `SUCCESS` \| `FAILURE` — short forms of `PROPOSAL_EXECUTOR_RESULT_*`), `messages[]` — the wrapped Msgs JSON-decoded with their `@type`, so clients can render what the proposal will execute without protobuf decoding — and `final_tally_result` (populated by `x/group` once the proposal closes).
+- **Indexer-derived:** `corporation_id` (the Corporation anchored on `group_policy_address`) and `tally` `{ yes_count, no_count, abstain_count, no_with_veto_count }` — the running tally computed over indexed votes at the evaluation block; equals `final_tally_result` once the proposal closes.
+
+##### IDX-GR-QRY-4 Get Proposal
+
+`GET /v4/group/proposal/{id}`
+
+Retrieve a single proposal by its `x/group` proposal id.
+
+| Name | In | Type | Required | Description |
+| --- | --- | --- | --- | --- |
+| `id` | path | uint64 | yes | The proposal ID |
+
+**Response:** `{ proposal: Proposal }` — same shape as an entry returned by [`listProposals`](#idx-gr-qry-3-list-proposals). Returns HTTP 404 for proposals that target no Corporation-anchored group policy.
+
+##### IDX-GR-QRY-5 List Votes
+
+`GET /v4/group/votes`
+
+Retrieve the votes cast on Corporation-anchored proposals.
+
+| Name | In | Type | Required | Description |
+| --- | --- | --- | --- | --- |
+| `proposal_id` | query | uint64 | conditional¹ | Filter by proposal |
+| `voter` | query | string | conditional¹ | Filter by voter account |
+
+¹ At least one of `proposal_id` and `voter` MUST be provided; providing neither is HTTP 400.
+
+Supports pagination through attributes `max_id`, `min_id`, `limit` and `sort`, as explained in [Pagination](#pagination). Since an `x/group` vote is keyed by the composite `(proposal_id, voter)`, the cursor key is an indexer-assigned per-row monotonic uint64 `id` surfaced on each entry (same mechanic as `ActivityItem.id`).
+
+**Response:** `{ votes: Vote[] }` — each entry carries `id` (indexer-assigned per-row uint64, the pagination cursor), `proposal_id`, `voter`, `option` (`YES` \| `NO` \| `ABSTAIN` \| `NO_WITH_VETO` — short forms of `VOTE_OPTION_*`), `metadata`, and `submit_time`.
+
 #### Exchange Rate methods
 
 The Exchange Rate module is a protocol-level oracle that publishes on-chain conversion rates between asset pairs (`(base_asset_type, base_asset)` → `(quote_asset_type, quote_asset)`), and exposes a derived `getPrice` helper that performs the integer arithmetic conversion. Rates are scoped to the network, not to a corporation, and update permission is governed by `ExchangeRateAuthorization` entries.
@@ -1197,9 +1293,11 @@ When **both** `dids` and `corporation_id` are present, only events matching **bo
 
 `WS /v4/indexer/subscribe`
 
-Real-time push of Corporation, Governance Framework, Ecosystem, Credential Schema, Participant, Trust Deposit, Delegation, and Digest events for one or more DIDs. The subscriber opens a WebSocket connection to `/v4/indexer/subscribe` and sends one or more JSON control messages; the first control message MUST be a `subscribe`. *Indexer-specific (no VPR equivalent).*
+Real-time push of Corporation, Governance Framework, Ecosystem, Credential Schema, Participant, Trust Deposit, Delegation, Digest, and Group events for one or more DIDs. The subscriber opens a WebSocket connection to `/v4/indexer/subscribe` and sends one or more JSON control messages; the first control message MUST be a `subscribe`. *Indexer-specific (no VPR equivalent).*
 
 > **Routing model.** Events are routed to scoped subscriptions by DID / Corporation affiliation (`Corporation.did`, `Ecosystem.did`, `Participant.did`, or ownership via `corporation_id` — see the `subscribe` filters below). Entities with neither affiliation — Exchange Rate entries, which are global market data — are therefore not part of any scoped subscription and define no dedicated notification event types; rates are pull-data, queried on demand via the [Exchange Rate methods](#exchange-rate-methods). A **wildcard** subscription (both filters absent) still receives every indexed transaction event, Exchange Rate messages included, since `event_type` is simply the Cosmos action name of the executed message.
+>
+> **`x/group` events** are in scope when they target a **Corporation-anchored group**: an `x/group` message whose group or group policy anchors a Corporation (via `policy_address`, per the [Group methods](#group-methods) scope) is routed as an event **of that Corporation** — delivered to `corporationId`-scoped subscriptions for that Corporation and to `dids[]`-scoped subscriptions containing the Corporation's `did`, with `event_type` the Cosmos action name (`SubmitProposal`, `Vote`, `Exec`, `WithdrawProposal`, `UpdateGroupMembers`, `UpdateGroupPolicyDecisionPolicy`, `UpdateGroupPolicyMetadata`, `UpdateGroupMetadata`, …) and `payload.module = "group"`. This gives corporation-scoped subscribers real-time proposal-lifecycle notifications (new proposal to vote on, vote cast, proposal executed, membership changed) without polling; the corresponding read state is served by the [Group methods](#group-methods). `x/group` events targeting groups that anchor no Corporation are not routed to any scoped subscription (wildcard subscriptions still receive them).
 
 ###### Connect / ready
 
