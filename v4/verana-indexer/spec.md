@@ -541,7 +541,7 @@ Retrieve a paginated, filtered list of Ecosystems. *Aligned with VPR [[MOD-ES-QR
 | `preferred_language` | query | string | no | Preferred document language; affects governance-framework document ordering |
 | `archived` | query | boolean | no | `true` → only archived Ecosystems; `false` → only not-archived Ecosystems; null/omitted → both. Default: null. |
 | `corporation_id` | query | uint64 | no | Filter by controlling-Corporation id |
-| `participant` | query | string | no | Account address; returns Ecosystems where this account is the Ecosystem corporation or holds an active `Participant` entry on a schema in the Ecosystem |
+| `participant_corporation_id` | query | uint64 | no | Id of a Corporation; returns Ecosystems where this Corporation is the controlling Corporation (`Ecosystem.corporation_id`) **or** owns a `Participant` entry with `participant_state = ACTIVE` (per [Participant State Semantics](#participant-state-semantics)) on any Credential Schema of the Ecosystem. Complements `corporation_id`, which matches on control only |
 | `modified_after` | query | datetime | no | Only return Ecosystems modified strictly after this ISO 8601 datetime |
 | `trust_data` | query | enum | no | `null` \| `summary` \| `full` — see [Conventions](#trust_data-query-parameter) |
 | `min_active_schemas` / `max_active_schemas` | query | integer | no | Active-schema count bounds |
@@ -642,7 +642,7 @@ Retrieve a paginated, filtered list of Credential Schemas. *Aligned with VPR [[M
 | `issuer_onboarding_mode` | query | enum | no | Filter by issuer onboarding mode: `OPEN` \| `GRANTOR_ONBOARDING_PROCESS` \| `ECOSYSTEM_ONBOARDING_PROCESS` |
 | `verifier_onboarding_mode` | query | enum | no | Filter by verifier onboarding mode: `OPEN` \| `GRANTOR_ONBOARDING_PROCESS` \| `ECOSYSTEM_ONBOARDING_PROCESS` |
 | `holder_onboarding_mode` | query | enum | no | Filter by holder onboarding mode: `ISSUER_ONBOARDING_PROCESS` \| `PERMISSIONLESS` |
-| `participant` | query | string | no | Account address; returns schemas where the account is the Ecosystem corporation or holds an active `Participant` entry |
+| `participant_corporation_id` | query | uint64 | no | Id of a Corporation; returns schemas where this Corporation controls the owning Ecosystem (`Ecosystem.corporation_id`) **or** owns a `Participant` entry with `participant_state = ACTIVE` (per [Participant State Semantics](#participant-state-semantics)) on the schema |
 | `modified_after` | query | datetime | no | Only return schemas modified strictly after this datetime |
 | *(standard list filters)* | query | — | no | See [Standard list filters](#standard-list-filters) |
 
