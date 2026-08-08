@@ -755,14 +755,21 @@ Supports pagination through attributes `max_id`, `min_id`, `limit` and `sort`, a
 
 `GET /v4/participant/beneficiaries`
 
-Compute the chain of beneficiary Participants for a credential transaction. Given an issuer Participant and a verifier Participant, returns every ancestor Participant in either tree (issuer grantor, verifier grantor, ecosystem, network) that participates in the fee-distribution flow. *Aligned with VPR [[MOD-PP-QRY-4]](https://verana-labs.github.io/verifiable-trust-vpr-spec/#mod-pp-qry-4-find-beneficiaries).*
+Compute the set of beneficiary Participants for a credential transaction. Given an issuer Participant and/or a verifier Participant, returns every ancestor Participant in the involved tree branch(es) (issuer grantor, verifier grantor, ecosystem) that participates in the fee-distribution flow. *Aligned with VPR [[MOD-PP-QRY-4]](https://verana-labs.github.io/verifiable-trust-vpr-spec/#mod-pp-qry-4-find-beneficiaries).*
 
 | Name | In | Type | Required | Description |
 | --- | --- | --- | --- | --- |
-| `issuer_participant_id` | query | uint64 | yes | Issuer Participant ID |
-| `verifier_participant_id` | query | uint64 | yes | Verifier Participant ID |
+| `issuer_participant_id` | query | uint64 | conditional¹ | Issuer Participant ID. MUST reference an [active](#participant-state-semantics) `Participant`; HTTP 400 otherwise |
+| `verifier_participant_id` | query | uint64 | conditional¹ | Verifier Participant ID. MUST reference an [active](#participant-state-semantics) `Participant`; HTTP 400 otherwise |
 
-**Response:** `{ participants: Participant[] }` — the ordered set of beneficiary Participants.
+¹ At least one of `issuer_participant_id` and `verifier_participant_id` MUST be provided (either one alone, or both); providing neither is HTTP 400. Per VPR [[MOD-PP-QRY-4]](https://verana-labs.github.io/verifiable-trust-vpr-spec/#mod-pp-qry-4-find-beneficiaries), the membership of the result set depends on the combination:
+
+- **Issuance** (`issuer_participant_id` only — a credential offer): the ancestors of the issuer `Participant`, excluding the issuer itself.
+- **Verification** (`verifier_participant_id` set, with or without `issuer_participant_id`): the ancestors of the verifier `Participant` (excluding the verifier itself), plus — when `issuer_participant_id` is provided — the issuer `Participant` **itself** and its ancestors.
+
+In both cases, revoked and slashed ancestors are excluded from the set; expired-but-not-revoked/slashed ancestors are included.
+
+**Response:** `{ participants: Participant[] }` — the set of beneficiary Participants.
 
 ##### IDX-PP-QRY-5 Pending Flat
 
