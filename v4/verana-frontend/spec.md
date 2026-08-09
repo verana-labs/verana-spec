@@ -275,7 +275,8 @@ Trust-economics previews MUST be computed from live chain parameters — never h
 - [VFE-PAGE-CORP-3] **Trust Deposit**: from [`IDX-TD-QRY-1`](../verana-indexer/spec.md#idx-td-qry-1-get-trust-deposit-by-corporation): `deposit` and slash history; **Repay slashed deposit** (`MsgRepaySlashedTrustDeposit`, shown only when an unrepaid slash exists, with the exact required amount). The UI MUST reflect that v4 trust deposits are non-withdrawable — no withdraw affordance exists — and yield display / reclaim (`claimable`, `MsgReclaimTrustDepositYield`) MUST NOT be surfaced in this revision: tokenomics change significantly in v5, and yield handling is deferred to that revision.
 - [VFE-PAGE-CORP-4] **Members**: the group's member list, total weight, and decision policy from [`IDX-GR-QRY-1`](../verana-indexer/spec.md#idx-gr-qry-1-get-corporation-group); membership and policy changes are proposal-only ([VFE-CORP-PROP-4]).
 - [VFE-PAGE-CORP-5] **Operators**: active `OperatorAuthorization` entries ([`IDX-DE-QRY-1`](../verana-indexer/spec.md#idx-de-qry-1-list-operator-authorizations) by `corporation_id`) with msg types, limits, expiration; associated fee grants from [`IDX-DE-QRY-5`](../verana-indexer/spec.md#idx-de-qry-5-list-fee-grants); grant/revoke via [VFE-CORP-CAPS-2] gating with proposal fallback.
-- [VFE-PAGE-CORP-6] **Proposals**: per [VFE-CORP-PROP], visible to group members.
+- [VFE-PAGE-CORP-6] **VS Operators**: the Corporation's active `VSOperatorAuthorization` entries ([`IDX-DE-QRY-2`](../verana-indexer/spec.md#idx-de-qry-2-list-vs-operator-authorizations) with `corporation_id=<acting>&only_active=true`), one row per `vs_operator` account with its `ParticipantAuthorizationRecord[]` — per record: the target Participant (linked to its detail card, with schema/ecosystem context via its `ecosystem_id`), `msg_types[]`, spend and fee limits, `with_feegrant`, and `expiration`. This view is **read-only**: per VPR, VSOA records are created, updated, and revoked exclusively by the Participant-module flows (`StartParticipantOP` / `SelfCreateParticipant` / `CreateRootParticipant` declare them; revocation/slash/cancel remove them), so the frontend MUST NOT offer direct grant/revoke actions here.
+- [VFE-PAGE-CORP-7] **Proposals**: per [VFE-CORP-PROP], visible to group members.
 
 ### [VFE-PAGE-ES-LIST] My Ecosystems
 
@@ -335,7 +336,7 @@ Trust-economics previews MUST be computed from live chain parameters — never h
 | Frontend concern | Indexer methods |
 |---|---|
 | Membership discovery | `IDX-DE-QRY-1` (operator), `IDX-GR-QRY-2` (group member), `IDX-CO-QRY-1/2` |
-| Corporation page | `IDX-CO-QRY-1/3/4`, `IDX-TD-QRY-1/2/3`, `IDX-GR-QRY-1`, `IDX-DE-QRY-1/5` |
+| Corporation page | `IDX-CO-QRY-1/3/4`, `IDX-TD-QRY-1/2/3`, `IDX-GR-QRY-1`, `IDX-DE-QRY-1/2/5` |
 | Proposals | `IDX-GR-QRY-3/4/5` + `x/group` event routing of `IDX-INDEXER-SUB-1` |
 | Ecosystems | `IDX-ES-QRY-1/2/3/4`, `IDX-GF-QRY-1/2` |
 | Credential Schemas | `IDX-CS-QRY-1/2/3/4/5` |
