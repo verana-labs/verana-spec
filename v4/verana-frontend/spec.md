@@ -251,8 +251,8 @@ Trust-economics previews MUST be computed from live chain parameters — never h
 
 ### [VFE-PAGE-NAV] Navigation
 
-- [VFE-PAGE-NAV-1] Primary navigation: **Dashboard**, **Account**, **Corporation**, **My Ecosystems**, **Discover & Join**, **Pending Tasks** (with combined badge: pending validations + proposals awaiting the user's vote), **Settings**.
-- [VFE-PAGE-NAV-2] Guest mode exposes Dashboard, Discover (read-only), and Settings; Account requires a connected wallet; Corporation, My Ecosystems, and Pending Tasks require an acting Corporation.
+- [VFE-PAGE-NAV-1] Primary navigation: **Dashboard**, **Account**, **Corporation**, **Ecosystems**, **Discover & Join**, **Pending Tasks** (with combined badge: pending validations + proposals awaiting the user's vote), **Settings**.
+- [VFE-PAGE-NAV-2] Guest mode exposes Dashboard, Discover (read-only), and Settings; Account requires a connected wallet; Corporation, Ecosystems, and Pending Tasks require an acting Corporation.
 
 ### [VFE-PAGE-DASH] Dashboard
 
@@ -279,7 +279,7 @@ Trust-economics previews MUST be computed from live chain parameters — never h
 - [VFE-PAGE-CORP-6] **Agent Authorizations**: the Corporation's active `VSOperatorAuthorization` entries ([`IDX-DE-QRY-2`](../verana-indexer/spec.md#idx-de-qry-2-list-vs-operator-authorizations) with `corporation_id=<acting>&only_active=true`), one row per `vs_operator` account with its `ParticipantAuthorizationRecord[]` — per record: the target Participant (linked to its detail card, with schema/ecosystem context via its `ecosystem_id`), `msg_types[]`, spend and fee limits, `with_feegrant`, and `expiration`. This view is **read-only**: per VPR, VSOA records are created, updated, and revoked exclusively by the Participant-module flows (`StartParticipantOP` / `SelfCreateParticipant` / `CreateRootParticipant` declare them; revocation/slash/cancel remove them), so the frontend MUST NOT offer direct grant/revoke actions here.
 - [VFE-PAGE-CORP-7] **Proposals**: the full surface of [VFE-CORP-PROP] — proposal list with status filter, the **New proposal** composer ([VFE-CORP-PROP-1] / [VFE-CORP-PROP-4]), and per-proposal detail with vote / execute / withdraw actions. Visible to group members of the acting Corporation.
 
-### [VFE-PAGE-ES-LIST] My Ecosystems
+### [VFE-PAGE-ES-LIST] Ecosystems
 
 - [VFE-PAGE-ES-LIST-1] MUST list the Ecosystems of the acting Corporation via [`IDX-ES-QRY-2`](../verana-indexer/spec.md#idx-es-qry-2-list-ecosystems) with `participant_corporation_id=<acting>` (control **or** active participation), `trust_data=full` for card identity, distinguishing *controlled* from *joined* (role badges from the Corporation's ACTIVE Participants, [`IDX-PP-QRY-2`](../verana-indexer/spec.md#idx-pp-qry-2-list-participants) with `corporation_id` + `ecosystem_id`).
 - [VFE-PAGE-ES-LIST-2] Cards MUST show: service/organization identity per [VFE-TRUST-CLAIMS], trust state, active schema count, participant count, locked trust value (`weight`), issued/verified counters, archived watermark when archived. Filters: show archived, controlled/joined, text filter (client-side over the loaded window per [VFE-DATA-IDX-1]).
