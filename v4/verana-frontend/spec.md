@@ -124,7 +124,7 @@ The user journey is: connect wallet → discover Corporations the account can ac
 
 ### [VFE-CORP-SEL] Acting Corporation Selection
 
-- [VFE-CORP-SEL-1] When the discovered set is non-empty, the header MUST show the acting Corporation selector: the current acting Corporation's name/DID, and a dropdown listing every discovered Corporation with its membership-kind badges (*Operator*, *Member*) and, for members, their voting weight.
+- [VFE-CORP-SEL-1] Whenever a wallet is connected, the header MUST show the acting Corporation selector: the current acting Corporation's name/DID (or a "no corporation" state), and a dropdown listing every discovered Corporation with its membership-kind badges (*Operator*, *Member*) and, for members, their voting weight. The dropdown MUST always end with a **Create new Corporation** entry opening the wizard of [VFE-CORP-CREATE] — an account can create additional Corporations regardless of how many it already acts for.
 - [VFE-CORP-SEL-2] Exactly one Corporation is acting at a time. Switching MUST re-scope every corporation-bound surface (pages of [VFE-PAGE], event subscription of [VFE-DATA-WS], capability gates of [VFE-CORP-CAPS]) without requiring a reload. If the set has exactly one entry, it is auto-selected; if several, the frontend MUST prompt for selection on first connect and persist the choice per [VFE-WALLET-4].
 - [VFE-CORP-SEL-3] On session restore, the persisted acting Corporation MUST be re-validated against a fresh discovery pass; if the account can no longer act for it, the selection MUST be cleared and the user re-prompted.
 - [VFE-CORP-SEL-4] If mid-session the acting Corporation becomes unrepresentable (last operator grant revoked/expired and account removed from the group), the frontend MUST surface a blocking notice and return the user to selection or guest mode. In-flight forms MUST NOT silently broadcast under a stale context.
@@ -140,7 +140,7 @@ The user journey is: connect wallet → discover Corporations the account can ac
 
 ### [VFE-CORP-CREATE] Corporation Creation
 
-- [VFE-CORP-CREATE-1] Any connected account MUST be able to create a Corporation through a wizard driving [`MOD-CO-MSG-1 Create New Corporation`](https://verana-labs.github.io/verifiable-trust-vpr-spec/versions/v4/#mod-co-msg-1-create-new-corporation), collecting: **members** (addresses + weights, at least one), **decision policy** (threshold or percentage, voting period, min execution period), **Corporation DID**, **primary language** (BCP 47), and the **CGF v1 document** (URL + `digest_sri` computed via [VFE-GEN-SRV-1]).
+- [VFE-CORP-CREATE-1] Any connected account MUST be able to create a Corporation — no pre-existing membership or authorization is required (per VPR, any account may sign `MsgCreateNewCorporation`). The wizard MUST be reachable from: (a) the **Create new Corporation** entry of the acting-Corporation selector ([VFE-CORP-SEL-1]); (b) a prominent empty-state call-to-action when discovery ([VFE-CORP-DISC]) yields no Corporation for the connected account; and (c) the Account page memberships section ([VFE-PAGE-ACCT-2]). It drives [`MOD-CO-MSG-1 Create New Corporation`](https://verana-labs.github.io/verifiable-trust-vpr-spec/versions/v4/#mod-co-msg-1-create-new-corporation), collecting: **members** (addresses + weights, at least one), **decision policy** (threshold or percentage, voting period, min execution period), **Corporation DID**, **primary language** (BCP 47), and the **CGF v1 document** (URL + `digest_sri` computed via [VFE-GEN-SRV-1]).
 - [VFE-CORP-CREATE-2] The review step MUST show the cost preview per [VFE-TX-SIM] and state plainly that the creating account retains **no ongoing privileges**: governance belongs to the group, and day-to-day operation requires an `OperatorAuthorization` granted by group proposal.
 - [VFE-CORP-CREATE-3] On success the frontend MUST re-run discovery; if the creator included themselves as a member, it SHOULD offer the guided next step "propose an OperatorAuthorization for your account" (pre-filled proposal per [VFE-CORP-PROP-4]).
 
@@ -264,7 +264,7 @@ Trust-economics previews MUST be computed from live chain parameters — never h
 *Scope: the connected account itself. Corporation-owned economics live on the Corporation page.*
 
 - [VFE-PAGE-ACCT-1] MUST show the account address (copy, QR, explorer link) and its bank balance via RPC; the low-balance warning follows [VFE-WALLET-5].
-- [VFE-PAGE-ACCT-2] MUST list the account's memberships (from [VFE-CORP-DISC]) with membership-kind badges, linking each to the Corporation page after switching context.
+- [VFE-PAGE-ACCT-2] MUST list the account's memberships (from [VFE-CORP-DISC]) with membership-kind badges, linking each to the Corporation page after switching context, and MUST include a **Create new Corporation** action opening the wizard of [VFE-CORP-CREATE].
 - [VFE-PAGE-ACCT-3] **Get VNA**: when `NEXT_PUBLIC_VERANA_TOPUP_VS` is set, MUST present the top-up Verifiable Service — trust-resolved per [VFE-DATA-RESOLVE] and displayed per [VFE-TRUST] — with a QR encoding the service DID and the account address for completion in the user's mobile wallet.
 
 ### [VFE-PAGE-CORP] Corporation
