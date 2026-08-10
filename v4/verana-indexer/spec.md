@@ -895,7 +895,9 @@ Retrieve a paginated, filtered list of `OperatorAuthorization` entries. Each ent
 
 Supports pagination through attributes `max_id`, `min_id`, `limit` and `sort`, as explained in [Pagination](#pagination).
 
-**Response:** `{ authorizations: OperatorAuthorization[] }` — each entry carries `id` (auto-incremented uint64), `corporation_id`, `operator`, `msg_types[]`, `spend_limit[]` (optional `DenomAmount[]`), `remaining_spend[]` (when `spend_limit` is set), `fee_spend_limit[]` (optional), `remaining_fee_spend[]` (when `fee_spend_limit` is set), `expiration` (optional timestamp), and `period` (optional duration).
+**Response:** `{ authorizations: OperatorAuthorization[] }` — each entry carries `id` (auto-incremented uint64), `corporation_id`, `operator`, `msg_types[]`, `spend_limit[]` (optional `DenomAmount[]`), `remaining_spend[]` (when `spend_limit` is set), `expiration` (optional timestamp), and `period` (optional duration).
+
+> Fee-payment capability is **not** part of `OperatorAuthorization`: per the VPR data model it lives on the separate [FeeGrant](https://verana-labs.github.io/verifiable-trust-vpr-spec/versions/v4/#feegrant) entity, keyed `(grantor_corporation_id, grantee)`. Query it via [`listFeeGrants`](#idx-de-qry-5-list-fee-grants).
 
 ##### IDX-DE-QRY-2 List VS Operator Authorizations
 
@@ -925,7 +927,7 @@ Retrieve a specific `OperatorAuthorization` entry by its id. *Aligned with VPR [
 | --- | --- | --- | --- | --- |
 | `id` | path | uint64 | yes | The OperatorAuthorization ID |
 
-**Response:** `{ authorization: OperatorAuthorization }` — same shape as an entry returned by [`listOperatorAuthorizations`](#idx-de-qry-1-list-operator-authorizations): `id`, `corporation_id`, `operator`, `msg_types[]`, `spend_limit[]` (optional `DenomAmount[]`), `remaining_spend[]` (when `spend_limit` is set), `fee_spend_limit[]` (optional), `remaining_fee_spend[]` (when `fee_spend_limit` is set), `expiration` (optional timestamp), and `period` (optional duration).
+**Response:** `{ authorization: OperatorAuthorization }` — same shape as an entry returned by [`listOperatorAuthorizations`](#idx-de-qry-1-list-operator-authorizations): `id`, `corporation_id`, `operator`, `msg_types[]`, `spend_limit[]` (optional `DenomAmount[]`), `remaining_spend[]` (when `spend_limit` is set), `expiration` (optional timestamp), and `period` (optional duration). For the associated fee-payment capability, see [`listFeeGrants`](#idx-de-qry-5-list-fee-grants).
 
 ##### IDX-DE-QRY-4 Get VS Operator Authorization
 
