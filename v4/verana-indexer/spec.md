@@ -941,11 +941,11 @@ The primary consumer use case is a client deciding, before broadcasting a delega
 | `grantee` | query | string | no | Filter by the grantee account |
 | `msg_type` | query | string | no | Filter to grants whose `msg_types[]` includes this message type |
 | `only_active` | query | boolean | no | If true, only return non-expired grants (`expiration > now` or null; for periodic grants, the auto-renewing cycle boundary never makes the grant inactive) |
-| `modified_after` | query | datetime | no | Only return grants modified strictly after this datetime |
+| `modified_after` | query | datetime | no | Only return grants modified strictly after this datetime. A grant is considered modified by its creation, update, or revocation, and by any change to `remaining_spend` (fee draw or cycle reset, detected via the SDK `use_feegrant` event — fee draws happen at fee-processing time and emit no Delegation-module event of their own) |
 
 Supports pagination through attributes `max_id`, `min_id`, `limit` and `sort`, as explained in [Pagination](#pagination). Since the VPR `FeeGrant` has a composite primary key `(grantor_corporation_id, grantee)` and no `id` of its own, the cursor key is an indexer-assigned per-row monotonic uint64 `id` surfaced on each entry (same mechanic as `ActivityItem.id`), distinct from any on-chain identifier.
 
-**Response:** `{ fee_grants: FeeGrant[] }` — each entry carries `id` (indexer-assigned per-row uint64, the pagination cursor), `grantor_corporation_id`, `grantee`, `msg_types[]`, `spend_limit[]` (optional `DenomAmount[]`), `remaining_spend[]` (when `spend_limit` is set — sourced from the underlying `x/feegrant` allowance's running balance, per the VPR Delegation module realization note), `expiration` (optional timestamp), and `period` (optional duration).
+**Response:** `{ fee_grants: FeeGrant[] }` — each entry carries `id` (indexer-assigned per-row uint64, the pagination cursor), `grantor_corporation_id`, `grantee`, `msg_types[]`, `spend_limit[]` (optional `DenomAmount[]`), `remaining_spend[]` (when `spend_limit` is set — sourced from the underlying `x/feegrant` allowance's running balance, per the VPR Delegation module realization note), `expiration` (optional timestamp), and `period` (optional duration). For periodic grants, `expiration` reflects the underlying allowance's current `period_reset` (the end of the current auto-renewing cycle), per the VPR Delegation module mapping — not the value stored at grant time, which never advances on-chain.
 
 #### Digest methods
 
