@@ -772,11 +772,13 @@ Compute the chain of beneficiary Participants for a credential transaction. Give
 
 `GET /v4/participant/pending/flat`
 
-Return the open task list for a given account — every Participant anywhere on the network where the account is the validator and the Participant is in a state that requires the validator's action (e.g. `op_state: PENDING`). Results are grouped by Ecosystem then by Credential Schema. *Indexer-specific (no VPR equivalent).*
+Return the open task list for a given Corporation — every Participant anywhere on the network whose **validator Participant** (the entry referenced by its `validator_participant_id`) is owned by that Corporation and whose state requires the validator's action (e.g. `op_state: PENDING`). Results are grouped by Ecosystem then by Credential Schema. *Indexer-specific (no VPR equivalent).*
+
+> Validator scoping is by Corporation, not by account: per VPR v4, `Participant` entries — including validator entries — are owned by Corporations (`Participant.corporation_id`), and individual accounts only act on them through delegated authorizations. A client acting for a Corporation (e.g. the Verana frontend after corporation selection) passes that Corporation's `corporation_id`; which of the Corporation's operators may actually execute the pending action (`SetParticipantOPtoValidated`, …) is determined separately by the caller against the Corporation's authorization grants (see [`listOperatorAuthorizations`](#idx-de-qry-1-list-operator-authorizations) / [`listVSOperatorAuthorizations`](#idx-de-qry-2-list-vs-operator-authorizations) and [Available Actions Semantics](#available-actions-semantics)).
 
 | Name | In | Type | Required | Description |
 | --- | --- | --- | --- | --- |
-| `account` | query | string | yes | Account address whose pending tasks are returned |
+| `corporation_id` | query | uint64 | yes | Id of the Corporation whose pending tasks are returned (the Corporation owning the validator `Participant` entries) |
 | `trust_data` | query | enum | no | `null` \| `summary` \| `full` |
 | `limit` | query | integer | no | 1..1024, default 64 (caps the number of Ecosystems returned) |
 
@@ -784,7 +786,7 @@ Return the open task list for a given account — every Participant anywhere on 
 
 - `id`, `did`, `pending_tasks` (count of pending validations), `participants` (active participant count).
 - `trust_data` (when requested; per [Conventions](#trust_data-query-parameter)).
-- `schemas[]: CredentialSchemaPending[]` — each `CredentialSchemaPending` carries `id`, `title` (indexer-derived from the JSON Schema `title`), `description` (indexer-derived from the JSON Schema `description`), `pending_tasks`, `participants` (active participant count), and `pending_participants[]: Participant[]` (full `Participant` shape; see [`getParticipant`](#idx-pp-qry-1-get-participant)). The `pending_participants[]` array is the list of `Participant` entries pending action from the validator account; it is intentionally distinct from the scalar `participants` count.
+- `schemas[]: CredentialSchemaPending[]` — each `CredentialSchemaPending` carries `id`, `title` (indexer-derived from the JSON Schema `title`), `description` (indexer-derived from the JSON Schema `description`), `pending_tasks`, `participants` (active participant count), and `pending_participants[]: Participant[]` (full `Participant` shape; see [`getParticipant`](#idx-pp-qry-1-get-participant)). The `pending_participants[]` array is the list of `Participant` entries pending action from the validator Corporation; it is intentionally distinct from the scalar `participants` count.
 
 ##### IDX-PP-QRY-6 Get Participant Session
 
