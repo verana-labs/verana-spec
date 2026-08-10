@@ -712,6 +712,7 @@ Retrieve a specific Participant by its ID. A Participant is a single VPR partici
 
 - **On-chain (VPR `Participant`):** `id`, `schema_id`, `role` (one of `ISSUER`, `VERIFIER`, `ISSUER_GRANTOR`, `VERIFIER_GRANTOR`, `ECOSYSTEM`, `HOLDER`), `did`, `corporation_id` (uint64; FK to `Corporation.id`), `vs_operator` (account), lifecycle timestamps (`created`, `modified`, `adjusted`, `slashed`, `repaid`, `revoked`, `effective_from`, `effective_until`), fee fields (`validation_fees`, `issuance_fees`, `verification_fees`, `issuance_fee_discount`, `verification_fee_discount`), deposit fields (`deposit`, `slashed_deposit`, `repaid_deposit`), and the onboarding-process state (`op_state` enum: `PENDING` / `VALIDATED` / `TERMINATED`; plus `op_last_state_change`, `op_current_fees`, `op_current_deposit`, `op_summary_digest`, `op_exp`, `op_validator_deposit`, `validator_participant_id`).
 - **Indexer-derived (computed at evaluation block; not stored on-chain):**
+  - `ecosystem_id` — the Ecosystem owning the Participant's Credential Schema, denormalised from `CredentialSchema.ecosystem_id`. Per VPR, every schema is owned by exactly one Ecosystem, so the value is well-defined and immutable for the Participant's lifetime; it saves consumers a schema→ecosystem join per row and mirrors the `participations[].ecosystemId` field the [Verifiable Trust Resolver](#verifiable-trust-resolver-methods) already surfaces inline.
   - `participant_state` — lifecycle state derived from on-chain timestamps. One of `ACTIVE`, `FUTURE`, `INACTIVE`, `EXPIRED`, `REVOKED`, `SLASHED`, `REPAID`. See [Conventions → `participant_state` semantics](#participant-state-semantics).
   - `corporation_available_actions[]`, `validator_available_actions[]` — UI-affordance arrays listing the next allowable VPR messages for the owning Corporation / validator at the current state (e.g. `CancelParticipantOPLastRequest`, `SetParticipantOPtoValidated`, `RenewParticipantOP`). See [Conventions → Available Actions Semantics](#available-actions-semantics).
 - **Indexer-enriched aggregates** (computed): `weight`, `issued`, `verified`, `participants` (sub-participant count for grantor roles), and the same slash counters as on `CredentialSchema`.
@@ -736,6 +737,7 @@ Retrieve a paginated, filtered list of Participants. *Aligned with VPR [[MOD-PP-
 | `only_slashed` | query | boolean | no | Filter only slashed Participants |
 | `only_repaid` | query | boolean | no | Filter only repaid Participants |
 | `schema_id` | query | uint64 | no | Filter by Credential Schema ID |
+| `ecosystem_id` | query | uint64 | no | Filter by the Ecosystem owning the Participant's Credential Schema (the denormalised `ecosystem_id` response field) |
 | `validator_participant_id` | query | uint64 | no | Filter by validator Participant ID |
 | `when` | query | datetime | no | Effective-date filter; returns Participants whose effective range includes this datetime |
 | `modified_after` | query | datetime | no | Only return Participants modified strictly after this datetime |
