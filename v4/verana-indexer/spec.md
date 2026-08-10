@@ -472,12 +472,15 @@ Retrieve a paginated, filtered list of Corporations. *Aligned with VPR [[MOD-CO-
 | `gf_data` | query | enum | no | `none` \| `only_active` \| `all` — controls inclusion of CGF `versions[]`. Default: `only_active`. |
 | `preferred_language` | query | string | no | Preferred document language; affects CGF document ordering |
 | `did` | query | string | no | Filter by Corporation DID |
+| `policy_address` | query | string | no | Comma-separated list of `policy_address` accounts (min 1, max 64 entries). Returns only Corporations whose `policy_address` is in the list. Since `policy_address` is globally unique across Corporation entries (1:1, per VPR), each supplied address matches at most one Corporation; addresses matching no Corporation are simply not represented in the result. More than 64 entries MUST be rejected with HTTP 400. |
 | `modified_after` | query | datetime | no | Only return Corporations modified strictly after this ISO 8601 datetime |
 | `trust_data` | query | enum | no | `null` \| `summary` \| `full` — see [Conventions](#trust_data-query-parameter) |
 
 Supports pagination through attributes `max_id`, `min_id`, `limit` and `sort`, as explained in [Pagination](#pagination).
 
 **Response:** `{ corporations: Corporation[] }`. Each entry has the same shape as [`getCorporation`](#idx-co-qry-1-get-corporation).
+
+> **Use case for `policy_address`:** reverse-mapping Cosmos SDK `x/group` policy accounts to their Corporation entries. A client that wants to know which Corporations an account can act for as a **group member** walks `x/group` (`GroupsByMember` → `GroupPoliciesByGroup`) to obtain the candidate policy addresses, then resolves them to Corporation entries in a single call with `policy_address=<addr1>,<addr2>,…`. This is the group-membership counterpart of the operator-side discovery served by [`listOperatorAuthorizations`](#idx-de-qry-1-list-operator-authorizations) with `operator=<addr>`.
 
 ##### IDX-CO-QRY-3 Get Corporation Params
 
