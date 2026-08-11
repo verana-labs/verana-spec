@@ -6,6 +6,7 @@
 
   "oneOf": [
     { "$ref": "#/$defs/ReadyMessage" },
+    { "$ref": "#/$defs/SubscribedMessage" },
     { "$ref": "#/$defs/BlockMessage" },
     { "$ref": "#/$defs/ListChangesResponse" }
   ],
@@ -51,6 +52,16 @@
       }
     },
 
+    "SubscribedMessage": {
+      "type": "object",
+      "description": "Acknowledges a processed `subscribe`. `block` is the height of the next block this subscription will deliver.",
+      "required": ["type", "block"],
+      "additionalProperties": false,
+      "properties": {
+        "type": { "const": "subscribed" },
+        "block": { "type": "integer", "minimum": 0 }
+      }
+    },
     "BlockMessage": {
       "type": "object",
       "additionalProperties": false,

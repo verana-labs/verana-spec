@@ -1,6 +1,6 @@
 # Indexer v4 Specification
 
-**Latest Draft:** spec v4-draft9
+**Latest Draft:** spec v4-draft10
 
 ## Abstract
 
@@ -1350,7 +1350,7 @@ Immediately after a successful WebSocket upgrade, before any `subscribe` is proc
 ```
 
 - `block` — The height of the **next** block that the server will deliver via this WebSocket (i.e. `latestProcessedBlock + 1` at connect time). Clients use `block - 1` as the catch-up cursor when bootstrapping via [`listIndexerEvents`](#idx-indexer-qry-6-list-indexer-events).
-- `blockIntervalMs` — The expected block production interval in milliseconds. Clients SHOULD treat `2 × blockIntervalMs` as the liveness timeout: if no `block` message arrives within that window after sending a `subscribe`, the subscription was not established and the client SHOULD reconnect. The same timeout applies to ongoing heartbeat detection (see [Heartbeat (indexer events)](#heartbeat-indexer-events) below).
+- `blockIntervalMs` — The expected block production interval in milliseconds. Clients SHOULD treat `2 × blockIntervalMs` as the liveness timeout: if no `subscribed` acknowledgement arrives within that window after sending a `subscribe`, the subscription was not established and the client SHOULD reconnect. The same timeout applies to ongoing heartbeat detection (see [Heartbeat (indexer events)](#heartbeat-indexer-events) below).
 
 ###### Subscribe control message
 
@@ -1370,9 +1370,24 @@ Immediately after a successful WebSocket upgrade, before any `subscribe` is proc
 
 A subsequent `subscribe` message replaces the active subscription on the same connection. To stop receiving notifications entirely, send `{ "action": "unsubscribe" }` or close the socket.
 
+###### Subscribed acknowledgement (server → client)
+
+The server confirms every processed `subscribe` with a `subscribed` message, sent once the subscription filter is active:
+
+```json
+{
+   "type": "subscribed",
+   "block": 1500007
+}
+```
+
+- `block` — The height of the next block this subscription will deliver (`latestProcessedBlock + 1` at the moment the subscription became active). Every block message with `block >= subscribed.block` is guaranteed to be delivered on this connection. Any block processed before the acknowledgement was already visible to the REST catch-up, so a client that drains after receiving `subscribed` observes every event exactly once after deduplication.
+
+An `unsubscribe` is not acknowledged. Clients MUST ignore server messages whose `type` they do not recognise, so this acknowledgement is backward compatible.
+
 ###### Block message (server → client)
 
-After the first `subscribe` is acknowledged, the server sends one **block message** per processed block, in strictly increasing order of `block`:
+After the first `subscribe` is acknowledged with a `subscribed` message, the server sends one **block message** per processed block, in strictly increasing order of `block`:
 
 ```json
 {
@@ -1407,7 +1422,7 @@ A subscriber detects a connection-level loss by observing a gap (`block > previo
 
 ###### Catch-up and resume (indexer events)
 
-This stream does not deliver historical events on connect, and an event that lands between a REST catch-up and a later `subscribe` is never redelivered — draining history *before* connecting therefore leaves a permanent gap. To bootstrap from a known point, the client SHOULD instead: (1) connect the WebSocket, read the `ready` message, and send its `subscribe`, buffering incoming block messages without applying them; (2) call [`listIndexerEvents`](#idx-indexer-qry-6-list-indexer-events) with `after_block_height` set to its `last_seen_block`, paginating to exhaustion; (3) apply the buffered — then live — block messages in order, discarding events already applied during catch-up (same `tx_hash` and `payload.message_index`). The WebSocket delivers every block from `ready.block` onwards while the catch-up covers everything up to the indexer's current block, so the union has no gap and the overlap is removed by deduplication. After a temporary disconnection, the client SHOULD repeat the same pattern using the highest `block` from a previously received block message as its new `last_seen_block`.
+This stream does not deliver historical events on connect, and an event that lands between a REST catch-up and a later `subscribe` is never redelivered — draining history *before* connecting therefore leaves a permanent gap. To bootstrap from a known point, the client SHOULD instead: (1) connect the WebSocket, read the `ready` message, send its `subscribe`, and wait for the `subscribed` acknowledgement, buffering incoming block messages without applying them; (2) call [`listIndexerEvents`](#idx-indexer-qry-6-list-indexer-events) with `after_block_height` set to its `last_seen_block`, paginating to exhaustion; (3) apply the buffered — then live — block messages in order, discarding events already applied during catch-up (same `tx_hash` and `payload.message_index`). The WebSocket delivers every block from `subscribed.block` onwards while the catch-up covers everything up to the indexer's current block, so the union has no gap and the overlap is removed by deduplication. After a temporary disconnection, the client SHOULD repeat the same pattern using the highest `block` from a previously received block message as its new `last_seen_block`.
 
 ###### Backpressure (indexer events)
 
@@ -1830,7 +1845,7 @@ Immediately after a successful WebSocket upgrade, before any `subscribe` is proc
 ```
 
 - `block` — The height of the **next** block that the server will deliver via this WebSocket (i.e. `latestProcessedBlock + 1` at connect time). Clients use `block - 1` as the bootstrap snapshot point — see [Bootstrap pattern](#bootstrap-pattern).
-- `blockIntervalMs` — The expected block production interval in milliseconds. Clients SHOULD treat `2 × blockIntervalMs` as the liveness timeout: if no `block` message arrives within that window after sending a `subscribe`, the subscription was not established and the client SHOULD reconnect. The same timeout applies to ongoing heartbeat detection (see [Heartbeat (resolver changes)](#heartbeat-resolver-changes)).
+- `blockIntervalMs` — The expected block production interval in milliseconds. Clients SHOULD treat `2 × blockIntervalMs` as the liveness timeout: if no `subscribed` acknowledgement arrives within that window after sending a `subscribe`, the subscription was not established and the client SHOULD reconnect. The same timeout applies to ongoing heartbeat detection (see [Heartbeat (resolver changes)](#heartbeat-resolver-changes)).
 
 ###### Subscribe control message
 
@@ -1871,9 +1886,24 @@ Immediately after a successful WebSocket upgrade, before any `subscribe` is proc
 
 A subsequent `subscribe` message replaces the active subscription on the same connection. To stop receiving notifications entirely, send `{ "action": "unsubscribe" }` or close the socket.
 
+###### Subscribed acknowledgement (server → client)
+
+The server confirms every processed `subscribe` with a `subscribed` message, sent once the subscription filter is active:
+
+```json
+{
+   "type": "subscribed",
+   "block": 1500007
+}
+```
+
+- `block` — The height of the next block this subscription will deliver (`latestProcessedBlock + 1` at the moment the subscription became active). Every block message with `block >= subscribed.block` is guaranteed to be delivered on this connection. Any block processed before the acknowledgement was already visible to `listChanges`, so a client that drains after receiving `subscribed` observes every event exactly once after deduplication.
+
+An `unsubscribe` is not acknowledged. Clients MUST ignore server messages whose `type` they do not recognise, so this acknowledgement is backward compatible.
+
 ###### Block message (server → client)
 
-After the first `subscribe` is acknowledged, the server sends one **block message** per processed block, in strictly increasing order of `block`:
+After the first `subscribe` is acknowledged with a `subscribed` message, the server sends one **block message** per processed block, in strictly increasing order of `block`:
 
 ```json
 {
@@ -2029,8 +2059,8 @@ Response:
 
 The recommended initial-sync sequence for a client with an empty mirror:
 
-1. **Connect** to `WS /v4/verifiable-trust/subscribe`. Read the `ready` message and capture `B = ready.block`.
-2. **Subscribe** with the desired `dids` / `channels`. Buffer all incoming block messages **without applying them** until step 5.
+1. **Connect** to `WS /v4/verifiable-trust/subscribe` and read the `ready` message.
+2. **Subscribe** with the desired `dids` / `channels`, wait for the `subscribed` acknowledgement, and capture `B = subscribed.block`. Buffer all incoming block messages **without applying them** until step 5.
 3. **Enumerate** the DID universe at block `B - 1` by calling `GET /v4/verifiable-trust/dids` with header `At-Block-Height: B-1` and paginating through `nextCursor`.
 4. **Resolve** each enumerated DID by calling `POST /v4/verifiable-trust/resolve` with header `At-Block-Height: B-1` and the response selectors the client cares about. Persist the resulting state as the snapshot at block `B - 1`.
 5. **Apply** the buffered WebSocket block messages in order (starting at block `B`), then continue applying live block messages as they arrive.
