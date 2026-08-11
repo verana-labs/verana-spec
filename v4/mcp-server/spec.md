@@ -655,7 +655,7 @@ VS Agent tools authenticate to the target VS Agent's [Administration API](../vs-
 | `verana.vsa.se.updateServiceEndpoint` | [`updateServiceEndpoint`](../vs-agent/spec.md#vsa-adm-se-update-updateserviceendpoint) | Update an existing service entry. |
 | `verana.vsa.se.deleteServiceEndpoint` | [`deleteServiceEndpoint`](../vs-agent/spec.md#vsa-adm-se-delete-deleteserviceendpoint) | Remove a service entry. |
 
-> The `VsAgentAdminAPI` and other VPR-mandated service entries (e.g. `#trqp`, `#tr-presentations`) MUST NOT be mutable through these tools per [[VSA-ADM-SE]](../vs-agent/spec.md#vsa-adm-se-service-endpoint-management); the upstream agent enforces this constraint.
+> The `VsAgentAdminAPI` and other VPR-mandated service entries (e.g. `#trqp`, `#tr-presentations`) MUST NOT be mutable through these tools per [[VSA-ADM-VT-SE]](../vs-agent/spec.md#vsa-adm-vt-se-service-endpoint-management); the upstream agent enforces this constraint.
 
 ### [VMS-TOOLS-COSMOS] Cosmos Read-Only Tools
 
