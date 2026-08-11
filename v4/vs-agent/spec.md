@@ -1,6 +1,6 @@
 # VS Agent v4 Specification
 
-**Latest Draft:** spec v4-draft4
+**Latest Draft:** spec v4-draft5
 
 ## Abstract
 
@@ -133,7 +133,7 @@ The following environment variables MUST be provided when the VS Agent container
 | Variable | Required | Description |
 |---|---|---|
 | `VERANA_CORPORATION_ID` | REQUIRED | The VPR `Corporation.id` (uint64) of the Corporation this agent belongs to. All on-chain resources (Ecosystems, Credential Schemas, Participants, Participant Sessions, ...) are owned by this Corporation. The agent SHOULD resolve the Corporation's `policy_address`, `did`, and `active_version` from the indexer at startup. |
-| `VERANA_ACCOUNT_MNEMONIC` | REQUIRED | BIP-39 mnemonic used to derive the agent's Verana blockchain account (the agent's `vs_operator`). This account MUST have been granted a `VSOperatorAuthorization` by the `VERANA_CORPORATION_ID` Corporation, with one `ParticipantAuthorizationRecord` per `Participant` it operates under. |
+| `VERANA_ACCOUNT_MNEMONIC` | REQUIRED | BIP-39 mnemonic used to derive the agent's Verana blockchain account (the agent's `vs_operator`). This account SHOULD have been granted a `VSOperatorAuthorization` by the `VERANA_CORPORATION_ID` Corporation, with one `ParticipantAuthorizationRecord` per `Participant` it operates under; without one, the agent operates in the fallback mode described in [Agent Account Authorizations](#agent-account-authorizations) (funded `vs_operator` account, Corporation co-signature for every message targeting the `Participant`). |
 
 ##### [VSA-VTI-CFG-ENV-NET] Network Configuration
 
@@ -154,6 +154,13 @@ See [comparison between VS-REQ-3 and VS-REQ-4](https://verana-labs.github.io/ver
 | `AGENT_MODE` | OPTIONAL | One of `standalone` or `delegated`. Default: `standalone`. See [ECS Standalone Mode](#ecs-standalone-mode). |
 | `AGENT_DELEGATED_PARENT_VS_DID` | CONDITIONAL | DID of the parent Verifiable Service to contact for obtaining a Service credential. REQUIRED when `AGENT_MODE` = `delegated`. |
 | `TRUSTED_ECS_ECOSYSTEM_DIDS` | CONDITIONAL | Comma-separated list of DIDs of the ECS Ecosystems the agent trusts for essential credential schemas, as required by [[WL-ECS]](https://verana-labs.github.io/verifiable-trust-spec/#wl-ecs-ecosystem-whitelists-and-vpr-scheme-resolution). REQUIRED when `AGENT_MODE` = `standalone`. |
+
+##### [VSA-VTI-CFG-ENV-RT] Agent Runtime
+
+| Variable | Required | Description |
+|---|---|---|
+| `AGENT_DIDCOMM_VERSIONS` | OPTIONAL | Comma-separated list of DIDComm protocol versions the agent supports. Allowed values: `v1`, `v2`. Constrains the `didCommVersion` values accepted by the [Invitations](#vsa-adm-in-invitations) methods; when a method omits `didCommVersion`, the agent infers the version from this configuration. If unset, the default is implementation-defined. |
+| `VS_AGENT_PLUGINS` | OPTIONAL | Comma-separated list of enabled agent plugins. Determines the set of message `type` values accepted by [`sendMessage`](#vsa-adm-ms-send-sendmessage) (e.g. `text`, `credential-issuance`, `credential-revocation`, `identity-proof-request`, `contextual-menu-update`, `profile`, `terminate-connection`). If unset, the default plugin set is implementation-defined. |
 
 ### [VSA-VTI-DIDDOC] DID Document Service Entries
 
@@ -207,7 +214,7 @@ The indexer then streams one block envelope per processed block, in strictly inc
 
 The indexer tracks all on-chain entities where the agent's DID is `Corporation.did`, `Ecosystem.did`, or `Participant.did` — transitively covering the embedded `CredentialSchema`, `GovernanceFrameworkVersion`, `ParticipantSession`, `VSOperatorAuthorization`, and `FeeGrant` entries that reference those parents — and emits an event whenever any of those entities is created or modified by a transaction.
 
-**Catch-up and resume:** The WebSocket stream does not deliver historical events on connect. The agent MUST persist the highest `block_height` it has fully processed and, on (re)connect, MUST first call [`GET /v4/indexer/events?dids=<agent DID>&after_block_height=<last_seen_block>`](../verana-indexer/spec.md#idx-indexer-qry-6-list-indexer-events) (or `?corporation_id=<Participant.corporation_id>` if the agent uses the corp-scoped subscription) to drain any missed events to exhaustion **before** processing new WebSocket messages. Events that have already been processed (same `tx_hash` + `message_index`) MUST be discarded as idempotent duplicates.
+**Catch-up and resume:** The WebSocket stream does not deliver historical events on connect, and an event landing between a REST drain and a later `subscribe` is never redelivered. The agent MUST persist the highest `block_height` it has fully processed and, on every (re)connect, MUST apply the connect-first pattern: connect and `subscribe`, buffer incoming block envelopes without processing them, drain [`GET /v4/indexer/events?dids=<agent DID>&after_block_height=<last_seen_block>`](../verana-indexer/spec.md#idx-indexer-qry-6-list-indexer-events) (or `?corporation_id=<Participant.corporation_id>` if the agent uses the corp-scoped subscription) to exhaustion, then process the buffered — and subsequent live — WebSocket messages in order. Events that have already been processed (same `tx_hash` + `message_index`) MUST be discarded as idempotent duplicates.
 
 If the WebSocket connection is lost, the agent MUST reconnect with exponential backoff and re-apply the catch-up pattern above.
 
@@ -253,9 +260,9 @@ These notifications are emitted when a `Participant` entry whose `did` equals th
 | --- | --- | --- |
 | `StartParticipantOP` [[MOD-PP-MSG-1]](https://verana-labs.github.io/verifiable-trust-vpr-spec/#mod-pp-msg-1-start-participant-op) | An applicant has started a new Onboarding Process targeting a validator `Participant` of this agent. | For Validator: N/A. For Applicant: Progress the credential acquisition flow (see [new onboarding process](#vsa-vti-flow-op-new-new-onboarding-process)). |
 | `RenewParticipantOP` [[MOD-PP-MSG-2]](https://verana-labs.github.io/verifiable-trust-vpr-spec/#mod-pp-msg-2-renew-participant-op) | An applicant has renewed an existing Onboarding Process. | For Validator: N/A. For Applicant: Progress the credential acquisition flow (see [renew onboarding process](#vsa-vti-flow-op-renew-renew-onboarding-process)). |
-| `SetParticipantOPtoValidated` [[MOD-PP-MSG-3]](https://verana-labs.github.io/verifiable-trust-vpr-spec/#mod-pp-msg-3-set-participant-op-to-validated) | Validator has set the agent's `Participant.op_state` to `VALIDATED`. | For Validator: Progress the credential acquisition flow (see [new onboarding process](#vsa-vti-flow-op-new-new-onboarding-process)). For Applicant: N/A. |
+| `SetParticipantOPtoValidated` [[MOD-PP-MSG-3]](https://verana-labs.github.io/verifiable-trust-vpr-spec/#mod-pp-msg-3-set-participant-op-to-validated) | Validator has set the agent's `Participant.op_state` to `VALIDATED`. | For Validator: Progress the credential acquisition flow (see [new onboarding process](#vsa-vti-flow-op-new-new-onboarding-process)). For Applicant: refresh cached authorization state (see [Authorization Notifications](#vsa-vti-notif-auth-authorization-notifications)). |
 | `CreateRootParticipant` [[MOD-PP-MSG-7]](https://verana-labs.github.io/verifiable-trust-vpr-spec/#mod-pp-msg-7-create-root-participant) | A root `Participant` (no validator parent) has been created with the agent's DID. | N/A. |
-| `SetParticipantEffectiveUntil` [[MOD-PP-MSG-8]](https://verana-labs.github.io/verifiable-trust-vpr-spec/#mod-pp-msg-8-set-participant-effective-until) | Validator or ancestor has set or adjusted the agent's `Participant.effective_until`. | N/A. |
+| `SetParticipantEffectiveUntil` [[MOD-PP-MSG-8]](https://verana-labs.github.io/verifiable-trust-vpr-spec/#mod-pp-msg-8-set-participant-effective-until) | Validator or ancestor has set or adjusted the agent's `Participant.effective_until`. | Refresh cached authorization state (see [Authorization Notifications](#vsa-vti-notif-auth-authorization-notifications)). |
 | `RevokeParticipant` [[MOD-PP-MSG-9]](https://verana-labs.github.io/verifiable-trust-vpr-spec/#mod-pp-msg-9-revoke-participant) | Validator, ancestor, or Ecosystem controller has revoked the agent's `Participant` entry. | Remove the corresponding linked VP from the DID Document (if any) and delete the credential from the credential store (HOLDER `Participant` only). For non-HOLDER `Participant`, terminate every in-flight downstream flow it serves as Validator for (see [Revoke Participant / Slash Participant Trust Deposit](#vsa-vti-flow-op-revoke-revoke-participant--slash-participant-trust-deposit)). |
 | `SlashParticipantTrustDeposit` [[MOD-PP-MSG-12]](https://verana-labs.github.io/verifiable-trust-vpr-spec/#mod-pp-msg-12-slash-participant-trust-deposit) | Validator, ancestor, or Ecosystem controller has slashed the agent's `Participant.deposit`. | Same as `RevokeParticipant`: clean up linked VP / credential / downstream flow state. |
 | `RepayParticipantSlashedTrustDeposit` [[MOD-PP-MSG-13]](https://verana-labs.github.io/verifiable-trust-vpr-spec/#mod-pp-msg-13-repay-participant-slashed-trust-deposit) | The agent's slashed trust deposit has been repaid (confirmation of own tx). | N/A. |
@@ -265,13 +272,15 @@ These notifications are emitted when a `Participant` entry whose `did` equals th
 
 #### [VSA-VTI-NOTIF-AUTH] Authorization Notifications
 
-These notifications are emitted whenever a `VSOperatorAuthorization` whose `vs_operator` is the agent's `vs_operator` account is created, modified, or revoked, **and** the affected `ParticipantAuthorizationRecord` references a `Participant` whose `did` is the agent's DID. They reach the agent through the same DID-scoped indexer subscription via the parent `Participant` event (see [Participant Notifications](#vsa-vti-notif-pp-participant-notifications)).
+There are **no dedicated indexer events** for `VSOperatorAuthorization` changes. The VPR methods that mutate `ParticipantAuthorizationRecord` entries — [[MOD-DE-MSG-5]](https://verana-labs.github.io/verifiable-trust-vpr-spec/#mod-de-msg-5-grant-vs-operator-authorization), [[MOD-DE-MSG-6]](https://verana-labs.github.io/verifiable-trust-vpr-spec/#mod-de-msg-6-revoke-vs-operator-authorization), and [[MOD-DE-MSG-9]](https://verana-labs.github.io/verifiable-trust-vpr-spec/#mod-de-msg-9-update-vs-operator-authorization-expiration) — are module-call-only subroutines invoked from within `Participant` module messages: they never appear as transaction messages, and the indexer's `event_type` is always the Cosmos action name of an executed message. A `ParticipantAuthorizationRecord` also cannot be created, modified, or revoked independently of its `Participant` entry — its lifecycle is fully derived from the `Participant` lifecycle — so the `Participant` events of [[VSA-VTI-NOTIF-PP]](#vsa-vti-notif-pp-participant-notifications) are sufficient signals.
 
-| `event_type` | Description | Default Handler Implementation |
+On receiving one of the parent events below, the agent MUST bring its cached authorization state up to date by querying the indexer — [`IDX-DE-QRY-2` List VS Operator Authorizations](../verana-indexer/spec.md#idx-de-qry-2-list-vs-operator-authorizations) (filtered by `vs_operator` and/or `participant_id`) or [`IDX-DE-QRY-4` Get VS Operator Authorization](../verana-indexer/spec.md#idx-de-qry-4-get-vs-operator-authorization):
+
+| Parent `event_type` | `VSOperatorAuthorization` side effect | Default Handler Implementation |
 | --- | --- | --- |
-| `GrantVSOperatorAuthorization` [[MOD-DE-MSG-5]](https://verana-labs.github.io/verifiable-trust-vpr-spec/#mod-de-msg-5-grant-vs-operator-authorization) | The Corporation has granted the agent's `vs_operator` one or more `ParticipantAuthorizationRecord` entries within a `VSOperatorAuthorization`. | Refresh the cached `VSOperatorAuthorization`; `CreateOrUpdateParticipantSession`, `TriggerResolver`, and `SetParticipantOPtoValidated` MAY now be signed for the newly authorized `Participant` entries. |
-| `RevokeVSOperatorAuthorization` [[MOD-DE-MSG-6]](https://verana-labs.github.io/verifiable-trust-vpr-spec/#mod-de-msg-6-revoke-vs-operator-authorization) | One or more of the agent's `ParticipantAuthorizationRecord` entries have been revoked. The parent `VSOperatorAuthorization` is deleted when its last record is removed. | Invalidate the cached records. Stop signing `CreateOrUpdateParticipantSession`, `TriggerResolver`, and `SetParticipantOPtoValidated` for the affected `Participant` entries until a new authorization is granted. |
-| `UpdateVSOperatorAuthorizationExpiration` [[MOD-DE-MSG-9]](https://verana-labs.github.io/verifiable-trust-vpr-spec/#mod-de-msg-9-update-vs-operator-authorization-expiration) | A `ParticipantAuthorizationRecord.expiration` has been updated. | Refresh the cached record; recompute remaining feegrant validity if `record.with_feegrant` is true. |
+| `StartParticipantOP`, `SelfCreateParticipant`, `CreateRootParticipant` | If the transaction declared `vs_operator_authz_msg_types`, a `ParticipantAuthorizationRecord` was created for the new `Participant` entry: **disabled** (`expiration = now`) for `StartParticipantOP`, **active** for `SelfCreateParticipant` and `CreateRootParticipant`. | Refresh the cached records from the indexer. For active records, the declared message types MAY now be signed for the new `Participant` entry. |
+| `SetParticipantOPtoValidated`, `SetParticipantEffectiveUntil` | The record's `expiration` was synchronised to `Participant.effective_until`, and the aggregate on-chain `FeeGrant` was granted or refreshed if `record.with_feegrant` is true. | Refresh the cached record from the indexer; recompute remaining feegrant validity. Once the record is active, the declared message types (`TriggerResolver`, `CreateOrUpdateParticipantSession`, `SetParticipantOPtoValidated`, per role) MAY be signed for the `Participant` entry. |
+| `RevokeParticipant`, `SlashParticipantTrustDeposit`, `CancelParticipantOPLastRequest` (only when the resulting `op_state` is `TERMINATED`) | The record was removed; the parent `VSOperatorAuthorization` is deleted when its last record is removed; the aggregate `FeeGrant` was recomputed or revoked. | Invalidate the cached records. Stop signing the previously authorized message types for the affected `Participant` entries. |
 
 ### [VSA-VTI-BOOT] Bootstrap Sequence
 
@@ -283,9 +292,9 @@ When the VS Agent starts, it SHOULD execute the following steps in order:
 
 3. **Start DIDComm message processor**: Enable DIDComm for outgoing messages.
 
-4. **Catch up missed events**: Call [`GET {VERANA_INDEXER_BASE_URL}/v4/indexer/events?dids=<agent DID>&after_block_height=<last_seen_block>`](../verana-indexer/spec.md#idx-indexer-qry-6-list-indexer-events) (or `?corporation_id=<VERANA_CORPORATION_ID>` if the agent uses the corp-scoped subscription per [[VSA-VTI-NOTIF]](#vsa-vti-notif-notifications)), paginating to exhaustion, where `last_seen_block` is the highest block height the agent has fully processed in its persistent state (0 on first start). Process each `IndexerTransactionEvent` returned, then advance `last_seen_block` to the highest `block_height` observed.
+4. **Connect to indexer WebSocket**: Establish a persistent WebSocket connection to [`WS {VERANA_INDEXER_BASE_URL}/v4/indexer/subscribe`](../verana-indexer/spec.md#idx-indexer-sub-1-subscribe-indexer-events) for real-time awareness of on-chain changes (see [Notifications](#vsa-vti-notif-notifications)). After receiving the indexer's `ready` message, send `{ "action": "subscribe", "dids": ["<agent DID>"] }`, then **buffer** incoming block envelopes without processing them until step 5 has completed. Connecting before catching up ensures no event can land unobserved between the two steps: the WebSocket never replays history.
 
-5. **Connect to indexer WebSocket**: Establish a persistent WebSocket connection to [`WS {VERANA_INDEXER_BASE_URL}/v4/indexer/subscribe`](../verana-indexer/spec.md#idx-indexer-sub-1-subscribe-indexer-events) for real-time awareness of on-chain changes (see [Notifications](#vsa-vti-notif-notifications)). After receiving the indexer's `ready` message, send `{ "action": "subscribe", "dids": ["<agent DID>"] }`. The indexer then streams one block envelope per processed block; process each envelope's `events[]` entries (each an `IndexerTransactionEvent`) in `(payload.tx_index, payload.message_index)` order. Any event with `block_height <= last_seen_block` MUST be discarded as a duplicate. These actions may trigger outgoing DIDComm messages.
+5. **Catch up missed events**: Call [`GET {VERANA_INDEXER_BASE_URL}/v4/indexer/events?dids=<agent DID>&after_block_height=<last_seen_block>`](../verana-indexer/spec.md#idx-indexer-qry-6-list-indexer-events) (or `?corporation_id=<VERANA_CORPORATION_ID>` if the agent uses the corp-scoped subscription per [[VSA-VTI-NOTIF]](#vsa-vti-notif-notifications)), paginating to exhaustion, where `last_seen_block` is the highest block height the agent has fully processed in its persistent state (0 on first start). Process each `IndexerTransactionEvent` returned, then advance `last_seen_block` to the highest `block_height` observed. Then process the buffered — and subsequent live — block envelopes in order: each envelope's `events[]` entries (each an `IndexerTransactionEvent`) in `(payload.tx_index, payload.message_index)` order, discarding as duplicates any event with `block_height <= last_seen_block` or an already-processed (`tx_hash`, `message_index`) pair. These actions may trigger outgoing DIDComm messages.
 
 6. **Start processing the queued incoming DIDComm messages**.
 
@@ -412,10 +421,10 @@ sequenceDiagram
 
     Validator->>Applicant Agent: 6a. Credential offer
     Applicant Agent->>Validator: 6b. Credential request
-    Note over Validator: 6c. Sign credential<br/>+ compute digest
+    Note over Validator: 6c. Sign credential<br/>+ compute digestJCS
     Validator->>VPR: 7. CreateOrUpdateParticipantSession
     Validator->>Applicant Agent: 8. Deliver signed credential (issue-credential)
-    Applicant Agent->>VPR: 9. Verify validator + digest
+    Applicant Agent->>VPR: 9. Verify validator + session + digestJCS
     Applicant Agent->>Validator: 10. Accept Credential
     Note over Applicant Agent: 11. Store credential
     Note over Applicant Agent: 12. (optional) VP in DID Doc
@@ -442,16 +451,17 @@ sequenceDiagram
 
 All steps below are optional and executed only if the validator issues a credential.
 
-6. The validator offers the credential to the applicant via the Issue Credential V2 subprotocol. Upon receiving the applicant's credential request, the validator generates and signs the credential, and computes the digest.
+6. The validator offers the credential to the applicant via the Issue Credential V2 subprotocol. Upon receiving the applicant's credential request, the validator generates and signs the credential, and computes its `digestJCS` as specified in [W3C VTCs: Determining Credential Issuance Time](https://verana-labs.github.io/verifiable-trust-spec/versions/v4/#w3c-vtcs-determining-credential-issuance-time).
 
-7. The **validator** calls `CreateOrUpdateParticipantSession` ([[MOD-PP-MSG-10]](https://verana-labs.github.io/verifiable-trust-vpr-spec/#mod-pp-msg-10-create-or-update-participant-session)) on-chain (see [Agent Account Authorizations](#agent-account-authorizations)). The credential MUST NOT be delivered until this transaction succeeds.
+7. The **validator** calls `CreateOrUpdateParticipantSession` ([[MOD-PP-MSG-10]](https://verana-labs.github.io/verifiable-trust-vpr-spec/#mod-pp-msg-10-create-or-update-participant-session)) on-chain, passing the computed `digestJCS` as the `digest` parameter (see [Agent Account Authorizations](#agent-account-authorizations)). The VPR anchors the digest in its `Digest` store via [Store Digest](https://verana-labs.github.io/verifiable-trust-vpr-spec/versions/v4/#mod-di-msg-1-store-digest); the `created` block timestamp of that `Digest` entry is the credential's effective issuance time. The credential MUST NOT be delivered until this transaction succeeds.
 
 8. The validator delivers the signed credential (`issue-credential`) to the applicant via the existing DIDComm session.
 
 9. The applicant MUST verify the received credential before accepting it:
    - Verify the validator is authorized by the ecosystem to issue credentials for this schema (`validator_participant.role` is `ISSUER` and the `Participant` is active).
-   - Recompute the credential's digest and verify it matches the digest recorded on-chain in the `ParticipantSession` updated in step 7.
-   - If either check fails, the applicant MUST reject the credential and log the error.
+   - Verify that the `ParticipantSession` created in step 7 exists on-chain and references the validator's ISSUER `Participant` entry (see [[MOD-PP-QRY-5]](https://verana-labs.github.io/verifiable-trust-vpr-spec/versions/v4/#mod-pp-qry-5-get-participantsession)).
+   - Recompute the credential's `digestJCS` as specified in [W3C VTCs: Determining Credential Issuance Time](https://verana-labs.github.io/verifiable-trust-spec/versions/v4/#w3c-vtcs-determining-credential-issuance-time) and locate the corresponding `Digest` entry via [Get Digest](https://verana-labs.github.io/verifiable-trust-vpr-spec/versions/v4/#mod-di-qry-1-get-digest). The entry MUST exist — the digest is anchored in the `Digest` store by the transaction of step 7, not on the `ParticipantSession` entry — and its `created` timestamp is the credential's effective issuance time.
+   - If any check fails, the applicant MUST reject the credential and log the error.
 
 10.  The applicant sends a **CRED_ACCEPT** message to the validator, confirming that the credential has been verified and accepted.
 
@@ -573,7 +583,7 @@ The two messages differ only on-chain:
 | On-chain state change | `p1.revoked = now` | `p1.slashed = now`; `slashed_deposit += amount`; trust deposit burned |
 | Authorized initiators | ancestor validator, grantee `corporation`, or Ecosystem controller | ancestor validator or Ecosystem controller (NOT the grantee) |
 | `Participant` must be active | yes | no — MAY be applied to expired or revoked Participants |
-| VS Operator Authorization (ISSUER / VERIFIER only) | revoked | revoked |
+| VS Operator Authorization record (any role; no-op if none exists) | revoked | revoked |
 
 When `p1` is revoked or slashed, an indexer event (see [Participant Notifications](#vsa-vti-notif-pp-participant-notifications)) is delivered to:
 
@@ -640,10 +650,10 @@ sequenceDiagram
     Validator-->>Applicant: 3. (optional) out-of-band info collection
     Validator->>Applicant: 4a. Credential offer
     Applicant->>Validator: 4b. Credential request
-    Note over Validator: 4c. Sign credential<br/>+ compute digest
+    Note over Validator: 4c. Sign credential<br/>+ compute digestJCS
     Validator->>VPR: 5. CreateOrUpdateParticipantSession
     Validator->>Applicant: 6. Deliver signed credential (issue-credential)
-    Applicant->>VPR: 7. Verify validator + digest
+    Applicant->>VPR: 7. Verify validator + session + digestJCS
     Applicant->>Validator: 8. Accept Credential
     Note over Applicant: 9. Store credential
     Note over Applicant: 10. (optional) VP in DID Doc
@@ -661,16 +671,17 @@ sequenceDiagram
 
 3. If the validator requires additional information to generate the credential (e.g., missing claims or proofs), the validator MAY send a link to the applicant for an out-of-DIDComm flow (such as a web form or portal) to collect the missing data.
 
-4. The validator offers the credential to the applicant via the Issue Credential V2 subprotocol. Upon receiving the applicant's credential request, the validator generates and signs the credential, and computes the digest.
+4. The validator offers the credential to the applicant via the Issue Credential V2 subprotocol. Upon receiving the applicant's credential request, the validator generates and signs the credential, and computes its `digestJCS` as specified in [W3C VTCs: Determining Credential Issuance Time](https://verana-labs.github.io/verifiable-trust-spec/versions/v4/#w3c-vtcs-determining-credential-issuance-time).
 
-5. The **validator** calls `CreateOrUpdateParticipantSession` ([[MOD-PP-MSG-10]](https://verana-labs.github.io/verifiable-trust-vpr-spec/#mod-pp-msg-10-create-or-update-participant-session)) on-chain (see [Agent Account Authorizations](#agent-account-authorizations)). The credential MUST NOT be delivered until this transaction succeeds.
+5. The **validator** calls `CreateOrUpdateParticipantSession` ([[MOD-PP-MSG-10]](https://verana-labs.github.io/verifiable-trust-vpr-spec/#mod-pp-msg-10-create-or-update-participant-session)) on-chain, passing the computed `digestJCS` as the `digest` parameter (see [Agent Account Authorizations](#agent-account-authorizations)). The VPR anchors the digest in its `Digest` store via [Store Digest](https://verana-labs.github.io/verifiable-trust-vpr-spec/versions/v4/#mod-di-msg-1-store-digest); the `created` block timestamp of that `Digest` entry is the credential's effective issuance time. The credential MUST NOT be delivered until this transaction succeeds.
 
 6. The validator delivers the signed credential (`issue-credential`) to the applicant via the existing DIDComm session.
 
 7. The applicant MUST verify the received credential before accepting it:
    - Verify the validator is authorized by the ecosystem to issue credentials for this schema (query the VPR via the indexer to confirm the validator has an active ISSUER `Participant` entry).
-   - Recompute the credential's digest and verify it matches the digest recorded on-chain in the `ParticipantSession` updated in step 5.
-   - If either check fails, the applicant MUST reject the credential and log the error.
+   - Verify that the `ParticipantSession` created in step 5 exists on-chain and references the validator's ISSUER `Participant` entry (see [[MOD-PP-QRY-5]](https://verana-labs.github.io/verifiable-trust-vpr-spec/versions/v4/#mod-pp-qry-5-get-participantsession)).
+   - Recompute the credential's `digestJCS` as specified in [W3C VTCs: Determining Credential Issuance Time](https://verana-labs.github.io/verifiable-trust-spec/versions/v4/#w3c-vtcs-determining-credential-issuance-time) and locate the corresponding `Digest` entry via [Get Digest](https://verana-labs.github.io/verifiable-trust-vpr-spec/versions/v4/#mod-di-qry-1-get-digest). The entry MUST exist — the digest is anchored in the `Digest` store by the transaction of step 5, not on the `ParticipantSession` entry — and its `created` timestamp is the credential's effective issuance time.
+   - If any check fails, the applicant MUST reject the credential and log the error.
 
 8. The applicant sends a **CRED_ACCEPT** message to the validator, confirming that the credential has been verified and accepted.
 
@@ -1423,15 +1434,29 @@ Issues a Verifiable Trust Credential bound to a JSON Schema Credential. The agen
 - `did` (REQUIRED for `jsonld`) — DID of the credential subject (the holder).
 - `jsonSchemaCredentialId` (REQUIRED) — URL of the JSON Schema Credential governing the credential structure.
 - `claims` (REQUIRED) — credential claims as a flat object of key/value pairs.
+- `participantSessionId` (REQUIRED for `jsonld`) — the session `uuid` supplied by the recipient's agent. Per [[MOD-PP-MSG-10]](https://verana-labs.github.io/verifiable-trust-vpr-spec/#mod-pp-msg-10-create-or-update-participant-session) the recipient issues this identifier and later calls [[MOD-PP-QRY-5]](https://verana-labs.github.io/verifiable-trust-vpr-spec/#mod-pp-qry-5-get-participantsession) on it to confirm the session before accepting the credential, so the agent MUST NOT generate it.
+- `agentParticipantId` (OPTIONAL) — `Participant` id of the agent that will receive the credential. Set only when the recipient is a **Verifiable User Agent**. It MUST NOT be set when the recipient is a **Verifiable Service**.
+- `walletAgentParticipantId` (OPTIONAL) — `Participant` id of the wallet agent that will store the credential. Same restriction as `agentParticipantId`.
+
+**Requirements**:
+
+- For `format = jsonld`, after signing the credential and before returning it, the agent MUST anchor the credential's `digestJCS` in the VPR: compute the `digestJCS` as specified in [W3C VTCs: Determining Credential Issuance Time](https://verana-labs.github.io/verifiable-trust-spec/versions/v4/#w3c-vtcs-determining-credential-issuance-time), then call `CreateOrUpdateParticipantSession` ([[MOD-PP-MSG-10]](https://verana-labs.github.io/verifiable-trust-vpr-spec/#mod-pp-msg-10-create-or-update-participant-session)) with `id` set to the supplied `participantSessionId`, the `digest` parameter, and `agent_participant_id` / `wallet_agent_participant_id` when supplied, referencing the agent's active ISSUER `Participant` entry for the governing `CredentialSchema`. The credential MUST NOT be returned until this transaction succeeds: a W3C VTC whose digest is not anchored has no provable issuance time and fails trust resolution ([[TR-4]](https://verana-labs.github.io/verifiable-trust-spec/versions/v4/#tr-trust-resolution)).
+- For `format = anoncreds`, digest anchoring does not apply (see [AnonCreds VTCs: Issuance Time](https://verana-labs.github.io/verifiable-trust-spec/versions/v4/#anoncreds-vtcs-issuance-time)); the on-chain `ParticipantSession` steps are performed as part of the DIDComm issuance flow that delivers the credential.
 
 **Output**:
 
-- For `jsonld`: the signed W3C Verifiable Credential, ready to be transmitted to the recipient.
+- For `jsonld`: the signed W3C Verifiable Credential, digest-anchored per the requirement above and ready to be transmitted to the recipient, together with the anchored `digestJCS` so the caller can correlate the credential with the on-chain `ParticipantSession` without recomputing it.
 - For `anoncreds`: a DIDComm invitation and the associated `credentialExchangeId` for further tracking through the events interface.
+
+**Errors**:
+
+- `ANCHORING_FAILED` — the transaction anchoring the credential's `digestJCS` did not succeed; no credential is returned.
 
 #### [VSA-ADM-VTC-REVOKE] revokeCredential
 
-Revokes a previously issued Verifiable Trust Credential. Currently only the AnonCreds format is supported.
+Revokes a previously issued Verifiable Trust Credential, addressed at registry level by revocation registry definition and index. Currently only the AnonCreds format is supported.
+
+> Not to be confused with [[VSA-ADM-FL-REVOKE] `revokeFlowCredential`](#vsa-adm-fl-revoke-revokeflowcredential), which revokes the credential of a given flow and additionally notifies the applicant and updates Flow State. This method performs registry-level revocation only, with no DIDComm or Flow State side effects.
 
 **Inputs** (request body):
 
@@ -1500,7 +1525,7 @@ Deletes a stored Verifiable Trust Credential identified by its schema URL.
 
 ### [VSA-ADM-JSC] Verifiable Trust JSON Schema Credentials
 
-Methods that manage Verifiable Trust JSON Schema Credentials (VTJSCs) — credentials by which a Trust Registry binds an on-chain `CredentialSchema` to the Ecosystem DID that governs it. The issuer DID of a VTJSC MUST equal the Ecosystem DID of the Trust Registry that created the referenced `CredentialSchema`.
+Methods that manage Verifiable Trust JSON Schema Credentials (VTJSCs) — credentials by which an Ecosystem binds an on-chain `CredentialSchema` to the Ecosystem DID that governs it. The issuer DID of a VTJSC MUST equal the `did` of the Ecosystem that owns the referenced `CredentialSchema`.
 
 | Module | Method Name | HTTP Method | Relative REST API path | Requirements |
 | --- | --- | --- | --- | --- |
@@ -1529,14 +1554,14 @@ Creates or updates a VTJSC.
 **Inputs** (request body):
 
 - `schemaBaseId` (REQUIRED) — short identifier used to construct the resulting VTJSC URL, e.g. `organization` produces `https://<agent>/vt/schemas-organization-jsc.json`.
-- `jsonSchemaRef` (REQUIRED) — VPR URI of the corresponding `CredentialSchema` entry, e.g. `vpr:verana:vna-testnet-1/cs/v1/js/12345678`.
+- `jsonSchemaRef` (REQUIRED) — VPR URI of the corresponding `CredentialSchema` entry, in the canonical form `vpr:verana:<network>:cs:<schema-id>`, e.g. `vpr:verana:vna-testnet-1:cs:12345678`.
 
 **Output**: confirmation that the VTJSC was created or updated.
 
 **Errors**:
 
 - `INVALID_INPUT` — schema parameters are malformed or missing.
-- `ISSUER_MISMATCH` — the agent's DID does not match the Ecosystem DID of the Trust Registry that owns the referenced `CredentialSchema`.
+- `ISSUER_MISMATCH` — the agent's DID does not match the `did` of the Ecosystem that owns the referenced `CredentialSchema`.
 
 #### [VSA-ADM-JSC-DELETE] deleteJsonSchemaCredential
 
@@ -1562,7 +1587,7 @@ The following methods list and progress credential-acquisition flows handled by 
 | Flow Management | `editCredentialClaims` | `PUT` | `/v1/vt/flows/{participant_session_id}/claims` | [see](#vsa-adm-fl-edit-editcredentialclaims) |
 | Flow Management | `sendOobLink` | `POST` | `/v1/vt/flows/{participant_session_id}/oob-link` | [see](#vsa-adm-fl-send-sendooblink) |
 | Flow Management | `validateFlow` | `POST` | `/v1/vt/flows/{participant_session_id}/validate` | [see](#vsa-adm-fl-validate-validateflow) |
-| Flow Management | `revokeCredential` | `POST` | `/v1/vt/flows/{participant_session_id}/revoke-credential` | [see](#vsa-adm-fl-revoke-revokecredential) |
+| Flow Management | `revokeFlowCredential` | `POST` | `/v1/vt/flows/{participant_session_id}/revoke-credential` | [see](#vsa-adm-fl-revoke-revokeflowcredential) |
 
 > Note: some VS Agent implementations may not support all actions, or may prefer sending the user to a portal for providing proofs, etc., using the OOB link.
 
@@ -1589,7 +1614,7 @@ Lists and inspects existing credential-acquisition flows handled by the agent.
 - last-event timestamp;
 - submitted credential claims and proofs;
 - any outstanding `OOB_LINK` URL;
-- once a credential has been generated: the offered credential identifier, its digest, and the on-chain `ParticipantSession` reference.
+- once a credential has been generated: the offered credential identifier, its `digestJCS`, and the on-chain `ParticipantSession` reference.
 
 **Requirements**: none beyond the Admin API access checks (see [Authorization](#authorization)).
 
@@ -1660,9 +1685,11 @@ Marks the applicant's documentation as validated for a given flow. When an Onboa
 - `NOT_FOUND` — no flow with the given `participant_session_id`.
 - `INVALID_STATE` — the flow is not in a state where validation is expected.
 
-#### [VSA-ADM-FL-REVOKE] revokeCredential
+#### [VSA-ADM-FL-REVOKE] revokeFlowCredential
 
-Revokes a previously issued credential for a given flow. The agent MUST notify the applicant via a `CRED_STATE_CHANGE` message over DIDComm (see [[VSA-VTI-FLOW-UPD] Validator Updates](#vsa-vti-flow-upd-validator-updates)).
+Revokes a previously issued credential for a given flow, addressed by the flow rather than by revocation registry coordinates. The agent MUST notify the applicant via a `CRED_STATE_CHANGE` message over DIDComm (see [[VSA-VTI-FLOW-UPD] Validator Updates](#vsa-vti-flow-upd-validator-updates)).
+
+> Distinct from [[VSA-ADM-VTC-REVOKE] `revokeCredential`](#vsa-adm-vtc-revoke-revokecredential), which is the registry-level revocation method: it is addressed by (`anoncredsRevocationRegistryDefinitionId`, `anoncredsRevocationRegistryIndex`) and has no DIDComm or Flow State side effects.
 
 This method performs **credential-level** revocation only, and only for credential formats that support it — currently AnonCreds, through the credential's revocation registry. W3C (`jsonld`) credentials have no credential-level revocation mechanism in v4; digest-level revocation is planned for v5. To invalidate a W3C credential that is tracked by a HOLDER `Participant` entry, a Corporation operator revokes that `Participant` entry directly on the VPR ([[MOD-PP-MSG-9]](https://verana-labs.github.io/verifiable-trust-vpr-spec/#mod-pp-msg-9-revoke-participant)): the agent cannot submit `RevokeParticipant` itself (see [Agent authorization on-chain](#agent-authorization-on-chain)) and instead reacts to the resulting indexer notification per [[VSA-VTI-NOTIF-PP]](#vsa-vti-notif-pp-participant-notifications), which already covers the `CRED_STATE_CHANGE` notification and the cleanup of the affected flow.
 

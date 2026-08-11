@@ -1,6 +1,6 @@
 # Indexer v4 Specification
 
-**Latest Draft:** spec v4-draft8
+**Latest Draft:** spec v4-draft9
 
 ## Abstract
 
@@ -72,7 +72,13 @@ The JSON Schemas published alongside this document expose this constraint as the
 | Delegation | List VS Operator Authorizations | `/v4/delegation/vs-operator-authorizations` | Query | [`IDX-DE-QRY-2`](#idx-de-qry-2-list-vs-operator-authorizations) | PUBLIC |
 | Delegation | Get Operator Authorization | `/v4/delegation/operator-authorization/{id}` | Query | [`IDX-DE-QRY-3`](#idx-de-qry-3-get-operator-authorization) | PUBLIC |
 | Delegation | Get VS Operator Authorization | `/v4/delegation/vs-operator-authorization/{id}` | Query | [`IDX-DE-QRY-4`](#idx-de-qry-4-get-vs-operator-authorization) | PUBLIC |
+| Delegation | List Fee Grants | `/v4/delegation/fee-grants` | Query | [`IDX-DE-QRY-5`](#idx-de-qry-5-list-fee-grants) | PUBLIC |
 | Digest | Get Digest | `/v4/di/get/{digest}` | Query | [`IDX-DI-QRY-1`](#idx-di-qry-1-get-digest) | PUBLIC |
+| Group | Get Corporation Group | `/v4/group/get/{corporation_id}` | Query | [`IDX-GR-QRY-1`](#idx-gr-qry-1-get-corporation-group) | PUBLIC |
+| Group | List Corporations By Member | `/v4/group/corporations-by-member` | Query | [`IDX-GR-QRY-2`](#idx-gr-qry-2-list-corporations-by-member) | PUBLIC |
+| Group | List Proposals | `/v4/group/proposals` | Query | [`IDX-GR-QRY-3`](#idx-gr-qry-3-list-proposals) | PUBLIC |
+| Group | Get Proposal | `/v4/group/proposal/{id}` | Query | [`IDX-GR-QRY-4`](#idx-gr-qry-4-get-proposal) | PUBLIC |
+| Group | List Votes | `/v4/group/votes` | Query | [`IDX-GR-QRY-5`](#idx-gr-qry-5-list-votes) | PUBLIC |
 | Exchange Rate | Get Exchange Rate | `/v4/exchange-rate/get` | Query | [`IDX-XR-QRY-1`](#idx-xr-qry-1-get-exchange-rate) | PUBLIC |
 | Exchange Rate | List Exchange Rates | `/v4/exchange-rate/list` | Query | [`IDX-XR-QRY-2`](#idx-xr-qry-2-list-exchange-rates) | PUBLIC |
 | Exchange Rate | Get Price | `/v4/exchange-rate/price` | Query | [`IDX-XR-QRY-3`](#idx-xr-qry-3-get-price) | PUBLIC |
@@ -98,7 +104,7 @@ All methods are specified in [Method Specification](#method-specification) below
 
 ### Method Specification
 
-This section specifies the raw indexer methods that expose VPR ledger entities (Corporations, Ecosystems, Governance Framework versions, Credential Schemas, Participants, Trust Deposits, Operator Authorizations, Digests, Exchange Rates) and the aggregate / statistical / operational state derived from them. They are pure query views; none mutate state. Per-method request and response JSON Schemas are published alongside this document at [`schemas/v4/idx/`](./schemas/v4/idx/) *(schemas to be added in a follow-up commit)*.
+This section specifies the raw indexer methods that expose VPR ledger entities (Corporations, Ecosystems, Governance Framework versions, Credential Schemas, Participants, Trust Deposits, Operator Authorizations, Digests, Exchange Rates), the Cosmos SDK `x/group` state anchoring Corporations (groups, members, policies, proposals, votes), and the aggregate / statistical / operational state derived from them. They are pure query views; none mutate state. Per-method request and response JSON Schemas are published alongside this document at [`schemas/v4/idx/`](./schemas/v4/idx/) *(schemas to be added in a follow-up commit)*.
 
 #### Conventions
 
@@ -472,12 +478,15 @@ Retrieve a paginated, filtered list of Corporations. *Aligned with VPR [[MOD-CO-
 | `gf_data` | query | enum | no | `none` \| `only_active` \| `all` — controls inclusion of CGF `versions[]`. Default: `only_active`. |
 | `preferred_language` | query | string | no | Preferred document language; affects CGF document ordering |
 | `did` | query | string | no | Filter by Corporation DID |
+| `policy_address` | query | string | no | Comma-separated list of `policy_address` accounts (min 1, max 64 entries). Returns only Corporations whose `policy_address` is in the list. Since `policy_address` is globally unique across Corporation entries (1:1, per VPR), each supplied address matches at most one Corporation; addresses matching no Corporation are simply not represented in the result. More than 64 entries MUST be rejected with HTTP 400. |
 | `modified_after` | query | datetime | no | Only return Corporations modified strictly after this ISO 8601 datetime |
 | `trust_data` | query | enum | no | `null` \| `summary` \| `full` — see [Conventions](#trust_data-query-parameter) |
 
 Supports pagination through attributes `max_id`, `min_id`, `limit` and `sort`, as explained in [Pagination](#pagination).
 
 **Response:** `{ corporations: Corporation[] }`. Each entry has the same shape as [`getCorporation`](#idx-co-qry-1-get-corporation).
+
+> **Use case for `policy_address`:** reverse-mapping Cosmos SDK `x/group` policy accounts to their Corporation entries. A client that wants to know which Corporations an account can act for as a **group member** walks `x/group` (`GroupsByMember` → `GroupPoliciesByGroup`) to obtain the candidate policy addresses, then resolves them to Corporation entries in a single call with `policy_address=<addr1>,<addr2>,…`. This is the group-membership counterpart of the operator-side discovery served by [`listOperatorAuthorizations`](#idx-de-qry-1-list-operator-authorizations) with `operator=<addr>`.
 
 ##### IDX-CO-QRY-3 Get Corporation Params
 
@@ -541,7 +550,7 @@ Retrieve a paginated, filtered list of Ecosystems. *Aligned with VPR [[MOD-ES-QR
 | `preferred_language` | query | string | no | Preferred document language; affects governance-framework document ordering |
 | `archived` | query | boolean | no | `true` → only archived Ecosystems; `false` → only not-archived Ecosystems; null/omitted → both. Default: null. |
 | `corporation_id` | query | uint64 | no | Filter by controlling-Corporation id |
-| `participant` | query | string | no | Account address; returns Ecosystems where this account is the Ecosystem corporation or holds an active `Participant` entry on a schema in the Ecosystem |
+| `participant_corporation_id` | query | uint64 | no | Id of a Corporation; returns Ecosystems where this Corporation is the controlling Corporation (`Ecosystem.corporation_id`) **or** owns a `Participant` entry with `participant_state = ACTIVE` (per [Participant State Semantics](#participant-state-semantics)) on any Credential Schema of the Ecosystem. Complements `corporation_id`, which matches on control only |
 | `modified_after` | query | datetime | no | Only return Ecosystems modified strictly after this ISO 8601 datetime |
 | `trust_data` | query | enum | no | `null` \| `summary` \| `full` — see [Conventions](#trust_data-query-parameter) |
 | `min_active_schemas` / `max_active_schemas` | query | integer | no | Active-schema count bounds |
@@ -642,7 +651,7 @@ Retrieve a paginated, filtered list of Credential Schemas. *Aligned with VPR [[M
 | `issuer_onboarding_mode` | query | enum | no | Filter by issuer onboarding mode: `OPEN` \| `GRANTOR_ONBOARDING_PROCESS` \| `ECOSYSTEM_ONBOARDING_PROCESS` |
 | `verifier_onboarding_mode` | query | enum | no | Filter by verifier onboarding mode: `OPEN` \| `GRANTOR_ONBOARDING_PROCESS` \| `ECOSYSTEM_ONBOARDING_PROCESS` |
 | `holder_onboarding_mode` | query | enum | no | Filter by holder onboarding mode: `ISSUER_ONBOARDING_PROCESS` \| `PERMISSIONLESS` |
-| `participant` | query | string | no | Account address; returns schemas where the account is the Ecosystem corporation or holds an active `Participant` entry |
+| `participant_corporation_id` | query | uint64 | no | Id of a Corporation; returns schemas where this Corporation controls the owning Ecosystem (`Ecosystem.corporation_id`) **or** owns a `Participant` entry with `participant_state = ACTIVE` (per [Participant State Semantics](#participant-state-semantics)) on the schema |
 | `modified_after` | query | datetime | no | Only return schemas modified strictly after this datetime |
 | *(standard list filters)* | query | — | no | See [Standard list filters](#standard-list-filters) |
 
@@ -703,6 +712,7 @@ Retrieve a specific Participant by its ID. A Participant is a single VPR partici
 
 - **On-chain (VPR `Participant`):** `id`, `schema_id`, `role` (one of `ISSUER`, `VERIFIER`, `ISSUER_GRANTOR`, `VERIFIER_GRANTOR`, `ECOSYSTEM`, `HOLDER`), `did`, `corporation_id` (uint64; FK to `Corporation.id`), `vs_operator` (account), lifecycle timestamps (`created`, `modified`, `adjusted`, `slashed`, `repaid`, `revoked`, `effective_from`, `effective_until`), fee fields (`validation_fees`, `issuance_fees`, `verification_fees`, `issuance_fee_discount`, `verification_fee_discount`), deposit fields (`deposit`, `slashed_deposit`, `repaid_deposit`), and the onboarding-process state (`op_state` enum: `PENDING` / `VALIDATED` / `TERMINATED`; plus `op_last_state_change`, `op_current_fees`, `op_current_deposit`, `op_summary_digest`, `op_exp`, `op_validator_deposit`, `validator_participant_id`).
 - **Indexer-derived (computed at evaluation block; not stored on-chain):**
+  - `ecosystem_id` — the Ecosystem owning the Participant's Credential Schema, denormalised from `CredentialSchema.ecosystem_id`. Per VPR, every schema is owned by exactly one Ecosystem, so the value is well-defined and immutable for the Participant's lifetime; it saves consumers a schema→ecosystem join per row and mirrors the `participations[].ecosystemId` field the [Verifiable Trust Resolver](#verifiable-trust-resolver-methods) already surfaces inline.
   - `participant_state` — lifecycle state derived from on-chain timestamps. One of `ACTIVE`, `FUTURE`, `INACTIVE`, `EXPIRED`, `REVOKED`, `SLASHED`, `REPAID`. See [Conventions → `participant_state` semantics](#participant-state-semantics).
   - `corporation_available_actions[]`, `validator_available_actions[]` — UI-affordance arrays listing the next allowable VPR messages for the owning Corporation / validator at the current state (e.g. `CancelParticipantOPLastRequest`, `SetParticipantOPtoValidated`, `RenewParticipantOP`). See [Conventions → Available Actions Semantics](#available-actions-semantics).
 - **Indexer-enriched aggregates** (computed): `weight`, `issued`, `verified`, `participants` (sub-participant count for grantor roles), and the same slash counters as on `CredentialSchema`.
@@ -727,6 +737,7 @@ Retrieve a paginated, filtered list of Participants. *Aligned with VPR [[MOD-PP-
 | `only_slashed` | query | boolean | no | Filter only slashed Participants |
 | `only_repaid` | query | boolean | no | Filter only repaid Participants |
 | `schema_id` | query | uint64 | no | Filter by Credential Schema ID |
+| `ecosystem_id` | query | uint64 | no | Filter by the Ecosystem owning the Participant's Credential Schema (the denormalised `ecosystem_id` response field) |
 | `validator_participant_id` | query | uint64 | no | Filter by validator Participant ID |
 | `when` | query | datetime | no | Effective-date filter; returns Participants whose effective range includes this datetime |
 | `modified_after` | query | datetime | no | Only return Participants modified strictly after this datetime |
@@ -755,24 +766,33 @@ Supports pagination through attributes `max_id`, `min_id`, `limit` and `sort`, a
 
 `GET /v4/participant/beneficiaries`
 
-Compute the chain of beneficiary Participants for a credential transaction. Given an issuer Participant and a verifier Participant, returns every ancestor Participant in either tree (issuer grantor, verifier grantor, ecosystem, network) that participates in the fee-distribution flow. *Aligned with VPR [[MOD-PP-QRY-4]](https://verana-labs.github.io/verifiable-trust-vpr-spec/#mod-pp-qry-4-find-beneficiaries).*
+Compute the set of beneficiary Participants for a credential transaction. Given an issuer Participant and/or a verifier Participant, returns every ancestor Participant in the involved tree branch(es) (issuer grantor, verifier grantor, ecosystem) that participates in the fee-distribution flow. *Aligned with VPR [[MOD-PP-QRY-4]](https://verana-labs.github.io/verifiable-trust-vpr-spec/#mod-pp-qry-4-find-beneficiaries).*
 
 | Name | In | Type | Required | Description |
 | --- | --- | --- | --- | --- |
-| `issuer_participant_id` | query | uint64 | yes | Issuer Participant ID |
-| `verifier_participant_id` | query | uint64 | yes | Verifier Participant ID |
+| `issuer_participant_id` | query | uint64 | conditional¹ | Issuer Participant ID. MUST reference an [active](#participant-state-semantics) `Participant`; HTTP 400 otherwise |
+| `verifier_participant_id` | query | uint64 | conditional¹ | Verifier Participant ID. MUST reference an [active](#participant-state-semantics) `Participant`; HTTP 400 otherwise |
 
-**Response:** `{ participants: Participant[] }` — the ordered set of beneficiary Participants.
+¹ At least one of `issuer_participant_id` and `verifier_participant_id` MUST be provided (either one alone, or both); providing neither is HTTP 400. Per VPR [[MOD-PP-QRY-4]](https://verana-labs.github.io/verifiable-trust-vpr-spec/#mod-pp-qry-4-find-beneficiaries), the membership of the result set depends on the combination:
+
+- **Issuance** (`issuer_participant_id` only — a credential offer): the ancestors of the issuer `Participant`, excluding the issuer itself.
+- **Verification** (`verifier_participant_id` set, with or without `issuer_participant_id`): the ancestors of the verifier `Participant` (excluding the verifier itself), plus — when `issuer_participant_id` is provided — the issuer `Participant` **itself** and its ancestors.
+
+In both cases, revoked and slashed ancestors are excluded from the set; expired-but-not-revoked/slashed ancestors are included.
+
+**Response:** `{ participants: Participant[] }` — the set of beneficiary Participants.
 
 ##### IDX-PP-QRY-5 Pending Flat
 
 `GET /v4/participant/pending/flat`
 
-Return the open task list for a given account — every Participant anywhere on the network where the account is the validator and the Participant is in a state that requires the validator's action (e.g. `op_state: PENDING`). Results are grouped by Ecosystem then by Credential Schema. *Indexer-specific (no VPR equivalent).*
+Return the open task list for a given Corporation — every Participant anywhere on the network whose **validator Participant** (the entry referenced by its `validator_participant_id`) is owned by that Corporation and whose state requires the validator's action (e.g. `op_state: PENDING`). Results are grouped by Ecosystem then by Credential Schema. *Indexer-specific (no VPR equivalent).*
+
+> Validator scoping is by Corporation, not by account: per VPR v4, `Participant` entries — including validator entries — are owned by Corporations (`Participant.corporation_id`), and individual accounts only act on them through delegated authorizations. A client acting for a Corporation (e.g. the Verana frontend after corporation selection) passes that Corporation's `corporation_id`; which of the Corporation's operators may actually execute the pending action (`SetParticipantOPtoValidated`, …) is determined separately by the caller against the Corporation's authorization grants (see [`listOperatorAuthorizations`](#idx-de-qry-1-list-operator-authorizations) / [`listVSOperatorAuthorizations`](#idx-de-qry-2-list-vs-operator-authorizations) and [Available Actions Semantics](#available-actions-semantics)).
 
 | Name | In | Type | Required | Description |
 | --- | --- | --- | --- | --- |
-| `account` | query | string | yes | Account address whose pending tasks are returned |
+| `corporation_id` | query | uint64 | yes | Id of the Corporation whose pending tasks are returned (the Corporation owning the validator `Participant` entries) |
 | `trust_data` | query | enum | no | `null` \| `summary` \| `full` |
 | `limit` | query | integer | no | 1..1024, default 64 (caps the number of Ecosystems returned) |
 
@@ -780,7 +800,7 @@ Return the open task list for a given account — every Participant anywhere on 
 
 - `id`, `did`, `pending_tasks` (count of pending validations), `participants` (active participant count).
 - `trust_data` (when requested; per [Conventions](#trust_data-query-parameter)).
-- `schemas[]: CredentialSchemaPending[]` — each `CredentialSchemaPending` carries `id`, `title` (indexer-derived from the JSON Schema `title`), `description` (indexer-derived from the JSON Schema `description`), `pending_tasks`, `participants` (active participant count), and `pending_participants[]: Participant[]` (full `Participant` shape; see [`getParticipant`](#idx-pp-qry-1-get-participant)). The `pending_participants[]` array is the list of `Participant` entries pending action from the validator account; it is intentionally distinct from the scalar `participants` count.
+- `schemas[]: CredentialSchemaPending[]` — each `CredentialSchemaPending` carries `id`, `title` (indexer-derived from the JSON Schema `title`), `description` (indexer-derived from the JSON Schema `description`), `pending_tasks`, `participants` (active participant count), and `pending_participants[]: Participant[]` (full `Participant` shape; see [`getParticipant`](#idx-pp-qry-1-get-participant)). The `pending_participants[]` array is the list of `Participant` entries pending action from the validator Corporation; it is intentionally distinct from the scalar `participants` count.
 
 ##### IDX-PP-QRY-6 Get Participant Session
 
@@ -864,7 +884,7 @@ Supports pagination through attributes `max_id`, `min_id`, `limit` and `sort`, a
 
 #### Delegation methods
 
-The Delegation module surfaces the two on-chain authorization entities that replaced the old `Participant.vs_operator_authz_*` fields: `OperatorAuthorization` (corporation-to-operator grants over module message types) and `VSOperatorAuthorization` (corporation-to-VS-operator grant container holding one `ParticipantAuthorizationRecord` per controlled `Participant`).
+The Delegation module surfaces the two on-chain authorization entities that replaced the old `Participant.vs_operator_authz_*` fields: `OperatorAuthorization` (corporation-to-operator grants over module message types) and `VSOperatorAuthorization` (corporation-to-VS-operator grant container holding one `ParticipantAuthorizationRecord` per controlled `Participant`) — plus the `FeeGrant` entries through which a Corporation pays transaction fees on behalf of its grantees.
 
 ##### IDX-DE-QRY-1 List Operator Authorizations
 
@@ -882,7 +902,9 @@ Retrieve a paginated, filtered list of `OperatorAuthorization` entries. Each ent
 
 Supports pagination through attributes `max_id`, `min_id`, `limit` and `sort`, as explained in [Pagination](#pagination).
 
-**Response:** `{ authorizations: OperatorAuthorization[] }` — each entry carries `id` (auto-incremented uint64), `corporation_id`, `operator`, `msg_types[]`, `spend_limit[]` (optional `DenomAmount[]`), `remaining_spend[]` (when `spend_limit` is set), `fee_spend_limit[]` (optional), `remaining_fee_spend[]` (when `fee_spend_limit` is set), `expiration` (optional timestamp), and `period` (optional duration).
+**Response:** `{ authorizations: OperatorAuthorization[] }` — each entry carries `id` (auto-incremented uint64), `corporation_id`, `operator`, `msg_types[]`, `spend_limit[]` (optional `DenomAmount[]`), `remaining_spend[]` (when `spend_limit` is set), `expiration` (optional timestamp), and `period` (optional duration).
+
+> Fee-payment capability is **not** part of `OperatorAuthorization`: per the VPR data model it lives on the separate [FeeGrant](https://verana-labs.github.io/verifiable-trust-vpr-spec/versions/v4/#feegrant) entity, keyed `(grantor_corporation_id, grantee)`. Query it via [`listFeeGrants`](#idx-de-qry-5-list-fee-grants).
 
 ##### IDX-DE-QRY-2 List VS Operator Authorizations
 
@@ -912,7 +934,7 @@ Retrieve a specific `OperatorAuthorization` entry by its id. *Aligned with VPR [
 | --- | --- | --- | --- | --- |
 | `id` | path | uint64 | yes | The OperatorAuthorization ID |
 
-**Response:** `{ authorization: OperatorAuthorization }` — same shape as an entry returned by [`listOperatorAuthorizations`](#idx-de-qry-1-list-operator-authorizations): `id`, `corporation_id`, `operator`, `msg_types[]`, `spend_limit[]` (optional `DenomAmount[]`), `remaining_spend[]` (when `spend_limit` is set), `fee_spend_limit[]` (optional), `remaining_fee_spend[]` (when `fee_spend_limit` is set), `expiration` (optional timestamp), and `period` (optional duration).
+**Response:** `{ authorization: OperatorAuthorization }` — same shape as an entry returned by [`listOperatorAuthorizations`](#idx-de-qry-1-list-operator-authorizations): `id`, `corporation_id`, `operator`, `msg_types[]`, `spend_limit[]` (optional `DenomAmount[]`), `remaining_spend[]` (when `spend_limit` is set), `expiration` (optional timestamp), and `period` (optional duration). For the associated fee-payment capability, see [`listFeeGrants`](#idx-de-qry-5-list-fee-grants).
 
 ##### IDX-DE-QRY-4 Get VS Operator Authorization
 
@@ -925,6 +947,26 @@ Retrieve a specific `VSOperatorAuthorization` entry by its id, including its nes
 | `id` | path | uint64 | yes | The VSOperatorAuthorization ID |
 
 **Response:** `{ authorization: VSOperatorAuthorization }` — same shape as an entry returned by [`listVSOperatorAuthorizations`](#idx-de-qry-2-list-vs-operator-authorizations): `id`, `corporation_id`, `vs_operator`, and `records[]: ParticipantAuthorizationRecord[]` (each record carries `participant_id`, `msg_types[]`, `spend_limit[]` and `remaining_spend[]`, `fee_spend_limit[]` and `remaining_fee_spend[]`, `with_feegrant`, `expiration`, `period`).
+
+##### IDX-DE-QRY-5 List Fee Grants
+
+`GET /v4/delegation/fee-grants`
+
+Retrieve a paginated, filtered list of `FeeGrant` entries — the grants through which a Corporation pays network transaction fees on behalf of a grantee account (an `operator` or a `vs_operator`). *Aligned with the VPR [FeeGrant](https://verana-labs.github.io/verifiable-trust-vpr-spec/versions/v4/#feegrant) entity and [Delegation Module](https://verana-labs.github.io/verifiable-trust-vpr-spec/versions/v4/#delegation-module) fee-grant model; no dedicated VPR query exists (grants are realized as `x/feegrant` allowances).*
+
+The primary consumer use case is a client deciding, before broadcasting a delegable Msg, whether the signing grantee can elect corporation-paid fees by setting the transaction's fee `granter` to the Corporation's `policy_address`: a single call with `grantor_corporation_id=<acting corporation>&grantee=<signing account>&msg_type=<Msg type>&only_active=true` answers it (the `(grantor_corporation_id, grantee)` pair is the FeeGrant's composite key, so at most one entry matches).
+
+| Name | In | Type | Required | Description |
+| --- | --- | --- | --- | --- |
+| `grantor_corporation_id` | query | uint64 | no | Filter by the granting Corporation id |
+| `grantee` | query | string | no | Filter by the grantee account |
+| `msg_type` | query | string | no | Filter to grants whose `msg_types[]` includes this message type |
+| `only_active` | query | boolean | no | If true, only return non-expired grants (`expiration > now` or null; for periodic grants, the auto-renewing cycle boundary never makes the grant inactive) |
+| `modified_after` | query | datetime | no | Only return grants modified strictly after this datetime. A grant is considered modified by its creation, update, or revocation, and by any change to `remaining_spend` (fee draw or cycle reset, detected via the SDK `use_feegrant` event — fee draws happen at fee-processing time and emit no Delegation-module event of their own) |
+
+Supports pagination through attributes `max_id`, `min_id`, `limit` and `sort`, as explained in [Pagination](#pagination). Since the VPR `FeeGrant` has a composite primary key `(grantor_corporation_id, grantee)` and no `id` of its own, the cursor key is an indexer-assigned per-row monotonic uint64 `id` surfaced on each entry (same mechanic as `ActivityItem.id`), distinct from any on-chain identifier.
+
+**Response:** `{ fee_grants: FeeGrant[] }` — each entry carries `id` (indexer-assigned per-row uint64, the pagination cursor), `grantor_corporation_id`, `grantee`, `msg_types[]`, `spend_limit[]` (optional `DenomAmount[]`), `remaining_spend[]` (when `spend_limit` is set — sourced from the underlying `x/feegrant` allowance's running balance, per the VPR Delegation module realization note), `expiration` (optional timestamp), and `period` (optional duration). For periodic grants, `expiration` reflects the underlying allowance's current `period_reset` (the end of the current auto-renewing cycle), per the VPR Delegation module mapping — not the value stored at grant time, which never advances on-chain.
 
 #### Digest methods
 
@@ -939,6 +981,97 @@ Look up a previously stored `Digest` entry by its digest string. *Aligned with V
 | `digest` | path | string | yes | The digest to look up, byte-for-byte as anchored (for a credential, its `digestJCS`) |
 
 **Response:** `{ digest: Digest }` — `{ digest: string, created: timestamp }`. Returns HTTP 404 if no `Digest` entry exists for the supplied value.
+
+#### Group methods
+
+The Verana chain uses the Cosmos SDK `x/group` module for Corporation governance: every Corporation is anchored on a group policy account (its `policy_address`), and corporation-level decisions — operator grants, member changes, every non-delegable Msg — are taken through group proposals (see the VPR [Corporation Module](https://verana-labs.github.io/verifiable-trust-vpr-spec/versions/v4/#corporation-module) group-lifecycle note). The Group module surfaces this `x/group` state **scoped to Corporation-anchored groups** — the group whose policy is some Corporation's `policy_address` — so that clients can implement membership discovery, member lists, and the full proposal/vote lifecycle without querying a chain LCD node. Groups and group policies that anchor no Corporation are out of scope and MUST NOT be surfaced.
+
+Write operations remain out of scope: submitting, voting on, executing, and withdrawing proposals (`MsgSubmitProposal`, `MsgVote`, `MsgExec`, `MsgWithdrawProposal`) are ordinary transactions broadcast to the chain; this module provides the read view, and [`IDX-INDEXER-SUB-1`](#idx-indexer-sub-1-subscribe-indexer-events) delivers the corresponding events in real time (see its routing model).
+
+*All methods in this module are indexer-specific (no VPR equivalent; they mirror Cosmos SDK `x/group` queries, joined with Corporation entries).*
+
+##### IDX-GR-QRY-1 Get Corporation Group
+
+`GET /v4/group/get/{corporation_id}`
+
+Retrieve the `x/group` state backing a Corporation: the group, the group policy anchoring the Corporation, and the full member list.
+
+| Name | In | Type | Required | Description |
+| --- | --- | --- | --- | --- |
+| `corporation_id` | path | uint64 | yes | The Corporation ID |
+
+**Response:** `{ group: CorporationGroup }`. The `CorporationGroup` object carries:
+
+- `corporation_id` — echo of the path parameter.
+- **Group:** `group_id` (uint64), `version` (bumped on membership changes), `total_weight` (decimal string), `created_at`.
+- **Policy:** `policy: { address, version, decision_policy }` — `address` equals the Corporation's `policy_address`; `decision_policy` is the `x/group` decision policy surfaced verbatim (a `ThresholdDecisionPolicy` `{ threshold, windows: { voting_period, min_execution_period } }` or a `PercentageDecisionPolicy` `{ percentage, windows: { … } }`).
+- **Members:** `members[]` — each `{ address, weight (decimal string), metadata, added_at }`. The full list is returned inline, not paginated: corporation groups are small by construction.
+
+The group and policy admin is not surfaced separately: per [[MOD-CO-MSG-1]](https://verana-labs.github.io/verifiable-trust-vpr-spec/versions/v4/#mod-co-msg-1-create-new-corporation), `group_policy_as_admin` is always `true`, so the admin of both the group and the group policy is the `policy.address` itself.
+
+##### IDX-GR-QRY-2 List Corporations By Member
+
+`GET /v4/group/corporations-by-member`
+
+Retrieve the Corporations whose backing group has the supplied account as a current member. This is the single-call **group-membership discovery** method: it replaces the LCD walk `GroupsByMember` → `GroupPoliciesByGroup` → Corporation reverse-mapping, and is the group-member counterpart of the operator-side discovery served by [`listOperatorAuthorizations`](#idx-de-qry-1-list-operator-authorizations) with `operator=<addr>`.
+
+| Name | In | Type | Required | Description |
+| --- | --- | --- | --- | --- |
+| `account` | query | string | yes | Member account address |
+
+Supports pagination through attributes `max_id`, `min_id`, `limit` and `sort`, as explained in [Pagination](#pagination); the cursor key is `corporation_id`.
+
+**Response:** `{ memberships: CorporationMembership[] }` — each entry carries `corporation_id`, `weight` (the member's weight in that group, decimal string), `metadata`, and `added_at`.
+
+##### IDX-GR-QRY-3 List Proposals
+
+`GET /v4/group/proposals`
+
+Retrieve a paginated, filtered list of `x/group` proposals targeting Corporation-anchored group policies.
+
+| Name | In | Type | Required | Description |
+| --- | --- | --- | --- | --- |
+| `corporation_id` | query | uint64 | no | Filter by the Corporation whose group policy the proposal targets |
+| `status` | query | enum | no | `SUBMITTED` \| `ACCEPTED` \| `REJECTED` \| `ABORTED` \| `WITHDRAWN` — short forms of the `x/group` `PROPOSAL_STATUS_*` values |
+| `proposer` | query | string | no | Filter to proposals whose `proposers[]` includes this account |
+| `pending_voter` | query | string | no | Only proposals with `status = SUBMITTED` whose voting period has not ended, where this account is a current member of the backing group and has not yet cast a vote. This is the "proposals awaiting my vote" badge query |
+| `modified_after` | query | datetime | no | Only return proposals modified (submitted, voted on, tallied, executed, withdrawn) strictly after this datetime |
+
+Supports pagination through attributes `max_id`, `min_id`, `limit` and `sort`, as explained in [Pagination](#pagination); the cursor key is the proposal `id` (`x/group` proposal ids are globally unique and monotonic).
+
+**Response:** `{ proposals: Proposal[] }`. Each `Proposal` carries:
+
+- **On-chain (`x/group`):** `id` (uint64), `group_policy_address`, `metadata`, `proposers[]`, `submit_time`, `group_version`, `group_policy_version`, `status` (enum above), `voting_period_end`, `executor_result` (`NOT_RUN` \| `SUCCESS` \| `FAILURE` — short forms of `PROPOSAL_EXECUTOR_RESULT_*`), `messages[]` — the wrapped Msgs JSON-decoded with their `@type`, so clients can render what the proposal will execute without protobuf decoding — and `final_tally_result` (populated by `x/group` once the proposal closes).
+- **Indexer-derived:** `corporation_id` (the Corporation anchored on `group_policy_address`) and `tally` `{ yes_count, no_count, abstain_count, no_with_veto_count }` — the running tally computed over indexed votes at the evaluation block; equals `final_tally_result` once the proposal closes.
+
+##### IDX-GR-QRY-4 Get Proposal
+
+`GET /v4/group/proposal/{id}`
+
+Retrieve a single proposal by its `x/group` proposal id.
+
+| Name | In | Type | Required | Description |
+| --- | --- | --- | --- | --- |
+| `id` | path | uint64 | yes | The proposal ID |
+
+**Response:** `{ proposal: Proposal }` — same shape as an entry returned by [`listProposals`](#idx-gr-qry-3-list-proposals). Returns HTTP 404 for proposals that target no Corporation-anchored group policy.
+
+##### IDX-GR-QRY-5 List Votes
+
+`GET /v4/group/votes`
+
+Retrieve the votes cast on Corporation-anchored proposals.
+
+| Name | In | Type | Required | Description |
+| --- | --- | --- | --- | --- |
+| `proposal_id` | query | uint64 | conditional¹ | Filter by proposal |
+| `voter` | query | string | conditional¹ | Filter by voter account |
+
+¹ At least one of `proposal_id` and `voter` MUST be provided; providing neither is HTTP 400.
+
+Supports pagination through attributes `max_id`, `min_id`, `limit` and `sort`, as explained in [Pagination](#pagination). Since an `x/group` vote is keyed by the composite `(proposal_id, voter)`, the cursor key is an indexer-assigned per-row monotonic uint64 `id` surfaced on each entry (same mechanic as `ActivityItem.id`).
+
+**Response:** `{ votes: Vote[] }` — each entry carries `id` (indexer-assigned per-row uint64, the pagination cursor), `proposal_id`, `voter`, `option` (`YES` \| `NO` \| `ABSTAIN` \| `NO_WITH_VETO` — short forms of `VOTE_OPTION_*`), `metadata`, and `submit_time`.
 
 #### Exchange Rate methods
 
@@ -1197,9 +1330,11 @@ When **both** `dids` and `corporation_id` are present, only events matching **bo
 
 `WS /v4/indexer/subscribe`
 
-Real-time push of Corporation, Governance Framework, Ecosystem, Credential Schema, Participant, Trust Deposit, Delegation, and Digest events for one or more DIDs. The subscriber opens a WebSocket connection to `/v4/indexer/subscribe` and sends one or more JSON control messages; the first control message MUST be a `subscribe`. *Indexer-specific (no VPR equivalent).*
+Real-time push of Corporation, Governance Framework, Ecosystem, Credential Schema, Participant, Trust Deposit, Delegation, Digest, and Group events for one or more DIDs. The subscriber opens a WebSocket connection to `/v4/indexer/subscribe` and sends one or more JSON control messages; the first control message MUST be a `subscribe`. *Indexer-specific (no VPR equivalent).*
 
 > **Routing model.** Events are routed to scoped subscriptions by DID / Corporation affiliation (`Corporation.did`, `Ecosystem.did`, `Participant.did`, or ownership via `corporation_id` — see the `subscribe` filters below). Entities with neither affiliation — Exchange Rate entries, which are global market data — are therefore not part of any scoped subscription and define no dedicated notification event types; rates are pull-data, queried on demand via the [Exchange Rate methods](#exchange-rate-methods). A **wildcard** subscription (both filters absent) still receives every indexed transaction event, Exchange Rate messages included, since `event_type` is simply the Cosmos action name of the executed message.
+>
+> **`x/group` events** are in scope when they target a **Corporation-anchored group**: an `x/group` message whose group or group policy anchors a Corporation (via `policy_address`, per the [Group methods](#group-methods) scope) is routed as an event **of that Corporation** — delivered to `corporationId`-scoped subscriptions for that Corporation and to `dids[]`-scoped subscriptions containing the Corporation's `did`, with `event_type` the Cosmos action name (`SubmitProposal`, `Vote`, `Exec`, `WithdrawProposal`, `UpdateGroupMembers`, `UpdateGroupPolicyDecisionPolicy`, `UpdateGroupPolicyMetadata`, `UpdateGroupMetadata`, …) and `payload.module = "group"`. This gives corporation-scoped subscribers real-time proposal-lifecycle notifications (new proposal to vote on, vote cast, proposal executed, membership changed) without polling; the corresponding read state is served by the [Group methods](#group-methods). `x/group` events targeting groups that anchor no Corporation are not routed to any scoped subscription (wildcard subscriptions still receive them).
 
 ###### Connect / ready
 
@@ -1272,7 +1407,7 @@ A subscriber detects a connection-level loss by observing a gap (`block > previo
 
 ###### Catch-up and resume (indexer events)
 
-This stream does not deliver historical events on connect. To bootstrap from a known point, the client SHOULD call [`listIndexerEvents`](#idx-indexer-qry-6-list-indexer-events) with `after_block_height` set to its `last_seen_block`, paginate to exhaustion, then connect the WebSocket and send its `subscribe`. After a temporary disconnection, the client SHOULD repeat the same pattern using the highest `block` from a previously received block message as its new `last_seen_block`.
+This stream does not deliver historical events on connect, and an event that lands between a REST catch-up and a later `subscribe` is never redelivered — draining history *before* connecting therefore leaves a permanent gap. To bootstrap from a known point, the client SHOULD instead: (1) connect the WebSocket, read the `ready` message, and send its `subscribe`, buffering incoming block messages without applying them; (2) call [`listIndexerEvents`](#idx-indexer-qry-6-list-indexer-events) with `after_block_height` set to its `last_seen_block`, paginating to exhaustion; (3) apply the buffered — then live — block messages in order, discarding events already applied during catch-up (same `tx_hash` and `payload.message_index`). The WebSocket delivers every block from `ready.block` onwards while the catch-up covers everything up to the indexer's current block, so the union has no gap and the overlap is removed by deduplication. After a temporary disconnection, the client SHOULD repeat the same pattern using the highest `block` from a previously received block message as its new `last_seen_block`.
 
 ###### Backpressure (indexer events)
 

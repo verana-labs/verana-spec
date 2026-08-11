@@ -644,7 +644,7 @@ VS Agent tools authenticate to the target VS Agent's [Administration API](../vs-
 | `verana.vsa.flow.editCredentialClaims` | [`editCredentialClaims`](../vs-agent/spec.md#vsa-adm-fl-edit-editcredentialclaims) | Edit pending credential claims for a flow. |
 | `verana.vsa.flow.sendOobLink` | [`sendOobLink`](../vs-agent/spec.md#vsa-adm-fl-send-sendooblink) | Re-send an OOB invitation link for a flow. |
 | `verana.vsa.flow.validateFlow` | [`validateFlow`](../vs-agent/spec.md#vsa-adm-fl-validate-validateflow) | Mark a flow as validated, allowing the agent to call `MOD-PP-MSG-3` Set Participant OP To Validated on chain. |
-| `verana.vsa.flow.revokeCredential` | [`revokeCredential`](../vs-agent/spec.md#vsa-adm-fl-revoke-revokecredential) | Revoke an issued credential and the corresponding Participant. |
+| `verana.vsa.flow.revokeCredential` | [`revokeFlowCredential`](../vs-agent/spec.md#vsa-adm-fl-revoke-revokeflowcredential) | Revoke the credential issued in a flow, notifying the applicant over DIDComm. Does not revoke the corresponding `Participant`. |
 
 #### [VMS-TOOLS-VSA-SE] Service Endpoint Management
 
