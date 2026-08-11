@@ -796,30 +796,36 @@ The VS Agent MUST expose a secure Administration API that allows authenticated a
 
 ### Authentication and Authorization
 
-#### Listeners
+#### Trusted networks
 
-The Admin API can be served through two distinct listeners:
+The agent serves the Admin API on a **single port**, and applies one access rule to every method. The agent classifies each request as **trusted-network** or **external**, and this classification decides whether the agent requires authentication:
 
-- **Internal listener** — bound to the loopback interface or to a pod-internal address (e.g. a Unix socket or a private container network). Reachable only from inside the agent's pod or deployment. No authentication is performed; trust is established by network reachability. The internal listener is **always active** and serves every INTERNAL method, in every mode.
-- **External listener** — bound to a publicly reachable interface at `ADMIN_API_PUBLIC_URL`. Active only when `ADMIN_API_AUTH_MODE` is `corporation`. Every request MUST be authenticated as a Verana account per [[VSA-ADM-AUTH-PROTO]](#vsa-adm-auth-proto-account-challengeresponse) and authorized per [Authorization](#authorization). It serves only the PUBLIC [authentication methods](#vsa-adm-auth-authentication) and the [Flow Management](#vsa-adm-fl-flow-management) methods; no other method is ever exposed externally.
+- A request is **trusted-network** when the peer address of its TCP connection matches an entry of `ADMIN_API_TRUSTED_NETWORKS`.
+- Every other request is **external**.
 
-The `ADMIN_API_AUTH_MODE` environment variable holds a **single value** that selects where the [Flow Management](#vsa-adm-fl-flow-management) methods are served. The two modes are mutually exclusive: flow methods are reachable through exactly one surface, never both.
+The agent MUST classify the request on the peer address of the TCP connection. The agent MUST NOT read the `X-Forwarded-For`, `X-Real-IP` or `Forwarded` header for this classification. A caller sets these headers freely, so a classification that reads them lets an external caller pass as trusted-network.
 
-| Mode | Flow Management methods served by | Auth on that surface |
-|---|---|---|
-| `internal` (default) | Internal listener | None — trust is established by network reachability. The external listener is not started. |
-| `corporation` | External listener **only** — flow methods are NOT served by the internal listener in this mode | Verana-account authentication ([[VSA-ADM-AUTH-PROTO]](#vsa-adm-auth-proto-account-challengeresponse)) + allowlist authorization (see [Authorization](#authorization)). Requires `ADMIN_API_PUBLIC_URL` and a non-empty `ADMIN_API_CORPORATION_ALLOWED_ACCOUNTS`. |
+`ADMIN_API_TRUSTED_NETWORKS` holds a comma-separated list of CIDR blocks. Its default value is `127.0.0.0/8,::1/128`. This default fits the primary deployment: the agent and the application backend share one pod network namespace, and the backend calls the agent on the loopback interface.
 
-In `corporation` mode both listeners are active — the internal listener for INTERNAL methods, the external listener for authentication and Flow Management — and they MUST bind distinct ports, so that the unauthenticated internal surface is never reachable on the externally exposed one.
+> **Caution:** a reverse proxy or an ingress that forwards internet traffic to the agent is itself a client of this port. If the source address of that proxy is inside `ADMIN_API_TRUSTED_NETWORKS`, every internet request becomes a trusted-network request, and the agent authenticates nothing. The operator MUST keep the source address of each public proxy outside `ADMIN_API_TRUSTED_NETWORKS`. The operator SHOULD also restrict the configured blocks at the network layer, for example with a Kubernetes `NetworkPolicy`.
 
-Future revisions of this specification MAY add additional modes (e.g. an OAuth-backed or mTLS-backed listener). Each new mode declares its own listener and authentication contract; existing modes are unaffected.
+The `ADMIN_API_AUTH_MODE` environment variable selects whether the agent accepts external callers at all:
+
+| Mode | External requests |
+|---|---|
+| `internal` (default) | The agent rejects every external request with HTTP `403`, and does not serve the [authentication methods](#vsa-adm-auth-authentication). |
+| `corporation` | The agent serves the Admin API to external callers. Each external caller MUST authenticate per [[VSA-ADM-AUTH-PROTO]](#vsa-adm-auth-proto-account-challengeresponse) and MUST pass the allowlist check of [Authorization](#authorization). This mode requires `ADMIN_API_PUBLIC_URL` and a non-empty `ADMIN_API_CORPORATION_ALLOWED_ACCOUNTS`. |
+
+The mode applies to external requests only. The agent classifies every request in both modes, and serves the Admin API to a trusted-network caller in both modes.
+
+Future revisions of this specification MAY add additional modes (e.g. an OAuth-backed or mTLS-backed mode). Each new mode declares its own authentication contract; existing modes are unaffected.
 
 #### Authentication
 
-Authentication is enforced **per listener**, not per method:
+The agent enforces authentication on the **classification of the request** (see [Trusted networks](#trusted-networks)), not on the method:
 
-1. Requests arriving on the **internal listener** are not authenticated. The deployment is responsible for ensuring that this listener is unreachable from outside the trust boundary (pod, deployment, host).
-2. Requests arriving on the **external listener** MUST be authenticated as a Verana account, using the challenge/response protocol defined below, before any other check.
+1. The agent does not authenticate a **trusted-network** request. The deployment is responsible for keeping the configured blocks inside its trust boundary (pod, deployment, host).
+2. The agent MUST authenticate an **external** request as a Verana account, with the challenge/response protocol defined below, before any other check. The [authentication methods](#vsa-adm-auth-authentication) themselves are the only exception, because a caller cannot hold a token before it completes the exchange.
 
 ##### [VSA-ADM-AUTH-PROTO] Account challenge/response
 
@@ -831,7 +837,7 @@ The exchange has three steps:
 2. **Sign the challenge.** The caller builds the sign doc described below over the challenge payload, and signs it with the private key of that account.
 3. **Exchange for a token.** The caller posts the account, public key, signature and nonce to [`token`](#vsa-adm-auth-token-token). The agent verifies the signature and returns a bearer token and its expiry.
 
-Both endpoints are declared PUBLIC (see [Authorization](#authorization)), since a caller cannot hold a token before completing the exchange. They MUST be served by the external listener only: the internal listener performs no authentication and therefore has no use for them.
+An external caller reaches both endpoints without a token, since it cannot hold a token before it completes the exchange (see [Authorization](#authorization)). The agent serves them only when `ADMIN_API_AUTH_MODE` is `corporation`. A trusted-network caller needs no token, and therefore has no use for them.
 
 ###### Challenge payload
 
@@ -882,7 +888,7 @@ A nonce MUST be single-use: the agent MUST invalidate it as soon as it is presen
 
 ###### Presenting the token
 
-The token MUST be sent on every external-listener request in the HTTP `Authorization` header, using the `Bearer` scheme:
+The token MUST be sent on every external request in the HTTP `Authorization` header, using the `Bearer` scheme:
 
 ```
 Authorization: Bearer <token>
@@ -890,21 +896,26 @@ Authorization: Bearer <token>
 
 The agent resolves the token to the authenticated account, and checks that account against `ADMIN_API_CORPORATION_ALLOWED_ACCOUNTS` as described in [Authorization](#authorization). A request whose token is missing, unknown, or expired MUST be rejected with HTTP `401`, before any authorization check.
 
-Tokens MUST expire; the RECOMMENDED lifetime is 900 seconds. Tokens are bearer credentials: the external listener MUST be served over TLS, and the agent MUST NOT log token values.
+Tokens MUST expire; the RECOMMENDED lifetime is 900 seconds. Tokens are bearer credentials: the public origin `ADMIN_API_PUBLIC_URL` MUST be served over TLS, and the agent MUST NOT log token values.
 
 #### Authorization
 
 The Admin API does not gate its methods on on-chain VPR authorization grants. No VPR grant type exists for administering a VS Agent: `VSOperatorAuthorization` records are created only for the agent's own `vs_operator` account when `Participant` entries are created, carry only the per-role permitted message types, and cannot be granted manually to an arbitrary account; and an [`OperatorAuthorization`](https://verana-labs.github.io/verifiable-trust-vpr-spec/#operatorauthorization) cannot carry the message types reserved to VS operators (e.g. `CreateOrUpdateParticipantSession`). Admin API methods therefore declare **no authorization kind, no VPR `Msg` type, and no `Participant` scope** for their callers.
 
-Instead, external-caller authorization is a **static allowlist**: the authenticated account MUST be listed in `ADMIN_API_CORPORATION_ALLOWED_ACCOUNTS`, which the Corporation controller populates with the Verana accounts entitled to administer this agent. When `ADMIN_API_AUTH_MODE` is `corporation`, this variable MUST be set and non-empty — it is the sole caller-authorization mechanism of the external listener.
+Instead, external-caller authorization is a **static allowlist**: the authenticated account MUST be listed in `ADMIN_API_CORPORATION_ALLOWED_ACCOUNTS`, which the Corporation controller populates with the Verana accounts entitled to administer this agent. When `ADMIN_API_AUTH_MODE` is `corporation`, this variable MUST be set and non-empty — it is the sole caller-authorization mechanism for external callers.
 
-Each Admin API method declares which **access mode** applies to it:
+The agent applies one rule to the whole Admin API. No method declares its own access level:
 
-- **PUBLIC** — reachable without authentication. Reserved for the [authentication](#authentication) methods themselves, which a caller MUST be able to reach before it holds a token. Served by the external listener only, and therefore only in `corporation` mode. No other method may declare PUBLIC.
-- **INTERNAL** — reachable only via the [internal listener](#listeners), in every mode. No authentication, no authorization check. Every Admin API method except the [authentication](#vsa-adm-auth-authentication) and [Flow Management](#vsa-adm-fl-flow-management) methods is INTERNAL: they are never exposed externally.
-- **FLOW** — the [Flow Management](#vsa-adm-fl-flow-management) methods. Served by exactly one listener, selected by `ADMIN_API_AUTH_MODE` (see [Listeners](#listeners)): in `internal` mode they behave like INTERNAL methods; in `corporation` mode they are served by the external listener only, where the authenticated caller MUST be present in `ADMIN_API_CORPORATION_ALLOWED_ACCOUNTS`.
+| Request | Mode `internal` | Mode `corporation` |
+|---|---|---|
+| Trusted-network | Served. No authentication. | Served. No authentication. |
+| External | `403` | Served, after the agent authenticates the caller per [[VSA-ADM-AUTH-PROTO]](#vsa-adm-auth-proto-account-challengeresponse) and finds its account in `ADMIN_API_CORPORATION_ALLOWED_ACCOUNTS`. |
 
-A request that fails these checks — an INTERNAL method reached on the external listener, a FLOW method reached on the listener not selected by the configured mode, or an authenticated account absent from `ADMIN_API_CORPORATION_ALLOWED_ACCOUNTS` — MUST be rejected with HTTP `403`. `401` means the caller is not authenticated and SHOULD retry after obtaining a token. `403` means the token is valid but the account may not invoke the method.
+The [authentication methods](#vsa-adm-auth-authentication) are the single exception: an external caller MUST reach them without a token, because it cannot hold a token before it completes the exchange. The agent serves them only when `ADMIN_API_AUTH_MODE` is `corporation`.
+
+For a trusted-network request, the agent MUST NOT require a bearer token, an account signature, or an entry in `ADMIN_API_CORPORATION_ALLOWED_ACCOUNTS`, in either mode.
+
+The agent MUST reject an external request with HTTP `403` when `ADMIN_API_AUTH_MODE` is `internal`, or when the authenticated account is absent from `ADMIN_API_CORPORATION_ALLOWED_ACCOUNTS`. `401` means the caller is not authenticated and SHOULD retry after it obtains a token. `403` means the token is valid, but the account may not invoke the Admin API.
 
 ##### Agent authorization on-chain
 
@@ -920,19 +931,19 @@ The following environment variables MUST be provided when the VS Agent container
 
 | Variable | Required | Description |
 |---|---|---|
-| `ADMIN_API_AUTH_MODE` | OPTIONAL | Single value selecting where the [Flow Management](#vsa-adm-fl-flow-management) methods are served: `internal` (default) or `corporation`. The two modes are mutually exclusive. See [Listeners](#listeners). |
-| `ADMIN_API_PUBLIC_URL` | CONDITIONAL | Public `https://` origin (scheme + host + optional port, no trailing path) at which the external listener is exposed. REQUIRED when `ADMIN_API_AUTH_MODE` is `corporation`; MUST NOT be set otherwise. When set, the agent also publishes a `VsAgentAdminAPI` entry in its DID Document per [[VSA-VTI-DIDDOC]](#vsa-vti-diddoc-did-document-service-entries). |
-| `ADMIN_API_EXTERNAL_PORT` | OPTIONAL | Port on which the external listener accepts requests. It MUST differ from the port serving the internal listener. Has no effect when `ADMIN_API_AUTH_MODE` is not `corporation`. |
-| `ADMIN_API_CORPORATION_ALLOWED_ACCOUNTS` | CONDITIONAL | Comma-separated list of Verana account addresses (the same identifiers that authenticate via [Authentication](#authentication)) entitled to invoke the externally served [Flow Management](#vsa-adm-fl-flow-management) methods. REQUIRED (non-empty) when `ADMIN_API_AUTH_MODE` is `corporation`: with no on-chain caller grant to check (see [Authorization](#authorization)), this allowlist is the sole authorization mechanism of the external listener. Has no effect when `ADMIN_API_AUTH_MODE` is not `corporation`. |
+| `ADMIN_API_AUTH_MODE` | OPTIONAL | Single value selecting whether the agent accepts external requests: `internal` (default) or `corporation`. It applies to external requests only. See [Trusted networks](#trusted-networks). |
+| `ADMIN_API_TRUSTED_NETWORKS` | OPTIONAL | Comma-separated list of CIDR blocks. The agent classifies a request as trusted-network when the peer address of its TCP connection matches one block, and serves that request without authentication, in both modes. Default: `127.0.0.0/8,::1/128`. The operator MUST keep the source address of each public reverse proxy or ingress outside these blocks. See [Trusted networks](#trusted-networks). |
+| `ADMIN_API_PUBLIC_URL` | CONDITIONAL | Public `https://` origin (scheme + host + optional port, no trailing path) at which external callers reach the Admin API. REQUIRED when `ADMIN_API_AUTH_MODE` is `corporation`; MUST NOT be set otherwise. When set, the agent also publishes a `VsAgentAdminAPI` entry in its DID Document per [[VSA-VTI-DIDDOC]](#vsa-vti-diddoc-did-document-service-entries). |
+| `ADMIN_API_CORPORATION_ALLOWED_ACCOUNTS` | CONDITIONAL | Comma-separated list of Verana account addresses (the same identifiers that authenticate via [Authentication](#authentication)) entitled to invoke the Admin API as external callers. REQUIRED (non-empty) when `ADMIN_API_AUTH_MODE` is `corporation`: with no on-chain caller grant to check (see [Authorization](#authorization)), this allowlist is the sole authorization mechanism for external callers. Has no effect when `ADMIN_API_AUTH_MODE` is not `corporation`. |
 
 ### [VSA-ADM-AUTH] Authentication
 
-Methods that exchange an account signature for a bearer token, per [[VSA-ADM-AUTH-PROTO]](#vsa-adm-auth-proto-account-challengeresponse). They are served by the external listener only — and therefore exist only when `ADMIN_API_AUTH_MODE` is `corporation` — and are the sole methods declared PUBLIC.
+Methods that exchange an account signature for a bearer token, per [[VSA-ADM-AUTH-PROTO]](#vsa-adm-auth-proto-account-challengeresponse). The agent serves them only when `ADMIN_API_AUTH_MODE` is `corporation`. They are the only methods that an external caller reaches without a token.
 
-| Module | Method Name | HTTP Method | Relative REST API path | Requirements | Authz |
-| --- | --- | --- | --- | --- | --- |
-| Authentication | `challenge` | `POST` | `/v1/auth/challenge` | [see](#vsa-adm-auth-challenge-challenge) | PUBLIC |
-| Authentication | `token` | `POST` | `/v1/auth/token` | [see](#vsa-adm-auth-token-token) | PUBLIC |
+| Module | Method Name | HTTP Method | Relative REST API path | Requirements |
+| --- | --- | --- | --- | --- |
+| Authentication | `challenge` | `POST` | `/v1/auth/challenge` | [see](#vsa-adm-auth-challenge-challenge) |
+| Authentication | `token` | `POST` | `/v1/auth/token` | [see](#vsa-adm-auth-token-token) |
 
 #### [VSA-ADM-AUTH-CHALLENGE] challenge
 
@@ -973,9 +984,9 @@ Verifies a signature over a previously issued challenge and returns a bearer tok
 
 Methods that expose runtime information about this VS Agent instance.
 
-| Module | Method Name | HTTP Method | Relative REST API path | Requirements | Authz |
-| --- | --- | --- | --- | --- | --- |
-| Agent | `getAgentInfo` | `GET` | `/v1/agent` | [see](#vsa-adm-ag-info-getagentinfo) | INTERNAL |
+| Module | Method Name | HTTP Method | Relative REST API path | Requirements |
+| --- | --- | --- | --- | --- |
+| Agent | `getAgentInfo` | `GET` | `/v1/agent` | [see](#vsa-adm-ag-info-getagentinfo) |
 
 #### [VSA-ADM-AG-INFO] getAgentInfo
 
@@ -993,9 +1004,9 @@ Returns the core configuration and runtime status of this VS Agent instance.
 
 ### [VSA-ADM-HE] Health
 
-| Module | Method Name | HTTP Method | Relative REST API path | Requirements | Authz |
-| --- | --- | --- | --- | --- | --- |
-| Health | `getHealth` | `GET` | `/v1/health` | [see](#vsa-adm-he-get-gethealth) | INTERNAL |
+| Module | Method Name | HTTP Method | Relative REST API path | Requirements |
+| --- | --- | --- | --- | --- |
+| Health | `getHealth` | `GET` | `/v1/health` | [see](#vsa-adm-he-get-gethealth) |
 
 #### [VSA-ADM-HE-GET] getHealth
 
@@ -1009,11 +1020,11 @@ Liveness/readiness probe for the agent. Returns HTTP `200` when the agent is up.
 
 Methods that manage DIDComm connection records held by this agent.
 
-| Module | Method Name | HTTP Method | Relative REST API path | Requirements | Authz |
-| --- | --- | --- | --- | --- | --- |
-| Connections | `listConnections` | `GET` | `/v1/connections` | [see](#vsa-adm-cn-list-listconnections) | INTERNAL |
-| Connections | `getConnection` | `GET` | `/v1/connections/{connectionId}` | [see](#vsa-adm-cn-get-getconnection) | INTERNAL |
-| Connections | `deleteConnection` | `DELETE` | `/v1/connections/{connectionId}` | [see](#vsa-adm-cn-delete-deleteconnection) | INTERNAL |
+| Module | Method Name | HTTP Method | Relative REST API path | Requirements |
+| --- | --- | --- | --- | --- |
+| Connections | `listConnections` | `GET` | `/v1/connections` | [see](#vsa-adm-cn-list-listconnections) |
+| Connections | `getConnection` | `GET` | `/v1/connections/{connectionId}` | [see](#vsa-adm-cn-get-getconnection) |
+| Connections | `deleteConnection` | `DELETE` | `/v1/connections/{connectionId}` | [see](#vsa-adm-cn-delete-deleteconnection) |
 
 #### [VSA-ADM-CN-LIST] listConnections
 
@@ -1067,12 +1078,12 @@ Deletes a connection record. The agent MAY also tear down the underlying DIDComm
 
 Methods that create or consume Out-of-Band invitations used to establish DIDComm connections, request presentations, or offer credentials.
 
-| Module | Method Name | HTTP Method | Relative REST API path | Requirements | Authz |
-| --- | --- | --- | --- | --- | --- |
-| Invitations | `createInvitation` | `POST` | `/v1/invitation` | [see](#vsa-adm-in-create-createinvitation) | INTERNAL |
-| Invitations | `receiveInvitation` | `POST` | `/v1/invitation/receive` | [see](#vsa-adm-in-receive-receiveinvitation) | INTERNAL |
-| Invitations | `createPresentationRequest` | `POST` | `/v1/invitation/presentation-request` | [see](#vsa-adm-in-pres-createpresentationrequest) | INTERNAL |
-| Invitations | `createCredentialOffer` | `POST` | `/v1/invitation/credential-offer` | [see](#vsa-adm-in-offer-createcredentialoffer) | INTERNAL |
+| Module | Method Name | HTTP Method | Relative REST API path | Requirements |
+| --- | --- | --- | --- | --- |
+| Invitations | `createInvitation` | `POST` | `/v1/invitation` | [see](#vsa-adm-in-create-createinvitation) |
+| Invitations | `receiveInvitation` | `POST` | `/v1/invitation/receive` | [see](#vsa-adm-in-receive-receiveinvitation) |
+| Invitations | `createPresentationRequest` | `POST` | `/v1/invitation/presentation-request` | [see](#vsa-adm-in-pres-createpresentationrequest) |
+| Invitations | `createCredentialOffer` | `POST` | `/v1/invitation/credential-offer` | [see](#vsa-adm-in-offer-createcredentialoffer) |
 
 #### [VSA-ADM-IN-CREATE] createInvitation
 
@@ -1150,9 +1161,9 @@ Creates an AnonCreds credential offer invitation including a preview of the offe
 
 ### [VSA-ADM-MS] Messaging
 
-| Module | Method Name | HTTP Method | Relative REST API path | Requirements | Authz |
-| --- | --- | --- | --- | --- | --- |
-| Messaging | `sendMessage` | `POST` | `/v1/message` | [see](#vsa-adm-ms-send-sendmessage) | INTERNAL |
+| Module | Method Name | HTTP Method | Relative REST API path | Requirements |
+| --- | --- | --- | --- | --- |
+| Messaging | `sendMessage` | `POST` | `/v1/message` | [see](#vsa-adm-ms-send-sendmessage) |
 
 #### [VSA-ADM-MS-SEND] sendMessage
 
@@ -1179,16 +1190,16 @@ Sends a DIDComm message over an established connection. The set of accepted mess
 
 Methods that manage AnonCreds credential definitions ("credential types") and their associated revocation registries.
 
-| Module | Method Name | HTTP Method | Relative REST API path | Requirements | Authz |
-| --- | --- | --- | --- | --- | --- |
-| Credential Types | `listCredentialTypes` | `GET` | `/v1/credential-types` | [see](#vsa-adm-ct-list-listcredentialtypes) | INTERNAL |
-| Credential Types | `createCredentialType` | `POST` | `/v1/credential-types` | [see](#vsa-adm-ct-create-createcredentialtype) | INTERNAL |
-| Credential Types | `deleteCredentialType` | `DELETE` | `/v1/credential-types/{credentialTypeId}` | [see](#vsa-adm-ct-delete-deletecredentialtype) | INTERNAL |
-| Credential Types | `exportCredentialType` | `GET` | `/v1/credential-types/export/{credentialTypeId}` | [see](#vsa-adm-ct-export-exportcredentialtype) | INTERNAL |
-| Credential Types | `importCredentialType` | `POST` | `/v1/credential-types/import` | [see](#vsa-adm-ct-import-importcredentialtype) | INTERNAL |
-| Credential Types | `listRevocationRegistries` | `GET` | `/v1/credential-types/revocation-registry` | [see](#vsa-adm-ct-revlist-listrevocationregistries) | INTERNAL |
-| Credential Types | `createRevocationRegistry` | `POST` | `/v1/credential-types/revocation-registry` | [see](#vsa-adm-ct-revcreate-createrevocationregistry) | INTERNAL |
-| Credential Types | `deleteRevocationRegistry` | `DELETE` | `/v1/credential-types/revocation-registry/{revocationRegistryDefinitionId}` | [see](#vsa-adm-ct-revdelete-deleterevocationregistry) | INTERNAL |
+| Module | Method Name | HTTP Method | Relative REST API path | Requirements |
+| --- | --- | --- | --- | --- |
+| Credential Types | `listCredentialTypes` | `GET` | `/v1/credential-types` | [see](#vsa-adm-ct-list-listcredentialtypes) |
+| Credential Types | `createCredentialType` | `POST` | `/v1/credential-types` | [see](#vsa-adm-ct-create-createcredentialtype) |
+| Credential Types | `deleteCredentialType` | `DELETE` | `/v1/credential-types/{credentialTypeId}` | [see](#vsa-adm-ct-delete-deletecredentialtype) |
+| Credential Types | `exportCredentialType` | `GET` | `/v1/credential-types/export/{credentialTypeId}` | [see](#vsa-adm-ct-export-exportcredentialtype) |
+| Credential Types | `importCredentialType` | `POST` | `/v1/credential-types/import` | [see](#vsa-adm-ct-import-importcredentialtype) |
+| Credential Types | `listRevocationRegistries` | `GET` | `/v1/credential-types/revocation-registry` | [see](#vsa-adm-ct-revlist-listrevocationregistries) |
+| Credential Types | `createRevocationRegistry` | `POST` | `/v1/credential-types/revocation-registry` | [see](#vsa-adm-ct-revcreate-createrevocationregistry) |
+| Credential Types | `deleteRevocationRegistry` | `DELETE` | `/v1/credential-types/revocation-registry/{revocationRegistryDefinitionId}` | [see](#vsa-adm-ct-revdelete-deleterevocationregistry) |
 
 > Note: the deployed agent currently exposes the revocation-registry endpoints under the camelCased path `/v1/credential-types/revocationRegistry`. The kebab-case form `revocation-registry` is RECOMMENDED for new deployments to stay consistent with the rest of the API; existing deployments MAY continue to expose the camelCased alias.
 
@@ -1299,10 +1310,10 @@ Deletes a revocation registry definition and its associated status list records.
 
 Methods to inspect the credential issuance pipeline.
 
-| Module | Method Name | HTTP Method | Relative REST API path | Requirements | Authz |
-| --- | --- | --- | --- | --- | --- |
-| Credential Exchanges | `listCredentialExchanges` | `GET` | `/v1/credential-exchanges` | [see](#vsa-adm-ce-list-listcredentialexchanges) | INTERNAL |
-| Credential Exchanges | `getCredentialExchange` | `GET` | `/v1/credential-exchanges/{credentialExchangeId}` | [see](#vsa-adm-ce-get-getcredentialexchange) | INTERNAL |
+| Module | Method Name | HTTP Method | Relative REST API path | Requirements |
+| --- | --- | --- | --- | --- |
+| Credential Exchanges | `listCredentialExchanges` | `GET` | `/v1/credential-exchanges` | [see](#vsa-adm-ce-list-listcredentialexchanges) |
+| Credential Exchanges | `getCredentialExchange` | `GET` | `/v1/credential-exchanges/{credentialExchangeId}` | [see](#vsa-adm-ce-get-getcredentialexchange) |
 
 #### [VSA-ADM-CE-LIST] listCredentialExchanges
 
@@ -1330,11 +1341,11 @@ Retrieves a single credential exchange record by id.
 
 Methods to inspect and clean up presentation (proof) exchanges.
 
-| Module | Method Name | HTTP Method | Relative REST API path | Requirements | Authz |
-| --- | --- | --- | --- | --- | --- |
-| Presentations | `listPresentations` | `GET` | `/v1/presentations` | [see](#vsa-adm-pr-list-listpresentations) | INTERNAL |
-| Presentations | `getPresentation` | `GET` | `/v1/presentations/{proofExchangeId}` | [see](#vsa-adm-pr-get-getpresentation) | INTERNAL |
-| Presentations | `deletePresentation` | `DELETE` | `/v1/presentations/{proofExchangeId}` | [see](#vsa-adm-pr-delete-deletepresentation) | INTERNAL |
+| Module | Method Name | HTTP Method | Relative REST API path | Requirements |
+| --- | --- | --- | --- | --- |
+| Presentations | `listPresentations` | `GET` | `/v1/presentations` | [see](#vsa-adm-pr-list-listpresentations) |
+| Presentations | `getPresentation` | `GET` | `/v1/presentations/{proofExchangeId}` | [see](#vsa-adm-pr-get-getpresentation) |
+| Presentations | `deletePresentation` | `DELETE` | `/v1/presentations/{proofExchangeId}` | [see](#vsa-adm-pr-delete-deletepresentation) |
 
 #### [VSA-ADM-PR-LIST] listPresentations
 
@@ -1374,9 +1385,9 @@ Deletes a presentation exchange record.
 
 ### [VSA-ADM-QR] QR
 
-| Module | Method Name | HTTP Method | Relative REST API path | Requirements | Authz |
-| --- | --- | --- | --- | --- | --- |
-| QR | `getQrCode` | `GET` | `/v1/qr` | [see](#vsa-adm-qr-get-getqrcode) | INTERNAL |
+| Module | Method Name | HTTP Method | Relative REST API path | Requirements |
+| --- | --- | --- | --- | --- |
+| QR | `getQrCode` | `GET` | `/v1/qr` | [see](#vsa-adm-qr-get-getqrcode) |
 
 #### [VSA-ADM-QR-GET] getQrCode
 
@@ -1397,10 +1408,10 @@ Returns a rendered QR-code image for an invitation URL.
 
 Methods that issue or revoke Verifiable Trust Credentials (VTCs) on behalf of the agent. Aligned with the [Verifiable Trust Specification](https://verana-labs.github.io/verifiable-trust-spec/).
 
-| Module | Method Name | HTTP Method | Relative REST API path | Requirements | Authz |
-| --- | --- | --- | --- | --- | --- |
-| Verifiable Trust Credentials | `issueCredential` | `POST` | `/v1/vt/issue-credential` | [see](#vsa-adm-vtc-issue-issuecredential) | INTERNAL |
-| Verifiable Trust Credentials | `revokeCredential` | `POST` | `/v1/vt/revoke-credential` | [see](#vsa-adm-vtc-revoke-revokecredential) | INTERNAL |
+| Module | Method Name | HTTP Method | Relative REST API path | Requirements |
+| --- | --- | --- | --- | --- |
+| Verifiable Trust Credentials | `issueCredential` | `POST` | `/v1/vt/issue-credential` | [see](#vsa-adm-vtc-issue-issuecredential) |
+| Verifiable Trust Credentials | `revokeCredential` | `POST` | `/v1/vt/revoke-credential` | [see](#vsa-adm-vtc-revoke-revokecredential) |
 
 #### [VSA-ADM-VTC-ISSUE] issueCredential
 
@@ -1438,11 +1449,11 @@ Revokes a previously issued Verifiable Trust Credential. Currently only the Anon
 
 Methods that manage stored Verifiable Trust Credentials (VTCs) exposed by the agent as `LinkedVerifiablePresentation` service entries (see [[VS-SVC-6]](https://verana-labs.github.io/verifiable-trust-spec/#vs-svc-service-declaration)).
 
-| Module | Method Name | HTTP Method | Relative REST API path | Requirements | Authz |
-| --- | --- | --- | --- | --- | --- |
-| Linked Verifiable Presentations | `listLinkedCredentials` | `GET` | `/v1/vt/linked-credentials` | [see](#vsa-adm-lvp-list-listlinkedcredentials) | INTERNAL |
-| Linked Verifiable Presentations | `createLinkedCredential` | `POST` | `/v1/vt/linked-credentials` | [see](#vsa-adm-lvp-create-createlinkedcredential) | INTERNAL |
-| Linked Verifiable Presentations | `deleteLinkedCredential` | `DELETE` | `/v1/vt/linked-credentials` | [see](#vsa-adm-lvp-delete-deletelinkedcredential) | INTERNAL |
+| Module | Method Name | HTTP Method | Relative REST API path | Requirements |
+| --- | --- | --- | --- | --- |
+| Linked Verifiable Presentations | `listLinkedCredentials` | `GET` | `/v1/vt/linked-credentials` | [see](#vsa-adm-lvp-list-listlinkedcredentials) |
+| Linked Verifiable Presentations | `createLinkedCredential` | `POST` | `/v1/vt/linked-credentials` | [see](#vsa-adm-lvp-create-createlinkedcredential) |
+| Linked Verifiable Presentations | `deleteLinkedCredential` | `DELETE` | `/v1/vt/linked-credentials` | [see](#vsa-adm-lvp-delete-deletelinkedcredential) |
 
 > Note: when the credential lifecycle is managed via Verana VPR events (per [[VSA-VTI-VTJSC] VTJSC Management](#vsa-vti-vtjsc-vtjsc-management)), the create and delete methods MUST be disabled. The agent SHOULD respond with HTTP `409 Conflict` if a caller attempts a managed mutation.
 
@@ -1491,11 +1502,11 @@ Deletes a stored Verifiable Trust Credential identified by its schema URL.
 
 Methods that manage Verifiable Trust JSON Schema Credentials (VTJSCs) — credentials by which a Trust Registry binds an on-chain `CredentialSchema` to the Ecosystem DID that governs it. The issuer DID of a VTJSC MUST equal the Ecosystem DID of the Trust Registry that created the referenced `CredentialSchema`.
 
-| Module | Method Name | HTTP Method | Relative REST API path | Requirements | Authz |
-| --- | --- | --- | --- | --- | --- |
-| JSON Schema Credentials | `listJsonSchemaCredentials` | `GET` | `/v1/vt/json-schema-credentials` | [see](#vsa-adm-jsc-list-listjsonschemacredentials) | INTERNAL |
-| JSON Schema Credentials | `createOrUpdateJsonSchemaCredential` | `POST` | `/v1/vt/json-schema-credentials` | [see](#vsa-adm-jsc-create-createorupdatejsonschemacredential) | INTERNAL |
-| JSON Schema Credentials | `deleteJsonSchemaCredential` | `DELETE` | `/v1/vt/json-schema-credentials` | [see](#vsa-adm-jsc-delete-deletejsonschemacredential) | INTERNAL |
+| Module | Method Name | HTTP Method | Relative REST API path | Requirements |
+| --- | --- | --- | --- | --- |
+| JSON Schema Credentials | `listJsonSchemaCredentials` | `GET` | `/v1/vt/json-schema-credentials` | [see](#vsa-adm-jsc-list-listjsonschemacredentials) |
+| JSON Schema Credentials | `createOrUpdateJsonSchemaCredential` | `POST` | `/v1/vt/json-schema-credentials` | [see](#vsa-adm-jsc-create-createorupdatejsonschemacredential) |
+| JSON Schema Credentials | `deleteJsonSchemaCredential` | `DELETE` | `/v1/vt/json-schema-credentials` | [see](#vsa-adm-jsc-delete-deletejsonschemacredential) |
 
 > Note: when the VTJSC lifecycle is managed via Verana VPR events (see [[VSA-VTI-VTJSC] VTJSC Management](#vsa-vti-vtjsc-vtjsc-management)), the create and delete methods MUST be disabled. The agent SHOULD respond with HTTP `409 Conflict` if a caller attempts a managed mutation.
 
@@ -1545,15 +1556,13 @@ Deletes a stored VTJSC.
 
 The following methods list and progress credential-acquisition flows handled by the agent (see [[VSA-VTI-FLOW-STATE] Flow State](#vsa-vti-flow-state-flow-state)).
 
-Flow Management methods use the **FLOW** access mode (see [Authorization](#authorization)): depending on `ADMIN_API_AUTH_MODE`, they are served either by the internal listener (mode `internal`) or by the external listener with ADR-036 authentication and allowlist authorization (mode `corporation`) — never both.
-
-| Module | Method Name | HTTP Method | Relative REST API path | Requirements | Authz |
-| --- | --- | --- | --- | --- | --- |
-| Flow Management | `listFlows` | `GET` | `/v1/vt/flows` | [see](#vsa-adm-fl-list-listflows) | FLOW |
-| Flow Management | `editCredentialClaims` | `PUT` | `/v1/vt/flows/{participant_session_id}/claims` | [see](#vsa-adm-fl-edit-editcredentialclaims) | FLOW |
-| Flow Management | `sendOobLink` | `POST` | `/v1/vt/flows/{participant_session_id}/oob-link` | [see](#vsa-adm-fl-send-sendooblink) | FLOW |
-| Flow Management | `validateFlow` | `POST` | `/v1/vt/flows/{participant_session_id}/validate` | [see](#vsa-adm-fl-validate-validateflow) | FLOW |
-| Flow Management | `revokeCredential` | `POST` | `/v1/vt/flows/{participant_session_id}/revoke-credential` | [see](#vsa-adm-fl-revoke-revokecredential) | FLOW |
+| Module | Method Name | HTTP Method | Relative REST API path | Requirements |
+| --- | --- | --- | --- | --- |
+| Flow Management | `listFlows` | `GET` | `/v1/vt/flows` | [see](#vsa-adm-fl-list-listflows) |
+| Flow Management | `editCredentialClaims` | `PUT` | `/v1/vt/flows/{participant_session_id}/claims` | [see](#vsa-adm-fl-edit-editcredentialclaims) |
+| Flow Management | `sendOobLink` | `POST` | `/v1/vt/flows/{participant_session_id}/oob-link` | [see](#vsa-adm-fl-send-sendooblink) |
+| Flow Management | `validateFlow` | `POST` | `/v1/vt/flows/{participant_session_id}/validate` | [see](#vsa-adm-fl-validate-validateflow) |
+| Flow Management | `revokeCredential` | `POST` | `/v1/vt/flows/{participant_session_id}/revoke-credential` | [see](#vsa-adm-fl-revoke-revokecredential) |
 
 > Note: some VS Agent implementations may not support all actions, or may prefer sending the user to a portal for providing proofs, etc., using the OOB link.
 
@@ -1582,7 +1591,7 @@ Lists and inspects existing credential-acquisition flows handled by the agent.
 - any outstanding `OOB_LINK` URL;
 - once a credential has been generated: the offered credential identifier, its digest, and the on-chain `ParticipantSession` reference.
 
-**Requirements**: none beyond the FLOW access checks (see [Authorization](#authorization)).
+**Requirements**: none beyond the Admin API access checks (see [Authorization](#authorization)).
 
 #### [VSA-ADM-FL-EDIT] editCredentialClaims
 
@@ -1600,7 +1609,6 @@ Creates, modifies, or overrides the credential claims submitted by the applicant
 
 **Requirements**:
 
-- Caller access per the FLOW access mode (see [Authorization](#authorization)).
 - MUST refuse when connection is not in `ESTABLISHED` state.
 - MUST refuse when the flow is not `VALIDATING` or `CRED_REVOKED` (see [Flow State](#vsa-vti-flow-state-flow-state)).
 
@@ -1626,7 +1634,6 @@ Sends or resends an `OOB_LINK` DIDComm message to the applicant for out-of-DIDCo
 
 **Requirements**:
 
-- Caller access per the FLOW access mode (see [Authorization](#authorization)).
 - MUST refuse when the flow's Connection State is not `ESTABLISHED`.
 
 **Errors**:
@@ -1646,9 +1653,7 @@ Marks the applicant's documentation as validated for a given flow. When an Onboa
 
 **Output**: the updated flow record.
 
-**Requirements**:
-
-- Caller access per the FLOW access mode (see [Authorization](#authorization)).
+**Requirements**: none beyond the Admin API access checks (see [Authorization](#authorization)).
 
 **Errors**:
 
@@ -1673,7 +1678,6 @@ This method performs **credential-level** revocation only, and only for credenti
 
 **Requirements**:
 
-- Caller access per the FLOW access mode (see [Authorization](#authorization)).
 - MUST send a `CRED_STATE_CHANGE` DIDComm message to the applicant.
 - MUST reject the request when the flow's credential format does not support credential-level revocation (W3C `jsonld`).
 
@@ -1682,18 +1686,18 @@ This method performs **credential-level** revocation only, and only for credenti
 - `NOT_FOUND` — no flow with the given `participant_session_id`.
 - `UNSUPPORTED_FORMAT` — the flow's credential is a W3C (`jsonld`) credential, which cannot be revoked at the credential level in v4.
 
-> Applicant-side methods are to be specified. They will use the same FLOW access mode; the corresponding on-chain transactions (`StartParticipantOP`, `RenewParticipantOP`) are executed by Corporation operators, not by the agent (see [Agent authorization on-chain](#agent-authorization-on-chain)).
+> Applicant-side methods are to be specified. The corresponding on-chain transactions (`StartParticipantOP`, `RenewParticipantOP`) are executed by Corporation operators, not by the agent (see [Agent authorization on-chain](#agent-authorization-on-chain)).
 
 ### [VSA-ADM-SE] Service Endpoint Management
 
 The following methods manage the **additional consumable** service entries declared in the agent's DID Document — i.e., the entries added under [[VS-SVC-3]](https://verana-labs.github.io/verifiable-trust-spec/#vs-svc-service-declaration), such as `MCP`, `A2A`, `LinkedDomains`, or any other ecosystem-defined consumable type. Note that `VsAgentAdminAPI` entries are auto-managed and MUST NOT be manipulated through these methods.
 
-| Module | Method Name | HTTP Method | Relative REST API path | Requirements | Authz |
-| --- | --- | --- | --- | --- | --- |
-| Service Endpoint Management | `listServiceEndpoints` | `GET` | `/v1/vt/service-endpoints` | [see](#vsa-adm-se-list-listserviceendpoints) | INTERNAL |
-| Service Endpoint Management | `addServiceEndpoint` | `POST` | `/v1/vt/service-endpoints` | [see](#vsa-adm-se-add-addserviceendpoint) | INTERNAL |
-| Service Endpoint Management | `updateServiceEndpoint` | `PATCH` | `/v1/vt/service-endpoints/{id}` | [see](#vsa-adm-se-update-updateserviceendpoint) | INTERNAL |
-| Service Endpoint Management | `deleteServiceEndpoint` | `DELETE` | `/v1/vt/service-endpoints/{id}` | [see](#vsa-adm-se-delete-deleteserviceendpoint) | INTERNAL |
+| Module | Method Name | HTTP Method | Relative REST API path | Requirements |
+| --- | --- | --- | --- | --- |
+| Service Endpoint Management | `listServiceEndpoints` | `GET` | `/v1/vt/service-endpoints` | [see](#vsa-adm-se-list-listserviceendpoints) |
+| Service Endpoint Management | `addServiceEndpoint` | `POST` | `/v1/vt/service-endpoints` | [see](#vsa-adm-se-add-addserviceendpoint) |
+| Service Endpoint Management | `updateServiceEndpoint` | `PATCH` | `/v1/vt/service-endpoints/{id}` | [see](#vsa-adm-se-update-updateserviceendpoint) |
+| Service Endpoint Management | `deleteServiceEndpoint` | `DELETE` | `/v1/vt/service-endpoints/{id}` | [see](#vsa-adm-se-delete-deleteserviceendpoint) |
 
 These methods MUST NOT be used to manipulate:
 
