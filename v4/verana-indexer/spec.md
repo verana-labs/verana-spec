@@ -1349,7 +1349,7 @@ Immediately after a successful WebSocket upgrade, before any `subscribe` is proc
 }
 ```
 
-- `block` — The height of the **next** block that the server will deliver via this WebSocket (i.e. `latestProcessedBlock + 1` at connect time). Clients use `block - 1` as the catch-up cursor when bootstrapping via [`listIndexerEvents`](#idx-indexer-qry-6-list-indexer-events).
+- `block` — The height of the next block the indexer will process (`latestProcessedBlock + 1` at connect time), sent for information. The delivery guarantee for this connection starts at `subscribed.block` — see the `subscribed` acknowledgement below.
 - `blockIntervalMs` — The expected block production interval in milliseconds. Clients SHOULD treat `2 × blockIntervalMs` as the liveness timeout: if no `subscribed` acknowledgement arrives within that window after sending a `subscribe`, the subscription was not established and the client SHOULD reconnect. The same timeout applies to ongoing heartbeat detection (see [Heartbeat (indexer events)](#heartbeat-indexer-events) below).
 
 ###### Subscribe control message
@@ -1844,7 +1844,7 @@ Immediately after a successful WebSocket upgrade, before any `subscribe` is proc
 }
 ```
 
-- `block` — The height of the **next** block that the server will deliver via this WebSocket (i.e. `latestProcessedBlock + 1` at connect time). Clients use `block - 1` as the bootstrap snapshot point — see [Bootstrap pattern](#bootstrap-pattern).
+- `block` — The height of the next block the indexer will process (`latestProcessedBlock + 1` at connect time), sent for information. The bootstrap snapshot point is `subscribed.block - 1` — see [Bootstrap pattern](#bootstrap-pattern).
 - `blockIntervalMs` — The expected block production interval in milliseconds. Clients SHOULD treat `2 × blockIntervalMs` as the liveness timeout: if no `subscribed` acknowledgement arrives within that window after sending a `subscribe`, the subscription was not established and the client SHOULD reconnect. The same timeout applies to ongoing heartbeat detection (see [Heartbeat (resolver changes)](#heartbeat-resolver-changes)).
 
 ###### Subscribe control message
