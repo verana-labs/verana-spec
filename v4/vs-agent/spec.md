@@ -126,7 +126,27 @@ recommended:
 
 #### [VSA-VTI-CFG-ENV] Container Environment Variables
 
-The following environment variables MUST be provided when the VS Agent container is started.
+The table lists every environment variable of the VS Agent container. The subsection of each variable is normative.
+
+| Variable | Required | Group |
+|---|---|---|
+| [`VERANA_CORPORATION_ID`](#vsa-vti-cfg-env-id-identity-and-corporation) | REQUIRED | Identity and Corporation |
+| [`VERANA_ACCOUNT_MNEMONIC`](#vsa-vti-cfg-env-id-identity-and-corporation) | REQUIRED | Identity and Corporation |
+| [`VERANA_RPC_ENDPOINT_URL`](#vsa-vti-cfg-env-net-network-configuration) | REQUIRED | Network Configuration |
+| [`VERANA_INDEXER_BASE_URL`](#vsa-vti-cfg-env-net-network-configuration) | REQUIRED | Network Configuration |
+| [`VERANA_CHAIN_ID`](#vsa-vti-cfg-env-net-network-configuration) | OPTIONAL | Network Configuration |
+| [`AGENT_MODE`](#vsa-vti-cfg-env-mode-agent-configuration-mode) | OPTIONAL | Agent Configuration Mode |
+| [`AGENT_DELEGATED_PARENT_VS_DID`](#vsa-vti-cfg-env-mode-agent-configuration-mode) | CONDITIONAL | Agent Configuration Mode |
+| [`TRUSTED_ECS_ECOSYSTEM_DIDS`](#vsa-vti-cfg-env-mode-agent-configuration-mode) | CONDITIONAL | Agent Configuration Mode |
+| [`AGENT_DIDCOMM_VERSIONS`](#vsa-vti-cfg-env-rt-agent-runtime) | OPTIONAL | Agent Runtime |
+| [`VS_AGENT_PLUGINS`](#vsa-vti-cfg-env-rt-agent-runtime) | OPTIONAL | Agent Runtime |
+| [`AGENT_PUBLIC_DID`](#vsa-vti-cfg-env-rt-agent-runtime) | OPTIONAL | Agent Runtime |
+| [`PUBLIC_API_BASE_URL`](#vsa-vti-cfg-env-rt-agent-runtime) | CONDITIONAL | Agent Runtime |
+| [`ADMIN_API_AUTH_MODE`](#vsa-vti-cfg-env-adm-administration-api) | OPTIONAL | Administration API |
+| [`ADMIN_API_TRUSTED_NETWORKS`](#vsa-vti-cfg-env-adm-administration-api) | OPTIONAL | Administration API |
+| [`ADMIN_API_PUBLIC_URL`](#vsa-vti-cfg-env-adm-administration-api) | CONDITIONAL | Administration API |
+| [`ADMIN_API_CORPORATION_ALLOWED_ACCOUNTS`](#vsa-vti-cfg-env-adm-administration-api) | CONDITIONAL | Administration API |
+| [`OID4VC_CONFIG_FILE`](#vsa-vti-cfg-env-oid-openid4vc) | CONDITIONAL | OpenID4VC |
 
 ##### [VSA-VTI-CFG-ENV-ID] Identity and Corporation
 
@@ -163,6 +183,17 @@ See [comparison between VS-REQ-3 and VS-REQ-4](https://verana-labs.github.io/ver
 | `VS_AGENT_PLUGINS` | OPTIONAL | Comma-separated list of enabled agent plugins. Determines the set of message `type` values accepted by [`sendMessage`](#vsa-adm-dc-ms-send-sendmessage) (e.g. `text`, `credential-issuance`, `credential-revocation`, `identity-proof-request`, `contextual-menu-update`, `profile`, `terminate-connection`). The value `openid4vc` enables the [OpenID4VC Scope](#openid4vc-scope) and REQUIRES `OID4VC_CONFIG_FILE`. If unset, the default plugin set is implementation-defined. |
 | `AGENT_PUBLIC_DID` | OPTIONAL | Public DID of the agent, for example `did:web:agent.example.com`. The agent publishes its DID Document under this DID. |
 | `PUBLIC_API_BASE_URL` | CONDITIONAL | Public `https://` base URL at which a peer reaches the public endpoints of the agent. The agent composes each protocol URL from this value verbatim, and a base path is allowed. A URL that carries a username or a password MUST be rejected. REQUIRED when `VS_AGENT_PLUGINS` includes `openid4vc`. |
+
+##### [VSA-VTI-CFG-ENV-ADM] Administration API
+
+These variables configure the access model of the [Administration API](#administration-api).
+
+| Variable | Required | Description |
+|---|---|---|
+| `ADMIN_API_AUTH_MODE` | OPTIONAL | Single value selecting whether the agent accepts external requests: `internal` (default) or `corporation`. It applies to external requests only. See [Trusted networks](#trusted-networks). |
+| `ADMIN_API_TRUSTED_NETWORKS` | OPTIONAL | Comma-separated list of CIDR blocks. The agent classifies a request as trusted-network when the peer address of its TCP connection matches one block, and serves that request without authentication, in both modes. Default: `127.0.0.0/8,::1/128`. The operator MUST keep the source address of each public reverse proxy or ingress outside these blocks. See [Trusted networks](#trusted-networks). |
+| `ADMIN_API_PUBLIC_URL` | CONDITIONAL | Public `https://` origin (scheme + host + optional port, no trailing path) at which external callers reach the Admin API. REQUIRED when `ADMIN_API_AUTH_MODE` is `corporation`; MUST NOT be set otherwise. When set, the agent also publishes a `VsAgentAdminAPI` entry in its DID Document per [[VSA-VTI-DIDDOC]](#vsa-vti-diddoc-did-document-service-entries). |
+| `ADMIN_API_CORPORATION_ALLOWED_ACCOUNTS` | CONDITIONAL | Comma-separated list of Verana account addresses (the same identifiers that authenticate via [Authentication](#authentication)) entitled to invoke the Admin API as external callers. REQUIRED (non-empty) when `ADMIN_API_AUTH_MODE` is `corporation`: with no on-chain caller grant to check (see [Authorization](#authorization)), this allowlist is the sole authorization mechanism for external callers. Has no effect when `ADMIN_API_AUTH_MODE` is not `corporation`. |
 
 ##### [VSA-VTI-CFG-ENV-OID] OpenID4VC
 
@@ -967,17 +998,6 @@ The agent can only ever sign the message types a `ParticipantAuthorizationRecord
 
 > A future revision of the VPR specification MAY introduce a dedicated authorization grant for VS Agent administration; per-method, msg-type-based caller authorization could then be reconsidered. Until then, the allowlist is the sole caller-authorization mechanism. See [verana-spec#32](https://github.com/verana-labs/verana-spec/issues/32).
 
-### Container Environment Variables
-
-The following environment variables MUST be provided when the VS Agent container is started.
-
-| Variable | Required | Description |
-|---|---|---|
-| `ADMIN_API_AUTH_MODE` | OPTIONAL | Single value selecting whether the agent accepts external requests: `internal` (default) or `corporation`. It applies to external requests only. See [Trusted networks](#trusted-networks). |
-| `ADMIN_API_TRUSTED_NETWORKS` | OPTIONAL | Comma-separated list of CIDR blocks. The agent classifies a request as trusted-network when the peer address of its TCP connection matches one block, and serves that request without authentication, in both modes. Default: `127.0.0.0/8,::1/128`. The operator MUST keep the source address of each public reverse proxy or ingress outside these blocks. See [Trusted networks](#trusted-networks). |
-| `ADMIN_API_PUBLIC_URL` | CONDITIONAL | Public `https://` origin (scheme + host + optional port, no trailing path) at which external callers reach the Admin API. REQUIRED when `ADMIN_API_AUTH_MODE` is `corporation`; MUST NOT be set otherwise. When set, the agent also publishes a `VsAgentAdminAPI` entry in its DID Document per [[VSA-VTI-DIDDOC]](#vsa-vti-diddoc-did-document-service-entries). |
-| `ADMIN_API_CORPORATION_ALLOWED_ACCOUNTS` | CONDITIONAL | Comma-separated list of Verana account addresses (the same identifiers that authenticate via [Authentication](#authentication)) entitled to invoke the Admin API as external callers. REQUIRED (non-empty) when `ADMIN_API_AUTH_MODE` is `corporation`: with no on-chain caller grant to check (see [Authorization](#authorization)), this allowlist is the sole authorization mechanism for external callers. Has no effect when `ADMIN_API_AUTH_MODE` is not `corporation`. |
-
 ### API Conventions
 
 These conventions apply to every method of this section. A method description does not repeat them.
@@ -992,7 +1012,7 @@ The agent groups its methods in scopes. A scope is the first path segment after 
 | DIDComm | `/v2/didcomm` | Wire-level DIDComm state: connections, messages, presentations, and credential exchanges. |
 | OpenID4VC | `/v2/openid4vc` | OpenID4VCI and OpenID4VP state: credential exchanges, presentations, and signing certificates. |
 | AnonCreds | `/v2/anoncreds` | AnonCreds artifacts: credential definitions, revocation registries, and credential revocation. |
-| Verifiable Trust | `/v2/vt` | Verifiable Trust state: linked credentials, flows, and service endpoints. |
+| Verifiable Trust | `/v2/vt` | Verifiable Trust state: flows and service endpoints. |
 
 #### Names
 
@@ -1079,10 +1099,7 @@ The table lists every method of the Administration API. It is a non-normative ov
 |  | `createRevocationRegistry` | `POST` | `/v2/anoncreds/revocation-registries` | [[VSA-ADM-AC-RR-CREATE]](#vsa-adm-ac-rr-create-createrevocationregistry) |
 |  | `deleteRevocationRegistry` | `DELETE` | `/v2/anoncreds/revocation-registries/{revocationRegistryDefinitionId}` | [[VSA-ADM-AC-RR-DELETE]](#vsa-adm-ac-rr-delete-deleterevocationregistry) |
 |  | `revokeCredential` | `POST` | `/v2/anoncreds/revoke-credential` | [[VSA-ADM-AC-CR-REVOKE]](#vsa-adm-ac-cr-revoke-revokecredential) |
-| Verifiable Trust | `listLinkedCredentials` | `GET` | `/v2/vt/linked-credentials` | [[VSA-ADM-VT-LVP-LIST]](#vsa-adm-vt-lvp-list-listlinkedcredentials) |
-|  | `createLinkedCredential` | `POST` | `/v2/vt/linked-credentials` | [[VSA-ADM-VT-LVP-CREATE]](#vsa-adm-vt-lvp-create-createlinkedcredential) |
-|  | `deleteLinkedCredential` | `DELETE` | `/v2/vt/linked-credentials` | [[VSA-ADM-VT-LVP-DELETE]](#vsa-adm-vt-lvp-delete-deletelinkedcredential) |
-|  | `listFlows` | `GET` | `/v2/vt/flows` | [[VSA-ADM-VT-FL-LIST]](#vsa-adm-vt-fl-list-listflows) |
+| Verifiable Trust | `listFlows` | `GET` | `/v2/vt/flows` | [[VSA-ADM-VT-FL-LIST]](#vsa-adm-vt-fl-list-listflows) |
 |  | `editCredentialClaims` | `PUT` | `/v2/vt/flows/{participantSessionId}/claims` | [[VSA-ADM-VT-FL-EDIT]](#vsa-adm-vt-fl-edit-editcredentialclaims) |
 |  | `sendOobLink` | `POST` | `/v2/vt/flows/{participantSessionId}/oob-link` | [[VSA-ADM-VT-FL-SEND]](#vsa-adm-vt-fl-send-sendooblink) |
 |  | `validateFlow` | `POST` | `/v2/vt/flows/{participantSessionId}/validate` | [[VSA-ADM-VT-FL-VALIDATE]](#vsa-adm-vt-fl-validate-validateflow) |
@@ -1715,57 +1732,7 @@ The methods of this scope manage the Verifiable Trust state of the agent.
 
 > The agent has no method that manages a Verifiable Trust JSON Schema Credential. The agent creates, updates, and deletes each VTJSC from the Verana VPR events that it receives, per [[VSA-VTI-VTJSC] VTJSC Management](#vsa-vti-vtjsc-vtjsc-management). A caller that needs a new VTJSC creates the `CredentialSchema` entry on the VPR; the agent then publishes the VTJSC on the resulting event.
 
-#### [VSA-ADM-VT-LVP] Linked Verifiable Presentations
-
-Methods that manage the stored Verifiable Trust Credentials (VTCs) that the agent exposes as `LinkedVerifiablePresentation` service entries (see [[VS-SVC-6]](https://verana-labs.github.io/verifiable-trust-spec/#vs-svc-service-declaration)).
-
-| Module | Method Name | HTTP Method | Relative REST API path | Requirements |
-| --- | --- | --- | --- | --- |
-| Linked Verifiable Presentations | `listLinkedCredentials` | `GET` | `/v2/vt/linked-credentials` | [see](#vsa-adm-vt-lvp-list-listlinkedcredentials) |
-| Linked Verifiable Presentations | `createLinkedCredential` | `POST` | `/v2/vt/linked-credentials` | [see](#vsa-adm-vt-lvp-create-createlinkedcredential) |
-| Linked Verifiable Presentations | `deleteLinkedCredential` | `DELETE` | `/v2/vt/linked-credentials` | [see](#vsa-adm-vt-lvp-delete-deletelinkedcredential) |
-
-> Note: when the agent manages the credential lifecycle through Verana VPR events (per [[VSA-VTI-VTJSC] VTJSC Management](#vsa-vti-vtjsc-vtjsc-management)), the create method and the delete method MUST be disabled. The agent MUST refuse a managed mutation with `MANAGED_LIFECYCLE` (`409`).
-
-##### [VSA-ADM-VT-LVP-LIST] listLinkedCredentials
-
-Retrieves one Verifiable Trust Credential linked to this agent, or all of them.
-
-**Inputs** (OPTIONAL query filter, in addition to the [pagination](#pagination) parameters):
-
-- `schemaId` — full URL of a stored credential schema. When set, the agent returns only the VTC bound to that schema.
-
-**Output**: a page of Verifiable Trust Credentials.
-
-##### [VSA-ADM-VT-LVP-CREATE] createLinkedCredential
-
-Creates and stores a new Verifiable Trust Credential. `schemaBaseId` defines the base name that the agent uses to construct the URL of the resulting credential schema.
-
-**Inputs** (request body):
-
-- `schemaBaseId` (REQUIRED) — short identifier that the agent uses to construct the schema URL. For example, `organization` produces `https://<agent>/vt/schemas-organization-c-vp.json`.
-- `credential` (REQUIRED) — the W3C Verifiable Credential payload.
-
-**Output**: confirmation. The agent derives the resulting schema URL from `schemaBaseId`.
-
-**Errors**:
-
-- `INVALID_CREDENTIAL` (`400`) — the credential payload is malformed, or a required field is absent.
-- `MANAGED_LIFECYCLE` (`409`) — the agent manages the credential lifecycle through VPR events.
-
-##### [VSA-ADM-VT-LVP-DELETE] deleteLinkedCredential
-
-Deletes a stored Verifiable Trust Credential, identified by its schema URL. The identifier is a full URL, so it stays a query parameter.
-
-**Inputs** (REQUIRED query parameter):
-
-- `schemaId` — full URL of the VTC to delete.
-
-**Output**: empty body (HTTP `204`).
-
-**Errors**:
-
-- `MANAGED_LIFECYCLE` (`409`) — the agent manages the credential lifecycle through VPR events.
+> The agent has no method that manages a `LinkedVerifiablePresentation` entry either. Per [[VS-SVC-6]](https://verana-labs.github.io/verifiable-trust-spec/#vs-svc-service-declaration), such an entry is part of the identity layer. The agent produces and maintains each one automatically, from the credential acquisition flows and from [[VSA-VTI-VTJSC] VTJSC Management](#vsa-vti-vtjsc-vtjsc-management). A caller reads the entries from the DID Document of the agent.
 
 #### [VSA-ADM-VT-FL] Flow Management
 
