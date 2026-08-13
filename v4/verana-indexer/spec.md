@@ -1,6 +1,6 @@
 # Indexer v4 Specification
 
-**Latest Draft:** spec v4-draft10
+**Latest Draft:** spec v4-draft11
 
 ## Abstract
 
@@ -1422,7 +1422,7 @@ A subscriber detects a connection-level loss by observing a gap (`block > previo
 
 ###### Catch-up and resume (indexer events)
 
-This stream does not deliver historical events on connect, and an event that lands between a REST catch-up and a later `subscribe` is never redelivered — draining history *before* connecting therefore leaves a permanent gap. To bootstrap from a known point, the client SHOULD instead: (1) connect the WebSocket, read the `ready` message, send its `subscribe`, and wait for the `subscribed` acknowledgement, buffering incoming block messages without applying them; (2) call [`listIndexerEvents`](#idx-indexer-qry-6-list-indexer-events) with `after_block_height` set to its `last_seen_block`, paginating to exhaustion; (3) apply the buffered — then live — block messages in order, discarding events already applied during catch-up (same `tx_hash` and `payload.message_index`). The WebSocket delivers every block from `subscribed.block` onwards while the catch-up covers everything up to the indexer's current block, so the union has no gap and the overlap is removed by deduplication. After a temporary disconnection, the client SHOULD repeat the same pattern using the highest `block` from a previously received block message as its new `last_seen_block`.
+This stream does not deliver historical events on connect, and an event that lands between a REST catch-up and a later `subscribe` is never redelivered — draining history *before* connecting therefore leaves a permanent gap. To bootstrap from a known point, the client SHOULD instead: (1) connect the WebSocket, read the `ready` message, send its `subscribe`, and wait for the `subscribed` acknowledgement, buffering every incoming block message from connect without applying it (a block MAY be delivered before the acknowledgement arrives); (2) call [`listIndexerEvents`](#idx-indexer-qry-6-list-indexer-events) with `after_block_height` set to its `last_seen_block`, paginating to exhaustion; (3) apply the buffered — then live — block messages in order, discarding events already applied during catch-up (same `tx_hash` and `payload.message_index`). The WebSocket delivers every block from `subscribed.block` onwards while the catch-up covers everything up to the indexer's current block, so the union has no gap and the overlap is removed by deduplication. After a temporary disconnection, the client SHOULD repeat the same pattern using the highest `block` from a previously received block message as its new `last_seen_block`.
 
 ###### Backpressure (indexer events)
 
@@ -2060,7 +2060,7 @@ Response:
 The recommended initial-sync sequence for a client with an empty mirror:
 
 1. **Connect** to `WS /v4/verifiable-trust/subscribe` and read the `ready` message.
-2. **Subscribe** with the desired `dids` / `channels`, wait for the `subscribed` acknowledgement, and capture `B = subscribed.block`. Buffer all incoming block messages **without applying them** until step 5.
+2. **Subscribe** with the desired `dids` / `channels`, buffering every incoming block message **without applying it** from connect (a block MAY be delivered before the acknowledgement arrives), then wait for the `subscribed` acknowledgement and capture `B = subscribed.block`. Keep buffering until step 5.
 3. **Enumerate** the DID universe at block `B - 1` by calling `GET /v4/verifiable-trust/dids` with header `At-Block-Height: B-1` and paginating through `nextCursor`.
 4. **Resolve** each enumerated DID by calling `POST /v4/verifiable-trust/resolve` with header `At-Block-Height: B-1` and the response selectors the client cares about. Persist the resulting state as the snapshot at block `B - 1`.
 5. **Apply** the buffered WebSocket block messages in order (starting at block `B`), then continue applying live block messages as they arrive.
