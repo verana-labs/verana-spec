@@ -42,8 +42,8 @@ Likes (submission period) select finalists; votes (Aug 24 → Sept 2, one per si
 
 ## 3. 2060 use case (supporting lane)
 
-**Working title:** *Hologram Agentic AI — verifiable agents, chatbots and a DIDComm browser* · **Submitted by:** 2060 org · **Targets:** Innovation Award (FIDES CA); feeds the Agentic eCommerce track.
-Outline: Hologram AI Agent + VUA + Messaging; agents authenticate humans and other agents via credentials over DIDComm; every agent is a Verifiable Service on Verana (the trust layer the primary use case demonstrates). Cross-links the Verana use case; deliberately does not compete in Collaboration.
+**Title:** *Hologram: a browser for decentralized AI chatbot services, self-hosted and verified before the first message* · **Submitted by:** 2060 org · **Targets:** Innovation Award (FIDES CA); feeds the Agentic eCommerce track.
+**Full paste-ready dossier: [use-case-hologram.md](./use-case-hologram.md)** — built on the five production services of [hologram-verifiable-services](https://github.com/2060-io/hologram-verifiable-services) (Avatar, Passport, GitHub/Wise MCP agents, X Agent) and the shipped demo copy at hologram.zone/demos. Cross-links the Verana use cases; deliberately does not compete in Collaboration.
 **Plus catalog assets:** Hologram Messaging → *Personal Wallets*; **vs-agent / Hologram cloud → *Business Wallets* by Aug 20** (Best Business Wallet 2026 eligibility).
 
 ## 4. Catalog entries checklist
@@ -52,8 +52,9 @@ Outline: Hologram AI Agent + VUA + Messaging; agents authenticate humans and oth
 | --- | --- | --- | --- |
 | Organizations | Verana (Foundation, in formation) | Verana | ☐ |
 | Organizations | 2060 | 2060 | ✅ created |
-| Use cases | One trust layer, many wallets | Verana | ☐ |
-| Use cases | Hologram Agentic AI | 2060 | ☐ |
+| Use cases | Vesta Appliances: from impostors to Proof-of-Trust | Verana | ✅ [published](https://fides.community/ecosystem-explorer/use-cases/?usecase=vesta-appliances-from-impostors-to-proof-of-trust-ATYNCN) |
+| Use cases | Republic of Verandia ([dossier](./use-case-verandia.md)) | Verana | ☐ blocked on playground PR #192 deploy |
+| Use cases | Hologram: a browser for decentralized AI chatbot services ([dossier](./use-case-hologram.md)) | 2060 | ☐ ready to submit |
 | Personal wallets | Hologram Messaging | 2060 | ☐ |
 | Business wallets | vs-agent (Hologram business wallet) | 2060 | ☐ |
 | Credential types | ECS-Service · ECS-Organization · ECS-Persona (+ ISO 9001 (demo)) | Verana | ☐ |
