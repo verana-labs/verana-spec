@@ -48,7 +48,8 @@ decentralized AI · verifiable AI agents · DIDComm · chatbot · MCP · verifia
 
 ## Assets
 
-- Thumbnail: the demo-grid art from hologram.zone (Avatar photo or the X Agent "Compose. Draw. Publish." card).
+- **Card thumbnail: capture from [`media/hologram-card.html`](./media/hologram-card.html)** — open in a browser at 100% zoom and screenshot the 1600x900 stage (press G for guides). Text sits in the top half only; the bottom stays visual and calm because FIDES overlays its own title on the lower part of card thumbnails.
+- Alternates: the demo-grid art from hologram.zone (Avatar photo or the X Agent "Compose. Draw. Publish." card).
 - The "Runs on the Verana open trust layer" badge (collaborator kit, §5 of the README) in the image set.
 - Screenshots: hologram.zone/demos grid, one in-chat capture per agent (Avatar issuance, Wise agent action with MCP config menu, X Agent approval step).
 - Video (≤3 min, uncut): scan Avatar QR → receive credential → connect Wise agent → authenticate with the credential → one real action in chat.

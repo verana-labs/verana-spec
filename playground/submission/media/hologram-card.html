@@ -1,0 +1,370 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Hologram x Verana - FIDES card capture stage</title>
+<style>
+  :root {
+    --holo: #7678ec;
+    --holo-cyan: #45f8ff;
+    --verana: #7c3aed;
+    --verana-2: #763ef0;
+    --emerald: #10b981;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    min-height: 100vh;
+    background: #1c1f2b;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 14px;
+    padding: 28px 0 60px;
+    font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  }
+  /* ------------------------------------------------------------------ */
+  /* The capture stage: exactly 1600 x 900. Screenshot this box only.   */
+  /* All text lives in the top half; FIDES overlays its own title on    */
+  /* the bottom part of card thumbnails, so the bottom half is visual   */
+  /* only and stays calm and dark toward the lower edge.                */
+  /* ------------------------------------------------------------------ */
+  #stage {
+    position: relative;
+    width: 1600px;
+    height: 900px;
+    flex: none;
+    overflow: hidden;
+    background:
+      radial-gradient(1200px 700px at 22% -10%, rgba(118, 120, 236, 0.28), transparent 60%),
+      radial-gradient(1100px 650px at 85% 8%, rgba(69, 248, 255, 0.10), transparent 55%),
+      radial-gradient(1400px 800px at 50% 118%, rgba(124, 58, 237, 0.38), transparent 62%),
+      linear-gradient(180deg, #0b1024 0%, #10122e 46%, #150f38 74%, #0d0a23 100%);
+    outline: 1px solid #3a3f55;
+  }
+
+  /* ---- top half: the only place text may appear ---- */
+  .top {
+    position: absolute;
+    inset: 0 0 auto 0;
+    height: 450px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 34px;
+    padding-top: 6px;
+  }
+  .lockup { display: flex; align-items: center; gap: 34px; }
+  .lockup .mark { display: flex; align-items: center; gap: 22px; }
+  .lockup svg.tile { width: 104px; height: 104px; border-radius: 24px; box-shadow: 0 18px 60px rgba(0, 0, 0, 0.45); }
+  .lockup .name {
+    color: #fff;
+    font-size: 64px;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+  }
+  .lockup .x {
+    color: #9aa3c0;
+    font-size: 44px;
+    font-weight: 300;
+    padding: 0 6px;
+    transform: translateY(2px);
+  }
+  .tagline {
+    color: rgba(255, 255, 255, 0.95);
+    font-size: 37px;
+    font-weight: 650;
+    letter-spacing: -0.01em;
+    text-align: center;
+  }
+  .subline {
+    color: #a7b0d0;
+    font-size: 21.5px;
+    font-weight: 450;
+    letter-spacing: 0.01em;
+    text-align: center;
+    margin-top: -14px;
+  }
+  .subline .on { color: #c4b5fd; font-weight: 600; }
+
+  /* ---- bottom half: visuals only, no text ---- */
+  .art { position: absolute; left: 0; top: 430px; width: 1600px; height: 470px; }
+
+  /* ---- capture helpers (outside the stage) ---- */
+  .note { color: #9aa3b8; font-size: 14px; max-width: 900px; text-align: center; line-height: 1.6; }
+  .note b { color: #d6dbea; }
+  #guides { position: absolute; inset: 0; display: none; pointer-events: none; }
+  #stage.g #guides { display: block; }
+</style>
+</head>
+<body>
+
+<div id="stage">
+  <!-- ============================ TOP HALF ============================ -->
+  <div class="top">
+    <div class="lockup">
+      <span class="mark">
+        <!-- Hologram mark (hologram.zone/logo.svg, inlined) -->
+        <svg class="tile" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg" aria-label="Hologram">
+          <g clip-path="url(#clip0_1086_61)">
+            <path d="M0 100C0 44.7715 44.7715 0 100 0H412C467.228 0 512 44.7715 512 100V412C512 467.228 467.228 512 412 512H100C44.7715 512 0 467.228 0 412V100Z" fill="#7678EC"/>
+            <g filter="url(#filter0_f_1086_61)">
+              <path d="M417.769 340.466V171.257C417.769 166.618 415.274 162.342 411.209 160.022L262.411 75.4178C258.346 73.098 253.31 73.098 249.245 75.4178L100.447 160.022C96.3816 162.342 93.887 166.618 93.887 171.257V340.466C93.887 345.106 96.3816 349.382 100.447 351.702L249.245 436.306C253.31 438.626 258.346 438.626 262.411 436.306L411.209 351.702C415.274 349.382 417.769 345.106 417.769 340.466H417.769Z" fill="#00FFFF"/>
+            </g>
+            <g opacity="0.999376" filter="url(#filter1_f_1086_61)">
+              <path d="M365 315.442V196.558C365 193.298 363.321 190.294 360.585 188.664L260.431 129.222C257.695 127.593 254.305 127.593 251.569 129.222L151.415 188.664C148.679 190.294 147 193.298 147 196.558V315.442C147 318.702 148.679 321.706 151.415 323.336L251.569 382.778C254.305 384.407 257.695 384.407 260.431 382.778L360.585 323.336C363.321 321.706 365 318.702 365 315.442H365Z" fill="white" fill-opacity="0.85"/>
+            </g>
+            <path d="M255.999 67.9707L89.8962 161.964V162.194V350.066L255.999 444.059L422.104 350.066V161.964L255.999 67.9707Z" fill="#45F8FF" fill-opacity="0.162366"/>
+            <path d="M255.999 67.9707L89.8962 161.964V162.194V350.066L255.999 444.059L422.104 350.066V161.964L255.999 67.9707Z" fill="white" fill-opacity="0.309888"/>
+            <path d="M256.185 324.028L316.134 289.962V221.909L256.185 256.005V324.028Z" fill="url(#paint0_linear_1086_61)"/>
+            <path d="M196.438 221.909V289.962L256.366 324.028V256.005L196.438 221.909Z" fill="url(#paint1_linear_1086_61)"/>
+            <path d="M256.281 187.723L196.354 221.768V221.87L256.281 255.966L316.23 221.87V221.768L256.281 187.723Z" fill="url(#paint2_linear_1086_61)"/>
+            <path d="M346.49 204.625V216.957V307.418V376.65L407.146 342.18V170.177L346.49 204.625Z" fill="url(#paint3_linear_1086_61)"/>
+            <path d="M346.487 204.505V204.344L286.634 170.358L347.372 135.852L407.143 169.787V170.058L346.487 204.505Z" fill="url(#paint4_linear_1086_61)"/>
+            <path d="M104.854 170.071V238.373L166.097 273.186V204.628L104.854 170.071Z" fill="url(#paint5_linear_1086_61)"/>
+            <path d="M104.854 170.012V169.741L256.307 83.7104L317.35 118.37L166.097 204.298V204.46V204.569L104.854 170.012Z" fill="url(#paint6_linear_1086_61)"/>
+            <path d="M255.888 428.275L316.068 394.076V324.852V324.852V325.108L256.119 359.175L255.888 428.275Z" fill="url(#paint7_linear_1086_61)"/>
+            <path d="M256.307 428.285L104.854 342.188V272.905L196.618 325.074V325.118L256.538 359.185L256.307 428.285Z" fill="url(#paint8_linear_1086_61)"/>
+          </g>
+          <defs>
+            <filter id="filter0_f_1086_61" x="63.887" y="43.678" width="383.882" height="424.368" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+              <feFlood flood-opacity="0" result="BackgroundImageFix"/>
+              <feBlend mode="normal" in="SourceGraphic" in2="BackgroundImageFix" result="shape"/>
+              <feGaussianBlur stdDeviation="15" result="effect1_foregroundBlur_1086_61"/>
+            </filter>
+            <filter id="filter1_f_1086_61" x="108" y="89" width="296" height="334" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+              <feFlood flood-opacity="0" result="BackgroundImageFix"/>
+              <feBlend mode="normal" in="SourceGraphic" in2="BackgroundImageFix" result="shape"/>
+              <feGaussianBlur stdDeviation="19.5" result="effect1_foregroundBlur_1086_61"/>
+            </filter>
+            <linearGradient id="paint0_linear_1086_61" x1="328.836" y1="177.804" x2="184.322" y2="281.161" gradientUnits="userSpaceOnUse"><stop stop-color="#130753"/><stop offset="1" stop-color="#777AEC"/></linearGradient>
+            <linearGradient id="paint1_linear_1086_61" x1="189.689" y1="221.909" x2="319.005" y2="297.406" gradientUnits="userSpaceOnUse"><stop stop-color="#130753"/><stop offset="1" stop-color="#777AEC"/></linearGradient>
+            <linearGradient id="paint2_linear_1086_61" x1="256.292" y1="285.562" x2="267.722" y2="166.809" gradientUnits="userSpaceOnUse"><stop stop-color="#130753"/><stop offset="1" stop-color="#777AEC"/></linearGradient>
+            <linearGradient id="paint3_linear_1086_61" x1="376.819" y1="4.95047" x2="376.819" y2="486.389" gradientUnits="userSpaceOnUse"><stop stop-color="#130753"/><stop offset="1" stop-color="#777AEC"/></linearGradient>
+            <linearGradient id="paint4_linear_1086_61" x1="417.827" y1="251.106" x2="379.475" y2="88.5036" gradientUnits="userSpaceOnUse"><stop stop-color="#7578EC"/><stop offset="1" stop-color="#5C5BC3"/></linearGradient>
+            <linearGradient id="paint5_linear_1086_61" x1="151.443" y1="282.786" x2="34.0791" y2="189.334" gradientUnits="userSpaceOnUse"><stop stop-color="#130753"/><stop offset="1" stop-color="#777AEC"/></linearGradient>
+            <linearGradient id="paint6_linear_1086_61" x1="343.568" y1="47.6217" x2="189.546" y2="317.883" gradientUnits="userSpaceOnUse"><stop stop-color="#130753"/><stop offset="1" stop-color="#777AEC"/></linearGradient>
+            <linearGradient id="paint7_linear_1086_61" x1="346.331" y1="290.372" x2="168.22" y2="378.931" gradientUnits="userSpaceOnUse"><stop stop-color="#130753"/><stop offset="1" stop-color="#777AEC"/></linearGradient>
+            <linearGradient id="paint8_linear_1086_61" x1="-2.87328" y1="120.676" x2="364.826" y2="500.971" gradientUnits="userSpaceOnUse"><stop stop-color="#130753"/><stop offset="1" stop-color="#777AEC"/></linearGradient>
+            <clipPath id="clip0_1086_61"><rect width="512" height="512" fill="white"/></clipPath>
+          </defs>
+        </svg>
+        <span class="name">Hologram</span>
+      </span>
+
+      <span class="x">&times;</span>
+
+      <span class="mark">
+        <!-- Verana mark (white double-V on the brand gradient tile) -->
+        <svg class="tile" viewBox="0 0 128 128" xmlns="http://www.w3.org/2000/svg" aria-label="Verana">
+          <defs>
+            <linearGradient id="vg" x1="0" y1="0" x2="128" y2="128" gradientUnits="userSpaceOnUse">
+              <stop stop-color="#763EF0"/><stop offset="1" stop-color="#9F7AEA"/>
+            </linearGradient>
+          </defs>
+          <rect width="128" height="128" rx="24" fill="url(#vg)"/>
+          <g transform="translate(-96,-2)">
+            <path d="M159.989 105.996L127.392 43.5353L122.942 51.4097L118.461 42.777L127.673 26.4619L159.989 88.3823L192.306 26.4619L201.538 42.803L197.042 51.4097L192.592 43.5353L159.989 105.996Z" fill="white"/>
+            <path d="M139.532 26.4619L159.99 65.6368L179.902 26.4619H139.532Z" fill="white"/>
+          </g>
+        </svg>
+        <span class="name">Verana</span>
+      </span>
+    </div>
+
+    <div class="tagline">A browser for decentralized AI chatbot services</div>
+    <div class="subline">
+      Self-hosted DIDComm services, running <span class="on">on the Verana open trust layer</span>,
+      verified before the first message
+    </div>
+  </div>
+
+  <!-- =========================== BOTTOM HALF ========================== -->
+  <!-- Visuals only. The phone and the service nodes stand ON the glowing
+       Verana platform; dashed cyan DIDComm links; emerald verified rings.
+       The lowest ~120px stays calm for the FIDES title overlay. -->
+  <svg class="art" viewBox="0 0 1600 470" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+    <defs>
+      <linearGradient id="plat" x1="800" y1="330" x2="800" y2="470" gradientUnits="userSpaceOnUse">
+        <stop stop-color="#7C3AED" stop-opacity="0.55"/>
+        <stop offset="0.45" stop-color="#5B21B6" stop-opacity="0.28"/>
+        <stop offset="1" stop-color="#2E1065" stop-opacity="0"/>
+      </linearGradient>
+      <linearGradient id="platedge" x1="220" y1="0" x2="1380" y2="0" gradientUnits="userSpaceOnUse">
+        <stop stop-color="#7C3AED" stop-opacity="0"/>
+        <stop offset="0.18" stop-color="#A78BFA" stop-opacity="0.9"/>
+        <stop offset="0.5" stop-color="#C4B5FD"/>
+        <stop offset="0.82" stop-color="#A78BFA" stop-opacity="0.9"/>
+        <stop offset="1" stop-color="#7C3AED" stop-opacity="0"/>
+      </linearGradient>
+      <linearGradient id="phoneglass" x1="0" y1="0" x2="0" y2="1">
+        <stop stop-color="#232a54"/><stop offset="1" stop-color="#161a3a"/>
+      </linearGradient>
+      <radialGradient id="nodeglow" cx="0.5" cy="0.5" r="0.5">
+        <stop stop-color="#7678EC" stop-opacity="0.55"/>
+        <stop offset="1" stop-color="#7678EC" stop-opacity="0"/>
+      </radialGradient>
+      <filter id="soft" x="-60%" y="-60%" width="220%" height="220%">
+        <feGaussianBlur stdDeviation="10"/>
+      </filter>
+    </defs>
+
+    <!-- ......................... the Verana platform ......................... -->
+    <g>
+      <ellipse cx="800" cy="352" rx="600" ry="16" fill="#A78BFA" opacity="0.32" filter="url(#soft)"/>
+      <rect x="200" y="350" width="1200" height="120" fill="url(#plat)"/>
+      <rect x="220" y="349.25" width="1160" height="2.5" fill="url(#platedge)"/>
+      <!-- mesh lines inside the platform -->
+      <g stroke="#A78BFA" stroke-opacity="0.22" stroke-width="1.4">
+        <path d="M290 470 L 540 352 M560 470 L 690 352 M830 470 L 800 352 M1080 470 L 910 352 M1330 470 L 1060 352"/>
+        <path d="M400 352 L 330 470 M1200 352 L 1290 470"/>
+        <path d="M255 384 H 1345 M310 420 H 1290" stroke-opacity="0.14"/>
+      </g>
+      <!-- Verana V motif woven into the platform, purely graphic -->
+      <g opacity="0.5" transform="translate(773,377) scale(1.0)">
+        <path d="M26.9932 51.6972L5.805 11.0977L2.91263 16.2161L0 10.6048L5.98725 0L26.9932 40.2483L47.9993 0L54 10.6217L51.0773 16.2161L48.1849 11.0977L26.9932 51.6972Z" fill="#C4B5FD"/>
+        <path d="M13.696 0L26.9935 25.4637L39.9367 0H13.696Z" fill="#34D399"/>
+      </g>
+      <g opacity="0.28" transform="translate(455,385) scale(0.72)">
+        <path d="M26.9932 51.6972L5.805 11.0977L2.91263 16.2161L0 10.6048L5.98725 0L26.9932 40.2483L47.9993 0L54 10.6217L51.0773 16.2161L48.1849 11.0977L26.9932 51.6972Z" fill="#C4B5FD"/>
+        <path d="M13.696 0L26.9935 25.4637L39.9367 0H13.696Z" fill="#34D399"/>
+      </g>
+      <g opacity="0.28" transform="translate(1105,385) scale(0.72)">
+        <path d="M26.9932 51.6972L5.805 11.0977L2.91263 16.2161L0 10.6048L5.98725 0L26.9932 40.2483L47.9993 0L54 10.6217L51.0773 16.2161L48.1849 11.0977L26.9932 51.6972Z" fill="#C4B5FD"/>
+        <path d="M13.696 0L26.9935 25.4637L39.9367 0H13.696Z" fill="#34D399"/>
+      </g>
+    </g>
+
+    <!-- .................. DIDComm links: phone to services .................. -->
+    <g stroke="#45F8FF" stroke-width="2.6" stroke-dasharray="2 9" stroke-linecap="round" fill="none" opacity="0.85">
+      <path d="M712 190 C 600 120, 470 130, 385 195"/>
+      <path d="M700 240 C 590 250, 500 250, 425 250"/>
+      <path d="M888 190 C 1000 120, 1130 130, 1215 195"/>
+      <path d="M900 240 C 1010 250, 1100 250, 1175 250"/>
+    </g>
+
+    <!-- ....................... the phone (Hologram) ....................... -->
+    <g>
+      <rect x="700" y="60" width="200" height="304" rx="30" fill="url(#phoneglass)" stroke="#7678EC" stroke-width="2.5"/>
+      <rect x="760" y="76" width="80" height="9" rx="4.5" fill="#0c1029" stroke="#3b3f6e" stroke-width="1"/>
+      <!-- chat bubbles -->
+      <rect x="722" y="112" width="106" height="34" rx="12" fill="#7678EC" opacity="0.92"/>
+      <rect x="772" y="158" width="106" height="34" rx="12" fill="#26305f"/>
+      <rect x="722" y="204" width="88" height="26" rx="11" fill="#7678EC" opacity="0.65"/>
+      <!-- QR chip on screen -->
+      <g transform="translate(760,248)">
+        <rect width="80" height="80" rx="10" fill="#0e1231" stroke="#45F8FF" stroke-opacity="0.6" stroke-width="1.6"/>
+        <g fill="#45F8FF">
+          <rect x="12" y="12" width="18" height="18" rx="3"/><rect x="50" y="12" width="18" height="18" rx="3"/>
+          <rect x="12" y="50" width="18" height="18" rx="3"/>
+          <rect x="40" y="40" width="9" height="9" rx="2"/><rect x="54" y="52" width="14" height="8" rx="2"/>
+          <rect x="36" y="56" width="8" height="12" rx="2"/><rect x="52" y="34" width="16" height="6" rx="2"/>
+        </g>
+      </g>
+      <!-- phone stands on the platform: contact glow -->
+      <ellipse cx="800" cy="364" rx="120" ry="10" fill="#45F8FF" opacity="0.18" filter="url(#soft)"/>
+    </g>
+
+    <!-- ......................... service nodes ......................... -->
+    <!-- Each: glow, circle, pictogram, emerald verified ring + check, and a
+         grounding stem into the Verana platform with an emerald contact dot. -->
+
+    <!-- bot service (far left) -->
+    <g>
+      <circle cx="330" cy="225" r="86" fill="url(#nodeglow)"/>
+      <line x1="330" y1="283" x2="330" y2="350" stroke="#A78BFA" stroke-width="2.4" stroke-opacity="0.75"/>
+      <circle cx="330" cy="350" r="6" fill="#34D399"/>
+      <circle cx="330" cy="225" r="52" fill="#141838" stroke="#34D399" stroke-width="3"/>
+      <g stroke="#c7cbff" stroke-width="4" stroke-linecap="round" fill="none">
+        <rect x="306" y="210" width="48" height="36" rx="10"/>
+        <line x1="330" y1="196" x2="330" y2="210"/><circle cx="330" cy="192" r="4" fill="#c7cbff" stroke="none"/>
+        <circle cx="319" cy="228" r="2.6" fill="#45F8FF" stroke="none"/><circle cx="341" cy="228" r="2.6" fill="#45F8FF" stroke="none"/>
+      </g>
+      <g transform="translate(360,175)">
+        <circle r="15" fill="#10B981"/>
+        <path d="M-6 0 L -1.5 5 L 7 -5" stroke="#fff" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+      </g>
+    </g>
+
+    <!-- ID / passport service (left) -->
+    <g>
+      <circle cx="475" cy="268" r="72" fill="url(#nodeglow)"/>
+      <line x1="475" y1="316" x2="475" y2="352" stroke="#A78BFA" stroke-width="2.4" stroke-opacity="0.75"/>
+      <circle cx="475" cy="352" r="6" fill="#34D399"/>
+      <circle cx="475" cy="268" r="46" fill="#141838" stroke="#34D399" stroke-width="3"/>
+      <g stroke="#c7cbff" stroke-width="3.6" stroke-linecap="round" fill="none">
+        <rect x="453" y="252" width="44" height="32" rx="6"/>
+        <circle cx="466" cy="265" r="5.5"/>
+        <path d="M459 277 C 459 271.5, 473 271.5, 473 277"/>
+        <line x1="482" y1="261" x2="491" y2="261"/><line x1="482" y1="270" x2="491" y2="270"/>
+      </g>
+      <g transform="translate(500,225)">
+        <circle r="13" fill="#10B981"/>
+        <path d="M-5.5 0 L -1.5 4.5 L 6 -4.5" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+      </g>
+    </g>
+
+    <!-- code / dev-tools service (right) -->
+    <g>
+      <circle cx="1270" cy="225" r="86" fill="url(#nodeglow)"/>
+      <line x1="1270" y1="283" x2="1270" y2="350" stroke="#A78BFA" stroke-width="2.4" stroke-opacity="0.75"/>
+      <circle cx="1270" cy="350" r="6" fill="#34D399"/>
+      <circle cx="1270" cy="225" r="52" fill="#141838" stroke="#34D399" stroke-width="3"/>
+      <g stroke="#c7cbff" stroke-width="4.4" stroke-linecap="round" stroke-linejoin="round" fill="none">
+        <path d="M1252 211 L 1238 225 L 1252 239"/>
+        <path d="M1288 211 L 1302 225 L 1288 239"/>
+        <line x1="1277" y1="205" x2="1263" y2="245"/>
+      </g>
+      <g transform="translate(1300,175)">
+        <circle r="15" fill="#10B981"/>
+        <path d="M-6 0 L -1.5 5 L 7 -5" stroke="#fff" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+      </g>
+    </g>
+
+    <!-- finance service (far right) -->
+    <g>
+      <circle cx="1125" cy="268" r="72" fill="url(#nodeglow)"/>
+      <line x1="1125" y1="316" x2="1125" y2="352" stroke="#A78BFA" stroke-width="2.4" stroke-opacity="0.75"/>
+      <circle cx="1125" cy="352" r="6" fill="#34D399"/>
+      <circle cx="1125" cy="268" r="46" fill="#141838" stroke="#34D399" stroke-width="3"/>
+      <g stroke="#c7cbff" stroke-width="3.6" stroke-linecap="round" fill="none">
+        <circle cx="1125" cy="268" r="17"/>
+        <path d="M1131.5 261.5 C 1128 258.5, 1120.5 259, 1119.5 263 C 1118.5 267.5, 1131 267, 1130.5 271.5 C 1130 276, 1121.5 276.5, 1118 273.5"/>
+        <line x1="1125" y1="255.5" x2="1125" y2="261"/><line x1="1125" y1="275" x2="1125" y2="280.5"/>
+      </g>
+      <g transform="translate(1150,225)">
+        <circle r="13" fill="#10B981"/>
+        <path d="M-5.5 0 L -1.5 4.5 L 6 -4.5" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+      </g>
+    </g>
+
+    <!-- faint stars in the mid gap -->
+    <g fill="#8ea0ff" opacity="0.5">
+      <circle cx="180" cy="80" r="2"/><circle cx="250" cy="140" r="1.5"/><circle cx="600" cy="60" r="1.6"/>
+      <circle cx="1010" cy="70" r="1.8"/><circle cx="1420" cy="95" r="2"/><circle cx="1360" cy="45" r="1.4"/>
+      <circle cx="90" cy="180" r="1.6"/><circle cx="1510" cy="180" r="1.6"/>
+    </g>
+  </svg>
+
+  <!-- optional guides, toggled with G -->
+  <div id="guides">
+    <div style="position:absolute;left:0;top:450px;width:100%;border-top:2px dashed #f43f5e;"></div>
+    <div style="position:absolute;left:0;bottom:0;width:100%;height:150px;background:rgba(244,63,94,0.12);"></div>
+  </div>
+</div>
+
+<p class="note">
+  Capture stage <b>1600 x 900</b> (16:9). Screenshot the framed area only, at 100% browser zoom
+  (e.g. Firefox: right-click, Take Screenshot, select the node; or any region tool snapped to the outline).
+  Press <b>G</b> to toggle guides: the red dashed line is the text boundary (all text sits above it),
+  the shaded band is where FIDES draws its own title overlay.
+</p>
+
+<script>
+  addEventListener("keydown", (e) => {
+    if (e.key.toLowerCase() === "g") document.getElementById("stage").classList.toggle("g");
+  });
+</script>
+
+</body>
+</html>
