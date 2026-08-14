@@ -29,7 +29,7 @@ Paste-ready values below; field names follow the published Vesta entry structure
 
 ## Overview
 
-> Hologram Messaging turns the messenger into a browser for decentralized services: scan a QR and you are in an encrypted DIDComm chat with a self-hosted chatbot or AI agent, verified against an open trust registry before the first message. Five production services show the range: an Avatar credential issuer, a Passport issuer with NFC and liveness, AI agents for GitHub and Wise over MCP gated by your Avatar credential, and an X agent whose right to post is bound to verifiable credentials. Everything is open source and self-hosted from forkable repos: no app store, no platform, no vendor lock-in.
+> Hologram Messaging turns the messenger into a browser for decentralized services: scan a QR and you are in an encrypted DIDComm chat with a self-hosted chatbot or AI agent, verified before the first message. It is built on Verana, the open public trust layer: every service is a Verifiable Service whose identity, operator and permissions any wallet can resolve. Five production services show the range: an Avatar credential issuer, a Passport issuer with NFC and liveness, AI agents for GitHub and Wise over MCP gated by your Avatar credential, and an X agent whose right to post is bound to verifiable credentials. Everything is open source and self-hosted from forkable repos: no app store, no platform, no vendor lock-in.
 
 ## How it works (1,088 / 1,200 chars)
 
@@ -49,6 +49,7 @@ decentralized AI · verifiable AI agents · DIDComm · chatbot · MCP · verifia
 ## Assets
 
 - Thumbnail: the demo-grid art from hologram.zone (Avatar photo or the X Agent "Compose. Draw. Publish." card).
+- The "Runs on the Verana open trust layer" badge (collaborator kit, §5 of the README) in the image set.
 - Screenshots: hologram.zone/demos grid, one in-chat capture per agent (Avatar issuance, Wise agent action with MCP config menu, X Agent approval step).
 - Video (≤3 min, uncut): scan Avatar QR → receive credential → connect Wise agent → authenticate with the credential → one real action in chat.
 
