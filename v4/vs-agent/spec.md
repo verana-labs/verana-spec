@@ -1026,15 +1026,19 @@ The agent groups its methods in scopes. A scope is the first path segment after 
 
 Every method that returns a collection is paginated with an opaque cursor. Each such method accepts these OPTIONAL query parameters:
 
-- `pageSize` — number of records in one page. Default `50`. Maximum `200`.
+- `limit` — number of records in one page. Minimum `1`. Maximum `500`. Default `100`.
 - `cursor` — the cursor of the requested page, as returned by the previous call. A caller omits it on the first call.
 
 Each such method returns:
 
 - `items` — array of records.
-- `nextCursor` — the cursor of the next page. The agent MUST omit this field on the last page.
+- `nextCursor` — the cursor of the next page. The agent MUST set this field to `null` on the last page.
 
-A caller MUST treat a cursor as opaque. The agent MUST reject an unknown or an expired cursor with `INVALID_CURSOR`.
+These bounds and these names match [[TG-QRY-6]](../verana-graph/spec.md#graph-traversal-queries) of the Verana Graph specification, so that one client library paginates both APIs.
+
+A caller MUST treat a cursor as opaque. The agent MUST NOT use offset pagination: a record that arrives while a caller iterates would make the agent skip a record or return one twice.
+
+A cursor is a **keyset** cursor: it names the last key of the delivered page, in the deterministic order of the collection. A cursor therefore never expires, and the agent MUST NOT store cursor state between calls. A record that another caller creates mid-iteration sorts after the current anchor and appears in a later page; a record that another caller deletes — the anchor included — stops appearing. The agent MUST reject a cursor with `INVALID_CURSOR` in these cases only: the cursor is malformed; the caller replayed it against a different method or a different filter set than the one that minted it; or an internal migration changed the cursor format.
 
 #### Errors
 
@@ -1042,23 +1046,27 @@ The agent MUST return a JSON body with each response whose HTTP status is `400` 
 
 ```json
 {
-  "code": "NOT_FOUND",
-  "message": "no connection with the given id"
+  "error": {
+    "code": "UNKNOWN_ID",
+    "message": "no connection with the given id"
+  }
 }
 ```
 
 - `code` — a stable token that identifies the condition. A caller MAY branch on it.
 - `message` — text for a human reader. A caller MUST NOT parse it.
 
+The envelope and the shared codes match [[TG-ERR-1]](../verana-graph/spec.md#error-responses) of the Verana Graph specification. The two APIs use one error vocabulary: `INVALID_INPUT` for a request that fails validation, `UNKNOWN_ID` for an identifier that resolves to no record, and `INVALID_CURSOR` for a cursor the agent refuses. The Administration API adds the codes that authentication and mutation need, which a read-only public API does not: `UNAUTHENTICATED`, `FORBIDDEN`, `INVALID_STATE`, and `INTERNAL`.
+
 Each method below lists only the codes that are specific to it. These codes apply to every method:
 
 | Code | HTTP | Condition |
 |---|---|---|
-| `INVALID_PAYLOAD` | `400` | The request body or a parameter failed validation. |
-| `INVALID_CURSOR` | `400` | The supplied `cursor` is unknown or expired. |
+| `INVALID_INPUT` | `400` | The request body or a parameter failed validation. |
+| `INVALID_CURSOR` | `400` | The agent refuses the supplied `cursor`. See [Pagination](#pagination). |
 | `UNAUTHENTICATED` | `401` | The bearer token is absent, unknown, or expired. See [Authentication](#authentication). |
 | `FORBIDDEN` | `403` | The caller may not invoke the Admin API. See [Authorization](#authorization). |
-| `NOT_FOUND` | `404` | The addressed record does not exist. |
+| `UNKNOWN_ID` | `404` | The identifier of the request resolves to no record. |
 | `INTERNAL` | `500` | The agent failed to complete the request. |
 
 ### Method Summary
@@ -1131,7 +1139,7 @@ Issues a single-use nonce for the supplied Verana account.
 - `nonce` — the challenge to sign. Opaque, single-use, and unpredictable.
 - `expiresAt` — ISO 8601 UTC datetime after which the agent no longer accepts the nonce.
 
-**Errors**: `INVALID_PAYLOAD` (`400`) when `account` is absent or is not a `verana` address.
+**Errors**: `INVALID_INPUT` (`400`) when `account` is absent or is not a `verana` address.
 
 A challenge MUST NOT reveal whether the agent knows the account, or whether the Corporation authorizes it: an unauthorized account still receives a nonce, and the agent refuses it later at the [authorization](#authorization) check.
 
@@ -1626,7 +1634,7 @@ Creates a new AnonCreds credential definition. A Verifiable Trust JSON Schema Cr
 
 **Errors**:
 
-- `NOT_FOUND` (`404`) — the agent cannot resolve `relatedJsonSchemaCredentialId`.
+- `UNKNOWN_ID` (`404`) — the agent cannot resolve `relatedJsonSchemaCredentialId`.
 
 ##### [VSA-ADM-AC-CD-DELETE] deleteCredentialDefinition
 
