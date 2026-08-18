@@ -1,6 +1,6 @@
 # Verana Graph spec
 
-**Latest Draft:** spec v4-draft5
+**Latest Draft:** spec v4-draft6
 
 ## Abstract
 
@@ -86,7 +86,7 @@ The rules in this subsection refer to the following per-instance ingestion state
 
 | Variable           | Definition                                                                                                                                                                                                                                                                                                                                          |
 | ---                | ---                                                                                                                                                                                                                                                                                                                                                 |
-| `B`                | The bootstrap snapshot block, captured from the WebSocket `ready.block` field per [[TG-INGEST-3]]. The graph issues all bootstrap calls with `At-Block-Height: B - 1`.                                                                                                                                                                              |
+| `B`                | The bootstrap snapshot block, captured from the WebSocket `subscribed.block` acknowledgement per [[TG-INGEST-3]]. The graph issues all bootstrap calls with `At-Block-Height: B - 1`.                                                                                                                                                                              |
 | `block`            | The block height carried by an incoming `ChangeEnvelope` (WebSocket envelope or `listChanges` entry), as defined by the indexer's [`changes.schema.json`](../verana-indexer/schemas/v4/vt/changes.schema.json). The graph uses this value in the `At-Block-Height` request header when reconciling that envelope's changes.                    |
 | `blockTime`        | The wall-clock timestamp carried by an incoming `ChangeEnvelope`. The graph uses it for `lastObservedAtTime` on the records it touches.                                                                                                                                                                                                                  |
 | `previousBlock`    | The block height of the most recently *received* WebSocket envelope, regardless of whether its changes have been reconciled yet. Used to detect gaps in the live stream via the predicate `block > previousBlock + 1` in [[TG-INGEST-5]]. Initialised to `B - 1` at bootstrap and updated on every received envelope.                                |
@@ -152,8 +152,8 @@ Per the indexer specification, the `subscribeChanges` `participations` channel f
 
 [TG-INGEST-3] A Verana Graph implementation MUST bootstrap an initial snapshot before applying any live block message, following the [Indexer Bootstrap pattern](../verana-indexer/spec.md#bootstrap-pattern):
 
-1. Capture `B = ready.block` from the WebSocket `ready` message.
-2. Buffer all incoming WebSocket block messages without applying.
+1. Send `subscribe`, buffering every incoming WebSocket block message from connect without applying it, then capture `B = subscribed.block` from the `subscribed` acknowledgement. A block MAY be delivered before the acknowledgement arrives.
+2. Keep buffering until step 5.
 3. Enumerate the DID universe at block `B - 1` via `GET /v4/verifiable-trust/dids` with `At-Block-Height: B - 1`, paginating through `nextCursor`, to align the snapshot with the WebSocket cut-over.
 4. Resolve each enumerated DID via `POST /v4/verifiable-trust/resolve` using the request payload of [[TG-INGEST-2]] with `At-Block-Height: B - 1`, persisting the resulting state into the graph.
 5. Apply the buffered WebSocket block messages from block `B` onwards.
