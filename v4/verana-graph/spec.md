@@ -1,6 +1,6 @@
 # Verana Graph spec
 
-**Latest Draft:** spec v4-draft5
+**Latest Draft:** spec v4-draft6
 
 ## Abstract
 
@@ -152,8 +152,8 @@ Per the indexer specification, the `subscribeChanges` `participations` channel f
 
 [TG-INGEST-3] A Verana Graph implementation MUST bootstrap an initial snapshot before applying any live block message, following the [Indexer Bootstrap pattern](../verana-indexer/spec.md#bootstrap-pattern):
 
-1. Send `subscribe` and capture `B = subscribed.block` from the `subscribed` acknowledgement.
-2. Buffer all incoming WebSocket block messages without applying.
+1. Send `subscribe`, buffering every incoming WebSocket block message from connect without applying it, then capture `B = subscribed.block` from the `subscribed` acknowledgement. A block MAY be delivered before the acknowledgement arrives.
+2. Keep buffering until step 5.
 3. Enumerate the DID universe at block `B - 1` via `GET /v4/verifiable-trust/dids` with `At-Block-Height: B - 1`, paginating through `nextCursor`, to align the snapshot with the WebSocket cut-over.
 4. Resolve each enumerated DID via `POST /v4/verifiable-trust/resolve` using the request payload of [[TG-INGEST-2]] with `At-Block-Height: B - 1`, persisting the resulting state into the graph.
 5. Apply the buffered WebSocket block messages from block `B` onwards.
