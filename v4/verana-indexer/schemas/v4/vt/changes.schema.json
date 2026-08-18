@@ -42,7 +42,7 @@
         },
         "blockTime": {
           "$ref": "#/$defs/Iso8601DateTime",
-          "description": "Wall-clock time at which `block` was committed."
+          "description": "Commit time of `block - 1`, the last block processed at connect time. `block` itself is the next height and is not yet committed."
         },
         "blockIntervalMs": {
           "type": "integer",
@@ -55,11 +55,15 @@
     "SubscribedMessage": {
       "type": "object",
       "description": "Acknowledges a processed `subscribe`. `block` is the height of the next block this subscription will deliver.",
-      "required": ["type", "block"],
+      "required": ["type", "block", "blockTime"],
       "additionalProperties": false,
       "properties": {
         "type": { "const": "subscribed" },
-        "block": { "type": "integer", "minimum": 0 }
+        "block": { "type": "integer", "minimum": 0 },
+        "blockTime": {
+          "$ref": "#/$defs/Iso8601DateTime",
+          "description": "Commit time of `block - 1`, the last block processed when the subscription became active. Clients use it to stamp state snapshotted at `block - 1`."
+        }
       }
     },
     "BlockMessage": {
