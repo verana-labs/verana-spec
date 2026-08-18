@@ -1377,11 +1377,13 @@ The server confirms every processed `subscribe` with a `subscribed` message, sen
 ```json
 {
    "type": "subscribed",
-   "block": 1500007
+   "block": 1500007,
+   "blockTime": "2026-05-11T13:00:12Z"
 }
 ```
 
-- `block` — The height of the next block this subscription will deliver (`latestProcessedBlock + 1` at the moment the subscription became active). Every block message with `block >= subscribed.block` is guaranteed to be delivered on this connection. Any block processed before the acknowledgement was already visible to the REST catch-up, so a client that drains after receiving `subscribed` observes every event exactly once after deduplication.
+- `block` — The height of the next block this subscription will deliver (`latestProcessedBlock + 1` at the moment the subscription became active).
+- `blockTime` — Commit time of `block - 1`, the last block processed when the subscription became active. A client snapshotting state at `block - 1` uses this as that snapshot's timestamp. Every block message with `block >= subscribed.block` is guaranteed to be delivered on this connection. Any block processed before the acknowledgement was already visible to the REST catch-up, so a client that drains after receiving `subscribed` observes every event exactly once after deduplication.
 
 An `unsubscribe` is not acknowledged. Clients MUST ignore server messages whose `type` they do not recognise, so this acknowledgement is backward compatible.
 
@@ -1893,11 +1895,13 @@ The server confirms every processed `subscribe` with a `subscribed` message, sen
 ```json
 {
    "type": "subscribed",
-   "block": 1500007
+   "block": 1500007,
+   "blockTime": "2026-05-11T13:00:12Z"
 }
 ```
 
-- `block` — The height of the next block this subscription will deliver (`latestProcessedBlock + 1` at the moment the subscription became active). Every block message with `block >= subscribed.block` is guaranteed to be delivered on this connection. Any block processed before the acknowledgement was already visible to `listChanges`, so a client that drains after receiving `subscribed` observes every event exactly once after deduplication.
+- `block` — The height of the next block this subscription will deliver (`latestProcessedBlock + 1` at the moment the subscription became active).
+- `blockTime` — Commit time of `block - 1`, the last block processed when the subscription became active. A client snapshotting state at `block - 1` uses this as that snapshot's timestamp. Every block message with `block >= subscribed.block` is guaranteed to be delivered on this connection. Any block processed before the acknowledgement was already visible to `listChanges`, so a client that drains after receiving `subscribed` observes every event exactly once after deduplication.
 
 An `unsubscribe` is not acknowledged. Clients MUST ignore server messages whose `type` they do not recognise, so this acknowledgement is backward compatible.
 
