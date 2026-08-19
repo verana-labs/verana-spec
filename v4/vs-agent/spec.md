@@ -135,6 +135,10 @@ The table lists every environment variable of the VS Agent container. The subsec
 | [`VERANA_RPC_ENDPOINT_URL`](#vsa-vti-cfg-env-net-network-configuration) | REQUIRED | Network Configuration |
 | [`VERANA_INDEXER_BASE_URL`](#vsa-vti-cfg-env-net-network-configuration) | REQUIRED | Network Configuration |
 | [`VERANA_CHAIN_ID`](#vsa-vti-cfg-env-net-network-configuration) | OPTIONAL | Network Configuration |
+| [`VERANA_INDEXER_SUBSCRIPTION_SCOPE`](#vsa-vti-cfg-env-net-network-configuration) | OPTIONAL | Network Configuration |
+| [`VERANA_INDEXER_DEFAULT_HANDLERS_OVERRIDE`](#vsa-vti-cfg-env-net-network-configuration) | OPTIONAL | Network Configuration |
+| [`VERANA_GAS_ADJUSTMENT`](#vsa-vti-cfg-env-net-network-configuration) | OPTIONAL | Network Configuration |
+| [`VERANA_AUTO_TRIGGER_RESOLVER`](#vsa-vti-cfg-env-net-network-configuration) | OPTIONAL | Network Configuration |
 | [`AGENT_MODE`](#vsa-vti-cfg-env-mode-agent-configuration-mode) | OPTIONAL | Agent Configuration Mode |
 | [`AGENT_DELEGATED_PARENT_VS_DID`](#vsa-vti-cfg-env-mode-agent-configuration-mode) | CONDITIONAL | Agent Configuration Mode |
 | [`TRUSTED_ECS_ECOSYSTEM_DIDS`](#vsa-vti-cfg-env-mode-agent-configuration-mode) | CONDITIONAL | Agent Configuration Mode |
@@ -162,6 +166,10 @@ The table lists every environment variable of the VS Agent container. The subsec
 | `VERANA_RPC_ENDPOINT_URL` | REQUIRED | Verana blockchain RPC endpoint URL (e.g., `https://rpc.testnet.verana.network`). |
 | `VERANA_INDEXER_BASE_URL` | REQUIRED | Verana indexer API URL (e.g., `https://idx.testnet.verana.network`). |
 | `VERANA_CHAIN_ID` | OPTIONAL | Chain ID. |
+| `VERANA_INDEXER_SUBSCRIPTION_SCOPE` | OPTIONAL | Scope of the indexer subscription and of the REST catch-up: `did` (default) subscribes to the agent's own DID only, `corporation` subscribes to every event of `VERANA_CORPORATION_ID`. |
+| `VERANA_INDEXER_DEFAULT_HANDLERS_OVERRIDE` | OPTIONAL | Comma-separated list of indexer `event_type` names whose default handler is disabled, or `*` for all of them. A backend behind the agent then reacts to those notifications itself. State synchronisation is never affected. |
+| `VERANA_GAS_ADJUSTMENT` | OPTIONAL | Multiplier the agent applies to the simulated gas of each transaction it signs. Default: `1.5`. A simulation signs with an empty signature and runs against the state of the moment, so it reports less gas than the delivery consumes; the multiplier covers that difference. Raise it when a transaction reports `out of gas` although its simulation succeeded. |
+| `VERANA_AUTO_TRIGGER_RESOLVER` | OPTIONAL | Whether the agent sends `TriggerResolver` by itself after it publishes a credential or changes a service endpoint. Default: `true`. Set it to `false` when the operator triggers the resolver out of band. |
 
 ##### [VSA-VTI-CFG-ENV-MODE] Agent Configuration Mode
 
