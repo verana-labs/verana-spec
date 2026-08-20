@@ -142,15 +142,13 @@ The table lists every environment variable of the VS Agent container. The subsec
 | [`AGENT_MODE`](#vsa-vti-cfg-env-mode-agent-configuration-mode) | OPTIONAL | Agent Configuration Mode |
 | [`AGENT_DELEGATED_PARENT_VS_DID`](#vsa-vti-cfg-env-mode-agent-configuration-mode) | CONDITIONAL | Agent Configuration Mode |
 | [`TRUSTED_ECS_ECOSYSTEM_DIDS`](#vsa-vti-cfg-env-mode-agent-configuration-mode) | CONDITIONAL | Agent Configuration Mode |
-| [`AGENT_DIDCOMM_VERSIONS`](#vsa-vti-cfg-env-rt-agent-runtime) | OPTIONAL | Agent Runtime |
-| [`VS_AGENT_PLUGINS`](#vsa-vti-cfg-env-rt-agent-runtime) | OPTIONAL | Agent Runtime |
-| [`AGENT_PUBLIC_DID`](#vsa-vti-cfg-env-rt-agent-runtime) | OPTIONAL | Agent Runtime |
-| [`PUBLIC_API_BASE_URL`](#vsa-vti-cfg-env-rt-agent-runtime) | CONDITIONAL | Agent Runtime |
+| [`PUBLIC_API_BASE_URL`](#vsa-vti-cfg-env-rt-agent-runtime) | REQUIRED | Agent Runtime |
+| [`AGENT_PUBLIC_DID_METHOD`](#vsa-vti-cfg-env-rt-agent-runtime) | OPTIONAL | Agent Runtime |
 | [`ADMIN_API_AUTH_MODE`](#vsa-vti-cfg-env-adm-administration-api) | OPTIONAL | Administration API |
 | [`ADMIN_API_TRUSTED_NETWORKS`](#vsa-vti-cfg-env-adm-administration-api) | OPTIONAL | Administration API |
 | [`ADMIN_API_PUBLIC_URL`](#vsa-vti-cfg-env-adm-administration-api) | CONDITIONAL | Administration API |
 | [`ADMIN_API_CORPORATION_ALLOWED_ACCOUNTS`](#vsa-vti-cfg-env-adm-administration-api) | CONDITIONAL | Administration API |
-| [`OID4VC_CONFIG_FILE`](#vsa-vti-cfg-env-oid-openid4vc) | CONDITIONAL | OpenID4VC |
+| [`OID4VC_CONFIG_FILE`](#vsa-vti-cfg-env-oid-openid4vc) | OPTIONAL | OpenID4VC |
 
 ##### [VSA-VTI-CFG-ENV-ID] Identity and Corporation
 
@@ -187,10 +185,8 @@ See [comparison between VS-REQ-3 and VS-REQ-4](https://verana-labs.github.io/ver
 
 | Variable | Required | Description |
 |---|---|---|
-| `AGENT_DIDCOMM_VERSIONS` | OPTIONAL | Comma-separated list of DIDComm protocol versions the agent supports. Allowed values: `v1`, `v2`. Constrains the `didcommVersion` values accepted by the methods that produce an invitation (see [Invitation parameters](#invitation-parameters)); when a method omits `didcommVersion`, the agent infers the version from this configuration. If unset, the default is implementation-defined. |
-| `VS_AGENT_PLUGINS` | OPTIONAL | Comma-separated list of enabled agent plugins. Determines the set of message `type` values accepted by [`sendMessage`](#vsa-adm-dc-ms-send-sendmessage) (e.g. `text`, `credential-issuance`, `credential-revocation`, `identity-proof-request`, `contextual-menu-update`, `profile`, `terminate-connection`). The value `openid4vc` enables the [OpenID4VC Scope](#openid4vc-scope) and REQUIRES `OID4VC_CONFIG_FILE`. If unset, the default plugin set is implementation-defined. |
-| `AGENT_PUBLIC_DID` | OPTIONAL | Public DID of the agent, for example `did:web:agent.example.com`. The agent publishes its DID Document under this DID. |
-| `PUBLIC_API_BASE_URL` | CONDITIONAL | Public `https://` base URL at which a peer reaches the public endpoints of the agent. The agent composes each protocol URL from this value verbatim, and a base path is allowed. A URL that carries a username or a password MUST be rejected. REQUIRED when `VS_AGENT_PLUGINS` includes `openid4vc`. |
+| `PUBLIC_API_BASE_URL` | REQUIRED | Public `https://` base URL at which a peer reaches the public endpoints of the agent. The agent derives its DID from this value and composes each protocol URL from it verbatim. A base path is allowed. The agent MUST reject a URL that carries a username or a password. See [[VSA-VTI-BOOT-DID] DID Creation](#vsa-vti-boot-did-did-creation). |
+| `AGENT_PUBLIC_DID_METHOD` | OPTIONAL | DID method the agent uses when it creates its DID on first startup: `webvh` (default) or `web`. The agent MUST reject any other value. See [[VSA-VTI-BOOT-DID] DID Creation](#vsa-vti-boot-did-did-creation). |
 
 ##### [VSA-VTI-CFG-ENV-ADM] Administration API
 
@@ -205,11 +201,11 @@ These variables configure the access model of the [Administration API](#administ
 
 ##### [VSA-VTI-CFG-ENV-OID] OpenID4VC
 
-The agent serves the [OpenID4VC Scope](#openid4vc-scope) and the OpenID4VC public endpoints only when `VS_AGENT_PLUGINS` includes `openid4vc`.
+`OID4VC_CONFIG_FILE` is the switch for OpenID4VC. The agent serves the [OpenID4VC Scope](#openid4vc-scope) and the OpenID4VC public endpoints when, and only when, the operator sets it.
 
 | Variable | Required | Description |
 |---|---|---|
-| `OID4VC_CONFIG_FILE` | CONDITIONAL | Path to the OpenID4VC configuration file, a JSON document with the structure below. REQUIRED when `VS_AGENT_PLUGINS` includes `openid4vc`. The operator SHOULD mount the file read-only, and SHOULD manage it as a secret: it can hold a private key. |
+| `OID4VC_CONFIG_FILE` | OPTIONAL | Path to the OpenID4VC configuration file, a JSON document with the structure below. When the operator sets it, the agent enables OpenID4VC; when the operator leaves it unset, the agent serves no OpenID4VC path. The operator SHOULD mount the file read-only, and SHOULD manage it as a secret: it can hold a private key. |
 
 The agent MUST validate the configuration file at startup, and MUST refuse to start when validation fails. The field names of this file are camelCase, like the field names of the Administration API (see [API Conventions](#api-conventions)).
 
@@ -227,8 +223,15 @@ A `claims` entry MUST NOT name `vct`, `iat`, `exp`, `iss`, or `cnf`. These names
 
 Each capability declares exactly one signing mode:
 
-- **Development signing** (`signing.development`) — the agent generates and persists a self-signed P-256 certificate for the capability, with a DNS SAN derived from `PUBLIC_API_BASE_URL` and a DID URI SAN derived from `AGENT_PUBLIC_DID`. Before it completes startup, the agent MUST publish the resulting public key in its DID Document: under `assertionMethod` for the issuer capability, and under `authentication` for the verifier capability. The method identifier MUST be deterministic per capability, so that a restart is idempotent. When both capabilities share one DID, the agent MUST publish the two keys in sequence, so that it keeps both relationships. Development signing is unsuitable for production.
+- **Development signing** (`signing.development`) — the agent generates and persists a self-signed P-256 certificate for the capability, with a DNS SAN derived from `PUBLIC_API_BASE_URL` and a DID URI SAN that carries the DID of the agent. Before it completes startup, the agent MUST publish the resulting public key in its DID Document: under `assertionMethod` for the issuer capability, and under `authentication` for the verifier capability. The method identifier MUST be deterministic per capability, so that a restart is idempotent. When both capabilities share one DID, the agent MUST publish the two keys in sequence, so that it keeps both relationships. Development signing is unsuitable for production.
 - **Configured signing** (`signing.configured`) — the operator supplies `certificateChain` (a non-self-signed leaf first, then any intermediate, then the root) and the `privateJwk` P-256 key of that leaf. Each leaf MUST carry the DID of the agent as a URI SAN. The agent MUST NOT publish a configured key itself; the operator publishes it under `assertionMethod` or `authentication` before startup.
+
+### [VSA-VTI-DIDCOMM] DIDComm Support
+
+[VSA-VTI-DIDCOMM-1] A VS Agent MUST implement DIDComm v1 (Aries-style) and DIDComm v2 ([DIF DIDComm Messaging](https://identity.foundation/didcomm-messaging/spec/)). The agent MUST accept an inbound connection over either envelope. The agent MUST establish an outbound connection over either envelope.
+
+[VSA-VTI-DIDCOMM-2] The agent MUST publish a `DIDCommMessaging` service entry that reaches both envelopes, per [[VS-SVC-2]](https://verana-labs.github.io/verifiable-trust-spec/#vs-svc-service-declaration). A caller selects the envelope of an outbound invitation with the `didcommVersion` parameter of [Invitation parameters](#invitation-parameters); when the caller omits it, the agent MUST use v2.
+
 
 ### [VSA-VTI-DIDDOC] DID Document Service Entries
 
@@ -358,15 +361,59 @@ When the VS Agent starts, it SHOULD execute the following steps in order:
 
 2. **Derive Verana account**: Derive the blockchain account from `VERANA_ACCOUNT_MNEMONIC` and store the derived address as the agent's `vs_operator` account.
 
-3. **Start DIDComm message processor**: Enable DIDComm for outgoing messages.
+3. **Create or load the DID**: On first startup, create the agent's DID from `PUBLIC_API_BASE_URL` and publish its DID Document. On a later startup, load the persisted DID. See [[VSA-VTI-BOOT-DID] DID Creation](#vsa-vti-boot-did-did-creation). Every later step needs this DID.
 
-4. **Connect to indexer WebSocket**: Establish a persistent WebSocket connection to [`WS {VERANA_INDEXER_BASE_URL}/v4/indexer/subscribe`](../verana-indexer/spec.md#idx-indexer-sub-1-subscribe-indexer-events) for real-time awareness of on-chain changes (see [Notifications](#vsa-vti-notif-notifications)). After receiving the indexer's `ready` message, send `{ "action": "subscribe", "dids": ["<agent DID>"] }`, and **buffer** every incoming block envelope from this point on, without processing any of them until step 5 has completed. Buffering starts at connect, not at the acknowledgement: a block MAY be delivered before the `subscribed` message arrives. Connecting before catching up ensures no event can land unobserved between the two steps: the WebSocket never replays history.
+4. **Start DIDComm message processor**: Enable DIDComm for outgoing messages.
 
-5. **Catch up missed events**: Call [`GET {VERANA_INDEXER_BASE_URL}/v4/indexer/events?dids=<agent DID>&after_block_height=<last_seen_block>`](../verana-indexer/spec.md#idx-indexer-qry-6-list-indexer-events) (or `?corporation_id=<VERANA_CORPORATION_ID>` if the agent uses the corp-scoped subscription per [[VSA-VTI-NOTIF]](#vsa-vti-notif-notifications)), paginating to exhaustion, where `last_seen_block` is the highest block height the agent has fully processed in its persistent state (0 on first start). Process each `IndexerTransactionEvent` returned, then advance `last_seen_block` to the highest `block_height` observed. Then process the buffered — and subsequent live — block envelopes in order: each envelope's `events[]` entries (each an `IndexerTransactionEvent`) in `(payload.tx_index, payload.message_index)` order, discarding as duplicates any event with `block_height <= last_seen_block` or an already-processed (`tx_hash`, `message_index`) pair. These actions may trigger outgoing DIDComm messages.
+5. **Connect to indexer WebSocket**: Establish a persistent WebSocket connection to [`WS {VERANA_INDEXER_BASE_URL}/v4/indexer/subscribe`](../verana-indexer/spec.md#idx-indexer-sub-1-subscribe-indexer-events) for real-time awareness of on-chain changes (see [Notifications](#vsa-vti-notif-notifications)). After receiving the indexer's `ready` message, send `{ "action": "subscribe", "dids": ["<agent DID>"] }`, and **buffer** every incoming block envelope from this point on, without processing any of them until step 6 has completed. Buffering starts at connect, not at the acknowledgement: a block MAY be delivered before the `subscribed` message arrives. Connecting before catching up ensures no event can land unobserved between the two steps: the WebSocket never replays history.
 
-6. **Start processing the queued incoming DIDComm messages**.
+6. **Catch up missed events**: Call [`GET {VERANA_INDEXER_BASE_URL}/v4/indexer/events?dids=<agent DID>&after_block_height=<last_seen_block>`](../verana-indexer/spec.md#idx-indexer-qry-6-list-indexer-events) (or `?corporation_id=<VERANA_CORPORATION_ID>` if the agent uses the corp-scoped subscription per [[VSA-VTI-NOTIF]](#vsa-vti-notif-notifications)), paginating to exhaustion, where `last_seen_block` is the highest block height the agent has fully processed in its persistent state (0 on first start). Process each `IndexerTransactionEvent` returned, then advance `last_seen_block` to the highest `block_height` observed. Then process the buffered — and subsequent live — block envelopes in order: each envelope's `events[]` entries (each an `IndexerTransactionEvent`) in `(payload.tx_index, payload.message_index)` order, discarding as duplicates any event with `block_height <= last_seen_block` or an already-processed (`tx_hash`, `message_index`) pair. These actions may trigger outgoing DIDComm messages.
+
+7. **Start processing the queued incoming DIDComm messages**.
 
 > If no `VSOperatorAuthorization` has been granted to this VS Agent AND the account balance of `vs_operator` is equal to 0, a warning SHOULD be printed in the log.
+
+#### [VSA-VTI-BOOT-DID] DID Creation
+
+The agent needs a DID to operate. Without one, no peer resolves its DID Document, no Ecosystem accredits it, and no verifier resolves it as trusted.
+
+The agent does not read its DID from a variable. It derives the DID from `PUBLIC_API_BASE_URL` and creates it on first startup. `AGENT_PUBLIC_DID_METHOD` selects the method: `webvh` (the default) or `web`. The agent MUST reject any other value at step 1 of the [Bootstrap Sequence](#vsa-vti-boot-bootstrap-sequence).
+
+An operator cannot know a `did:webvh` DID before the agent creates it: its self-certifying identifier (SCID) exists only after creation.
+
+##### DID location
+
+The agent derives the location part of the DID from `PUBLIC_API_BASE_URL`:
+
+- The host becomes the first segment. When the URL carries a port, the agent appends the port, and MUST percent-encode the colon that separates the two.
+- Each segment of the base path becomes one further segment. A colon separates the segments.
+
+| `PUBLIC_API_BASE_URL` | Location |
+|---|---|
+| `https://agent.example.com` | `agent.example.com` |
+| `https://agent.example.com:8443` | `agent.example.com%3A8443` |
+| `https://agent.example.com/vs/alpha` | `agent.example.com:vs:alpha` |
+
+##### First startup
+
+When its storage holds no DID, the agent MUST:
+
+1. Generate its key material.
+2. Compose the DID.
+   - For `web`, the DID is `did:web:<location>`, as [DID-WEB](https://w3c-ccg.github.io/did-method-web/) defines it. `PUBLIC_API_BASE_URL` determines it completely.
+   - For `webvh`, the agent creates the first entry of the DID log, computes the SCID from that entry, and the DID is `did:webvh:<SCID>:<location>`, as [DID-WEBVH](https://identity.foundation/didwebvh/) defines it.
+3. Publish the DID Document at the location that the method resolves, and, for `webvh`, the DID log beside it. The agent MUST serve both on the public listener, under `PUBLIC_API_BASE_URL`.
+4. Persist the DID, the key material, and the DID log.
+
+The agent MUST complete these steps before step 4 of the [Bootstrap Sequence](#vsa-vti-boot-bootstrap-sequence). A peer that resolves the agent during this window MUST NOT observe a partial DID Document.
+
+##### Later startups
+
+When its storage holds a DID, the agent MUST load that DID and its key material, and MUST NOT create a new one.
+
+The agent MUST compare the location that it derives from `PUBLIC_API_BASE_URL` with the location of the persisted DID. When the two differ, the agent MUST fail to start, with a descriptive error that names both values.
+
+> **Caution:** the agent MUST NOT create a second DID when `PUBLIC_API_BASE_URL` changes. The credentials, `Participant` entries, permissions, and accreditations of the agent are bound to the persisted DID, and a new DID discards all of them. An operator migrates the DID deliberately, outside the startup path.
 
 ### [VSA-VTI-VTJSC] VTJSC Management
 
@@ -873,7 +920,7 @@ For the full state machine diagrams (per-role and post-issuance transitions), se
 
 The VS Agent MUST expose a secure Administration API that allows authenticated and authorized entities to remotely query and manage the agent's state: for example, from the Verana frontend, or from a backend container connected to agent.
 
-This section specifies **Admin API v2**. Every path starts with `/v2`. v2 replaces v1, and is not backwards compatible with it: it groups the methods in scopes, it renames each field to snakeCase, it paginates each collection with a cursor, and it returns one error envelope. An agent MAY serve v1 and v2 on the same port for a migration period, but v1 is out of the scope of this specification.
+This section specifies **Admin API v2**. Every path starts with `/v2`. v2 replaces v1, and is not backwards compatible with it: it groups the methods in scopes, it renames each field to camelCase, it paginates each collection with a cursor, and it returns one error envelope. An agent MAY serve v1 and v2 on the same port for a migration period, but v1 is out of the scope of this specification.
 
 ### Authentication and Authorization
 
@@ -906,7 +953,7 @@ Future revisions of this specification MAY add additional modes (e.g. an OAuth-b
 The agent enforces authentication on the **classification of the request** (see [Trusted networks](#trusted-networks)), not on the method:
 
 1. The agent does not authenticate a **trusted-network** request. The deployment is responsible for keeping the configured blocks inside its trust boundary (pod, deployment, host).
-2. The agent MUST authenticate an **external** request as a Verana account, with the challenge/response protocol defined below, before any other check. The [authentication methods](#vsa-adm-auth-authentication) themselves are the only exception, because a caller cannot hold a token before it completes the exchange.
+2. The agent MUST authenticate an **external** request as a Verana account, with the challenge/response protocol defined below, before any other check. The [unauthenticated methods](#unauthenticated-methods) are the only exception.
 
 ##### [VSA-ADM-AUTH-PROTO] Account challenge/response
 
@@ -985,18 +1032,31 @@ The Admin API does not gate its methods on on-chain VPR authorization grants. No
 
 Instead, external-caller authorization is a **static allowlist**: the authenticated account MUST be listed in `ADMIN_API_CORPORATION_ALLOWED_ACCOUNTS`, which the Corporation controller populates with the Verana accounts entitled to administer this agent. When `ADMIN_API_AUTH_MODE` is `corporation`, this variable MUST be set and non-empty — it is the sole caller-authorization mechanism for external callers.
 
-The agent applies one rule to the whole Admin API. No method declares its own access level:
+The agent applies one rule to every method of the Admin API, except the four methods that [Unauthenticated methods](#unauthenticated-methods) names. No other method declares its own access level:
 
 | Request | Mode `internal` | Mode `corporation` |
 |---|---|---|
 | Trusted-network | Served. No authentication. | Served. No authentication. |
 | External | `403` | Served, after the agent authenticates the caller per [[VSA-ADM-AUTH-PROTO]](#vsa-adm-auth-proto-account-challengeresponse) and finds its account in `ADMIN_API_CORPORATION_ALLOWED_ACCOUNTS`. |
 
-The [authentication methods](#vsa-adm-auth-authentication) are the single exception: an external caller MUST reach them without a token, because it cannot hold a token before it completes the exchange. The agent serves them only when `ADMIN_API_AUTH_MODE` is `corporation`.
+##### Unauthenticated methods
+
+Four methods, and only these four, are outside the rule above. The agent MUST serve each of them without a bearer token, without an account signature, and without a check against `ADMIN_API_CORPORATION_ALLOWED_ACCOUNTS`:
+
+| Method | Served in mode `internal` | Reason |
+|---|---|---|
+| [`challenge`](#vsa-adm-auth-challenge-challenge) | No | A caller cannot hold a token before it completes the exchange that mints one. |
+| [`token`](#vsa-adm-auth-token-token) | No | Same. |
+| [`getLiveness`](#vsa-adm-ag-live-getliveness) | Yes | A probe MUST answer before the agent can authenticate anybody, and MUST NOT fail because the authentication path failed. |
+| [`getReadiness`](#vsa-adm-ag-ready-getreadiness) | Yes | Same. |
+
+In mode `internal`, the agent MUST answer an external request to an [authentication method](#vsa-adm-auth-authentication) with `403`. The agent MUST serve both [health methods](#vsa-adm-ag-agent) in both modes, to a trusted-network caller and to an external caller.
+
+Any peer that reaches the port reaches both health methods. The agent MUST NOT put a secret, a token, a Verana account address, a DID, or a peer identifier in a probe body.
 
 For a trusted-network request, the agent MUST NOT require a bearer token, an account signature, or an entry in `ADMIN_API_CORPORATION_ALLOWED_ACCOUNTS`, in either mode.
 
-The agent MUST reject an external request with HTTP `403` when `ADMIN_API_AUTH_MODE` is `internal`, or when the authenticated account is absent from `ADMIN_API_CORPORATION_ALLOWED_ACCOUNTS`. `401` means the caller is not authenticated and SHOULD retry after it obtains a token. `403` means the token is valid, but the account may not invoke the Admin API.
+The agent MUST reject an external request to any method other than the four above with HTTP `403` when `ADMIN_API_AUTH_MODE` is `internal`, or when the authenticated account is absent from `ADMIN_API_CORPORATION_ALLOWED_ACCOUNTS`. `401` means the caller is not authenticated and SHOULD retry after it obtains a token. `403` means the token is valid, but the account may not invoke the Admin API.
 
 ##### Agent authorization on-chain
 
@@ -1016,7 +1076,8 @@ The agent groups its methods in scopes. A scope is the first path segment after 
 
 | Scope | Path prefix | Content |
 |---|---|---|
-| *(unscoped)* | `/v2/auth`, `/v2/agent`, `/v2/health` | Authentication, agent information, and health. |
+| Auth | `/v2/auth` | Authentication. |
+| Agent | `/v2/agent` | Identity of the agent, and the liveness and readiness probes. |
 | DIDComm | `/v2/didcomm` | Wire-level DIDComm state: connections, messages, presentations, and credential exchanges. |
 | OpenID4VC | `/v2/openid4vc` | OpenID4VCI and OpenID4VP state: credential exchanges, presentations, and signing certificates. |
 | AnonCreds | `/v2/anoncreds` | AnonCreds artifacts: credential definitions, revocation registries, and credential revocation. |
@@ -1042,11 +1103,19 @@ Each such method returns:
 - `items` — array of records.
 - `nextCursor` — the cursor of the next page. The agent MUST set this field to `null` on the last page.
 
-These bounds and these names match [[TG-QRY-6]](../verana-graph/spec.md#graph-traversal-queries) of the Verana Graph specification, so that one client library paginates both APIs.
+These names and bounds match [[TG-QRY-6]](../verana-graph/spec.md#graph-traversal-queries) of the Verana Graph specification.
 
-A caller MUST treat a cursor as opaque. The agent MUST NOT use offset pagination: a record that arrives while a caller iterates would make the agent skip a record or return one twice.
+A collection that this specification bounds to a fixed number of records is **not** paginated: it returns a bare array, and the agent MUST ignore `limit` and `cursor` on it. [`listSigningCertificates`](#vsa-adm-oid-cs-list-listsigningcertificates) is the only such method — it returns one record per configured OpenID4VC capability, so at most two. Every other collection grows with use and MUST be paginated.
 
-A cursor is a **keyset** cursor: it names the last key of the delivered page, in the deterministic order of the collection. A cursor therefore never expires, and the agent MUST NOT store cursor state between calls. A record that another caller creates mid-iteration sorts after the current anchor and appears in a later page; a record that another caller deletes — the anchor included — stops appearing. The agent MUST reject a cursor with `INVALID_CURSOR` in these cases only: the cursor is malformed; the caller replayed it against a different method or a different filter set than the one that minted it; or an internal migration changed the cursor format.
+A caller MUST treat a cursor as opaque. The agent MUST NOT use offset pagination.
+
+A cursor is a **keyset** cursor: it names the last key of the delivered page, in the deterministic order of the collection. A cursor never expires, and the agent MUST NOT store cursor state between calls. A record that another caller creates mid-iteration appears in a later page. A record that another caller deletes, the anchor included, stops appearing.
+
+The agent MUST reject a cursor with `INVALID_CURSOR` in these cases only:
+
+- the cursor is malformed;
+- the caller replayed it against a different method, or a different filter set, than the one that minted it;
+- an internal migration changed the cursor format.
 
 #### Errors
 
@@ -1083,10 +1152,11 @@ The table lists every method of the Administration API. It is a non-normative ov
 
 | Scope | Method | HTTP | Path | Requirement |
 |---|---|---|---|---|
-| *(unscoped)* | `challenge` | `POST` | `/v2/auth/challenge` | [[VSA-ADM-AUTH-CHALLENGE]](#vsa-adm-auth-challenge-challenge) |
+| Auth | `challenge` | `POST` | `/v2/auth/challenge` | [[VSA-ADM-AUTH-CHALLENGE]](#vsa-adm-auth-challenge-challenge) |
 |  | `token` | `POST` | `/v2/auth/token` | [[VSA-ADM-AUTH-TOKEN]](#vsa-adm-auth-token-token) |
-|  | `getAgentInfo` | `GET` | `/v2/agent` | [[VSA-ADM-AG-INFO]](#vsa-adm-ag-info-getagentinfo) |
-|  | `getHealth` | `GET` | `/v2/health` | [[VSA-ADM-HE-GET]](#vsa-adm-he-get-gethealth) |
+| Agent | `getAgentInfo` | `GET` | `/v2/agent/info` | [[VSA-ADM-AG-INFO]](#vsa-adm-ag-info-getagentinfo) |
+|  | `getLiveness` | `GET` | `/v2/agent/health/live` | [[VSA-ADM-AG-LIVE]](#vsa-adm-ag-live-getliveness) |
+|  | `getReadiness` | `GET` | `/v2/agent/health/ready` | [[VSA-ADM-AG-READY]](#vsa-adm-ag-ready-getreadiness) |
 | DIDComm | `listConnections` | `GET` | `/v2/didcomm/connections` | [[VSA-ADM-DC-CN-LIST]](#vsa-adm-dc-cn-list-listconnections) |
 |  | `getConnection` | `GET` | `/v2/didcomm/connections/{connectionId}` | [[VSA-ADM-DC-CN-GET]](#vsa-adm-dc-cn-get-getconnection) |
 |  | `deleteConnection` | `DELETE` | `/v2/didcomm/connections/{connectionId}` | [[VSA-ADM-DC-CN-DELETE]](#vsa-adm-dc-cn-delete-deleteconnection) |
@@ -1171,39 +1241,61 @@ Verifies a signature over a previously issued challenge, and returns a bearer to
 
 ### [VSA-ADM-AG] Agent
 
-Methods that expose runtime information about this VS Agent instance.
+Methods that identify the agent and report its state to an orchestrator. Liveness and readiness answer different questions at different moments: liveness asks whether the process still runs, readiness asks whether the agent can serve traffic now.
+
+[`getLiveness`](#vsa-adm-ag-live-getliveness) and [`getReadiness`](#vsa-adm-ag-ready-getreadiness) are [unauthenticated](#unauthenticated-methods): the agent MUST serve them in either `ADMIN_API_AUTH_MODE`, to a trusted-network caller and to an external caller, with no bearer token and no allowlist check. Neither method MUST ever answer `401` or `403`. Their bodies MUST carry no sensitive detail.
 
 | Module | Method Name | HTTP Method | Relative REST API path | Requirements |
 | --- | --- | --- | --- | --- |
-| Agent | `getAgentInfo` | `GET` | `/v2/agent` | [see](#vsa-adm-ag-info-getagentinfo) |
+| Agent | `getAgentInfo` | `GET` | `/v2/agent/info` | [see](#vsa-adm-ag-info-getagentinfo) |
+| Agent | `getLiveness` | `GET` | `/v2/agent/health/live` | [see](#vsa-adm-ag-live-getliveness) |
+| Agent | `getReadiness` | `GET` | `/v2/agent/health/ready` | [see](#vsa-adm-ag-ready-getreadiness) |
 
 #### [VSA-ADM-AG-INFO] getAgentInfo
 
-Returns the core configuration and the runtime status of this VS Agent instance.
+Identifies this VS Agent instance.
 
 **Inputs**: none.
 
 **Output**:
 
-- `label` — name of the agent, for a human reader.
-- `endpoints` — list of the DIDComm service endpoints currently published for this agent.
-- `isInitialized` — `true` when the agent completed its setup.
-- `publicDid` — public DID assigned to the agent, when set, for example `did:web:agent.example.com`.
+- `did` — the DID of the agent, created on first startup per [[VSA-VTI-BOOT-DID]](#vsa-vti-boot-did-did-creation).
 - `version` — running application version.
 
-### [VSA-ADM-HE] Health
+#### [VSA-ADM-AG-LIVE] getLiveness
 
-| Module | Method Name | HTTP Method | Relative REST API path | Requirements |
-| --- | --- | --- | --- | --- |
-| Health | `getHealth` | `GET` | `/v2/health` | [see](#vsa-adm-he-get-gethealth) |
-
-#### [VSA-ADM-HE-GET] getHealth
-
-Liveness and readiness probe for the agent. Returns HTTP `200` when the agent is up.
+Reports whether the process of the agent still runs. An orchestrator restarts the container when this method stops answering.
 
 **Inputs**: none.
 
-**Output**: opaque body that indicates health. An implementation MAY include process-level diagnostics.
+**Output**: HTTP `200` with an opaque body. An implementation MAY include process-level diagnostics.
+
+**Requirements**:
+
+- The agent MUST answer `200` as soon as its HTTP listener accepts a connection, and before the [Bootstrap Sequence](#vsa-vti-boot-bootstrap-sequence) completes.
+- The agent MUST NOT fail this method because an external dependency failed: not the Verana RPC endpoint, not the indexer, not the peer of a flow.
+- The agent SHOULD fail this method only for a condition that a restart repairs, for example a deadlocked event loop or an unrecoverable storage fault.
+
+#### [VSA-ADM-AG-READY] getReadiness
+
+Reports whether the agent can serve traffic now. An orchestrator withholds traffic while this method reports not ready.
+
+**Inputs**: none.
+
+**Output**:
+
+- HTTP `200` with an opaque body when the agent is ready.
+- HTTP `503` with the error code `NOT_READY` when the agent is not ready. The `message` SHOULD name the pending bootstrap step.
+
+**Requirements**:
+
+- The agent MUST report not ready until every step of the [Bootstrap Sequence](#vsa-vti-boot-bootstrap-sequence) completes. Its DID MUST exist per [[VSA-VTI-BOOT-DID]](#vsa-vti-boot-did-did-creation), and it MUST have caught up with the indexer.
+- The agent MUST report not ready while it catches up with the indexer after a reconnection. Until catch-up completes, its view of the on-chain state is stale.
+- Readiness MUST NOT depend on the reachability of a peer agent.
+
+**Errors**:
+
+- `NOT_READY` (`503`) — the agent cannot serve traffic yet.
 
 ### DIDComm Scope
 
@@ -1216,7 +1308,7 @@ The agent has no method that creates a bare connection invitation, and no method
 Each method that produces an Out-of-Band invitation accepts these OPTIONAL parameters:
 
 - `useLegacyDid` — when the DID of the agent is `did:webvh`, force the invitation to advertise the legacy `did:web` form.
-- `didcommVersion` — `v1` or `v2`. `v2` requires that `AGENT_DIDCOMM_VERSIONS` includes `v2`. When the caller omits this field, the agent infers the version from its configuration.
+- `didcommVersion` — `v1` or `v2`. The agent implements both, per [[VSA-VTI-DIDCOMM-1]](#vsa-vti-didcomm-didcomm-support). When the caller omits this field, the agent MUST use `v2`.
 
 #### [VSA-ADM-DC-CN] Connections
 
@@ -1276,11 +1368,11 @@ Deletes a connection record. The agent MAY also close the related DIDComm sessio
 
 ##### [VSA-ADM-DC-MS-SEND] sendMessage
 
-Sends a DIDComm message on an established connection. The set of accepted `type` values depends on the plugins that `VS_AGENT_PLUGINS` enables (`text`, `credential-issuance`, `credential-revocation`, `identity-proof-request`, `contextual-menu-update`, `profile`, `terminate-connection`, and similar).
+Sends a DIDComm message on an established connection. The set of accepted `type` values is implementation-defined; an implementation commonly accepts `text`, `credential-issuance`, `credential-revocation`, `identity-proof-request`, `contextual-menu-update`, `profile`, and `terminate-connection`. The agent MUST reject a `type` that it does not implement with `INVALID_INPUT`.
 
 **Inputs** (request body):
 
-- `type` (REQUIRED) — message type from the enabled plugins of the agent.
+- `type` (REQUIRED) — one of the message types that the agent implements.
 - `connectionId` (REQUIRED) — target connection.
 - `id` (OPTIONAL) — UUID of the message. The agent generates one when the caller omits it.
 - `threadId` (OPTIONAL) — DIDComm thread identifier.
@@ -1396,7 +1488,7 @@ Retrieves one credential exchange record by identifier.
 
 ### OpenID4VC Scope
 
-The methods of this scope operate on the OpenID4VC state of the agent. The agent serves this scope only when `VS_AGENT_PLUGINS` includes `openid4vc` (see [[VSA-VTI-CFG-ENV-OID] OpenID4VC](#vsa-vti-cfg-env-oid-openid4vc)). When the plugin is disabled, the agent MUST respond to every path of this scope with HTTP `404`.
+The methods of this scope operate on the OpenID4VC state of the agent. The agent serves this scope only when the operator sets `OID4VC_CONFIG_FILE` (see [[VSA-VTI-CFG-ENV-OID] OpenID4VC](#vsa-vti-cfg-env-oid-openid4vc)). When that variable is unset, the agent MUST respond to every path of this scope with HTTP `404`.
 
 The scope mirrors the [DIDComm Scope](#didcomm-scope): a credential offer and a presentation request produce a URL that the caller renders as a QR code or sends as a link, and each one starts an exchange that the caller then reads by identifier. Two differences follow from the protocol:
 
@@ -1405,7 +1497,7 @@ The scope mirrors the [DIDComm Scope](#didcomm-scope): a credential offer and a 
 
 The agent MUST issue and MUST verify only the credential formats that [[VSA-VTI-CFG-ENV-OID] OpenID4VC](#vsa-vti-cfg-env-oid-openid4vc) declares. At present that is the SD-JWT VC format `dc+sd-jwt`.
 
-> The methods of this scope obey the single access rule of the [Administration API](#administration-api), like every other method (see [Authorization](#authorization)). A credential offer URL and an authorization request URL are bearer capabilities: the agent MUST NOT write either value to a log, and MUST NOT serve either value on a public endpoint.
+> A credential offer URL and an authorization request URL are bearer capabilities. The agent MUST NOT write either value to a log, and MUST NOT serve either value on a public endpoint.
 
 #### Public protocol endpoints
 
@@ -1573,7 +1665,7 @@ Deletes a verification session record.
 
 #### Trust decision
 
-The agent MUST accept a presentation only after each of the following steps succeeds, in this order. The agent MUST fail closed: a missing chain, an invalid chain, a SAN error, a key mismatch, an unresolvable DID, a resolver timeout, a malformed resolver response, a status other than `TRUSTED`, and an absent authorization each produce a verdict that is not `TRUSTED_AUTHORIZED`.
+The agent MUST accept a presentation only after each of the following steps succeeds, in this order. The agent MUST fail closed: any step that does not succeed produces a verdict other than `TRUSTED_AUTHORIZED`.
 
 1. The agent verifies the OpenID4VP response, the nonce, the audience, the holder binding, the SD-JWT disclosure, the signature, and the X.509 chain, against the configured trust anchors or against an exact development leaf fingerprint.
 2. The agent reads the issuer DID only from a URI SAN of the certificate, and only after step 1 succeeds.
@@ -1596,7 +1688,7 @@ Returns the public signing certificate of each configured capability, so that an
 
 **Inputs**: none.
 
-**Output**: an array of certificate records. Each record contains:
+**Output**: an array of certificate records — not a page, per the bounded-collection rule of [Pagination](#pagination). Each record contains:
 
 - `role` — `issuer` or `verifier`.
 - `development` — `true` when the agent generated the certificate itself, per [Development signing](#vsa-vti-cfg-env-oid-openid4vc).
