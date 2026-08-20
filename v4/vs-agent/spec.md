@@ -1175,7 +1175,7 @@ The table lists every method of the Administration API. It is a non-normative ov
 |  | `listPresentations` | `GET` | `/v2/openid4vc/presentations` | [[VSA-ADM-OID-PR-LIST]](#vsa-adm-oid-pr-list-listpresentations) |
 |  | `getPresentation` | `GET` | `/v2/openid4vc/presentations/{proofExchangeId}` | [[VSA-ADM-OID-PR-GET]](#vsa-adm-oid-pr-get-getpresentation) |
 |  | `deletePresentation` | `DELETE` | `/v2/openid4vc/presentations/{proofExchangeId}` | [[VSA-ADM-OID-PR-DELETE]](#vsa-adm-oid-pr-delete-deletepresentation) |
-|  | `listSigningCertificates` | `GET` | `/v2/openid4vc/certificates` | [[VSA-ADM-OID-CS-LIST]](#vsa-adm-oid-cs-list-listsigningcertificates) |
+|  | `listSigningCertificates` | `GET` | `/v2/openid4vc/signing-certificates` | [[VSA-ADM-OID-CS-LIST]](#vsa-adm-oid-cs-list-listsigningcertificates) |
 | AnonCreds | `listCredentialDefinitions` | `GET` | `/v2/anoncreds/credential-definitions` | [[VSA-ADM-AC-CD-LIST]](#vsa-adm-ac-cd-list-listcredentialdefinitions) |
 |  | `createCredentialDefinition` | `POST` | `/v2/anoncreds/credential-definitions` | [[VSA-ADM-AC-CD-CREATE]](#vsa-adm-ac-cd-create-createcredentialdefinition) |
 |  | `deleteCredentialDefinition` | `DELETE` | `/v2/anoncreds/credential-definitions/{credentialDefinitionId}` | [[VSA-ADM-AC-CD-DELETE]](#vsa-adm-ac-cd-delete-deletecredentialdefinition) |
@@ -1192,8 +1192,8 @@ The table lists every method of the Administration API. It is a non-normative ov
 |  | `revokeFlowCredential` | `POST` | `/v2/vt/flows/{participantSessionId}/revoke-credential` | [[VSA-ADM-VT-FL-REVOKE]](#vsa-adm-vt-fl-revoke-revokeflowcredential) |
 |  | `listServiceEndpoints` | `GET` | `/v2/vt/service-endpoints` | [[VSA-ADM-VT-SE-LIST]](#vsa-adm-vt-se-list-listserviceendpoints) |
 |  | `addServiceEndpoint` | `POST` | `/v2/vt/service-endpoints` | [[VSA-ADM-VT-SE-ADD]](#vsa-adm-vt-se-add-addserviceendpoint) |
-|  | `updateServiceEndpoint` | `PATCH` | `/v2/vt/service-endpoints/{id}` | [[VSA-ADM-VT-SE-UPDATE]](#vsa-adm-vt-se-update-updateserviceendpoint) |
-|  | `deleteServiceEndpoint` | `DELETE` | `/v2/vt/service-endpoints/{id}` | [[VSA-ADM-VT-SE-DELETE]](#vsa-adm-vt-se-delete-deleteserviceendpoint) |
+|  | `updateServiceEndpoint` | `PATCH` | `/v2/vt/service-endpoints/{serviceEndpointId}` | [[VSA-ADM-VT-SE-UPDATE]](#vsa-adm-vt-se-update-updateserviceendpoint) |
+|  | `deleteServiceEndpoint` | `DELETE` | `/v2/vt/service-endpoints/{serviceEndpointId}` | [[VSA-ADM-VT-SE-DELETE]](#vsa-adm-vt-se-delete-deleteserviceendpoint) |
 
 ### [VSA-ADM-AUTH] Authentication
 
@@ -1680,7 +1680,7 @@ The agent MUST NOT read `trust.allowedDidWebHosts` from a peer request or from a
 
 | Module | Method Name | HTTP Method | Relative REST API path | Requirements |
 | --- | --- | --- | --- | --- |
-| Signing Certificates | `listSigningCertificates` | `GET` | `/v2/openid4vc/certificates` | [see](#vsa-adm-oid-cs-list-listsigningcertificates) |
+| Signing Certificates | `listSigningCertificates` | `GET` | `/v2/openid4vc/signing-certificates` | [see](#vsa-adm-oid-cs-list-listsigningcertificates) |
 
 ##### [VSA-ADM-OID-CS-LIST] listSigningCertificates
 
@@ -1984,8 +1984,8 @@ The following methods manage the **additional consumable** service entries decla
 | --- | --- | --- | --- | --- |
 | Service Endpoint Management | `listServiceEndpoints` | `GET` | `/v2/vt/service-endpoints` | [see](#vsa-adm-vt-se-list-listserviceendpoints) |
 | Service Endpoint Management | `addServiceEndpoint` | `POST` | `/v2/vt/service-endpoints` | [see](#vsa-adm-vt-se-add-addserviceendpoint) |
-| Service Endpoint Management | `updateServiceEndpoint` | `PATCH` | `/v2/vt/service-endpoints/{id}` | [see](#vsa-adm-vt-se-update-updateserviceendpoint) |
-| Service Endpoint Management | `deleteServiceEndpoint` | `DELETE` | `/v2/vt/service-endpoints/{id}` | [see](#vsa-adm-vt-se-delete-deleteserviceendpoint) |
+| Service Endpoint Management | `updateServiceEndpoint` | `PATCH` | `/v2/vt/service-endpoints/{serviceEndpointId}` | [see](#vsa-adm-vt-se-update-updateserviceendpoint) |
+| Service Endpoint Management | `deleteServiceEndpoint` | `DELETE` | `/v2/vt/service-endpoints/{serviceEndpointId}` | [see](#vsa-adm-vt-se-delete-deleteserviceendpoint) |
 
 A caller MUST NOT use these methods to manipulate:
 
@@ -2050,7 +2050,7 @@ Updates the `type`, the `serviceEndpoint`, or both, of an existing consumable se
 
 **Path parameters**:
 
-- `id` (REQUIRED) — identifier of the entry to update. The caller MUST percent-encode the value in the URL path, for example `%23mcp` for `#mcp`.
+- `serviceEndpointId` (REQUIRED) — identifier of the entry to update. The caller MUST percent-encode the value in the URL path, for example `%23mcp` for `#mcp`.
 
 **Inputs** (request body):
 
@@ -2068,9 +2068,9 @@ The caller MUST supply `type`, `serviceEndpoint`, or both.
 
 **Errors**:
 
-- `DIDCOMM_ENTRY` (`409`) — `id` refers to a `DIDCommMessaging` entry, or the requested change produces one.
-- `LINKED_VP_ENTRY` (`409`) — `id` refers to a `LinkedVerifiablePresentation` entry, or the requested change produces one.
-- `ADMIN_API_ENTRY` (`409`) — `id` refers to a `VsAgentAdminAPI` entry, or the requested change produces one.
+- `DIDCOMM_ENTRY` (`409`) — `serviceEndpointId` refers to a `DIDCommMessaging` entry, or the requested change produces one.
+- `LINKED_VP_ENTRY` (`409`) — `serviceEndpointId` refers to a `LinkedVerifiablePresentation` entry, or the requested change produces one.
+- `ADMIN_API_ENTRY` (`409`) — `serviceEndpointId` refers to a `VsAgentAdminAPI` entry, or the requested change produces one.
 - `INVALID_SERVICE_ENDPOINT` (`400`) — `serviceEndpoint` does not conform to [DID-CORE].
 
 ##### [VSA-ADM-VT-SE-DELETE] deleteServiceEndpoint
@@ -2079,7 +2079,7 @@ Removes a consumable service entry from the DID Document of the agent.
 
 **Path parameters**:
 
-- `id` (REQUIRED) — identifier of the entry to remove: a DID-relative fragment such as `#mcp`, or a full DID URL. The caller MUST percent-encode the value in the URL path, for example `%23mcp` for `#mcp`.
+- `serviceEndpointId` (REQUIRED) — identifier of the entry to remove: a DID-relative fragment such as `#mcp`, or a full DID URL. The caller MUST percent-encode the value in the URL path, for example `%23mcp` for `#mcp`.
 
 **Inputs**: none.
 
@@ -2087,10 +2087,10 @@ Removes a consumable service entry from the DID Document of the agent.
 
 **Requirements**:
 
-- The agent MUST refuse the request when `id` refers to a `DIDCommMessaging`, a `LinkedVerifiablePresentation`, or a `VsAgentAdminAPI` entry (the agent manages such an entry automatically — see the preamble).
+- The agent MUST refuse the request when `serviceEndpointId` refers to a `DIDCommMessaging`, a `LinkedVerifiablePresentation`, or a `VsAgentAdminAPI` entry (the agent manages such an entry automatically — see the preamble).
 
 **Errors**:
 
-- `DIDCOMM_ENTRY` (`409`) — `id` refers to a `DIDCommMessaging` entry.
-- `LINKED_VP_ENTRY` (`409`) — `id` refers to a `LinkedVerifiablePresentation` entry.
-- `ADMIN_API_ENTRY` (`409`) — `id` refers to a `VsAgentAdminAPI` entry.
+- `DIDCOMM_ENTRY` (`409`) — `serviceEndpointId` refers to a `DIDCommMessaging` entry.
+- `LINKED_VP_ENTRY` (`409`) — `serviceEndpointId` refers to a `LinkedVerifiablePresentation` entry.
+- `ADMIN_API_ENTRY` (`409`) — `serviceEndpointId` refers to a `VsAgentAdminAPI` entry.
