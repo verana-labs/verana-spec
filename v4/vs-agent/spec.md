@@ -211,7 +211,7 @@ These variables carry the claims that the agent proposes for its own ECS credent
 The agent derives the remaining claims of each schema, and reads no variable for them:
 
 - `id`: the DID of the agent.
-- `logoDigestSri`, `avatarDigestSri`, `termsAndConditionsDigestSri`, and `privacyPolicyDigestSri`: the agent fetches the resource at the paired URI claim and computes the digest of the response. When the fetch fails, the agent MUST log a descriptive error and MUST omit both claims.
+- `logoDigestSri`, `avatarDigestSri`, `termsAndConditionsDigestSri`, and `privacyPolicyDigestSri`: the agent fetches the resource at the paired URI claim and computes the digest of the response. The agent SHOULD retry a failed fetch, and SHOULD increase the delay between the attempts. When the fetch continues to fail, the agent MUST log a descriptive error that names the variable and the URI, and MUST stop the flow.
 
 **ECS-Organization** ([VT-ECS-ORG-CRED-W3C]). The agent reads these variables in [ECS Standalone Mode](#ecs-standalone-mode) only.
 
@@ -534,7 +534,7 @@ To be a Verifiable Service, an agent MUST obtain `Participant` entries (HOLDER a
 
 The agent enters each ECS flow at step 2 of the [New Onboarding Process](#vsa-vti-flow-op-new-new-onboarding-process), on the `StartParticipantOP` event (see [[VSA-VTI-NOTIF-PP] Participant Notifications](#vsa-vti-notif-pp-participant-notifications)). That transaction ([[MOD-PP-MSG-1]](https://verana-labs.github.io/verifiable-trust-vpr-spec/#mod-pp-msg-1-start-participant-op)) selects the Ecosystem, the schema, the role, and the validator.
 
-The agent MUST verify that the Ecosystem that owns the schema is an entry of `TRUSTED_ECS_ECOSYSTEM_DIDS` ([[WL-ECS]](https://verana-labs.github.io/verifiable-trust-spec/#wl-ecs-ecosystem-whitelists-and-vpr-scheme-resolution)). When the check fails, the agent MUST log a descriptive error and stop the flow.
+When the operator sets `TRUSTED_ECS_ECOSYSTEM_DIDS`, the agent MUST verify that the Ecosystem that owns the schema is an entry of that list ([[WL-ECS]](https://verana-labs.github.io/verifiable-trust-spec/#wl-ecs-ecosystem-whitelists-and-vpr-scheme-resolution)). When the check fails, the agent MUST log a descriptive error and stop the flow.
 
 The agent composes the claims of each ECS credential from the [[VSA-VTI-CFG-ENV-ECS] ECS Credential Claims](#vsa-vti-cfg-env-ecs-ecs-credential-claims) variables of the schema of the flow:
 
