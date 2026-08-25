@@ -178,7 +178,7 @@ See [comparison between VS-REQ-3 and VS-REQ-4](https://verana-labs.github.io/ver
 | Variable | Required | Description |
 |---|---|---|
 | `AGENT_MODE` | OPTIONAL | One of `standalone` or `delegated`. Default: `standalone`. See [ECS Standalone Mode](#ecs-standalone-mode). |
-| `AGENT_DELEGATED_PARENT_VS_DID` | CONDITIONAL | DID of the parent Verifiable Service to contact for obtaining a Service credential. REQUIRED when `AGENT_MODE` = `delegated`. |
+| `AGENT_DELEGATED_PARENT_VS_DID` | CONDITIONAL | DID of the parent Verifiable Service that issues the Service credential of this agent. The agent does not contact this DID by itself; it verifies that the validator of the onboarding process is this DID. REQUIRED when `AGENT_MODE` = `delegated`. See [ECS Delegated Mode](#ecs-delegated-mode). |
 | `TRUSTED_ECS_ECOSYSTEM_DIDS` | CONDITIONAL | Comma-separated list of DIDs of the ECS Ecosystems the agent trusts for essential credential schemas, as required by [[WL-ECS]](https://verana-labs.github.io/verifiable-trust-spec/#wl-ecs-ecosystem-whitelists-and-vpr-scheme-resolution). REQUIRED when `AGENT_MODE` = `standalone`. |
 
 ##### [VSA-VTI-CFG-ENV-RT] Agent Runtime
@@ -462,25 +462,39 @@ Onboarding modes are [defined here](https://verana-labs.github.io/verifiable-tru
 
 To be a Verifiable Service, an agent MUST obtain `Participant` entries (HOLDER and/or ISSUER) and the corresponding ECS credentials from a trusted ECS Ecosystem. The vs-agent implements two modes, as specified in the Verifiable Trust spec. They are configured via the `AGENT_MODE` env variable.
 
-> For ECS-Organization, ECS-Persona, and ECS-Service credential schemas, `holder_onboarding_mode` is always set to `ISSUER_ONBOARDING_PROCESS`. See [[VT-ECS-JSON-SCHEMA-VPR-CONFIG]](https://verana-labs.github.io/verifiable-trust-spec/#vt-ecs-json-schema-vpr-config-essential-schema-vpr-configuration).
+The agent does not start an ECS acquisition. The Corporation operator submits `StartParticipantOP` ([[MOD-PP-MSG-1]](https://verana-labs.github.io/verifiable-trust-vpr-spec/#mod-pp-msg-1-start-participant-op)) on-chain, and that transaction selects the Ecosystem, the schema, the role, and the validator. The agent enters each flow at step 2 of the [New Onboarding Process](#vsa-vti-flow-op-new-new-onboarding-process), on the `StartParticipantOP` event (see [[VSA-VTI-NOTIF-PP] Participant Notifications](#vsa-vti-notif-pp-participant-notifications)).
 
-##### ECS Standalone Mode
+Before it progresses such a flow, the agent MUST verify that the Ecosystem that owns the schema is an entry of `TRUSTED_ECS_ECOSYSTEM_DIDS` ([[WL-ECS]](https://verana-labs.github.io/verifiable-trust-spec/#wl-ecs-ecosystem-whitelists-and-vpr-scheme-resolution)). The agent MUST log a descriptive error and MUST NOT progress the flow when that check fails.
 
-In standalone mode:
+The agent MUST NOT fail to start because it holds no ECS credential. The [Bootstrap Sequence](#vsa-vti-boot-bootstrap-sequence) does not include the ECS acquisition, and [`getReadiness`](#vsa-adm-ag-ready-getreadiness) does not report on it. An agent that holds no Service credential is not a Verifiable Service, but it runs, it serves its Administration API, and it processes indexer events.
 
-1. Applicant resolves the trusted ECS Ecosystem: the first entry of `TRUSTED_ECS_ECOSYSTEM_DIDS` (see [[WL-ECS]](https://verana-labs.github.io/verifiable-trust-spec/#wl-ecs-ecosystem-whitelists-and-vpr-scheme-resolution)) that corresponds to an active Ecosystem publishing the required ECS credential schemas.
-2. Applicant starts a [new onboarding process flow](#vsa-vti-flow-op-new-new-onboarding-process) to obtain an **ECS-Organization** or **ECS-Persona** HOLDER `Participant` and its corresponding credential via DIDComm from an authorized ISSUER registered under the trusted ECS Ecosystem.
-3. Applicant starts a [new onboarding process flow](#vsa-vti-flow-op-new-new-onboarding-process) to obtain an ISSUER `Participant` for the **Service** credential schema from the same trusted ECS Ecosystem.
+> [[VT-ECS-JSON-SCHEMA-VPR-CONFIG]](https://verana-labs.github.io/verifiable-trust-spec/#vt-ecs-json-schema-vpr-config-essential-schema-vpr-configuration) requires `holder_onboarding_mode` = `ISSUER_ONBOARDING_PROCESS` for the ECS-Organization, ECS-Persona, and ECS-Service credential schemas. The agent obtains an ECS credential through an onboarding process only. The agent gives no automatic support to an ECS schema that carries a different `holder_onboarding_mode`.
 
 > As defined in [[VS-CONN-VS]](https://verana-labs.github.io/verifiable-trust-spec/#vs-conn-vs-requirements-for-a-vs-to-accept-a-connection-from-another-service), a validator agent CAN accept connections from a not-yet-verifiable agent if and only if the purpose of the connection is the issuance of [VT-ECS-ORG-CRED-W3C], [VT-ECS-PERSONA-CRED-W3C], or [VT-ECS-SERVICE-CRED-W3C] credentials.
 
+##### ECS Standalone Mode
+
+The agent holds an ECS-Organization or an ECS-Persona credential, and issues its own Service credential ([[VS-REQ-3]](https://verana-labs.github.io/verifiable-trust-spec/#vs-req-verifiable-service-basic-requirements-and-linked-vps)). The agent:
+
+1. Obtains the **ECS-Organization** or **ECS-Persona** credential and its HOLDER `Participant`, as the applicant of a [New Onboarding Process](#vsa-vti-flow-op-new-new-onboarding-process) with an authorized ISSUER of that schema.
+2. Obtains an ISSUER `Participant` for the **ECS-Service** schema, as the applicant of a [New Onboarding Process](#vsa-vti-flow-op-new-new-onboarding-process).
+3. Issues its own **Service credential** under the ISSUER `Participant` of step 2. The agent signs the credential and computes its `digestJCS`, then anchors that digest on-chain with `CreateOrUpdateParticipantSession`, as in step 7 of the [New Onboarding Process](#vsa-vti-flow-op-new-new-onboarding-process). The agent then publishes the credential as a `LinkedVerifiablePresentation` in its DID Document ([[VT-CRED-W3C-LINKED-VP]](https://verana-labs.github.io/verifiable-trust-spec/#vt-cred-w3c-linked-vp-w3c-vtc-linked-vp)).
+
+Step 3 follows no event. The agent runs it when steps 1 and 2 are complete.
+
 ##### ECS Delegated Mode
 
-In delegated mode, the agent contacts the parent VS specified by `AGENT_DELEGATED_PARENT_VS_DID` to obtain its Service credential:
+The agent holds a Service credential that the parent VS issues, and holds no ECS-Organization credential and no ECS-Persona credential ([[VS-REQ-4]](https://verana-labs.github.io/verifiable-trust-spec/#vs-req-verifiable-service-basic-requirements-and-linked-vps)). The parent VS holds that credential, and it anchors the accountability of the agent.
 
-1. Applicant starts a [new onboarding process flow](#vsa-vti-flow-op-new-new-onboarding-process) to obtain a HOLDER `Participant` and its corresponding **Service credential** from the parent VS via DIDComm.
+The agent obtains the **Service credential** and its HOLDER `Participant`, as the applicant of a [New Onboarding Process](#vsa-vti-flow-op-new-new-onboarding-process) with the parent VS as the validator.
 
-The parent VS (`AGENT_DELEGATED_PARENT_VS_DID`) MUST already hold an ISSUER `Participant` for the Service schema and MUST be a Verifiable Service. If the agent cannot reach the parent VS, or the parent VS rejects the request, or the parent agent IS NOT verifiable, the agent MUST fail with a descriptive error.
+Before it progresses the flow, the agent MUST verify that:
+
+- the validator of the `Participant` entry is `AGENT_DELEGATED_PARENT_VS_DID`;
+- the parent VS is a Verifiable Service ([[VS-REQ]](https://verana-labs.github.io/verifiable-trust-spec/#vs-req-verifiable-service-basic-requirements-and-linked-vps));
+- the parent VS holds an active ISSUER `Participant` for the schema.
+
+The agent MUST log a descriptive error and MUST NOT progress the flow when one of these checks fails.
 
 #### Logic for Other Participants and Credentials
 
