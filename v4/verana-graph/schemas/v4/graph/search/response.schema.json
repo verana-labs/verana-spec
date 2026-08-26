@@ -146,28 +146,62 @@
         }
       }
     },
+    "DidIdentityBlock": {
+      "type": "object",
+      "description": "Display identity of a DID-bound entity, copied from the `Did` search document of the entity's current `did` per [TG-FCT-6a]. Every field is present; `null` when the `Did` document is not materialised or the referenced credential is absent.",
+      "required": [
+        "didTrusted",
+        "serviceName", "serviceLogoUri", "serviceLogoDigestSri",
+        "operatorName", "operatorLogoUri", "operatorLogoDigestSri", "operatorCountryCode"
+      ],
+      "properties": {
+        "didTrusted": { "type": ["boolean", "null"], "description": "`Did.trusted` of the entity's current `did`; `null` while that `Did` document is not materialised. Trust-expiry is not carried: per [TG-FCT-2], hits whose controlling DID is trust-expired are hidden outright." },
+        "serviceName": { "type": ["string", "null"] },
+        "serviceLogoUri": { "type": ["string", "null"], "format": "uri" },
+        "serviceLogoDigestSri": { "anyOf": [{ "$ref": "#/$defs/DigestSri" }, { "type": "null" }] },
+        "operatorName": { "type": ["string", "null"] },
+        "operatorLogoUri": { "type": ["string", "null"], "format": "uri" },
+        "operatorLogoDigestSri": { "anyOf": [{ "$ref": "#/$defs/DigestSri" }, { "type": "null" }] },
+        "operatorCountryCode": { "type": ["string", "null"], "pattern": "^[A-Z]{2}$" }
+      }
+    },
     "EcosystemSnippet": {
       "type": "object",
       "additionalProperties": true,
-      "required": ["id", "did", "archived", "lastObservedAtTime"],
+      "allOf": [{ "$ref": "#/$defs/DidIdentityBlock" }],
+      "required": [
+        "id", "did", "archived", "lastObservedAtTime", "corporationId",
+        "participants", "issuedCredentials", "verifiedCredentials"
+      ],
+      "description": "Minimum normative shape for an `Ecosystem` hit card per [TG-FCT-6a]: entity fields, counters, and the DID identity block of the Ecosystem's current `did`.",
       "properties": {
         "id": { "type": "integer", "minimum": 0 },
         "did": { "$ref": "#/$defs/DidString", "description": "The Ecosystem's DID (mirrors VPR `Ecosystem.did`; MAY be shared across Ecosystem entries — the key remains `id`)." },
         "archived": { "type": "boolean" },
         "corporationId": { "type": "integer", "minimum": 0, "description": "Stable `uint64` id of the controlling Corporation (mirrors VPR `Ecosystem.corporation_id`)." },
+        "participants": { "type": "object", "additionalProperties": { "type": "integer", "minimum": 0 }, "description": "Per-role active-participant counts; `{}` when none." },
+        "issuedCredentials": { "type": "integer", "minimum": 0 },
+        "verifiedCredentials": { "type": "integer", "minimum": 0 },
         "lastObservedAtTime": { "$ref": "#/$defs/Iso8601DateTime" }
       }
     },
     "CorporationSnippet": {
       "type": "object",
       "additionalProperties": true,
-      "required": ["id", "did", "lastObservedAtTime"],
+      "allOf": [{ "$ref": "#/$defs/DidIdentityBlock" }],
+      "required": [
+        "id", "did", "lastObservedAtTime", "policyAddress",
+        "deposit", "slashedEvents", "lastSlashedAtTime", "slashedValue"
+      ],
+      "description": "Minimum normative shape for a `Corporation` hit card per [TG-FCT-6a]: entity fields, trust signals, and the DID identity block of the Corporation's current `did`.",
       "properties": {
         "id": { "type": "integer", "minimum": 0, "description": "Stable `uint64` primary key of the Corporation (mirrors VPR `Corporation.id`)." },
         "did": { "$ref": "#/$defs/DidString", "description": "The Corporation's own declared DID (mirrors VPR `Corporation.did`)." },
         "policyAddress": { "$ref": "#/$defs/Bech32Address", "description": "On-chain account that signs on behalf of this Corporation (mirrors VPR `Corporation.policy_address`)." },
         "deposit": { "type": "string" },
-        "slashedEvents": { "type": "integer", "minimum": 0 },
+        "slashedEvents": { "type": "integer", "minimum": 0, "description": "`0` when never slashed." },
+        "lastSlashedAtTime": { "anyOf": [{ "$ref": "#/$defs/Iso8601DateTime" }, { "type": "null" }], "description": "`null` when never slashed." },
+        "slashedValue": { "type": ["string", "null"], "description": "Coin string; `null` when never slashed." },
         "lastObservedAtTime": { "$ref": "#/$defs/Iso8601DateTime" }
       }
     },
