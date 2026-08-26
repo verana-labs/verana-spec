@@ -716,6 +716,8 @@ Worked example: a `Did`-surface query for *"plumber issuers"* (free-text *"plumb
 | `Did.pattern`                                        | eq, in                 | `A` \| `B`; `null` (no `ServiceCredential`) never matches                                                                                                                                                                                                                  |
 | `Did.serviceTypes`                                   | contains, containsAny  | DID Document `service[].type` set                                                                                                                                                                                            |
 | `Did.corporationId`                                  | eq                     | "all VSs of this Corp"                                                                                                                                                                                                       |
+| `Did.isCorporation`                                  | eq                     | the DID is the declared `did` of a `Corporation` entry ("show corporations only")                                                                                                                                             |
+| `Did.ecosystemIds`                                   | contains, containsAny  | ids of the Ecosystems this DID controls; combined with a non-empty check ("show ecosystem controllers only")                                                                                                                    |
 | `Did.operatorKind`                                   | eq, in                 | derived facet ∈ `{ Organization, Persona }`, materialised at ingestion from the operative ORG-or-PERSONA credential the VS's trust chain rests on (Pattern A: self; Pattern B: issuer). Lets queries say "personal" / "corporate" structurally |
 | `EcsCredential.ServiceCredential.type`               | eq, in                 | high-value facet — the VS-level service category                                                                                                                                                                              |
 | `EcsCredential.ServiceCredential.minimumAgeRequired` | range                  | "kids ≤ 8" → `<= 7`                                                                                                                                                                                                          |
@@ -836,8 +838,10 @@ For the **`Did` surface**, the snippet MUST additionally carry the result-card f
 | `corporationLastSlashedAtTime` | owner `Corporation.lastSlashedAtTime` | never slashed, or owner `Corporation` record not yet materialised |
 | `corporationSlashedValue` | owner `Corporation.slashedValue` | never slashed, or owner `Corporation` record not yet materialised |
 | `serviceEndpoints` | the DID's `ServiceEndpoint` records (the non-`LinkedVerifiablePresentation` `services[]` entries of the DID Document), each projected as `{ id, type, serviceEndpoint }` with `serviceEndpoint` preserved verbatim per [DID-CORE] | never — empty array (`[]`) when the DID Document declares no such entry |
+| `isCorporation` | `true` iff the DID is the current `did` of a `Corporation` entry | never |
+| `ecosystemIds` | ids of the `Ecosystem` entries whose current `did` is this DID (the DID is an ecosystem controller iff non-empty) | never — empty array (`[]`) when none |
 
-The `service*`, `operator*`, and `serviceEndpoints` values are denormalised onto the `Did` search document at ingestion time from data the graph already persists (the `EcsCredential` records, the pattern / operator derivation of [[TG-FCT-3]], and the DID's own `ServiceEndpoint` records); no additional fetch is introduced. The `corporation*` values are sourced from the owner `Corporation` record through the `Did.corporationId` anchor: implementations MAY denormalise them onto the `Did` search document or join them at serve time. A denormalising implementation MUST refresh the corporation-sourced fields of every `Did` document of a Corporation when that Corporation's change envelope reports a `corporation`-channel change (deposit tick — the graph subscribes with `includeDepositChanges: true` per [[TG-INGEST-1]] — or slash event) or a `trust`-channel `corporationId` rotation.
+The `service*`, `operator*`, and `serviceEndpoints` values are denormalised onto the `Did` search document at ingestion time from data the graph already persists (the `EcsCredential` records, the pattern / operator derivation of [[TG-FCT-3]], and the DID's own `ServiceEndpoint` records); no additional fetch is introduced. The `corporation*` values are sourced from the owner `Corporation` record through the `Did.corporationId` anchor: implementations MAY denormalise them onto the `Did` search document or join them at serve time. A denormalising implementation MUST refresh the corporation-sourced fields of every `Did` document of a Corporation when that Corporation's change envelope reports a `corporation`-channel change (deposit tick — the graph subscribes with `includeDepositChanges: true` per [[TG-INGEST-1]] — or slash event) or a `trust`-channel `corporationId` rotation. The `isCorporation` and `ecosystemIds` entity bindings refresh on the DID's `corporation` and `ecosystems` channel envelopes (creation, archival, and `did` rotation in either direction). These two fields let a `Did`-surface result card badge the DID as a Corporation or Ecosystem controller without a second query.
 
 For the **`Ecosystem` surface**, the snippet MUST additionally carry the entity fields and the **DID identity block** below, so that an ecosystem list renders with a display identity without per-hit resolution. An Ecosystem's or Corporation's human-readable identity is the identity of its current `did`: the identity-block values are copied from the `Did` search document of that DID (the same [TG-FCT-6a] fields defined for the `Did` surface above) and are `null` — present, never omitted — when that `Did` document is not (yet) materialised or the referenced credential is absent.
 
@@ -957,7 +961,9 @@ The normative JSON Schema for the faceted-search response is published alongside
             "type":            "MCP",
             "serviceEndpoint": "https://fabrice.agents.example/mcp"
           }
-        ]
+        ],
+        "isCorporation":    false,
+        "ecosystemIds":     []
       },
       "highlights": [
         "PersonaCredential.name: <em>fabrice</em>"
@@ -994,7 +1000,9 @@ The normative JSON Schema for the faceted-search response is published alongside
             "type":            "did-communication",
             "serviceEndpoint": "wss://fabrice-bot.agents.example/didcomm"
           }
-        ]
+        ],
+        "isCorporation":    false,
+        "ecosystemIds":     []
       },
       "highlights": [
         "PersonaCredential.name: <em>fabrice</em>-bot"

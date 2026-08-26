@@ -100,7 +100,7 @@
         "operatorName", "operatorLogoUri", "operatorLogoDigestSri", "operatorCountryCode",
         "corporationId", "corporationDeposit", "corporationSlashedEvents",
         "corporationLastSlashedAtTime", "corporationSlashedValue",
-        "serviceEndpoints"
+        "serviceEndpoints", "isCorporation", "ecosystemIds"
       ],
       "description": "Minimum normative shape for a `Did` hit card per [TG-FCT-6a]: identity, trust flags, the result-card fields (service name / type / description / logo plus operator name / logo / country), the owner Corporation's trust signals (deposit and slash history), and the declared service endpoints, so a search response alone can render a service list. Nullable fields MUST be present with value `null` when unavailable, not omitted. Implementations MAY surface additional fields.",
       "properties": {
@@ -143,7 +143,9 @@
               }
             }
           }
-        }
+        },
+        "isCorporation": { "type": "boolean", "description": "`true` iff the DID is the current `did` of a `Corporation` entry. Powers the Corporation badge and the `Did.isCorporation` filter." },
+        "ecosystemIds": { "type": "array", "items": { "type": "integer", "minimum": 0 }, "description": "Ids of the `Ecosystem` entries whose current `did` is this DID; `[]` when none. Non-empty iff the DID is an ecosystem controller. Powers the Ecosystem badge and the `Did.ecosystemIds` filter." }
       }
     },
     "DidIdentityBlock": {
