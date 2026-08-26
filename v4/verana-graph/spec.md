@@ -1,6 +1,6 @@
 # Verana Graph spec
 
-**Latest Draft:** spec v4-draft6
+**Latest Draft:** spec v4-draft7
 
 ## Abstract
 
@@ -810,7 +810,28 @@ Worked example: a `Did`-surface query for *"plumber issuers"* (free-text *"plumb
 }
 ```
 
-The `facets` object MUST contain aggregations for at least every `eq` / `in` filter field declared on the queried surface in [[TG-FCT-3]]. Each `hit.snippet` MUST carry the entity's primary key, `lastObservedAtTime`, and the visibility flags applicable to the surface (`isTrustExpired` for `Did`, `archived` for `Ecosystem` / `CredentialSchema`).
+The `facets` object MUST contain aggregations for at least every `eq` / `in` filter field declared on the queried surface in [[TG-FCT-3]]. The minimum content of each `hit.snippet` is fixed by [[TG-FCT-6a]].
+
+[TG-FCT-6a] **Minimum snippet fields.** Every `hit.snippet` MUST carry the entity's primary key, `lastObservedAtTime`, and the visibility flags applicable to the surface (`isTrustExpired` for `Did`, `archived` for `Ecosystem` / `CredentialSchema`). In addition, **every surface whose entity is DID-bound MUST carry that DID** in the snippet: `did` on `Did`, `Corporation`, and `Ecosystem` hits; `didId` (the owning DID) on `ServiceEndpoint` hits.
+
+For the **`Did` surface**, the snippet MUST additionally carry the result-card fields below, so that a search response alone can render a service list — name, both logos, operator identity — without per-hit traversal or resolve calls. Every field is nullable under the stated condition; a field with no value MUST be present with the value `null`, not omitted.
+
+| Field | Source | Null when |
+| --- | --- | --- |
+| `trusted` | `Did.trusted` | never |
+| `pattern` | `Did.pattern` | no `ServiceCredential` |
+| `operatorKind` | derived facet (`Organization` \| `Persona`, per [[TG-FCT-3]]) | trust chain incomplete |
+| `serviceName` | `ServiceCredential.name` | no `ServiceCredential` |
+| `serviceType` | `ServiceCredential.type` | no `ServiceCredential` |
+| `serviceDescription` | `ServiceCredential.description` — implementations MAY truncate for card use; a truncation MUST end at a character boundary and be flagged with a trailing `…` | no `ServiceCredential` |
+| `serviceLogoUri` | `ServiceCredential.logoUri` | no `ServiceCredential` |
+| `serviceLogoDigestSri` | `ServiceCredential.logoDigestSri` | no `ServiceCredential` |
+| `operatorName` | operative `OrganizationCredential.name` or `PersonaCredential.name` (Pattern A: self; Pattern B: issuer) | trust chain incomplete |
+| `operatorLogoUri` | operative `OrganizationCredential.logoUri` or `PersonaCredential.avatarUri` | trust chain incomplete, or Persona without avatar |
+| `operatorLogoDigestSri` | paired `OrganizationCredential.logoDigestSri` or `PersonaCredential.avatarDigestSri` | same as `operatorLogoUri` |
+| `operatorCountryCode` | operative `OrganizationCredential.countryCode` or `PersonaCredential.controllerCountryCode` | trust chain incomplete |
+
+These values are denormalised onto the `Did` search document at ingestion time from data the graph already persists (the `EcsCredential` records and the pattern / operator derivation of [[TG-FCT-3]]); no additional fetch is introduced. Implementations MAY add further snippet fields on any surface.
 
 [TG-FCT-7] **Pagination.** Implementations MUST use **cursor-based** pagination — the `cursor` returned in one response is opaque to the client and is the only way to fetch subsequent pages. Offset-based pagination (`?offset=...&limit=...`) MUST NOT be used because it is unstable under the live ingestion stream: records appear and disappear from the result set as upstream block events flow in, and offset-based pagination silently skips or duplicates rows under concurrent writes. A cursor MAY become invalid (e.g. its anchor record left the result set); responses to invalid cursors MUST return the `INVALID_CURSOR` error of [[TG-ERR-1]](#error-responses) rather than silently re-anchoring.
 
@@ -830,7 +851,7 @@ The normative JSON Schema for the faceted-search request is published alongside 
 
 #### Search response schema
 
-The normative JSON Schema for the faceted-search response is published alongside this document at [`schemas/v4/graph/search/response.schema.json`](./schemas/v4/graph/search/response.schema.json). It defines the result envelope fixed by [[TG-FCT-6]] (`query`, `totalCount`, `hits[]`, `facets`, `cursor`); each `hit.snippet` MUST carry the entity's primary key, `lastObservedAtTime`, and the visibility flags applicable to the surface.
+The normative JSON Schema for the faceted-search response is published alongside this document at [`schemas/v4/graph/search/response.schema.json`](./schemas/v4/graph/search/response.schema.json). It defines the result envelope fixed by [[TG-FCT-6]] (`query`, `totalCount`, `hits[]`, `facets`, `cursor`); each `hit.snippet` MUST carry the per-surface minimum of [[TG-FCT-6a]] — primary key, `lastObservedAtTime`, visibility flags, the DID binding on DID-bound surfaces, and, on the `Did` surface, the result-card fields (service name, type, description, both logos, and operator identity).
 
 #### Example search request
 
@@ -866,13 +887,21 @@ The normative JSON Schema for the faceted-search response is published alongside
       "id":    "did:webvh:Qm...:fabrice.agents.example",
       "score": 18.42,
       "snippet": {
-        "did":                "did:webvh:Qm...:fabrice.agents.example",
-        "lastObservedAtTime": "2026-05-17T20:51:07.000Z",
-        "isTrustExpired":     false,
-        "pattern":            "B",
-        "operatorKind":       "Persona",
-        "serviceType":        "AIAgent",
-        "personaName":        "@fabrice"
+        "did":                   "did:webvh:Qm...:fabrice.agents.example",
+        "lastObservedAtTime":    "2026-05-17T20:51:07.000Z",
+        "isTrustExpired":        false,
+        "trusted":               true,
+        "pattern":               "B",
+        "operatorKind":          "Persona",
+        "serviceName":           "Fabrice Agent",
+        "serviceType":           "AIAgent",
+        "serviceDescription":    "Personal AI agent of @fabrice.",
+        "serviceLogoUri":        "https://fabrice.agents.example/logo.png",
+        "serviceLogoDigestSri":  "sha384-…",
+        "operatorName":          "@fabrice",
+        "operatorLogoUri":       "https://fabrice.agents.example/avatar.png",
+        "operatorLogoDigestSri": "sha384-…",
+        "operatorCountryCode":   "CO"
       },
       "highlights": [
         "PersonaCredential.name: <em>fabrice</em>"
@@ -883,13 +912,21 @@ The normative JSON Schema for the faceted-search response is published alongside
       "id":    "did:webvh:Qm...:fabrice-bot.agents.example",
       "score": 11.07,
       "snippet": {
-        "did":                "did:webvh:Qm...:fabrice-bot.agents.example",
-        "lastObservedAtTime": "2026-05-17T20:42:13.000Z",
-        "isTrustExpired":     false,
-        "pattern":            "B",
-        "operatorKind":       "Persona",
-        "serviceType":        "AIAgent",
-        "personaName":        "@fabrice-bot"
+        "did":                   "did:webvh:Qm...:fabrice-bot.agents.example",
+        "lastObservedAtTime":    "2026-05-17T20:42:13.000Z",
+        "isTrustExpired":        false,
+        "trusted":               true,
+        "pattern":               "B",
+        "operatorKind":          "Persona",
+        "serviceName":           "Fabrice Bot",
+        "serviceType":           "AIAgent",
+        "serviceDescription":    "Task automation agent of @fabrice-bot.",
+        "serviceLogoUri":        "https://fabrice-bot.agents.example/logo.png",
+        "serviceLogoDigestSri":  "sha384-…",
+        "operatorName":          "@fabrice-bot",
+        "operatorLogoUri":       null,
+        "operatorLogoDigestSri": null,
+        "operatorCountryCode":   "CO"
       },
       "highlights": [
         "PersonaCredential.name: <em>fabrice</em>-bot"
