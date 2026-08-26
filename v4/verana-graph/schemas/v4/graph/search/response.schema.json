@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://verana.io/schemas/v4/graph/search/response.schema.json",
   "title": "SearchResponse",
-  "description": "Response envelope for the verana-graph faceted-search endpoint `POST /v4/graph/search` per [TG-FCT-6]. Each `hits[].snippet` MUST carry the per-surface minimum of [TG-FCT-6a]: the entity's primary key, `lastObservedAtTime`, the visibility flags applicable to the surface (`isTrustExpired` for `Did`, `archived` for `Ecosystem` / `CredentialSchema`), the DID binding on DID-bound surfaces (`did` on `Did` / `Corporation` / `Ecosystem`, `didId` on `ServiceEndpoint`), and, on the `Did` surface, the result-card fields (service name, type, description, both logos, operator identity). Implementations MAY surface additional per-card fields (additionalProperties open). Per [TG-FCT-7] the `cursor` field is opaque and is the only way to fetch subsequent pages. All datetime values are ISO 8601 / RFC 3339 UTC strings (see `#/$defs/Iso8601DateTime`). See `### Search REST binding` in the verana-graph spec.",
+  "description": "Response envelope for the verana-graph faceted-search endpoint `POST /v4/graph/search` per [TG-FCT-6]. Each `hits[].snippet` MUST carry the per-surface minimum of [TG-FCT-6a]: the entity's primary key, `lastObservedAtTime`, the visibility flags applicable to the surface (`isTrustExpired` for `Did`, `archived` for `Ecosystem` / `CredentialSchema`), the DID binding on DID-bound surfaces (`did` on `Did` / `Corporation` / `Ecosystem`, `didId` on `ServiceEndpoint`), and, on the `Did` surface, the result-card fields (service name, type, description, both logos, operator identity, and the owner Corporation's trust signals: deposit and slash history). Implementations MAY surface additional per-card fields (additionalProperties open). Per [TG-FCT-7] the `cursor` field is opaque and is the only way to fetch subsequent pages. All datetime values are ISO 8601 / RFC 3339 UTC strings (see `#/$defs/Iso8601DateTime`). See `### Search REST binding` in the verana-graph spec.",
   "type": "object",
   "additionalProperties": false,
   "required": ["query", "totalCount", "hits", "facets", "cursor"],
@@ -97,9 +97,11 @@
       "required": [
         "did", "lastObservedAtTime", "isTrustExpired", "trusted", "pattern", "operatorKind",
         "serviceName", "serviceType", "serviceDescription", "serviceLogoUri", "serviceLogoDigestSri",
-        "operatorName", "operatorLogoUri", "operatorLogoDigestSri", "operatorCountryCode"
+        "operatorName", "operatorLogoUri", "operatorLogoDigestSri", "operatorCountryCode",
+        "corporationId", "corporationDeposit", "corporationSlashedEvents",
+        "corporationLastSlashedAtTime", "corporationSlashedValue"
       ],
-      "description": "Minimum normative shape for a `Did` hit card per [TG-FCT-6a]: identity, trust flags, and the result-card fields (service name / type / description / logo plus operator name / logo / country), so a search response alone can render a service list. Nullable fields MUST be present with value `null` when unavailable, not omitted. Implementations MAY surface additional fields.",
+      "description": "Minimum normative shape for a `Did` hit card per [TG-FCT-6a]: identity, trust flags, the result-card fields (service name / type / description / logo plus operator name / logo / country), and the owner Corporation's trust signals (deposit and slash history), so a search response alone can render a service list. Nullable fields MUST be present with value `null` when unavailable, not omitted. Implementations MAY surface additional fields.",
       "properties": {
         "did": { "$ref": "#/$defs/DidString" },
         "lastObservedAtTime": { "$ref": "#/$defs/Iso8601DateTime" },
@@ -116,7 +118,11 @@
         "operatorLogoUri": { "type": ["string", "null"], "format": "uri", "description": "Operative `OrganizationCredential.logoUri` or `PersonaCredential.avatarUri`; `null` when the trust chain is incomplete or the Persona has no avatar." },
         "operatorLogoDigestSri": { "anyOf": [{ "$ref": "#/$defs/DigestSri" }, { "type": "null" }], "description": "Paired `OrganizationCredential.logoDigestSri` or `PersonaCredential.avatarDigestSri`; `null` under the same conditions as `operatorLogoUri`." },
         "operatorCountryCode": { "type": ["string", "null"], "pattern": "^[A-Z]{2}$", "description": "Operative `OrganizationCredential.countryCode` or `PersonaCredential.controllerCountryCode`; `null` when the trust chain is incomplete." },
-        "corporationId": { "type": "integer", "minimum": 0, "description": "Stable `uint64` id of the DID's owner Corporation per the VPR DID ownership invariant. Never null." }
+        "corporationId": { "type": "integer", "minimum": 0, "description": "Stable `uint64` id of the DID's owner Corporation per the VPR DID ownership invariant. Never null." },
+        "corporationDeposit": { "type": ["string", "null"], "description": "Owner `Corporation.deposit` (Coin string), via `Did.corporationId`; `null` only while the owner Corporation record is not yet materialised (bootstrap transient)." },
+        "corporationSlashedEvents": { "type": ["integer", "null"], "minimum": 0, "description": "Owner `Corporation.slashedEvents` (`0` when never slashed); `null` only while the owner Corporation record is not yet materialised (bootstrap transient)." },
+        "corporationLastSlashedAtTime": { "anyOf": [{ "$ref": "#/$defs/Iso8601DateTime" }, { "type": "null" }], "description": "Owner `Corporation.lastSlashedAtTime`; `null` when never slashed, or while the owner Corporation record is not yet materialised." },
+        "corporationSlashedValue": { "type": ["string", "null"], "description": "Owner `Corporation.slashedValue` (Coin string); `null` when never slashed, or while the owner Corporation record is not yet materialised." }
       }
     },
     "EcosystemSnippet": {

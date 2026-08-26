@@ -814,7 +814,7 @@ The `facets` object MUST contain aggregations for at least every `eq` / `in` fil
 
 [TG-FCT-6a] **Minimum snippet fields.** Every `hit.snippet` MUST carry the entity's primary key, `lastObservedAtTime`, and the visibility flags applicable to the surface (`isTrustExpired` for `Did`, `archived` for `Ecosystem` / `CredentialSchema`). In addition, **every surface whose entity is DID-bound MUST carry that DID** in the snippet: `did` on `Did`, `Corporation`, and `Ecosystem` hits; `didId` (the owning DID) on `ServiceEndpoint` hits.
 
-For the **`Did` surface**, the snippet MUST additionally carry the result-card fields below, so that a search response alone can render a service list — name, both logos, operator identity — without per-hit traversal or resolve calls. Every field is nullable under the stated condition; a field with no value MUST be present with the value `null`, not omitted.
+For the **`Did` surface**, the snippet MUST additionally carry the result-card fields below, so that a search response alone can render a service list — name, both logos, operator identity, and the owner Corporation's trust signals — without per-hit traversal or resolve calls. Every field is nullable under the stated condition; a field with no value MUST be present with the value `null`, not omitted.
 
 | Field | Source | Null when |
 | --- | --- | --- |
@@ -830,8 +830,13 @@ For the **`Did` surface**, the snippet MUST additionally carry the result-card f
 | `operatorLogoUri` | operative `OrganizationCredential.logoUri` or `PersonaCredential.avatarUri` | trust chain incomplete, or Persona without avatar |
 | `operatorLogoDigestSri` | paired `OrganizationCredential.logoDigestSri` or `PersonaCredential.avatarDigestSri` | same as `operatorLogoUri` |
 | `operatorCountryCode` | operative `OrganizationCredential.countryCode` or `PersonaCredential.controllerCountryCode` | trust chain incomplete |
+| `corporationId` | `Did.corporationId` (the owner Corporation per the VPR [DID ownership invariant](https://verana-labs.github.io/verifiable-trust-vpr-spec/versions/v4/#did-ownership-invariant)) | never |
+| `corporationDeposit` | owner `Corporation.deposit`, via `Did.corporationId` | owner `Corporation` record not yet materialised (bootstrap transient) |
+| `corporationSlashedEvents` | owner `Corporation.slashedEvents` (`0` when never slashed) | owner `Corporation` record not yet materialised (bootstrap transient) |
+| `corporationLastSlashedAtTime` | owner `Corporation.lastSlashedAtTime` | never slashed, or owner `Corporation` record not yet materialised |
+| `corporationSlashedValue` | owner `Corporation.slashedValue` | never slashed, or owner `Corporation` record not yet materialised |
 
-These values are denormalised onto the `Did` search document at ingestion time from data the graph already persists (the `EcsCredential` records and the pattern / operator derivation of [[TG-FCT-3]]); no additional fetch is introduced. Implementations MAY add further snippet fields on any surface.
+The `service*` and `operator*` values are denormalised onto the `Did` search document at ingestion time from data the graph already persists (the `EcsCredential` records and the pattern / operator derivation of [[TG-FCT-3]]); no additional fetch is introduced. The `corporation*` values are sourced from the owner `Corporation` record through the `Did.corporationId` anchor: implementations MAY denormalise them onto the `Did` search document or join them at serve time. A denormalising implementation MUST refresh the corporation-sourced fields of every `Did` document of a Corporation when that Corporation's change envelope reports a `corporation`-channel change (deposit tick — the graph subscribes with `includeDepositChanges: true` per [[TG-INGEST-1]] — or slash event) or a `trust`-channel `corporationId` rotation. Implementations MAY add further snippet fields on any surface.
 
 [TG-FCT-7] **Pagination.** Implementations MUST use **cursor-based** pagination — the `cursor` returned in one response is opaque to the client and is the only way to fetch subsequent pages. Offset-based pagination (`?offset=...&limit=...`) MUST NOT be used because it is unstable under the live ingestion stream: records appear and disappear from the result set as upstream block events flow in, and offset-based pagination silently skips or duplicates rows under concurrent writes. A cursor MAY become invalid (e.g. its anchor record left the result set); responses to invalid cursors MUST return the `INVALID_CURSOR` error of [[TG-ERR-1]](#error-responses) rather than silently re-anchoring.
 
@@ -851,7 +856,7 @@ The normative JSON Schema for the faceted-search request is published alongside 
 
 #### Search response schema
 
-The normative JSON Schema for the faceted-search response is published alongside this document at [`schemas/v4/graph/search/response.schema.json`](./schemas/v4/graph/search/response.schema.json). It defines the result envelope fixed by [[TG-FCT-6]] (`query`, `totalCount`, `hits[]`, `facets`, `cursor`); each `hit.snippet` MUST carry the per-surface minimum of [[TG-FCT-6a]] — primary key, `lastObservedAtTime`, visibility flags, the DID binding on DID-bound surfaces, and, on the `Did` surface, the result-card fields (service name, type, description, both logos, and operator identity).
+The normative JSON Schema for the faceted-search response is published alongside this document at [`schemas/v4/graph/search/response.schema.json`](./schemas/v4/graph/search/response.schema.json). It defines the result envelope fixed by [[TG-FCT-6]] (`query`, `totalCount`, `hits[]`, `facets`, `cursor`); each `hit.snippet` MUST carry the per-surface minimum of [[TG-FCT-6a]] — primary key, `lastObservedAtTime`, visibility flags, the DID binding on DID-bound surfaces, and, on the `Did` surface, the result-card fields (service name, type, description, both logos, operator identity, and the owner Corporation's trust signals: deposit and slash history).
 
 #### Example search request
 
@@ -901,7 +906,12 @@ The normative JSON Schema for the faceted-search response is published alongside
         "operatorName":          "@fabrice",
         "operatorLogoUri":       "https://fabrice.agents.example/avatar.png",
         "operatorLogoDigestSri": "sha384-…",
-        "operatorCountryCode":   "CO"
+        "operatorCountryCode":   "CO",
+        "corporationId":         42,
+        "corporationDeposit":    "40000000uvna",
+        "corporationSlashedEvents": 0,
+        "corporationLastSlashedAtTime": null,
+        "corporationSlashedValue": null
       },
       "highlights": [
         "PersonaCredential.name: <em>fabrice</em>"
@@ -926,7 +936,12 @@ The normative JSON Schema for the faceted-search response is published alongside
         "operatorName":          "@fabrice-bot",
         "operatorLogoUri":       null,
         "operatorLogoDigestSri": null,
-        "operatorCountryCode":   "CO"
+        "operatorCountryCode":   "CO",
+        "corporationId":         57,
+        "corporationDeposit":    "12000000uvna",
+        "corporationSlashedEvents": 1,
+        "corporationLastSlashedAtTime": "2026-01-01T03:00:00.000Z",
+        "corporationSlashedValue": "1000000uvna"
       },
       "highlights": [
         "PersonaCredential.name: <em>fabrice</em>-bot"
