@@ -474,7 +474,7 @@ In standalone mode:
 
 > As defined in [[VS-CONN-VS]](https://verana-labs.github.io/verifiable-trust-spec/#vs-conn-vs-requirements-for-a-vs-to-accept-a-connection-from-another-service), a validator agent CAN accept connections from a not-yet-verifiable agent if and only if the purpose of the connection is the issuance of [VT-ECS-ORG-CRED-W3C], [VT-ECS-PERSONA-CRED-W3C], or [VT-ECS-SERVICE-CRED-W3C] credentials.
 >
-> The Validator MAY grant this exemption only when it can establish the purpose **from the VPR**, not from the peer's assertion: there MUST exist an on-chain `Participant` entry in `op_state = PENDING` whose `did` is the connecting peer, whose `validator_participant_id` is controlled by the Validator, and whose credential schema is one of [VT-ECS-ORG-CRED-W3C], [VT-ECS-PERSONA-CRED-W3C], or [VT-ECS-SERVICE-CRED-W3C]. The Validator observes this entry via the `StartParticipantOP` notification of [[VSA-VTI-NOTIF-PP]](#vsa-vti-notif-pp-participant-notifications) (or an indexer lookup keyed by the peer DID). It MUST NOT grant the exemption on the peer's assertion alone, and MUST confirm that the `participant_id` of the Onboarding Request matches that entry.
+> The Validator MUST establish this purpose from the VPR, not from the peer's claim. An on-chain `Participant` MUST exist. It MUST have `op_state = PENDING`, a `did` equal to the peer, a `validator_participant_id` that the Validator controls, and one of the ECS credential schemas above. The `participant_id` in the Onboarding Request MUST match this entry.
 
 ##### ECS Delegated Mode
 
