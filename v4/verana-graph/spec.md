@@ -776,6 +776,14 @@ Worked example: a `Did`-surface query for *"plumber issuers"* (free-text *"plumb
 | `{title, description}` of any `CredentialSchema` the `Did` has a `Participant` for | low–medium | **denormalised onto the `Did` doc at index time.** Per-role weighting (e.g. higher weight for ISSUER Participants) is implementation-defined. Enables one-shot "*plumber issuers*" queries on the `Did` surface — no two-step search-the-schema-then-search-the-DIDs flow                          |
 | `{textual fields}` of `credentialSubject` of any non-ECS `Vtc` the `Did` holds       | medium     | **denormalised onto the `Did` doc at index time. MUST.** Domain-credential discovery — *"baby shoes in Bogotá"*, *"streaming video for kids"* — relies on free-text matching content authored on non-ECS VTCs. Requires VP body fetches per [[TG-DEREF-3]]; if a VP body is not fetched, only schema-level text contributes |
 
+[TG-FCT-4a] **Matching semantics.** So that a given `freeText` payload admits the same result set on every conformant implementation regardless of the backing engine, the free-text matcher MUST apply the following baseline:
+
+1. **Case-insensitive.** Matching MUST be case-insensitive under Unicode case folding: `Test`, `TEST`, and `test` are equivalent.
+2. **Whole-token matching.** `freeText` MUST be tokenized on whitespace and punctuation, and the fields of [[TG-FCT-4]] are matched per whole token. Clients MUST NOT assume substring (infix) matching: `test` matches `Test Service` but is not guaranteed to match `Attestation`. Implementations MAY additionally support prefix matching on the **final** token of the query (search-as-you-type); earlier tokens are matched whole.
+3. **Multi-token queries are conjunctive.** Every token MUST match at least one scored field of the hit — AND semantics evaluated across the hit's whole search document, with different tokens free to match different fields. Ranking of the admitted hits then follows the field weights of [[TG-FCT-4]] and the trust signals of [[TG-FCT-5]]. Disjunctive (OR) matching MUST NOT be the default behaviour.
+4. **Recall wideners are additive only.** Stemming, typo tolerance, and synonym expansion are OPTIONAL. When enabled, they MAY admit additional hits, but MUST NOT drop any hit that clauses 1–3 admit, and exact-token matches SHOULD rank above widened matches.
+5. **Empty query.** When `freeText` is absent, empty, or whitespace-only, no lexical constraint applies: the result set is determined by the structured filters and visibility gates alone, and ranking follows [[TG-FCT-5]] only.
+
 [TG-FCT-5] **Ranking signals.** Beyond the visibility gates of [[TG-FCT-2]] and the lexical score from the free-text fields of [[TG-FCT-4]], the final ranking score MUST incorporate the trust signals below. **Direction** of each signal is normative; absolute **weights** are implementation-defined.
 
 | Signal                                                          | Direction          | Notes                                                                       |
@@ -826,7 +834,7 @@ The `facets` object MUST contain aggregations for at least every `eq` / `in` fil
 
 #### Search request schema
 
-The normative JSON Schema for the faceted-search request is published alongside this document at [`schemas/v4/graph/search/request.schema.json`](./schemas/v4/graph/search/request.schema.json). It defines the `surface` selector (per [[TG-FCT-1]]), the `filters` object (per [[TG-FCT-3]], using the dotted field-name form), the `freeText` string (per [[TG-FCT-4]]), the `limit` integer, the opaque `cursor` (per [[TG-FCT-7]]), and the visibility-gate overrides `includeUntrusted` and `includeArchived` (per [[TG-FCT-2]]).
+The normative JSON Schema for the faceted-search request is published alongside this document at [`schemas/v4/graph/search/request.schema.json`](./schemas/v4/graph/search/request.schema.json). It defines the `surface` selector (per [[TG-FCT-1]]), the `filters` object (per [[TG-FCT-3]], using the dotted field-name form), the `freeText` string (per [[TG-FCT-4]], matching semantics per [[TG-FCT-4a]]), the `limit` integer, the opaque `cursor` (per [[TG-FCT-7]]), and the visibility-gate overrides `includeUntrusted` and `includeArchived` (per [[TG-FCT-2]]).
 
 #### Search response schema
 
