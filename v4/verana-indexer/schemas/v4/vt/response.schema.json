@@ -165,7 +165,8 @@
             "ServiceCredential",
             "OrganizationCredential",
             "PersonaCredential",
-            "UserAgentCredential"
+            "UserAgentCredential",
+            "BadgeCredential"
           ]
         },
         "ecsSchemaVersion": { "type": "string" },
