@@ -53,6 +53,12 @@ The `playground/` directory is unversioned: it specifies the [Verana Playground]
 
 A new top-level `vN/` directory is created when a breaking change is introduced across one or more component specs. Within a version, individual component specs evolve independently and carry their own draft / release markers in their front matter.
 
+Any pull request that changes something under a component directory must increase that component's marker, for example `**Latest Draft:** spec v4-draft7` to `v4-draft8`. Schemas count: editing `v4/verana-graph/schemas/` bumps the graph spec. CI checks this on every PR against `main` as it stands at that moment, so two PRs cannot land on the same draft number. To check before pushing:
+
+```sh
+git fetch origin main && python3 scripts/check-spec-versions.py
+```
+
 ## Contributing
 
 Editorial fixes, clarifications, and new component specs are welcome via pull request. For changes that touch the public Verifiable Trust or VPR specifications, please open the PR against the relevant upstream repository listed in [Scope](#scope) instead.
