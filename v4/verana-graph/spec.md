@@ -843,40 +843,7 @@ For the **`Did` surface**, the snippet MUST additionally carry the result-card f
 | `isEcosystem` | `true` iff the DID is the current `did` of at least one `Ecosystem` entry (equivalently: `ecosystemIds` is non-empty) | never |
 | `ecosystemIds` | ids of the `Ecosystem` entries whose current `did` is this DID | never — empty array (`[]`) when none |
 
-The `service*`, `operator*`, and `serviceEndpoints` values are denormalised onto the `Did` search document at ingestion time from data the graph already persists (the `EcsCredential` records, the pattern / operator derivation of [[TG-FCT-3]], and the DID's own `ServiceEndpoint` records); no additional fetch is introduced. The `corporation*` values are sourced from the owner `Corporation` record through the `Did.corporationId` anchor: implementations MAY denormalise them onto the `Did` search document or join them at serve time. A denormalising implementation MUST refresh the corporation-sourced fields of every `Did` document of a Corporation when that Corporation's change envelope reports a `corporation`-channel change (deposit tick — the graph subscribes with `includeDepositChanges: true` per [[TG-INGEST-1]] — or slash event) or a `trust`-channel `corporationId` rotation. The `isCorporation`, `isEcosystem`, and `ecosystemIds` entity bindings refresh on the DID's `corporation` and `ecosystems` channel envelopes (creation, archival, and `did` rotation in either direction). These two fields let a `Did`-surface result card badge the DID as a Corporation or Ecosystem controller without a second query.
-
-For the **`Ecosystem` surface**, the snippet MUST additionally carry the entity fields and the **DID identity block** below, so that an ecosystem list renders with a display identity without per-hit resolution. An Ecosystem's or Corporation's human-readable identity is the identity of its current `did`: the identity-block values are copied from the `Did` search document of that DID (the same [TG-FCT-6a] fields defined for the `Did` surface above) and are `null` — present, never omitted — when that `Did` document is not (yet) materialised or the referenced credential is absent.
-
-| Field | Source | Null when |
-| --- | --- | --- |
-| `corporationId` | `Ecosystem.corporationId` (controlling Corporation) | never |
-| `participants` | `Ecosystem.participants` (per-role counts) | never — `{}` when no counts |
-| `issuedCredentials` | `Ecosystem.issuedCredentials` | never |
-| `verifiedCredentials` | `Ecosystem.verifiedCredentials` | never |
-| `didTrusted` | `Did.trusted` of the Ecosystem's current `did` | `Did` document not materialised |
-| `serviceName` | identity block, from the `Did` document of `did` | no `ServiceCredential` on that DID |
-| `serviceLogoUri` / `serviceLogoDigestSri` | identity block | no `ServiceCredential` on that DID |
-| `operatorName` | identity block | trust chain of that DID incomplete |
-| `operatorLogoUri` / `operatorLogoDigestSri` | identity block | trust chain incomplete, or Persona without avatar |
-| `operatorCountryCode` | identity block | trust chain of that DID incomplete |
-
-For the **`Corporation` surface**, likewise:
-
-| Field | Source | Null when |
-| --- | --- | --- |
-| `policyAddress` | `Corporation.policyAddress` | never |
-| `deposit` | `Corporation.deposit` | never |
-| `slashedEvents` | `Corporation.slashedEvents` (`0` when never slashed) | never |
-| `lastSlashedAtTime` | `Corporation.lastSlashedAtTime` | never slashed |
-| `slashedValue` | `Corporation.slashedValue` | never slashed |
-| `didTrusted` | `Did.trusted` of the Corporation's current `did` | `Did` document not materialised |
-| `serviceName` | identity block, from the `Did` document of `did` | no `ServiceCredential` on that DID |
-| `serviceLogoUri` / `serviceLogoDigestSri` | identity block | no `ServiceCredential` on that DID |
-| `operatorName` | identity block | trust chain of that DID incomplete |
-| `operatorLogoUri` / `operatorLogoDigestSri` | identity block | trust chain incomplete, or Persona without avatar |
-| `operatorCountryCode` | identity block | trust chain of that DID incomplete |
-
-The identity block never carries the DID's trust-expiry state beyond `didTrusted`: per [[TG-FCT-2]], `Ecosystem` and `Corporation` hits whose current controlling DID is trust-expired are hidden outright, so a surfaced hit's DID is never trust-expired. An implementation that denormalises the identity block MUST refresh it on every change envelope of the bound `did` that flips a `trust`-channel field or an `ecsCredentials`-channel field, and on a `did` rotation of the entity (`corporation` / `ecosystems` channel). Implementations MAY add further snippet fields on any surface.
+The `service*`, `operator*`, and `serviceEndpoints` values are denormalised onto the `Did` search document at ingestion time from data the graph already persists (the `EcsCredential` records, the pattern / operator derivation of [[TG-FCT-3]], and the DID's own `ServiceEndpoint` records); no additional fetch is introduced. The `corporation*` values are sourced from the owner `Corporation` record through the `Did.corporationId` anchor: implementations MAY denormalise them onto the `Did` search document or join them at serve time. A denormalising implementation MUST refresh the corporation-sourced fields of every `Did` document of a Corporation when that Corporation's change envelope reports a `corporation`-channel change (deposit tick — the graph subscribes with `includeDepositChanges: true` per [[TG-INGEST-1]] — or slash event) or a `trust`-channel `corporationId` rotation. The `isCorporation`, `isEcosystem`, and `ecosystemIds` entity bindings refresh on the DID's `corporation` and `ecosystems` channel envelopes (creation, archival, and `did` rotation in either direction). These bindings let a `Did`-surface result card badge the DID as a Corporation or Ecosystem controller without a second query. Implementations MAY add further snippet fields on any surface.
 
 [TG-FCT-7] **Pagination.** Implementations MUST use **cursor-based** pagination — the `cursor` returned in one response is opaque to the client and is the only way to fetch subsequent pages. Offset-based pagination (`?offset=...&limit=...`) MUST NOT be used because it is unstable under the live ingestion stream: records appear and disappear from the result set as upstream block events flow in, and offset-based pagination silently skips or duplicates rows under concurrent writes. A cursor MAY become invalid (e.g. its anchor record left the result set); responses to invalid cursors MUST return the `INVALID_CURSOR` error of [[TG-ERR-1]](#error-responses) rather than silently re-anchoring.
 
@@ -896,7 +863,7 @@ The normative JSON Schema for the faceted-search request is published alongside 
 
 #### Search response schema
 
-The normative JSON Schema for the faceted-search response is published alongside this document at [`schemas/v4/graph/search/response.schema.json`](./schemas/v4/graph/search/response.schema.json). It defines the result envelope fixed by [[TG-FCT-6]] (`query`, `totalCount`, `hits[]`, `facets`, `cursor`); each `hit.snippet` MUST carry the per-surface minimum of [[TG-FCT-6a]] — primary key, `lastObservedAtTime`, visibility flags, the DID binding on DID-bound surfaces; on the `Did` surface, the result-card fields (service name, type, description, both logos, operator identity, the owner Corporation's trust signals — deposit and slash history — and the declared service endpoints); and, on the `Ecosystem` and `Corporation` surfaces, the entity fields (counters, respectively trust signals) plus the DID identity block of the entity's current `did`.
+The normative JSON Schema for the faceted-search response is published alongside this document at [`schemas/v4/graph/search/response.schema.json`](./schemas/v4/graph/search/response.schema.json). It defines the result envelope fixed by [[TG-FCT-6]] (`query`, `totalCount`, `hits[]`, `facets`, `cursor`); each `hit.snippet` MUST carry the per-surface minimum of [[TG-FCT-6a]] — primary key, `lastObservedAtTime`, visibility flags, the DID binding on DID-bound surfaces, and, on the `Did` surface, the result-card fields (service name, type, description, both logos, operator identity, the owner Corporation's trust signals — deposit and slash history — and the declared service endpoints).
 
 #### Example search request
 
