@@ -460,7 +460,8 @@ This invariant does NOT extend to `EcsCredential` or `Vtc`. For both, the `crede
 - `Ecosystem.participants[<role>]` (numeric range), `Ecosystem.issuedCredentials` (numeric range), `Ecosystem.verifiedCredentials` (numeric range)
 - `CredentialSchema.ecosystemId`, `CredentialSchema.issuedCredentials` (numeric range), `CredentialSchema.verifiedCredentials` (numeric range)
 - `ServiceEndpoint.type`
-- `EcsCredential.OrganizationCredential.{countryCode, legalJurisdiction, organizationKind, lei, registryId}`
+- `EcsCredential.OrganizationCredential.{name, countryCode, legalJurisdiction, organizationKind, lei, registryId}`
+- `EcsCredential.PersonaCredential.{name}`
 - `EcsCredential.ServiceCredential.{type, name}`
 - Free-text indexes on every textual `name`, `description`, `address` field across the catalogue, plus full-text indexes on `Corporation.cgf` and `Ecosystem.egf` document content.
 
@@ -720,6 +721,7 @@ Worked example: a `Did`-surface query for *"plumber issuers"* (free-text *"plumb
 | `Did.isEcosystem`                                    | eq                     | the DID is the declared `did` of at least one `Ecosystem` entry ("show ecosystem controllers only")                                                                                                                            |
 | `Did.ecosystemIds`                                   | contains, containsAny  | the DID controls the given Ecosystem id(s)                                                                                                                                                                                     |
 | `Did.operatorKind`                                   | eq, in                 | derived facet ∈ `{ Organization, Persona }`, materialised at ingestion from the operative ORG-or-PERSONA credential the VS's trust chain rests on (Pattern A: self; Pattern B: issuer). Lets queries say "personal" / "corporate" structurally |
+| `Did.operatorName`                                   | eq, in, prefix         | derived facet, the same value as the `operatorName` of [[TG-FCT-6a]]: the operative `OrganizationCredential.name` or `PersonaCredential.name` (Pattern A: self; Pattern B: issuer). One field rather than one per credential type, so a client filtering by operator name does not have to branch on `operatorKind` first |
 | `EcsCredential.ServiceCredential.type`               | eq, in                 | high-value facet — the VS-level service category                                                                                                                                                                              |
 | `EcsCredential.ServiceCredential.minimumAgeRequired` | range                  | "kids ≤ 8" → `<= 7`                                                                                                                                                                                                          |
 | `OrganizationCredential.countryCode`                 | eq, in                 | from operative Org cred (Pattern A: self; B: issuer)                                                                                                                                                                          |
