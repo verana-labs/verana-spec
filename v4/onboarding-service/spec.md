@@ -100,7 +100,7 @@ sequenceDiagram
     participant VU as Validator operator
 
     AU->>P: login (ADR-036), select acting Corporation
-$1
+    P-->>AU: offer: ecosystem, schema, role, fees, prerequisites
     AU->>P: read and accept the active EGF version (acceptance persisted)
     AU->>P: start form (DID, fees, VSOA options)
     P->>VPR: pre-flight checks (resolve, eligibility, ownership)
@@ -420,7 +420,7 @@ Joining an ecosystem binds the applicant to its governance framework: a `Partici
 - [OBS-APP-GF-5] The acceptance is part of the round summary ([OBS-DOC-3]) and therefore of the `op_summary_digest` anchored on chain by `SetParticipantOPtoValidated`; the validator review shows it ([OBS-VAL-REVIEW-1]).
 - [OBS-APP-GF-6] The validator Corporation's own governance framework (CGF) is not accepted through the portal; the home page MAY link to it for information.
 
-$1
+### [OBS-APP-START] Start form
 
 The start form is the Join wizard of the Verana Frontend ([VFE-PAGE-DISCOVER-2](../verana-frontend/spec.md#vfe-page-discover-discover--join)) with the ecosystem, the schema and the validator fixed by the deployment.
 
@@ -448,7 +448,7 @@ Before the wallet is opened, the portal MUST run the following checks, in order,
 4. [OBS-APP-PRE-4] **Eligibility** ([OBS-APP-ELIG]).
 5. [OBS-APP-PRE-5] **On-chain gates**: the validator Participant is still `ACTIVE`; no `Participant` entry of the acting Corporation for this DID, role and validator is `PENDING` or `VALIDATED` with a null `effective_until` ([MOD-PP-MSG-1-2-4](https://verana-labs.github.io/verifiable-trust-vpr-spec/versions/v4/#mod-pp-msg-1-2-4-start-participant-op-overlap-checks)); no unrepaid slash of the acting Corporation in this ecosystem or on the network ([MOD-PP-MSG-1-2-5](https://verana-labs.github.io/verifiable-trust-vpr-spec/versions/v4/#mod-pp-msg-1-2-5-start-participant-op-unrepaid-slash-checks)). The portal MAY rely on transaction simulation to detect these and MUST surface the chain's error text when it does.
 6. [OBS-APP-PRE-6] **Schema not archived** ([`IDX-CS-QRY-1`](../verana-indexer/spec.md#idx-cs-qry-1-get-credential-schema)).
-$1
+7. [OBS-APP-PRE-7] **Capability** ([OBS-CORP-CAPS]) and **cost preview** ([OBS-APP-FEES]).
 8. [OBS-APP-PRE-8] **Governance framework accepted** for the currently active version by an operator of the acting Corporation ([OBS-APP-GF-4]).
 
 ### [OBS-APP-ELIG] Eligibility
@@ -589,7 +589,7 @@ The backend API follows the conventions of the VS Agent Administration API v2 ([
 | Scope | Path prefix | Content |
 | --- | --- | --- |
 | Auth | `/v1/auth` | `challenge`, `token` ([OBS-AUTH-PROTO]) |
-$1
+| Configuration | `/v1/config` | public deployment descriptor: ecosystem, schema, validator, roles, fees, prerequisites, requirements, claims mode, issuance (serves [OBS-APP-HOME]) |
 | Governance framework | `/v1/governance-framework` | active EGF version and documents, digest-verified document proxy, acceptance records ([OBS-APP-GF]) |
 | Corporations | `/v1/corporations` | discovery result for the session ([OBS-CORP-DISC]) and attention counts ([OBS-CORP-SEL-3]) |
 | Cases | `/v1/cases` | list and read cases in the applicant or validator scope; pre-flight and eligibility checks; submissions, drafts, documents, decisions and messages of a case |
@@ -608,7 +608,7 @@ $1
 - ADR-036 nonces are single-use and short-lived; the portal-specific payload prefix prevents cross-service replay ([OBS-AUTH-PROTO-1]).
 - DID resolution ([OBS-APP-PRE-2]) and any fetch of remote content are server-side requests driven by user input: the backend MUST restrict them to `https://`, MUST NOT follow redirects to other schemes, and MUST NOT reach private or link-local addresses.
 - Uploads are untrusted: media types are sniffed, sizes bounded, and files served only to authorized sessions with a content-disposition that prevents inline execution.
-$1
+- Rendered remote content (logos, avatars, governance documents) and claim text follow [VFE-SEC-2](../verana-frontend/spec.md#vfe-sec-security-considerations): images sandboxed, text rendered as text or Markdown, never as HTML.
 - Governance framework documents are rendered only from digest-verified bytes fetched by the backend; HTML documents are shown in a sandboxed frame without scripts ([OBS-APP-GF-2]).
 - Authorization is per request and per case ([OBS-AUTHZ]); the validator scope never grants access to cases of other deployments, since a deployment serves one validator Participant.
 - The chain, the indexer and the validator agent stay authoritative: no case is validated, issued, cancelled or created on the strength of a frontend report alone ([OBS-TX-WRITE-3], [OBS-CASE-2], [OBS-VAL-ACCEPT-4]).
