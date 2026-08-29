@@ -52,7 +52,7 @@ The protocol is identified by the message type URI of the first vt-flow message 
 | **Credential Schema** | An on-chain resource in the VPR that defines the format and validation rules for a credential. Each schema has onboarding modes (`issuer_onboarding_mode`, `verifier_onboarding_mode`, `holder_onboarding_mode`) that determine whether an Onboarding Process is required. |
 | **Participant** | An on-chain record granting a DID a specific role (`ISSUER`, `VERIFIER`, `HOLDER`, `ISSUER_GRANTOR`, `VERIFIER_GRANTOR`) for a schema. Obtained either directly (`OPEN` mode) or through an Onboarding Process. |
 | **Onboarding Process (OP)** | An on-chain state transition used when a Credential Schema requires validator approval. Initiated with `StartParticipantOP`, transitioned to `VALIDATED` with `SetParticipantOPtoValidated`. |
-| **Participant Session** | An on-chain record created by `CreateOrUpdateParticipantSession` that binds a specific credential issuance to a validator's Participant. Identified by `participant_session_id`. |
+| **Participant Session** | An on-chain record created by `CreateOrUpdateParticipantSession` that binds a specific credential issuance to a validator's Participant. Identified by `participant_session_id`. The same transaction anchors the credential's `digestJCS` in the VPR `Digest` store ([MOD-DI-MSG-1][vpr-di-msg-1]); the digest is not stored on the `ParticipantSession` entry. |
 | **vt-flow session** | A DIDComm conversation between an Applicant and a Validator identified by the `thid` of the first vt-flow message. |
 | **Superprotocol / Subprotocol** | Per [RFC 0003][rfc0003], `vt-flow` is the outer (super)protocol; Issue Credential V2 runs nested inside a vt-flow session and is linked via `~thread.pthid`. |
 
@@ -195,7 +195,7 @@ Applicant                          VPR (Chain)                    Validator
     │ │                                  │                              │ │
     │ │  Applicant MUST verify validator   │                              │ │
     │ │  authorization + recompute digest   │                              │ │
-    │ │  against on-chain session record    │                              │ │
+    │ │  against on-chain Digest entry      │                              │ │
     │ │                                  │                              │ │
     │ │ 10. ack                        │                              │ │
     │ │ ──────────────────────────────────────────────────────────────>│
@@ -409,7 +409,8 @@ Values for `who_retries`, `impact`, and `where` follow RFC 0035 conventions (low
 
 **Verification before Ack:** The Applicant **MUST NOT** send the Issue Credential V2 `ack` until it has verified the received credential. Before sending the Ack, the Applicant **MUST**:
 1. Query the VPR to confirm the Validator has an active `ISSUER` Participant for the schema.
-2. Recompute the credential's digest and verify it matches the digest recorded in the `ParticipantSession` created by `CreateOrUpdateParticipantSession`.
+2. Confirm that the `ParticipantSession` identified by `participant_session_id` exists on-chain and references the Validator's `ISSUER` Participant ([VPR MOD-PP-QRY-5][vpr-qry-5]).
+3. Recompute the credential's `digestJCS` as specified in [W3C VTCs: Determining Credential Issuance Time][vt-spec-digest] and locate the corresponding `Digest` entry with [VPR Get Digest][vpr-di-qry-1]. The entry MUST exist: `CreateOrUpdateParticipantSession` anchors the digest in the VPR `Digest` store ([MOD-DI-MSG-1][vpr-di-msg-1]), not on the `ParticipantSession` entry, and its `created` timestamp is the credential's effective issuance time.
 
 If verification succeeds, the Applicant sends the Ack. If verification fails, the Applicant sends a subprotocol problem-report instead and the subprotocol transitions to `abandoned`; the vt-flow session transitions to `ERROR`.
 
@@ -678,7 +679,7 @@ Additional format identifiers **MAY** be negotiated by mutual agreement.
 
 1. **Cross-layer coupling.** The protocol couples DIDComm message flow with Verana on-chain transactions. Correct timing is implementation work and cannot be fully specified at the protocol layer.
 2. **Session persistence.** Because the connection is kept open after `COMPLETED` to receive `credential-state-change`, implementations must persist vt-flow state across restarts and reconnections.
-3. **Atomicity.** Credential delivery and `CreateOrUpdateParticipantSession` are not atomic. A malicious or faulty Validator could record the session but never deliver the credential, or vice-versa. Applicants **MUST** verify the digest against the on-chain session before accepting.
+3. **Atomicity.** Credential delivery and `CreateOrUpdateParticipantSession` are not atomic. A malicious or faulty Validator could create the session and anchor the digest but never deliver the credential, or vice-versa. Applicants **MUST** verify the on-chain `ParticipantSession` and the anchored `Digest` entry before accepting (see [Subprotocols](#subprotocols)).
 
 ## Prior Art
 
@@ -713,5 +714,9 @@ Additional format identifiers **MAY** be negotiated by mutual agreement.
 [rfc0593]: https://github.com/hyperledger/aries-rfcs/blob/main/features/0593-json-ld-cred-attach/README.md
 [vpr-v4]: https://verana-labs.github.io/verifiable-trust-vpr-spec/
 [vpr-msg-10]: https://verana-labs.github.io/verifiable-trust-vpr-spec/versions/v4/#mod-pp-msg-10-create-or-update-participant-session
+[vpr-qry-5]: https://verana-labs.github.io/verifiable-trust-vpr-spec/versions/v4/#mod-pp-qry-5-get-participantsession
+[vpr-di-msg-1]: https://verana-labs.github.io/verifiable-trust-vpr-spec/versions/v4/#mod-di-msg-1-store-digest
+[vpr-di-qry-1]: https://verana-labs.github.io/verifiable-trust-vpr-spec/versions/v4/#mod-di-qry-1-get-digest
 [vt-spec]: https://verana-labs.github.io/verifiable-trust-spec/
+[vt-spec-digest]: https://verana-labs.github.io/verifiable-trust-spec/versions/v4/#w3c-vtcs-determining-credential-issuance-time
 [vt-spec-conn-vs]: https://verana-labs.github.io/verifiable-trust-spec/#vs-conn-vs
