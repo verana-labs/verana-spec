@@ -643,7 +643,7 @@ VS Agent tools authenticate to the target VS Agent's [Administration API](../vs-
 | `verana.vsa.flow.listFlows` | [`listFlows`](../vs-agent/spec.md#vsa-adm-vt-fl-list-listflows) | Enumerate active and historical flows on the agent. |
 | `verana.vsa.flow.editCredentialClaims` | [`editCredentialClaims`](../vs-agent/spec.md#vsa-adm-vt-fl-edit-editcredentialclaims) | Edit pending credential claims for a flow. |
 | `verana.vsa.flow.sendOobLink` | [`sendOobLink`](../vs-agent/spec.md#vsa-adm-vt-fl-send-sendooblink) | Re-send an OOB invitation link for a flow. |
-| `verana.vsa.flow.validateFlow` | [`validateFlow`](../vs-agent/spec.md#vsa-adm-vt-fl-validate-validateflow) | Mark a flow as validated, allowing the agent to call `MOD-PP-MSG-3` Set Participant OP To Validated on chain. |
+| `verana.vsa.flow.validateFlow` | [`validateFlow`](../vs-agent/spec.md#vsa-adm-vt-fl-validate-validateflow) | Mark the applicant's documentation as validated. Starts issuance for a Credential Direct Issuance flow; for an Onboarding Process flow, issuance follows the on-chain `SetParticipantOPtoValidated` event, which the agent never submits (see vs-agent [VSA-VTI-FLOW-OP-ISSUE](../vs-agent/spec.md#vsa-vti-flow-op-issue-issuance-after-validation)). |
 | `verana.vsa.flow.revokeCredential` | [`revokeFlowCredential`](../vs-agent/spec.md#vsa-adm-vt-fl-revoke-revokeflowcredential) | Revoke the credential issued in a flow, notifying the applicant over DIDComm. Does not revoke the corresponding `Participant`. |
 
 #### [VMS-TOOLS-VSA-SE] Service Endpoint Management
