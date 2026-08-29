@@ -371,7 +371,7 @@ Sent by the Validator to notify the Applicant of a post-issuance change to the c
 
 | Value | Applicant response |
 |---|---|
-| `REVOKED` | Applicant **MUST** remove the corresponding `LinkedVerifiablePresentation` from its DID Document (if present) and delete the credential from its credential store. Flow State transitions to `CRED_REVOKED`. The DIDComm connection remains open. |
+| `REVOKED` | Applicant **MUST** remove the corresponding `LinkedVerifiablePresentation` from its DID Document and delete the credential from its credential store. Flow State transitions to `CRED_REVOKED`. The DIDComm connection remains open. |
 
 **Forward compatibility:** Receivers **MUST** accept messages with unknown `state` values without error and **MAY** ignore them. This allows future versions to extend the enum (e.g., `REACTIVATED`, `SUSPENDED`, `UNSUSPENDED`, `RENEWED`) without breaking v1.0 parsers.
 
@@ -401,7 +401,7 @@ Values for `who_retries`, `impact`, and `where` follow RFC 0035 conventions (low
 
 **Initiation:** The Validator initiates the subprotocol by sending `offer-credential`. In an Onboarding Process, the subprotocol runs only when the validated `Participant` role is `HOLDER`, and MAY start at any time after Flow State `VALIDATED` once the Validator holds a claim set that satisfies the `json_schema` of the schema (see [Issuance After Validation](../vs-agent/spec.md#vsa-vti-flow-op-issue-issuance-after-validation)); in Direct Issuance, it MAY start after accepting the request. The only hard constraint is: **the `issue-credential` message MUST NOT be sent until `CreateOrUpdateParticipantSession` has succeeded on-chain.**
 
-**Credential format:** vt-flow is credential-format-agnostic; format selection is negotiated inside the Issue Credential V2 subprotocol. Implementations **MUST** support at least the `aries/ld-proof-vc@v1.0` format (W3C JSON-LD Verifiable Credential, [RFC 0593][rfc0593]) for ECS credentials.
+**Credential format and presentation:** in this version, vt-flow issues W3C Verifiable Trust Credentials only, delivered in the `aries/ld-proof-vc@v1.0` format (W3C JSON-LD Verifiable Credential, [RFC 0593][rfc0593]) inside the Issue Credential V2 subprotocol, and the Applicant publishes every credential it accepts as a `LinkedVerifiablePresentation` entry of its DID Document (VT-CRED-W3C-LINKED-VP of the [Verifiable Trust Specification][vt-spec]). Flows for other credential formats, and presentation policies other than the linked VP, will be defined in future versions of this protocol.
 
 **Verification before Ack:** The Applicant **MUST NOT** send the Issue Credential V2 `ack` until it has verified the received credential. Before sending the Ack, the Applicant **MUST**:
 1. Query the VPR to confirm the Validator has an active `ISSUER` Participant for the schema.

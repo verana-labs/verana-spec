@@ -592,6 +592,8 @@ In all flows below, actors represented as Applicant and Validator can be: an age
 
 > Applicant is always the peer that initiates a connection to a Validator.
 
+> **Credential format and presentation.** In this version, the flows issue W3C Verifiable Trust Credentials only ([VT-CRED-W3C](https://verana-labs.github.io/verifiable-trust-spec/versions/v4/#vt-cred-w3c-w3c-verifiable-trust-credential-vtc)), and the applicant automatically publishes every credential it receives through a flow as a `LinkedVerifiablePresentation` entry of its DID Document ([[VT-CRED-W3C-LINKED-VP]](https://verana-labs.github.io/verifiable-trust-spec/#vt-cred-w3c-linked-vp-w3c-vtc-linked-vp)). Flows for other credential formats, and presentation policies other than the linked VP, will be defined in future versions.
+
 #### [VSA-VTI-FLOW-OP] Onboarding Processes
 
 Possible Applicant/Validator combinations:
@@ -649,7 +651,7 @@ sequenceDiagram
     Applicant Agent->>VPR: 9. Verify validator + session + digestJCS
     Applicant Agent->>Validator: 10. Accept Credential
     Note over Applicant Agent: 11. Store credential
-    Note over Applicant Agent: 12. (optional) VP in DID Doc
+    Note over Applicant Agent: 12. Linked VP in DID Doc
     Applicant Agent->>VPR: 13. (optional) TriggerResolver
 ```
 
@@ -689,9 +691,9 @@ Steps 6 to 13 are executed only when a credential is issued, which the agent dec
 
 11.  The applicant stores the credential in its credential store.
 
-12.  **Optionally**, the applicant links the credential as a `LinkedVerifiablePresentation` in its DID Document per [[VT-CRED-W3C-LINKED-VP]](https://verana-labs.github.io/verifiable-trust-spec/#vt-cred-w3c-linked-vp-w3c-vtc-linked-vp). This is required for ECS credentials but optional for other credential types.
+12.  The applicant publishes the credential as a `LinkedVerifiablePresentation` entry of its DID Document per [[VT-CRED-W3C-LINKED-VP]](https://verana-labs.github.io/verifiable-trust-spec/#vt-cred-w3c-linked-vp-w3c-vtc-linked-vp). In this version this is automatic for every credential issued through a flow (see [Credential format and presentation](#participant-and-credential-acquisition-flows)).
 
-13.  **Optionally**, the applicant calls `TriggerResolver` ([[MOD-PP-MSG-15]](https://verana-labs.github.io/verifiable-trust-vpr-spec/#mod-pp-msg-15-trigger-resolver)) on-chain to refresh its Verifiable Service resolution state. The applicant SHOULD call `TriggerResolver` when:
+13.  The applicant calls `TriggerResolver` ([[MOD-PP-MSG-15]](https://verana-labs.github.io/verifiable-trust-vpr-spec/#mod-pp-msg-15-trigger-resolver)) on-chain to refresh its Verifiable Service resolution state. The applicant SHOULD call `TriggerResolver` after step 12, and in particular when:
     - it has just become a Verifiable Service by newly complying with [[VS-REQ]](https://verana-labs.github.io/verifiable-trust-spec/#vs-req-verifiable-service-basic-requirements-and-linked-vps); or
     - it has added or removed a `LinkedVerifiablePresentation` entry in its DID Document.
 
@@ -736,9 +738,8 @@ sequenceDiagram
 
 Steps 6–13 are identical to those of [New Onboarding Process](#vsa-vti-flow-op-new-new-onboarding-process) and are executed when a credential is issued per [[VSA-VTI-FLOW-OP-ISSUE] Issuance After Validation](#vsa-vti-flow-op-issue-issuance-after-validation): for a `HOLDER` entry the Validator issues an updated credential with the claims the flow holds. If a credential is delivered:
 
-- The Applicant MUST replace the previously stored credential with the updated one in its credential store and delete any previously created linked-VP linked to the old credential.
-- **Optionally**, the Applicant creates the corresponding `LinkedVerifiablePresentation` entry in its DID Document.
-- **Optionally**, the Applicant calls `TriggerResolver` on-chain to refresh its Verifiable Service resolution state. The Applicant SHOULD call `TriggerResolver` when:
+- The Applicant MUST replace the previously stored credential with the updated one in its credential store, and MUST replace the `LinkedVerifiablePresentation` entry of the old credential with one that presents the updated credential ([[VT-CRED-W3C-LINKED-VP]](https://verana-labs.github.io/verifiable-trust-spec/#vt-cred-w3c-linked-vp-w3c-vtc-linked-vp)).
+- The Applicant calls `TriggerResolver` on-chain to refresh its Verifiable Service resolution state. The Applicant SHOULD call `TriggerResolver` after the update, and in particular when:
   - it has just become a Verifiable Service by newly complying with [[VS-REQ]](https://verana-labs.github.io/verifiable-trust-spec/#vs-req-verifiable-service-basic-requirements-and-linked-vps); or
   - it has added or removed a `LinkedVerifiablePresentation` entry in its DID Document.
 
@@ -748,7 +749,7 @@ When the validator agent receives the `SetParticipantOPtoValidated` notification
 
 - [VSA-VTI-FLOW-OP-ISSUE-1] If `p.role` is `HOLDER`, the agent MUST issue a credential of `p.schema_id` to the applicant: a `HOLDER` entry exists to hold a credential of its schema, and by [[MOD-PP-MSG-1-2-2]](https://verana-labs.github.io/verifiable-trust-vpr-spec/versions/v4/#mod-pp-msg-1-2-2-start-participant-op-permission-checks) its validator is an `ISSUER` entry of the same schema. The agent runs steps 6 to 13 of the [New Onboarding Process](#vsa-vti-flow-op-new-new-onboarding-process), or of the [Renew Onboarding Process](#vsa-vti-flow-op-renew-renew-onboarding-process) for a renewal.
 - [VSA-VTI-FLOW-OP-ISSUE-2] For any other `p.role` (`ISSUER_GRANTOR`, `VERIFIER_GRANTOR`, `ISSUER`, `VERIFIER`) no credential is issued: the `Participant` entry is the accreditation. The flow reaches `VALIDATED`, its terminal state ([vt-flow States](../vt-flow-protocol/spec.md#states)).
-- [VSA-VTI-FLOW-OP-ISSUE-3] The credential container follows from the agent's own setup for the schema: AnonCreds when the agent holds a Credential Definition whose `relatedJsonSchemaCredentialId` is the VTJSC of `p.schema_id` ([VT-CRED-ANON](https://verana-labs.github.io/verifiable-trust-spec/versions/v4/#vt-cred-anon-anoncreds-verifiable-trust-credential-vtc)); otherwise a W3C Verifiable Trust Credential ([VT-CRED-W3C](https://verana-labs.github.io/verifiable-trust-spec/versions/v4/#vt-cred-w3c-w3c-verifiable-trust-credential-vtc)) signed with the agent's DID key, whose `credentialSchema.id` is that VTJSC.
+- [VSA-VTI-FLOW-OP-ISSUE-3] The credential is a W3C Verifiable Trust Credential ([VT-CRED-W3C](https://verana-labs.github.io/verifiable-trust-spec/versions/v4/#vt-cred-w3c-w3c-verifiable-trust-credential-vtc)) signed with the agent's DID key, whose `credentialSchema.id` is the VTJSC of `p.schema_id`. No other container is issued through a flow in this version, and the applicant publishes the credential as a linked VP (see [Credential format and presentation](#participant-and-credential-acquisition-flows)).
 - [VSA-VTI-FLOW-OP-ISSUE-4] The claims of the credential are the claims the flow holds when the notification is processed: those of the `onboarding-request` (see [[VSA-VTI-FLOW-OP-OR] Onboarding Request Composition](#vsa-vti-flow-op-or-onboarding-request-composition)), as created or replaced through [`editCredentialClaims`](#vsa-adm-vt-fl-edit-editcredentialclaims). [`validateFlow`](#vsa-adm-vt-fl-validate-validateflow) validated them before the transaction; the agent MUST validate them again against the `json_schema` of the `CredentialSchema` entry before issuing, since they may have been edited since. When the flow holds no claims or invalid claims, the agent MUST NOT issue, MUST log a descriptive error that names each missing or invalid claim, and MUST move the flow to `VALIDATED_PENDING_CLAIMS`; the operator corrects the claims with `editCredentialClaims` and calls `validateFlow` again, which validates them and starts the issuance.
 - [VSA-VTI-FLOW-OP-ISSUE-5] A validator that collects claims out of band (for example through the portal reached by an `oob-link`) therefore writes them into the flow before it calls `validateFlow`.
 - [VSA-VTI-FLOW-OP-ISSUE-6] When the default handler of the `SetParticipantOPtoValidated` notification is disabled (`VERANA_INDEXER_DEFAULT_HANDLERS_OVERRIDE`, [[VSA-VTI-CFG-ENV-NET]](#vsa-vti-cfg-env-net-network-configuration)), the backend behind the agent triggers issuance with [`validateFlow`](#vsa-adm-vt-fl-validate-validateflow) once the entry is `VALIDATED` on chain ([VSA-ADM-VT-FL-VALIDATE-11]); the rules above apply unchanged.
@@ -850,7 +851,7 @@ sequenceDiagram
 - **If `p1` is a HOLDER `Participant`** (the credential issued under `p1` is held by the Applicant of `p1`):
   - The **Validator of `p1`** SHOULD send a `CRED_STATE_CHANGE` message to the Applicant of `p1` over the existing DIDComm session.
   - The **Applicant of `p1`** MUST:
-    - remove the corresponding `LinkedVerifiablePresentation` entry from its DID Document if the credential was published as a linked VP;
+    - remove the corresponding `LinkedVerifiablePresentation` entry from its DID Document;
     - delete the credential from its credential store.
 
 - **If `p1` is NOT a HOLDER `Participant`** (i.e., `p1.role` is `ISSUER`, `VERIFIER`, `ISSUER_GRANTOR`, `VERIFIER_GRANTOR`, or `ECOSYSTEM`):
@@ -889,7 +890,7 @@ sequenceDiagram
     Applicant->>VPR: 7. Verify validator + session + digestJCS
     Applicant->>Validator: 8. Accept Credential
     Note over Applicant: 9. Store credential
-    Note over Applicant: 10. (optional) VP in DID Doc
+    Note over Applicant: 10. Linked VP in DID Doc
     Applicant->>VPR: 11. (optional) TriggerResolver
 ```
 
@@ -920,9 +921,9 @@ sequenceDiagram
 
 9. The applicant stores the credential in its credential store.
 
-10. **Optionally**, the applicant links the credential as a `LinkedVerifiablePresentation` in its DID Document per [[VT-CRED-W3C-LINKED-VP]](https://verana-labs.github.io/verifiable-trust-spec/#vt-cred-w3c-linked-vp-w3c-vtc-linked-vp).
+10. The applicant publishes the credential as a `LinkedVerifiablePresentation` entry of its DID Document per [[VT-CRED-W3C-LINKED-VP]](https://verana-labs.github.io/verifiable-trust-spec/#vt-cred-w3c-linked-vp-w3c-vtc-linked-vp); in this version this is automatic for every credential issued through a flow (see [Credential format and presentation](#participant-and-credential-acquisition-flows)).
 
-11. **Optionally**, the applicant calls `TriggerResolver` on-chain to refresh its Verifiable Service resolution state. The applicant SHOULD call `TriggerResolver` when:
+11. The applicant calls `TriggerResolver` on-chain to refresh its Verifiable Service resolution state. The applicant SHOULD call `TriggerResolver` after step 10, and in particular when:
     - it has just become a Verifiable Service by newly complying with [[VS-REQ]](https://verana-labs.github.io/verifiable-trust-spec/#vs-req-verifiable-service-basic-requirements-and-linked-vps); or
     - it has added or removed a `LinkedVerifiablePresentation` entry in its DID Document.
 
@@ -937,7 +938,7 @@ Validator MAY send update messages to the applicant through the persistent DIDCo
 The validator sends a `CRED_STATE_CHANGE` message when the credential's status changes. Supported states:
 
 - **REVOKED**: The credential has been permanently revoked by the validator. The applicant MUST:
-  1. Remove the corresponding `LinkedVerifiablePresentation` from its DID Document (if present).
+  1. Remove the corresponding `LinkedVerifiablePresentation` from its DID Document.
   2. Delete the credential from the credential store.
 
 > Note: DIDComm connection can be maintained for future updates: a revocation of a credential doesn't imply the end of the flow.
@@ -999,7 +1000,7 @@ The following table maps the agent-level message names used in this specificatio
 
 #### [VSA-VTI-FLOW-MISC] Additional Considerations
 
-- **Credential update**: At any time, the validator MAY issue an updated credential via a new Issue Credential V2 subprotocol run through the existing DIDComm session. Upon receiving an updated credential, the applicant MUST delete the old credential from the credential store, replace it with the new one, and update the corresponding `LinkedVerifiablePresentation` in its DID Document if the credential was previously linked.
+- **Credential update**: At any time, the validator MAY issue an updated credential via a new Issue Credential V2 subprotocol run through the existing DIDComm session. Upon receiving an updated credential, the applicant MUST delete the old credential from the credential store, replace it with the new one, and update the corresponding `LinkedVerifiablePresentation` entry of its DID Document.
 - **Out-of-band requests**: At any time, the validator MAY send an `oob-link` message — for example, to revalidate applicant information, to extend a `Participant`'s lifetime, or to collect additional data before issuing an updated credential.
 - **Reconnection**: Per the [vt-flow Reconnection](../vt-flow-protocol/spec.md#reconnection) rules, if the applicant reconnects to the validator after a connection has been closed, it MUST resend an `onboarding-request` or `issuance-request` with the same `participant_session_id`. The validator MUST identify that the message is related to an existing flow and reassign the flow to the new connection.
 - **Onboarding renewal**: When an onboarding process must be renewed, the applicant MUST first execute the required VPR on-chain transaction (`RenewParticipantOP`) and then resend an `onboarding-request` to the validator to re-trigger validation.
