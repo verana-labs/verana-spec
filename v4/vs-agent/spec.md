@@ -399,8 +399,8 @@ These notifications are emitted when a `Participant` entry whose `did` equals th
 
 | `event_type` | Description | Default Handler Implementation |
 | --- | --- | --- |
-| `StartParticipantOP` [[MOD-PP-MSG-1]](https://verana-labs.github.io/verifiable-trust-vpr-spec/#mod-pp-msg-1-start-participant-op) | An applicant has started a new Onboarding Process targeting a validator `Participant` of this agent. | For Validator: N/A. For Applicant: Progress the credential acquisition flow (see [new onboarding process](#vsa-vti-flow-op-new-new-onboarding-process)). |
-| `RenewParticipantOP` [[MOD-PP-MSG-2]](https://verana-labs.github.io/verifiable-trust-vpr-spec/#mod-pp-msg-2-renew-participant-op) | An applicant has renewed an existing Onboarding Process. | For Validator: N/A. For Applicant: Progress the credential acquisition flow (see [renew onboarding process](#vsa-vti-flow-op-renew-renew-onboarding-process)). |
+| `StartParticipantOP` [[MOD-PP-MSG-1]](https://verana-labs.github.io/verifiable-trust-vpr-spec/#mod-pp-msg-1-start-participant-op) | An applicant has started a new Onboarding Process targeting a validator `Participant` of this agent. | For Validator: N/A. For Applicant: Progress the credential acquisition flow, for any `CredentialSchema` (see [new onboarding process](#vsa-vti-flow-op-new-new-onboarding-process) and [Onboarding Request Composition](#vsa-vti-flow-op-or-onboarding-request-composition)). |
+| `RenewParticipantOP` [[MOD-PP-MSG-2]](https://verana-labs.github.io/verifiable-trust-vpr-spec/#mod-pp-msg-2-renew-participant-op) | An applicant has renewed an existing Onboarding Process. | For Validator: N/A. For Applicant: Progress the credential acquisition flow, for any `CredentialSchema` (see [renew onboarding process](#vsa-vti-flow-op-renew-renew-onboarding-process) and [Onboarding Request Composition](#vsa-vti-flow-op-or-onboarding-request-composition)). |
 | `SetParticipantOPtoValidated` [[MOD-PP-MSG-3]](https://verana-labs.github.io/verifiable-trust-vpr-spec/#mod-pp-msg-3-set-participant-op-to-validated) | Validator has set the agent's `Participant.op_state` to `VALIDATED`. | For Validator: Progress the credential acquisition flow (see [new onboarding process](#vsa-vti-flow-op-new-new-onboarding-process)). For Applicant: refresh cached authorization state (see [Authorization Notifications](#vsa-vti-notif-auth-authorization-notifications)). |
 | `CreateRootParticipant` [[MOD-PP-MSG-7]](https://verana-labs.github.io/verifiable-trust-vpr-spec/#mod-pp-msg-7-create-root-participant) | A root `Participant` (no validator parent) has been created with the agent's DID. | N/A. |
 | `SetParticipantEffectiveUntil` [[MOD-PP-MSG-8]](https://verana-labs.github.io/verifiable-trust-vpr-spec/#mod-pp-msg-8-set-participant-effective-until) | Validator or ancestor has set or adjusted the agent's `Participant.effective_until`. | Refresh cached authorization state (see [Authorization Notifications](#vsa-vti-notif-auth-authorization-notifications)). |
@@ -538,7 +538,7 @@ When the operator sets `TRUSTED_ECS_ECOSYSTEM_DIDS`, the agent MUST verify that 
 
 The agent composes the claims of each ECS credential from the [[VSA-VTI-CFG-ENV-ECS] ECS Credential Claims](#vsa-vti-cfg-env-ecs-ecs-credential-claims) variables of the schema of the flow:
 
-- In an onboarding process, the agent sends the composed claims as the `claims` field of the [`onboarding-request`](../vt-flow-protocol/spec.md#onboarding-request). The agent MUST omit that field when it composes no claim. The validator MAY override any claim that it receives.
+- In an onboarding process, the agent sends the composed claims as the `claims` field of the [`onboarding-request`](../vt-flow-protocol/spec.md#onboarding-request). The agent MUST omit that field when it composes no claim. The validator MAY override any claim that it receives. See [Onboarding Request Composition](#vsa-vti-flow-op-or-onboarding-request-composition) for the schemas that have no claims source.
 - When the agent issues its own Service credential, the agent MUST validate the composed claims against the `json_schema` of the `CredentialSchema` entry. When the validation fails, the agent MUST log a descriptive error that names each missing or invalid claim, and MUST stop the issuance.
 
 The agent MUST complete its [Bootstrap Sequence](#vsa-vti-boot-bootstrap-sequence) and serve its Administration API before it holds any ECS credential.
@@ -582,6 +582,8 @@ To obtain a `Participant` entry and/or credential from a specific issuer of a `C
 
 The flows described in the next section provide a list of possible Applicant/Validator combinations for which they are relevant.
 
+The agent has no claims source for these schemas. Its default handler still connects to the validator and sends the `onboarding-request`, without `claims` (see [Onboarding Request Composition](#vsa-vti-flow-op-or-onboarding-request-composition)). The validator collects the data it needs through its own validation process, for example an out-of-DIDComm portal reached through an `oob-link`, and sets the claims of the credential that it issues, if any, with `editCredentialClaims`.
+
 ### Participant and Credential Acquisition Flows
 
 *This section is non normative.*
@@ -603,6 +605,23 @@ Possible Applicant/Validator combinations:
 | VERIFIER | VERIFIER_GRANTOR | `verifier_onboarding_mode` = `GRANTOR_ONBOARDING_PROCESS` |
 | VERIFIER | ECOSYSTEM | `verifier_onboarding_mode` = `ECOSYSTEM_ONBOARDING_PROCESS` |
 | HOLDER | ISSUER | `holder_onboarding_mode` = `ISSUER_ONBOARDING_PROCESS` |
+
+##### [VSA-VTI-FLOW-OP-OR] Onboarding Request Composition
+
+The applicant default handler of the `StartParticipantOP` and `RenewParticipantOP` events ([[VSA-VTI-NOTIF-PP] Participant Notifications](#vsa-vti-notif-pp-participant-notifications)) runs steps 2 and 3 of the [New Onboarding Process](#vsa-vti-flow-op-new-new-onboarding-process) or of the [Renew Onboarding Process](#vsa-vti-flow-op-renew-renew-onboarding-process) for every `Participant` entry whose `did` is the agent's DID, whatever the `CredentialSchema` of the entry. The agent MUST NOT require a local configuration for the schema in order to connect to the validator and send the [`onboarding-request`](../vt-flow-protocol/spec.md#onboarding-request).
+
+The agent composes the `claims` field of the `onboarding-request` as follows:
+
+- For an ECS schema, the agent composes the claims from the [[VSA-VTI-CFG-ENV-ECS] ECS Credential Claims](#vsa-vti-cfg-env-ecs-ecs-credential-claims) variables, as specified in [ECS Participants and Credentials](#ecs-participants-and-credentials).
+- For any other schema, the agent has no claims source and MUST send the request without `claims`. A custom handler (see [Notifications](#vsa-vti-notif-notifications)) MAY compose the claims from a source of its own.
+- The agent MUST omit the `claims` field, rather than send an empty object, when it has no claim to propose.
+
+An `onboarding-request` without `claims` is a complete request: the field is OPTIONAL in the [vt-flow protocol](../vt-flow-protocol/spec.md#onboarding-request). The validator agent:
+
+- MUST apply to it the same checks as to a request with `claims`, and on success transition the flow to `VALIDATING`;
+- MUST NOT reject it with `vt-flow.invalid-claims` for the sole reason that the field is absent;
+- obtains the claims of the credential that it issues, if any, from its own validation process: the operator, or a portal that collects them from the applicant through an [`oob-link`](../vt-flow-protocol/spec.md#oob-link), sets them with [`editCredentialClaims`](#vsa-adm-vt-fl-edit-editcredentialclaims). That method is accepted while the flow is `VALIDATING` only, so the claims are set before the validator submits `SetParticipantOPtoValidated`;
+- MUST validate the claim set of the flow against the `json_schema` of the `CredentialSchema` entry before it offers a credential (step 6 of the [New Onboarding Process](#vsa-vti-flow-op-new-new-onboarding-process)). When the validation fails, the agent MUST NOT offer the credential and MUST log a descriptive error that names each missing or invalid claim.
 
 ##### [VSA-VTI-FLOW-OP-NEW] New Onboarding Process
 
@@ -643,11 +662,11 @@ sequenceDiagram
    - `participant_id`: The applicant `Participant.id`.
    - `participant_session_id`: A UUID for the `ParticipantSession`.
 
-   The applicant MAY also include credential claims (if the flow should issue a credential) and supporting proofs, if already available. The validator MUST either accept the information and proceed, or refuse it with an error code and descriptive error message. If refused, the applicant MAY retry with corrected information.
+   The applicant includes credential claims only when it has a claims source for the schema of the flow, and MAY include supporting proofs, if already available (see [Onboarding Request Composition](#vsa-vti-flow-op-or-onboarding-request-composition)); a request without `claims` is complete. The validator MUST either accept the information and proceed, or refuse it with an error code and descriptive error message. If refused, the applicant MAY retry with corrected information.
 
 > Note: this onboarding request must be executed when a new onboarding process is started or if an existing onboarding process is renewed.
 
-4. If the validator requires additional information to generate the credential (e.g., missing claims or proofs), the validator MAY send a link to the applicant for an out-of-DIDComm flow (such as a web form or portal) to collect the missing data.
+4. If the validator requires additional information to generate the credential (e.g., missing claims or proofs), the validator MAY send a link to the applicant for an out-of-DIDComm flow (such as a web form or portal) to collect the missing data. This is the normal path when the request carries no `claims`. The validator operator MAY also set the claims of the flow directly with [`editCredentialClaims`](#vsa-adm-vt-fl-edit-editcredentialclaims), while the flow is `VALIDATING`.
 
 5. After validation, the validator calls `SetParticipantOPtoValidated` ([[MOD-PP-MSG-3]](https://verana-labs.github.io/verifiable-trust-vpr-spec/#mod-pp-msg-3-set-participant-op-to-validated)) on-chain, changing `op_state` to `VALIDATED`. The VS Agent is notified.
 
@@ -708,7 +727,7 @@ sequenceDiagram
 
 2. The Applicant connects to the same Validator via DIDComm (see [DIDComm Protocol](#vsa-vti-flow-didcomm-didcomm-protocol)). If a DIDComm session was kept open from the previous flow, that session SHOULD be reused. The Validator MUST verify that the connecting agent is compliant with [[VS-CONN-VS]](https://verana-labs.github.io/verifiable-trust-spec/#vs-conn-vs-requirements-for-a-vs-to-accept-a-connection-from-another-service) before accepting the connection.
 
-3. The Applicant sends an **OR (Onboarding Request)** message containing `participant_id` and (RECOMMENDED) a fresh `participant_session_id`. The Applicant MAY include updated credential claims and supporting proofs. The Validator MUST recognise that `participant_id` corresponds to a renewal (its previous flow was `COMPLETED`) and reuse / update the associated flow state rather than create a new one.
+3. The Applicant sends an **OR (Onboarding Request)** message containing `participant_id` and (RECOMMENDED) a fresh `participant_session_id`. The Applicant includes updated credential claims only when it has a claims source for the schema of the flow (see [Onboarding Request Composition](#vsa-vti-flow-op-or-onboarding-request-composition)), and MAY include supporting proofs. The Validator MUST recognise that `participant_id` corresponds to a renewal (its previous flow was `COMPLETED`) and reuse / update the associated flow state rather than create a new one.
 
 4. If the Validator requires fresh information for the renewal (e.g., re-confirming identity, updated documentation), it MAY send an `OOB_LINK` to the Applicant for an out-of-DIDComm flow.
 
@@ -969,7 +988,7 @@ The following table maps the agent-level message names used in this specificatio
 
 | Agent-level name | vt-flow message | Sender | Agent-level trigger |
 | --- | --- | --- | --- |
-| OR (Onboarding Request) | [`onboarding-request`](../vt-flow-protocol/spec.md#onboarding-request) | Applicant | After `StartParticipantOP` / `RenewParticipantOP` succeeds on-chain. |
+| OR (Onboarding Request) | [`onboarding-request`](../vt-flow-protocol/spec.md#onboarding-request) | Applicant | After `StartParticipantOP` / `RenewParticipantOP` succeeds on-chain, for any schema. `claims` per [Onboarding Request Composition](#vsa-vti-flow-op-or-onboarding-request-composition). |
 | IR (Issuance Request) | [`issuance-request`](../vt-flow-protocol/spec.md#issuance-request) | Applicant | When initiating a [Credential Direct Issuance](#vsa-vti-flow-di-credential-direct-issuance). |
 | OOB_LINK | [`oob-link`](../vt-flow-protocol/spec.md#oob-link) | Validator | When additional out-of-DIDComm information is needed. |
 | VALIDATING | [`validating`](../vt-flow-protocol/spec.md#validating) | Validator | When off-chain validation begins. |
@@ -1983,7 +2002,7 @@ Lists and inspects the credential acquisition flows that the agent handles.
 
 ##### [VSA-ADM-VT-FL-EDIT] editCredentialClaims
 
-Creates, modifies, or overrides the credential claims that the applicant submitted for a given flow.
+Creates, modifies, or overrides the credential claims of a given flow: the claims that the applicant submitted, or the initial claim set when the `onboarding-request` carried no `claims` (see [Onboarding Request Composition](#vsa-vti-flow-op-or-onboarding-request-composition)).
 
 **Path parameters**:
 
