@@ -8,7 +8,7 @@
 
 This document is the **normative DIDComm protocol definition** for the Participant and credential acquisition flows specified in the [VS Agent Specification](../vs-agent/spec.md). It extracts the wire-level protocol detail into a self-contained reference so that implementers can focus on DIDComm message formats, state machines, and error semantics independently of agent-level behaviour.
 
-The **Verifiable Trust Flow Protocol** (`vt-flow`) is a DIDComm superprotocol that orchestrates the acquisition of a Verifiable Trust Credential between an **Applicant** and a **Validator**. It carries VPR-specific state (`participant_id`, `participant_session_id`, `agent_participant_id`, `wallet_agent_participant_id`) across a multi-step flow and delegates credential delivery to the [Issue Credential V2 protocol (RFC 0453)][rfc0453] as a subprotocol, linked via the DIDComm thread / parent-thread mechanism (per [RFC 0008][rfc0008] in v1 envelopes, and equivalent `thid`/`pthid` fields in v2 envelopes).
+The **Verifiable Trust Flow Protocol** (`vt-flow`) is a DIDComm superprotocol that orchestrates the acquisition of a Verifiable Trust Credential between an **Applicant** and a **Validator**. It carries VPR-specific state (`participant_id`, `participant_session_id`) across a multi-step flow and delegates credential delivery to the [Issue Credential V2 protocol (RFC 0453)][rfc0453] as a subprotocol, linked via the DIDComm thread / parent-thread mechanism (per [RFC 0008][rfc0008] in v1 envelopes, and equivalent `thid`/`pthid` fields in v2 envelopes).
 
 `vt-flow` covers two flow variants defined in the [VS Agent Specification](../vs-agent/spec.md):
 
@@ -22,7 +22,7 @@ Both variants share the same state machine, message set, and error model. They d
 Verana VS onboarding and credential issuance require coordination between DIDComm sessions and on-chain transactions. The `vt-flow` protocol addresses this by defining a DIDComm protocol that:
 
 - Authenticates both sides as Verifiable Services (see [[VS-CONN-VS]][vt-spec-conn-vs]) before data exchange.
-- Carries `participant_id` / `participant_session_id` / `agent_participant_id` / `wallet_agent_participant_id` in-band so both agents can coordinate on-chain transactions against a shared session.
+- Carries `participant_id` / `participant_session_id` in-band so both agents can coordinate on-chain transactions against a shared session.
 - Delegates credential delivery to [Issue Credential V2][rfc0453], reusing its format negotiation, attachment machinery, and state handling without reimplementation.
 - Adopts [Problem Report (RFC 0035)][rfc0035] for errors so existing DIDComm tooling handles them uniformly.
 - Keeps the DIDComm connection open after `COMPLETED` so the Validator can push credential state changes (e.g., `CRED_REVOKED`) through the same authenticated channel.
@@ -64,6 +64,17 @@ Two identifiers carry session semantics in vt-flow. They serve different layers 
 |---|---|---|
 | `thid` (DIDComm `~thread.thid`) | DIDComm correlation | Links all vt-flow messages in one session, and carried as `pthid` on all Issue Credential V2 subprotocol messages. Equals the `@id` of the initial `onboarding-request` or `issuance-request`. |
 | `participant_session_id` (vt-flow message body field) | On-chain / VPR | Identifier used for `CreateOrUpdateParticipantSession`. Also used by the Validator to re-attach an existing flow to a new DIDComm connection on reconnection (see [Reconnection](#reconnection)). |
+
+### Agent and Wallet Agent Participant Ids
+
+VPR [MOD-PP-MSG-10][vpr-msg-10] defines two OPTIONAL `CreateOrUpdateParticipantSession` fields, `agent_participant_id` and `wallet_agent_participant_id`. They identify the issuer Participants of the User Agent and wallet credentials of a **Verifiable User Agent** peer, so that user-agent rewards can be distributed. They are set only by VUAs, **MUST NOT** be set when the peer is a Verifiable Service, and a peer that sets them illegitimately **MUST** be refused.
+
+Both parties of a vt-flow session are Verifiable Services (see [Verifiable Service Identity Check](#verifiable-service-identity-check)). Therefore, in vt-flow 1.0:
+
+- `onboarding-request` and `issuance-request` **MUST NOT** carry `agent_participant_id` or `wallet_agent_participant_id`. A Validator that receives either field **MUST** reject the request with `problem-report` code `vt-flow.agent-participant-id-not-allowed`.
+- The Validator **MUST NOT** set `agent_participant_id` or `wallet_agent_participant_id` in the `CreateOrUpdateParticipantSession` transaction of a vt-flow session; no user-agent or wallet-agent reward is distributed for a credential issued over vt-flow.
+
+A future version of this protocol MAY define a VUA-applicant profile that carries these fields with the semantics of [MOD-PP-MSG-10][vpr-msg-10].
 
 ### Roles
 
@@ -255,8 +266,6 @@ Sent by the Applicant to initiate an Onboarding Process flow. **MUST** be the fi
   },
   "participant_id": "<applicant Participant id, from StartParticipantOP>",
   "participant_session_id": "<applicant-generated uuid for the ParticipantSession>",
-  "agent_participant_id": "<see field descriptions>",
-  "wallet_agent_participant_id": "<see field descriptions>",
   "claims": {},
   "proofs~attach": [
     {
@@ -275,8 +284,6 @@ Sent by the Applicant to initiate an Onboarding Process flow. **MUST** be the fi
 |---|---|---|---|
 | `participant_id` | string | REQUIRED | The Applicant's on-chain `Participant.id` created via `StartParticipantOP`. The Validator validates this on-chain before transitioning to `VALIDATING`. |
 | `participant_session_id` | string (UUIDv4) | REQUIRED | UUIDv4 generated by the Applicant for the eventual on-chain `ParticipantSession`. Used by the Validator to re-attach an existing flow on reconnection. |
-| `agent_participant_id` | string | REQUIRED | If the Applicant's Service credential was issued by another agent (delegated mode), the `validator_participant_id` of the Applicant's Participant for that Service credential's validator. If the Service credential is self-issued (standalone mode), the `id` of the Applicant's own Service credential ISSUER Participant. |
-| `wallet_agent_participant_id` | string | REQUIRED | Wallet counterpart of `agent_participant_id`, same semantics. |
 | `claims` | object | OPTIONAL | Credential claims the Applicant proposes. Validator MAY override. |
 | `proofs~attach` | array | OPTIONAL | Supporting proofs as DIDComm attachments ([RFC 0017][rfc0017]). See [`proofs~attach` Format Registry](#proofsattach-format-registry). |
 
@@ -293,8 +300,6 @@ Sent by the Applicant to initiate a Direct Issuance flow. Same shape as `onboard
   "~thread": { "thid": "<same as @id>" },
   "schema_id": "<VPR credential schema id>",
   "participant_session_id": "<applicant-generated uuid>",
-  "agent_participant_id": "<see onboarding-request>",
-  "wallet_agent_participant_id": "<see onboarding-request>",
   "claims": {},
   "proofs~attach": []
 }
@@ -429,7 +434,7 @@ Receiving `credential-received` on the Applicant side is the hook point for on-c
 If the Applicant reconnects after a connection closes:
 
 1. The Applicant **MUST** establish a new DIDComm connection (via implicit invitation to the Validator's DID).
-2. The Applicant **MUST** resend an `onboarding-request` or `issuance-request` matching the original, carrying the **same** `participant_session_id`, `agent_participant_id`, `wallet_agent_participant_id`, and (for Onboarding Process) `participant_id` or (for Direct Issuance) `schema_id`.
+2. The Applicant **MUST** resend an `onboarding-request` or `issuance-request` matching the original, carrying the **same** `participant_session_id` and (for Onboarding Process) `participant_id` or (for Direct Issuance) `schema_id`.
 3. The Validator **MUST** recognize the request as belonging to an existing session by matching on `participant_session_id` (plus `participant_id` or `schema_id` for defence-in-depth) and re-attach the existing flow to the new connection.
 4. The reattached flow's Flow State resumes from whatever stage it was in when the connection dropped.
 
@@ -576,8 +581,7 @@ Error codes are carried in the adopted `problem-report`'s `description.code` fie
 | `vt-flow.unsupported-message` | Either | Received a message type not supported in the current state. Note: if this is the first message on the connection, senders **SHOULD** prefer `vt-flow.or-required` / `vt-flow.ir-required` over the generic code. | `none` | `connection` |
 | `vt-flow.invalid-participant-id` | Validator | `participant_id` does not exist, does not reference the Validator's Participant, or is in the wrong `op_state`. | `you` | `thread` |
 | `vt-flow.invalid-schema-id` | Validator | `schema_id` does not exist or is not supported by the Validator. | `you` | `thread` |
-| `vt-flow.invalid-agent-participant-id` | Validator | `agent_participant_id` is malformed or does not resolve on-chain. | `you` | `thread` |
-| `vt-flow.invalid-wallet-agent-participant-id` | Validator | `wallet_agent_participant_id` is malformed or does not resolve on-chain. | `you` | `thread` |
+| `vt-flow.agent-participant-id-not-allowed` | Validator | Request carries `agent_participant_id` or `wallet_agent_participant_id`. Both fields are reserved for Verifiable User Agent peers (VPR [MOD-PP-MSG-10][vpr-msg-10]) and **MUST NOT** be sent by a Verifiable Service; see [Agent and Wallet Agent Participant Ids](#agent-and-wallet-agent-participant-ids). | `you` | `thread` |
 | `vt-flow.invalid-claims` | Validator | Submitted `claims` do not satisfy the schema. | `you` | `thread` |
 | `vt-flow.invalid-participant-session-id` | Validator | `participant_session_id` is malformed or collides with an existing session. | `you` | `thread` |
 | `vt-flow.not-a-verifiable-service` | Either | Peer's DID does not satisfy [[VS-CONN-VS]][vt-spec-conn-vs]. | `none` | `connection` |
@@ -634,8 +638,6 @@ Message type URIs, field names, state machine, error semantics, and subprotocol 
   },
   "participant_id": "12345",
   "participant_session_id": "f7e9c8a2-4b6d-4e1f-9a3c-5d8b2e7f1a4c",
-  "agent_participant_id": "678",
-  "wallet_agent_participant_id": "910",
   "claims": { "...": "..." }
 }
 ```
@@ -649,8 +651,6 @@ Message type URIs, field names, state machine, error semantics, and subprotocol 
   "body": {
     "participant_id": "12345",
     "participant_session_id": "f7e9c8a2-4b6d-4e1f-9a3c-5d8b2e7f1a4c",
-    "agent_participant_id": "678",
-    "wallet_agent_participant_id": "910",
     "claims": { "...": "..." }
   }
 }
@@ -712,5 +712,6 @@ Additional format identifiers **MAY** be negotiated by mutual agreement.
 [rfc0453]: https://github.com/hyperledger/aries-rfcs/blob/main/features/0453-issue-credential-v2/README.md
 [rfc0593]: https://github.com/hyperledger/aries-rfcs/blob/main/features/0593-json-ld-cred-attach/README.md
 [vpr-v4]: https://verana-labs.github.io/verifiable-trust-vpr-spec/
+[vpr-msg-10]: https://verana-labs.github.io/verifiable-trust-vpr-spec/versions/v4/#mod-pp-msg-10-create-or-update-participant-session
 [vt-spec]: https://verana-labs.github.io/verifiable-trust-spec/
 [vt-spec-conn-vs]: https://verana-labs.github.io/verifiable-trust-spec/#vs-conn-vs
