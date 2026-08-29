@@ -327,7 +327,7 @@ Sent by the Validator when additional information outside of DIDComm is required
 
 | Field | Type | Required | Description |
 |---|---|---|---|
-| `url` | string | REQUIRED | Absolute HTTPS URL where the Applicant completes the OOB step. **MUST** be unique to this session (e.g., include a capability token). |
+| `url` | string | REQUIRED | Absolute HTTPS URL where the Applicant completes the OOB step. **MUST** be unique to this session (e.g. a per-session path). It SHOULD NOT carry a bearer secret: the receiving portal authenticates the Applicant itself, and the URL is stored in the flow record and exposed through the Validator agent's Administration API (`oobLinkUrl`). |
 | `description` | string | REQUIRED | Human-readable explanation. Follows DIDComm l10n conventions ([RFC 0043][rfc0043]). |
 | `expires_time` | string (ISO 8601) | OPTIONAL | Deadline after which the URL becomes invalid. |
 
