@@ -115,7 +115,8 @@ All states enumerated below are normative.
 | `AWAITING_IR` | Validator | Direct Issuance | `ESTABLISHED`. `issuance-request` expected but not yet received, or last request was rejected (Applicant may retry). |
 | `OOB_PENDING` | Both | Both | `ESTABLISHED`. Validator sent an `oob-link`; awaiting Applicant completion. |
 | `VALIDATING` | Both | Both | `ESTABLISHED`. Validator performing off-chain validation (Onboarding Process) or processing an accepted issuance request (Direct Issuance). |
-| `VALIDATED` | Both | Onboarding Process | `ESTABLISHED`. Validator called `SetParticipantOPtoValidated` on-chain; `op_state` is now `VALIDATED`. Terminal state when the validated `Participant` role is not `HOLDER`: no credential is issued. When the role is `HOLDER`, the Validator issues a credential of the schema; the flow stays in this state until the Validator holds a claim set that satisfies the schema and sends `offer-credential` (see [Issuance After Validation](../vs-agent/spec.md#vsa-vti-flow-op-issue-issuance-after-validation)). |
+| `VALIDATED` | Both | Onboarding Process | `ESTABLISHED`. Validator called `SetParticipantOPtoValidated` on-chain; `op_state` is now `VALIDATED`. Terminal state when the validated `Participant` role is not `HOLDER`: no credential is issued. When the role is `HOLDER`, the Validator sends `offer-credential` (transition to `CRED_OFFERED`), or moves to `VALIDATED_PENDING_CLAIMS` when it holds no claim set that satisfies the schema (see [Issuance After Validation](../vs-agent/spec.md#vsa-vti-flow-op-issue-issuance-after-validation)). |
+| `VALIDATED_PENDING_CLAIMS` | Validator | Onboarding Process | `ESTABLISHED`. `op_state` is `VALIDATED` and the role is `HOLDER`, but the Validator holds no claim set that satisfies the schema. The Validator obtains the claims out of band, then sends `offer-credential`. The Applicant stays in `VALIDATED`. |
 | `CRED_OFFERED` | Both | Both | `ESTABLISHED`. Issue Credential V2 subprotocol in flight. Applicant verifies on-chain digest while in this state; acceptance transitions to `COMPLETED`. |
 | `COMPLETED` | Both | Both | `ESTABLISHED`. Credential delivered, verified, and accepted (Issue Credential V2 Ack sent). Connection remains open for future updates. |
 | `CRED_REVOKED` | Both | Both | `ESTABLISHED`. Validator sent `credential-state-change` with `state=REVOKED`. Applicant removed the linked VP and deleted the credential. Connection remains open. |
@@ -510,6 +511,8 @@ stateDiagram-v2
     OOB_PENDING --> VALIDATING: OOB complete
     VALIDATING --> VALIDATED: validation complete
     VALIDATED --> CRED_OFFERED: offer-credential sent
+    VALIDATED --> VALIDATED_PENDING_CLAIMS: claims missing or invalid
+    VALIDATED_PENDING_CLAIMS --> CRED_OFFERED: offer-credential sent
     CRED_OFFERED --> COMPLETED: Ack received
 
     VALIDATED --> [*]: validation-only terminal
@@ -523,6 +526,7 @@ stateDiagram-v2
     VALIDATING --> PARTICIPANT_SLASHED: on-chain slash
     AWAITING_OR --> TERMINATED_BY_VALIDATOR: reject
     AWAITING_IR --> TERMINATED_BY_VALIDATOR: reject
+    VALIDATING --> TERMINATED_BY_VALIDATOR: reject
     COMPLETED --> TERMINATED_BY_VALIDATOR: close session
     ERROR --> [*]
     TERMINATED_BY_VALIDATOR --> [*]
@@ -582,6 +586,7 @@ Error codes are carried in the adopted `problem-report`'s `description.code` fie
 | `vt-flow.invalid-participant-session-id` | Validator | `participant_session_id` is malformed or collides with an existing session. | `you` | `thread` |
 | `vt-flow.not-a-verifiable-service` | Either | Peer's DID does not satisfy [[VS-CONN-VS]][vt-spec-conn-vs]. | `none` | `connection` |
 | `vt-flow.validation-failed` | Validator | Off-chain validation of submitted documentation failed. | `you` (OPTIONAL) | `thread` |
+| `vt-flow.validation-refused` | Validator | The Validator refused the request after its off-chain validation; the flow is terminated. | `none` | `thread` |
 | `vt-flow.oob-expired` | Validator | OOB link expired before Applicant completed the step. | `you` | `thread` |
 | `vt-flow.session-terminated` | Either | Party explicitly terminated the session. | `none` | `thread` |
 | `vt-flow.internal-error` | Either | Unspecified error. | varies | `thread` |
