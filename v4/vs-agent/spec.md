@@ -2005,7 +2005,7 @@ Lists and inspects the credential acquisition flows that the agent handles.
 - `lastEventAt` — timestamp of the last event;
 - the submitted credential claims and proofs;
 - `oobLinkUrl` — the outstanding `OOB_LINK` URL, when one exists;
-- `validation` — for an Onboarding Process flow after `validateFlow`: `decidedAt`, `submission` (`AGENT` or `OPERATOR`), the agreed fees and discounts, and `tx` (`hash`, `height`, `status`, `reason`, `error`) when the agent submitted the transaction (see [[VSA-ADM-VT-FL-VALIDATE]](#vsa-adm-vt-fl-validate-validateflow));
+- `validation` — for an Onboarding Process flow after `validateFlow`: `decidedAt`, `submission` (`AGENT` or `OPERATOR`), the agreed fees, discounts, `effectiveUntil` and `opSummaryDigest`, and `tx` (`hash`, `height`, `status`, `reason`, `error`) when the agent submitted the transaction (see [[VSA-ADM-VT-FL-VALIDATE]](#vsa-adm-vt-fl-validate-validateflow));
 - after the agent generates a credential: the identifier of the offered credential, its `digestJCS`, and the reference to the on-chain `ParticipantSession`.
 
 **Requirements**: none beyond the Admin API access checks (see [Authorization](#authorization)).
@@ -2070,7 +2070,7 @@ For an Onboarding Process flow, the method validates the claim set of a `HOLDER`
 - [VSA-ADM-VT-FL-VALIDATE-1] The method is accepted when the flow is `VALIDATING`, `VALIDATION_TX_FAILED` (retry), or `VALIDATED_PENDING_CLAIMS` (issuance after corrected claims). Any other state is refused with `INVALID_STATE`.
 - [VSA-ADM-VT-FL-VALIDATE-2] When the applicant `Participant` role is `HOLDER`, the agent MUST validate the claim set of the flow against the `json_schema` of the `CredentialSchema` entry before anything else. On failure the agent MUST return `INVALID_CLAIMS` with the list of violations, and MUST NOT record the decision nor submit anything.
 - [VSA-ADM-VT-FL-VALIDATE-3] In `VALIDATED_PENDING_CLAIMS`, the agent then starts issuance per [[VSA-VTI-FLOW-OP-ISSUE] Issuance After Validation](#vsa-vti-flow-op-issue-issuance-after-validation) (steps 6 to 13) and returns.
-- [VSA-ADM-VT-FL-VALIDATE-4] Otherwise the agent records the decision and the fee inputs on the flow (`validation.decidedAt`, `validation.fees`) and determines the submission path, recorded in `validation.submission`: `AGENT` when the agent holds an active `ParticipantAuthorizationRecord` for its validator `Participant` entry whose `msg_types` include `SetParticipantOPtoValidated` and whose `expiration` has not passed (see [Agent Account Authorizations](#agent-account-authorizations)); `OPERATOR` otherwise.
+- [VSA-ADM-VT-FL-VALIDATE-4] Otherwise the agent records the decision and the inputs on the flow (`validation.decidedAt`, `validation.fees`, `validation.effectiveUntil`, `validation.opSummaryDigest`) and determines the submission path, recorded in `validation.submission`: `AGENT` when the agent holds an active `ParticipantAuthorizationRecord` for its validator `Participant` entry whose `msg_types` include `SetParticipantOPtoValidated` and whose `expiration` has not passed (see [Agent Account Authorizations](#agent-account-authorizations)); `OPERATOR` otherwise.
 - [VSA-ADM-VT-FL-VALIDATE-5] `OPERATOR`: the flow moves to `AWAITING_VALIDATION_TX` and the agent MUST NOT submit the transaction. An operator of the validator Corporation submits it under its own `OperatorAuthorization`, for example from the Verana frontend; the `SetParticipantOPtoValidated` notification then moves the flow to `VALIDATED`.
 - [VSA-ADM-VT-FL-VALIDATE-6] `AGENT`: before broadcasting, the agent MUST run a pre-flight: simulate the transaction, and check that the fee payer can pay it, that is the agent account, or, when the record has `with_feegrant`, the `FeeGrant` allowance and the balance of the Corporation account. A failed pre-flight moves the flow to `VALIDATION_TX_FAILED` without broadcasting.
 - [VSA-ADM-VT-FL-VALIDATE-7] The agent signs the transaction with its own account key, and only that key, and broadcasts it. A broadcast rejected by the node moves the flow to `VALIDATION_TX_FAILED`; an accepted broadcast moves it to `VALIDATION_TX_SUBMITTED` with `validation.tx.hash`, and the method returns without waiting for inclusion.
@@ -2087,8 +2087,10 @@ For an Onboarding Process flow, the method validates the claim set of a `HOLDER`
 
 - `validationFees`, `issuanceFees`, `verificationFees` (OPTIONAL, default `0`) — the fee values of [[MOD-PP-MSG-3]](https://verana-labs.github.io/verifiable-trust-vpr-spec/#mod-pp-msg-3-set-participant-op-to-validated).
 - `issuanceFeeDiscount`, `verificationFeeDiscount` (OPTIONAL, default `0`) — the discount values of [[MOD-PP-MSG-3]](https://verana-labs.github.io/verifiable-trust-vpr-spec/#mod-pp-msg-3-set-participant-op-to-validated), between `0` and `1`.
+- `effectiveUntil` (OPTIONAL) — the `effective_until` value of the message; absent for no time limit.
+- `opSummaryDigest` (OPTIONAL) — the `op_summary_digest` value of the message.
 
-The values are agreed at the first validation of the entry. For a renewal they MUST equal the values already on the entry: the VPR rejects a change (see [Renew Onboarding Process](#vsa-vti-flow-op-renew-renew-onboarding-process)).
+The fee and discount values are agreed at the first validation of the entry. For a renewal they MUST equal the values already on the entry: the VPR rejects a change (see [Renew Onboarding Process](#vsa-vti-flow-op-renew-renew-onboarding-process)).
 
 **Output**: the updated flow record, including `validation` (see [`listFlows`](#vsa-adm-vt-fl-list-listflows)).
 
