@@ -6,7 +6,7 @@
 
 The **Ecosystem Onboarding Service** (OBS) is the web service through which a Corporation that holds a validator-capable `Participant` entry in a Verifiable Public Registry (VPR) — an ECOSYSTEM, ISSUER_GRANTOR, VERIFIER_GRANTOR or ISSUER Participant of a Credential Schema — onboards applicants for that schema. It publishes what can be obtained (ecosystem, schema, role, fees, prerequisites), lets an applicant start an Onboarding Process from a browser with a wallet, collects out of band the evidence the validator needs (credential claims, documents, additional fields), lets the validator review and decide, and keeps a durable record of every step, including the on-chain transactions the humans sign.
 
-The service is the out-of-band portal that the [Verifiable Trust Flow Protocol](../vt-flow-protocol/spec.md) anticipates with its `oob-link` message. It does not speak DIDComm, does not hold issuing keys and never signs on chain: the applicant's and the validator's [VS Agents](../vs-agent/spec.md) run the credential-acquisition flow on their own, humans sign VPR messages with their wallets under `OperatorAuthorization` grants, and the service records evidence and decisions, writes the agreed claims into the validator agent's flow, and reconciles its state with the chain (through the indexer) and with the agent.
+The service is the out-of-band portal that the [Verifiable Trust Flow Protocol](../vt-flow-protocol/spec.md) anticipates with its `oob-link` message. It does not speak DIDComm, does not hold issuing keys and never signs on chain: the applicant's and the validator's [VS Agents](../vs-agent/spec.md) run the credential-acquisition flow on their own; VPR messages are signed by humans with their wallets under `OperatorAuthorization` grants or, for the validation transaction, by the validator agent under a `VSOperatorAuthorization`; and the service records evidence and decisions, writes the agreed claims into the validator agent's flow, records the validator's decision with `validateFlow`, and reconciles its state with the chain (through the indexer) and with the agent.
 
 This document specifies the normative behavior of an OBS implementation: container configuration and bootstrap, authentication and corporation context, the case and transaction-record models, the applicant and validator journeys, the integration contracts with the indexer, the chain RPC and the VS Agent, document handling, and the frontend requirements it inherits from the Verana Frontend specification.
 
@@ -84,9 +84,9 @@ flowchart LR
 | --- | --- | --- |
 | Start, renew, cancel an Onboarding Process | applicant operator | wallet-signed `StartParticipantOP` / `RenewParticipantOP` / `CancelParticipantOPLastRequest` under an `OperatorAuthorization` of the applicant Corporation |
 | Contact the validator, send the `onboarding-request` | applicant VS Agent | its default handler for the `StartParticipantOP` / `RenewParticipantOP` events ([VSA-VTI-NOTIF-PP](../vs-agent/spec.md#vsa-vti-notif-pp-participant-notifications)) |
-| Hold the flow, receive and expose claims and proofs, issue the credential | validator VS Agent | vt-flow; its default handler for the `SetParticipantOPtoValidated` event; `CreateOrUpdateParticipantSession` signed by its `vs_operator` |
+| Hold the flow, receive and expose claims and proofs, check the claims, submit the validation when authorized, issue the credential | validator VS Agent | vt-flow; `validateFlow` ([VSA-ADM-VT-FL-VALIDATE](../vs-agent/spec.md#vsa-adm-vt-fl-validate-validateflow)); `SetParticipantOPtoValidated` signed by its `vs_operator` when a `VSOperatorAuthorization` record covers the message; its default handler for the `SetParticipantOPtoValidated` event; `CreateOrUpdateParticipantSession` signed by its `vs_operator` |
 | Publish the offer, show the ecosystem governance framework and record its acceptance, check eligibility, collect claims, documents and fields, keep decisions and transaction records | OBS | this specification |
-| Decide and validate on chain | validator operator | wallet-signed `SetParticipantOPtoValidated` under an `OperatorAuthorization` of the validator Corporation |
+| Decide, and validate on chain when the agent cannot | validator operator | decision recorded through the portal; wallet-signed `SetParticipantOPtoValidated` under an `OperatorAuthorization` of the validator Corporation when `validateFlow` answers `submission` = `OPERATOR`, or as the fallback after an agent failure ([OBS-VAL-TXFAIL]) |
 
 ### End-to-end sequence
 
@@ -120,8 +120,14 @@ sequenceDiagram
         P-->>AU: AWAITING_APPLICANT_DATA (validator message)
     else accept
         P->>VA: editCredentialClaims (final claims)
-        VU->>VPR: sign + broadcast SetParticipantOPtoValidated
-        VU->>P: transaction record (SUBMITTED)
+        P->>VA: validateFlow (fees, effective_until): claims checked, submission path
+        alt submission = AGENT
+            VA->>VPR: sign + broadcast SetParticipantOPtoValidated (VSOA)
+            P->>VA: listFlows (poll): VALIDATION_TX_SUBMITTED, then VALIDATED
+        else submission = OPERATOR
+            VU->>VPR: sign + broadcast SetParticipantOPtoValidated
+            VU->>P: transaction record (SUBMITTED)
+        end
         VPR-->>VA: SetParticipantOPtoValidated event
         VA->>AA: DIDComm: credential offer, session, issue-credential
         P->>VA: listFlows (poll): CRED_OFFERED, then COMPLETED
@@ -246,7 +252,7 @@ When the backend starts, it MUST execute the following steps in order. Any REQUI
 8. **Initialize reconciliation.** Load the persisted event cursor; on first start set it to the current indexed height ([`IDX-INDEXER-QRY-1`](../verana-indexer/spec.md#idx-indexer-qry-1-get-block-height)); start the event-log poll ([OBS-INT-IDX-POLL]) and the flow poll ([OBS-INT-VSA-POLL]).
 9. **Serve the API.** The readiness probe ([OBS-OPS-2]) turns ready.
 
-> Deployment precondition: the validator agent's default handler for the `SetParticipantOPtoValidated` notification MUST be enabled (the event type MUST NOT be listed in the agent's `VERANA_INDEXER_DEFAULT_HANDLERS_OVERRIDE`, see [VSA-VTI-CFG-ENV-NET](../vs-agent/spec.md#vsa-vti-cfg-env-net-network-configuration)): the service relies on the agent progressing the flow, and never calls `validateFlow` ([OBS-INT-VSA-3]).
+> Deployment note: the service relies on the validator agent's default handler for the `SetParticipantOPtoValidated` notification ([VSA-VTI-FLOW-OP-ISSUE](../vs-agent/spec.md#vsa-vti-flow-op-issue-issuance-after-validation)); the event type MUST NOT be listed in the agent's `VERANA_INDEXER_DEFAULT_HANDLERS_OVERRIDE` ([VSA-VTI-CFG-ENV-NET](../vs-agent/spec.md#vsa-vti-cfg-env-net-network-configuration)). Whether the agent submits the validation transaction itself depends on the `VSOperatorAuthorization` records of the validator Participant, decided by the agent at each `validateFlow` call ([OBS-VAL-ACCEPT-2]); no configuration of the service is involved.
 
 ### [OBS-BOOT-ROLE] Applicant role derivation
 
@@ -335,10 +341,10 @@ A case has no stored status: its status is **derived** from four inputs each tim
 | --- | --- |
 | `P` | the applicant `Participant` entry as read from the indexer: `op_state`, `participant_state`, `effective_until` |
 | `F` | the validator agent's flow for the case: `flowState`, `connectionState` ([vt-flow States](../vt-flow-protocol/spec.md#states)); absent until the applicant agent has made contact |
-| `S` | the current round's submission state kept by the service: `NONE`, `DRAFT`, `SUBMITTED`, `RETURNED`, `ACCEPTED`, `REFUSED` |
+| `S` | the current round's submission state kept by the service: `NONE`, `DRAFT`, `SUBMITTED`, `RETURNED`, `ACCEPTED`, `REFUSED`, `REJECTED` |
 | `T` | the open transaction records of the case ([OBS-TX]) |
 
-- [OBS-CASE-STATUS-1] `S` transitions are: `NONE` → `DRAFT` (applicant saves), `DRAFT` → `SUBMITTED` (applicant submits), `SUBMITTED` → `RETURNED` (validator requests more information), `RETURNED` → `SUBMITTED` (applicant resubmits), `SUBMITTED` → `ACCEPTED` (validator accepts, [OBS-VAL-ACCEPT]) or `SUBMITTED` → `REFUSED` (validator refuses), `REFUSED` → `RETURNED` (validator reopens), `ACCEPTED` → `SUBMITTED` (the validation transaction failed, [OBS-VAL-ACCEPT-6]). `ACCEPTED` is final for the round otherwise; a new round starts at `NONE`.
+- [OBS-CASE-STATUS-1] `S` transitions are: `NONE` → `DRAFT` (applicant saves), `DRAFT` → `SUBMITTED` (applicant submits), `SUBMITTED` → `RETURNED` (validator requests more information), `RETURNED` → `SUBMITTED` (applicant resubmits), `SUBMITTED` → `ACCEPTED` (validator accepts, [OBS-VAL-ACCEPT]), `SUBMITTED` → `REFUSED` (validator refuses), `REFUSED` → `RETURNED` (validator reopens), `SUBMITTED` or `REFUSED` → `REJECTED` (validator rejects, [OBS-VAL-REJECT]). `ACCEPTED` and `REJECTED` are final for the round: a failed validation transaction keeps `S` = `ACCEPTED` ([OBS-VAL-TXFAIL]); a new round starts at `NONE`.
 - [OBS-CASE-STATUS-2] The status is the first row that matches, top to bottom:
 
 | Status | Rule |
@@ -348,16 +354,19 @@ A case has no stored status: its status is **derived** from four inputs each tim
 | `CREDENTIAL_REVOKED` | `F.flowState` = `CRED_REVOKED` |
 | `ERROR` | `F.flowState` = `ERROR` |
 | `CANCELLED` | `P.op_state` = `TERMINATED`, or `F.flowState` = `TERMINATED_BY_APPLICANT`, or (round of kind `renewal` and the `CancelParticipantOPLastRequest` event of this round was seen) |
+| `REJECTED` | `F.flowState` = `TERMINATED_BY_VALIDATOR`, or `S` = `REJECTED` |
 | `COMPLETED` | `F.flowState` = `COMPLETED` |
 | `ISSUING` | `F.flowState` = `CRED_OFFERED` |
+| `ISSUANCE_PENDING_CLAIMS` | `F.flowState` = `VALIDATED_PENDING_CLAIMS` |
 | `VALIDATED` | `P.op_state` = `VALIDATED` for the current round |
 | `REFUSED` | `S` = `REFUSED` |
+| `VALIDATION_FAILED` | `F.flowState` = `VALIDATION_TX_FAILED`, or `S` = `ACCEPTED` and the round's `SetParticipantOPtoValidated` transaction record is `FAILED` or `NOT_FOUND` with no later open record |
 | `ACCEPTED_PENDING_CHAIN` | `S` = `ACCEPTED` |
 | `PENDING_VALIDATOR_REVIEW` | `S` = `SUBMITTED` |
 | `AWAITING_APPLICANT_DATA` | `F` is present (`AWAITING_OR`, `VALIDATING`, `OOB_PENDING`) and `S` ∈ {`NONE`, `DRAFT`, `RETURNED`} |
 | `AWAITING_AGENT` | `P.op_state` = `PENDING` and `F` is absent |
 
-- [OBS-CASE-STATUS-3] `COMPLETED`, `CANCELLED`, `REVOKED`, `SLASHED`, `CREDENTIAL_REVOKED` and `ERROR` are terminal for the round; `VALIDATED` is terminal when the applicant role is not `HOLDER`. `REFUSED` is not terminal: the validator MAY reopen the round, and the applicant MAY cancel the Onboarding Process ([OBS-APP-CANCEL]).
+- [OBS-CASE-STATUS-3] `COMPLETED`, `CANCELLED`, `REJECTED`, `REVOKED`, `SLASHED`, `CREDENTIAL_REVOKED` and `ERROR` are terminal for the round; `VALIDATED` is terminal when the applicant role is not `HOLDER`. `REFUSED` is not terminal: the validator MAY reopen or reject the round, and the applicant MAY cancel the Onboarding Process ([OBS-APP-CANCEL]). `VALIDATION_FAILED` and `ISSUANCE_PENDING_CLAIMS` wait for a validator action ([OBS-VAL-TXFAIL], [OBS-VAL-POST-3]).
 - [OBS-CASE-STATUS-4] Later on-chain changes to a closed round (`participant_state` becoming `EXPIRED`, a `SetParticipantEffectiveUntil`, a revocation of a non-HOLDER entry after completion, for which the agent defines no flow transition) are reflected by re-reading `P` when the case is displayed and by the event-log poll; they never require the browser.
 - [OBS-CASE-STATUS-5] The portal renders the status with the vocabulary above and, alongside it, the on-chain badges of [VFE-TRUST-BADGE](../verana-frontend/spec.md#vfe-trust-badge-badges) (`participant_state`, `op_state`) so that the human sees both the workflow position and the chain facts.
 
@@ -367,7 +376,7 @@ The Verana Frontend's transaction notification is ephemeral. The portal instead 
 
 ### [OBS-TX-REC] Record
 
-- [OBS-TX-REC-1] A record holds: `txHash` (uppercase hexadecimal SHA-256 of the signed `TxRaw` bytes, the identifier the chain reports), `msgType` (one of `StartParticipantOP`, `RenewParticipantOP`, `CancelParticipantOPLastRequest`, `SetParticipantOPtoValidated`), `context` (the case `participantId`, or, for a `StartParticipantOP`, the start-form key: acting Corporation, DID, role), `actingCorporationId`, `signerAccount`, `submittedAt`, `status`, `height`, `code`, `rawLog`, `participantId` (once known), `resolvedBy` (`frontend`, `event-log`, `rpc`), `updatedAt`.
+- [OBS-TX-REC-1] A record holds: `txHash` (uppercase hexadecimal SHA-256 of the signed `TxRaw` bytes, the identifier the chain reports), `msgType` (one of `StartParticipantOP`, `RenewParticipantOP`, `CancelParticipantOPLastRequest`, `SetParticipantOPtoValidated`), `context` (the case `participantId`, or, for a `StartParticipantOP`, the start-form key: acting Corporation, DID, role), `actingCorporationId`, `signerAccount`, `submitter` (`operator` for a wallet-signed transaction, `agent` for one the validator agent submitted, [OBS-TX-RESOLVE-6]), `submittedAt`, `status`, `height`, `code`, `rawLog`, `participantId` (once known), `resolvedBy` (`frontend`, `event-log`, `rpc`, `agent`), `updatedAt`.
 - [OBS-TX-REC-2] At most one record with status `SUBMITTED` or `INCLUDED` MAY exist per (`context`, `msgType`); the backend MUST refuse another with `409` `INVALID_STATE`, and the portal MUST keep the corresponding action disabled while one exists.
 
 ### [OBS-TX-STATE] States
@@ -379,6 +388,8 @@ The Verana Frontend's transaction notification is ephemeral. The portal instead 
 | `INDEXED` | backend, when the event of the transaction is seen in the indexer event log and the case has been refreshed | the service's state reflects the transaction | banner replaced by the case status; success notification when the tab is open |
 | `FAILED` | frontend from the `DeliverTxResponse`, backend from the RPC lookup | executed with `code` ≠ 0, or rejected by the mempool | persistent error banner with the chain's `rawLog`; the action is enabled again |
 | `NOT_FOUND` | backend | the chain does not know the hash after `OBS_TX_NOT_FOUND_AFTER_BLOCKS` indexed blocks | "not found on chain" banner with the hash, the submission time and the explorer link; the action is enabled again |
+
+A record with `submitter` = `agent` is created and resolved from the validator agent's flow ([OBS-TX-RESOLVE-6]): `code` carries the flow's `validation.tx.reason` and `rawLog` its `error`, and the portal renders them with the remedies of [OBS-VAL-TXFAIL].
 
 ### [OBS-TX-WRITE] Frontend write path
 
@@ -394,6 +405,7 @@ The Verana Frontend's transaction notification is ephemeral. The portal instead 
 - [OBS-TX-RESOLVE-3] For a record still `SUBMITTED` after `OBS_TX_LOOKUP_AFTER_BLOCKS` indexed blocks since `submittedAt`, the backend MUST look the hash up on the RPC ([OBS-INT-RPC]): found with `code` = 0 → `INCLUDED` (the event-log poll completes it); found with `code` ≠ 0 → `FAILED` with the `rawLog`; not found → the record stays `SUBMITTED`. The lookup SHOULD be repeated at most once per indexed block.
 - [OBS-TX-RESOLVE-4] A record not found on the chain after `OBS_TX_NOT_FOUND_AFTER_BLOCKS` indexed blocks since `submittedAt` MUST be set to `NOT_FOUND`. A transaction signed with a `timeoutHeight` MAY be set to `NOT_FOUND` as soon as the indexer passes that height.
 - [OBS-TX-RESOLVE-5] Records are retained with their case for the case's lifetime; a `StartParticipantOP` record that never resolved to a case is retained `OBS_CASE_RETENTION_DAYS`.
+- [OBS-TX-RESOLVE-6] When the flow poll ([OBS-INT-VSA-POLL]) shows a `validation.tx.hash` for a round with no record for it, the backend MUST create the `SetParticipantOPtoValidated` record with `submitter` = `agent`, `signerAccount` = the agent account, `submittedAt` = the flow's `validation.decidedAt`, status `SUBMITTED`, and resolve it like any other record ([OBS-TX-RESOLVE-1..4]). A flow in `VALIDATION_TX_FAILED` sets the record `FAILED` with `resolvedBy` = `agent`; a failed pre-flight, which broadcasts nothing, creates the record directly as `FAILED` without `txHash`.
 
 ### [OBS-TX-UX] User experience
 
@@ -490,13 +502,13 @@ When the case reaches `AWAITING_APPLICANT_DATA` (the applicant agent has contact
 ### [OBS-VAL-LIST] Case list
 
 - [OBS-VAL-LIST-1] In the validator scope the portal MUST list every case of the deployment with: the applicant's identity (trust resolution of the case DID, [VFE-TRUST-CLAIMS](../verana-frontend/spec.md#vfe-trust-claims-ecs-claim-mapping)), the DID, the applicant Corporation, the role, the derived status with the chain badges, the round kind, `lastEventAt`, and the requested fee terms.
-- [OBS-VAL-LIST-2] The list MUST offer status filters as tick boxes; by default only `PENDING_VALIDATOR_REVIEW` is ticked ("pending action from the validator"). The counts per status are the attention indicators of [OBS-CORP-SEL-3].
+- [OBS-VAL-LIST-2] The list MUST offer status filters as tick boxes; by default `PENDING_VALIDATOR_REVIEW`, `VALIDATION_FAILED` and `ISSUANCE_PENDING_CLAIMS` are ticked ("pending action from the validator"). The counts per status are the attention indicators of [OBS-CORP-SEL-3].
 - [OBS-VAL-LIST-3] The list SHOULD also show Onboarding Processes started toward the validator Participant on chain but not yet known to the agent, from [`IDX-PP-QRY-2`](../verana-indexer/spec.md#idx-pp-qry-2-list-participants) with `validator_participant_id` and `op_state=PENDING`, as `AWAITING_AGENT` entries ([OBS-INT-IDX-3]).
 
 ### [OBS-VAL-REVIEW] Review
 
 - [OBS-VAL-REVIEW-1] The review page MUST present: the applicant's full Proof of Trust from [`IDX-VT-QRY-1`](../verana-indexer/spec.md#idx-vt-qry-1-resolve) selecting `ecsCredentials`, `presentations`, `participations` and `ecosystems` (trust state, service and controller identity, every presented credential with its schema and governing ecosystem, every accreditation with its role, state and ecosystem); the flow's claims and proofs as exposed by [`listFlows`](../vs-agent/spec.md#vsa-adm-vt-fl-list-listflows); the submitted documents (downloadable per [OBS-AUTHZ-5]) and fields; the requested fee terms; the governance framework acceptance of the round (version, document, digest, accepted by and when), flagged when that version is no longer the active one; the on-chain facts of the entry; the round history; and the `instructions.validator` text of the requirements file.
-- [OBS-VAL-REVIEW-2] Review actions are offered only while `S` = `SUBMITTED` (or `REFUSED`, for reopening); otherwise the page is read-only.
+- [OBS-VAL-REVIEW-2] Review actions are offered only while `S` = `SUBMITTED` (or `REFUSED`, for reopening or rejecting), and the actions of [OBS-VAL-TXFAIL] and [OBS-VAL-POST-3] while the case is `VALIDATION_FAILED` or `ISSUANCE_PENDING_CLAIMS`; otherwise the page is read-only.
 
 ### [OBS-VAL-INFO] Requesting more information
 
@@ -506,23 +518,36 @@ When the case reaches `AWAITING_APPLICANT_DATA` (the applicant agent has contact
 ### [OBS-VAL-REFUSE] Refusing
 
 - [OBS-VAL-REFUSE-1] The validator MAY refuse the round with a message (REQUIRED). The backend sets `S` = `REFUSED`, records the message, and sends it to the applicant agent with `sendOobLink` as in [OBS-VAL-INFO-1].
-- [OBS-VAL-REFUSE-2] Refusal has no on-chain counterpart: the entry stays `PENDING` with its escrow until the applicant cancels ([OBS-APP-CANCEL-2]). The portal MUST tell the validator so, and MUST offer to reopen a refused round (`S` = `RETURNED`).
+- [OBS-VAL-REFUSE-2] Refusal has no on-chain counterpart: the entry stays `PENDING` with its escrow until the applicant cancels ([OBS-APP-CANCEL-2]). The portal MUST tell the validator so, and MUST offer to reopen a refused round (`S` = `RETURNED`). Refusal is reversible; a final decision is a rejection ([OBS-VAL-REJECT]).
+
+### [OBS-VAL-REJECT] Rejecting
+
+- [OBS-VAL-REJECT-1] The validator MAY reject the round with a message (REQUIRED). The backend calls [`rejectFlow`](../vs-agent/spec.md#vsa-adm-vt-fl-reject-rejectflow) on the validator agent with `description` = the message (default `code`), then sets `S` = `REJECTED`. The action is offered only while the flow is in a state that `rejectFlow` accepts ([VSA-ADM-VT-FL-REJECT-1](../vs-agent/spec.md#vsa-adm-vt-fl-reject-rejectflow)); otherwise the portal offers refusal only.
+- [OBS-VAL-REJECT-2] Rejection has no on-chain counterpart: the entry stays `PENDING` with its escrow until the applicant cancels ([OBS-APP-CANCEL-2]). The portal MUST tell the validator so before confirming, and the applicant's case page MUST show the message and the cancel action.
+- [OBS-VAL-REJECT-3] A rejected round cannot be reopened: the DIDComm session is terminated. The applicant obtains a new decision only through a new Onboarding Process.
 
 ### [OBS-VAL-ACCEPT] Accepting
 
-Accepting a round is the only step that leads the validator to sign on chain, and it must be ordered carefully: the validator agent issues the credential with whatever claims its flow holds at the instant it sees the `SetParticipantOPtoValidated` event.
+Accepting a round puts the validation on chain, by the validator agent itself or by the validator's wallet, and it must be ordered carefully: the claims are written and checked before the transaction, since the validator agent issues the credential with the claims its flow holds when it sees the `SetParticipantOPtoValidated` event.
 
 - [OBS-VAL-ACCEPT-1] The accept form MUST collect: the final claims (when the applicant role is `HOLDER`; editable in both claim modes); the agreed fee terms per the role table of [OBS-APP-START-3], prefilled with the applicant's request, editable on the initial round only (on a renewal the chain requires them to equal the values first agreed, [MOD-PP-MSG-3-2-1](https://verana-labs.github.io/verifiable-trust-vpr-spec/versions/v4/#mod-pp-msg-3-2-1-set-participant-op-to-validated-basic-checks)); `issuance_fee_discount` for `ISSUER_GRANTOR` and `ISSUER` applicants and `verification_fee_discount` for `VERIFIER_GRANTOR` and `VERIFIER` applicants (default 0, otherwise 0 and hidden); and `effective_until`, defaulting to the computed `op_exp` and bounded by it. The `op_summary_digest` is computed by the backend ([OBS-DOC-3]) and displayed.
-- [OBS-VAL-ACCEPT-2] The portal MUST execute the acceptance in this order: (1) the backend persists the decision draft; (2) when the applicant role is `HOLDER`, the backend writes the final claims into the flow with [`editCredentialClaims`](../vs-agent/spec.md#vsa-adm-vt-fl-edit-editcredentialclaims) and this call MUST succeed before the next step; (3) the portal opens the wallet for `SetParticipantOPtoValidated` built per [VFE-TX-SIGN-1](../verana-frontend/spec.md#vfe-tx-sign-signing-model) (`corporation` = the validator Corporation's `policy_address`, `operator` = the connected account, `id` = the case `participantId`, the fee terms, discounts, `effective_until`, `op_summary_digest`), with a transaction record ([OBS-TX-WRITE]); (4) the backend sets `S` = `ACCEPTED`.
-- [OBS-VAL-ACCEPT-3] The service MUST NOT call `validateFlow` and MUST NOT trigger issuance in any other way: the validator agent's default handler progresses the flow on the chain event ([VSA-VTI-NOTIF-PP](../vs-agent/spec.md#vsa-vti-notif-pp-participant-notifications)), and the portal follows the flow to `ISSUING` and `COMPLETED` ([OBS-CASE-STATUS]).
+- [OBS-VAL-ACCEPT-2] The portal MUST execute the acceptance in this order: (1) the backend persists the decision draft; (2) when the applicant role is `HOLDER`, the backend writes the final claims into the flow with [`editCredentialClaims`](../vs-agent/spec.md#vsa-adm-vt-fl-edit-editcredentialclaims) and this call MUST succeed before the next step; (3) the backend calls [`validateFlow`](../vs-agent/spec.md#vsa-adm-vt-fl-validate-validateflow) with the fee terms, the discounts, `effectiveUntil` and `opSummaryDigest`; an `INVALID_CLAIMS` answer stops the sequence and its `violations` are shown field by field on the accept form; (4) the backend sets `S` = `ACCEPTED` and records the answer's `validation.submission`; (5) when `submission` = `OPERATOR`, the portal opens the wallet for `SetParticipantOPtoValidated` built per [VFE-TX-SIGN-1](../verana-frontend/spec.md#vfe-tx-sign-signing-model) (`corporation` = the validator Corporation's `policy_address`, `operator` = the connected account, `id` = the case `participantId`, the same fee terms, discounts, `effective_until` and `op_summary_digest`), with a transaction record ([OBS-TX-WRITE]); when `submission` = `AGENT`, the portal shows the pending banner of [OBS-TX-STATE] for the agent's transaction and the backend follows the flow through the flow poll (`VALIDATION_TX_SUBMITTED`, then `VALIDATED` or `VALIDATION_TX_FAILED`), creating the transaction record from the flow ([OBS-TX-RESOLVE-6]).
+- [OBS-VAL-ACCEPT-3] The service MUST NOT trigger issuance in any way other than the `validateFlow` calls of this section and of [OBS-VAL-POST-3]: the validator agent decides the issuance from the validated entry and its default handler runs it on the chain event ([VSA-VTI-FLOW-OP-ISSUE](../vs-agent/spec.md#vsa-vti-flow-op-issue-issuance-after-validation)); the portal follows the flow to `ISSUING` and `COMPLETED` ([OBS-CASE-STATUS]).
 - [OBS-VAL-ACCEPT-4] The status stays `ACCEPTED_PENDING_CHAIN` until the indexer shows `op_state` = `VALIDATED`; the portal MUST NOT present the round as validated on the strength of its own decision record.
-- [OBS-VAL-ACCEPT-5] `SetParticipantOPtoValidated` MAY also be executed outside the portal (another operator, the Verana Frontend, a group proposal). The service then observes it like any chain event; when this happens before the portal wrote the final claims, the agent issues with the claims the flow held: the validator list SHOULD warn about rounds validated on chain while `S` was still `SUBMITTED`.
-- [OBS-VAL-ACCEPT-6] When the validation transaction ends `FAILED` or `NOT_FOUND`, the backend MUST set `S` back to `SUBMITTED`, keep the decision draft, and re-enable the accept action.
+- [OBS-VAL-ACCEPT-5] `SetParticipantOPtoValidated` MAY also be executed outside the portal (another operator, the Verana Frontend, a group proposal). The service then observes it like any chain event; when this happens before the portal wrote the final claims, the agent applies its issuance rule with the claims the flow held: with none or invalid ones the flow goes to `VALIDATED_PENDING_CLAIMS` and the case to `ISSUANCE_PENDING_CLAIMS` ([OBS-VAL-POST-3]). The validator list SHOULD warn about rounds validated on chain while `S` was still `SUBMITTED`.
+- [OBS-VAL-ACCEPT-6] When the validation transaction fails, the case becomes `VALIDATION_FAILED` and [OBS-VAL-TXFAIL] applies; `S` stays `ACCEPTED` and the decision is kept.
+
+### [OBS-VAL-TXFAIL] Validation transaction failure
+
+- [OBS-VAL-TXFAIL-1] A case is `VALIDATION_FAILED` when the agent's submission ended in `VALIDATION_TX_FAILED` ([VSA-VTI-FLOW-STATE](../vs-agent/spec.md#vsa-vti-flow-state-flow-state)) or when the operator's transaction record is `FAILED` or `NOT_FOUND`. The case page MUST show the reason (`validation.tx.reason` or the record's `code`), the transaction hash when one exists, the raw chain message, and the remedy for the reason: `INSUFFICIENT_FUNDS_AGENT` → fund the agent account; `INSUFFICIENT_FUNDS_CORPORATION` → fund the Corporation account (`policy_address`); `FEEGRANT_EXHAUSTED`, `FEEGRANT_EXPIRED` → renew the fee grant of the authorization record; `AUTHORIZATION_EXPIRED` → renew the `VSOperatorAuthorization`; `BROADCAST_ERROR`, `TX_FAILED`, `TX_NOT_FOUND` and an operator-side failure → the chain message. The account addresses and the current balances ([VFE-DATA-SRC-2](../verana-frontend/spec.md#vfe-data-src-sources)) are shown next to the remedy.
+- [OBS-VAL-TXFAIL-2] The page MUST offer two actions to a validator operator: **retry through the agent**, which calls [`validateFlow`](../vs-agent/spec.md#vsa-adm-vt-fl-validate-validateflow) again with the recorded inputs ([VSA-ADM-VT-FL-VALIDATE-9](../vs-agent/spec.md#vsa-adm-vt-fl-validate-validateflow)), and **sign it myself**, which is step (5) of [OBS-VAL-ACCEPT-2] on the operator path and is available whatever the original submission path. The retry is also the action after an operator-side failure when the agent holds a usable authorization.
+- [OBS-VAL-TXFAIL-3] Both paths may race: a transaction rejected because the entry is already `VALIDATED` is a success on either side ([VSA-ADM-VT-FL-VALIDATE-10](../vs-agent/spec.md#vsa-adm-vt-fl-validate-validateflow)); the portal MUST NOT show it as a failure, and the case follows `P.op_state`.
 
 ### [OBS-VAL-POST] After validation
 
 - [OBS-VAL-POST-1] When the applicant role is `HOLDER`, the case page MUST show the issuance progress from the flow (`CRED_OFFERED`, `COMPLETED`) and, once issued, the credential identifier, its `digestJCS` and the on-chain session reference exposed by [`listFlows`](../vs-agent/spec.md#vsa-adm-vt-fl-list-listflows).
 - [OBS-VAL-POST-2] Later lifecycle actions on the applicant's entry (`SetParticipantEffectiveUntil`, `RevokeParticipant`, `SlashParticipantTrustDeposit`) are out of scope of this revision; the portal MUST show the entry's current on-chain state and MAY deep-link to the Verana Frontend's Participant card when `VERANA_FRONTEND_URL` is set.
+- [OBS-VAL-POST-3] A case in `ISSUANCE_PENDING_CLAIMS` (flow `VALIDATED_PENDING_CLAIMS`: the entry is validated on chain but the claim set is missing or invalid, [VSA-VTI-FLOW-OP-ISSUE](../vs-agent/spec.md#vsa-vti-flow-op-issue-issuance-after-validation)) MUST appear in the validator list under the default filters, and its page MUST reopen the claims form only. On save, the backend writes the claims with [`editCredentialClaims`](../vs-agent/spec.md#vsa-adm-vt-fl-edit-editcredentialclaims) and calls [`validateFlow`](../vs-agent/spec.md#vsa-adm-vt-fl-validate-validateflow) without inputs, which validates them and starts the issuance ([VSA-ADM-VT-FL-VALIDATE-3](../vs-agent/spec.md#vsa-adm-vt-fl-validate-validateflow)); an `INVALID_CLAIMS` answer is shown field by field.
 
 ## [OBS-INT] Integration Contracts
 
@@ -546,20 +571,20 @@ Accepting a round is the only step that leads the validator to sign on chain, an
 
 ### [OBS-INT-VSA] Validator VS Agent
 
-- [OBS-INT-VSA-1] The backend uses the Administration API v2 of the validator agent for exactly: [`getAgentInfo`](../vs-agent/spec.md#vsa-adm-ag-info-getagentinfo) (bootstrap); [`listServiceEndpoints`](../vs-agent/spec.md#vsa-adm-vt-se-list-listserviceendpoints), [`addServiceEndpoint`](../vs-agent/spec.md#vsa-adm-vt-se-add-addserviceendpoint) and [`updateServiceEndpoint`](../vs-agent/spec.md#vsa-adm-vt-se-update-updateserviceendpoint) for its own `EcosystemOnboardingService` entry only ([OBS-BOOT-SVC]); [`listFlows`](../vs-agent/spec.md#vsa-adm-vt-fl-list-listflows); [`editCredentialClaims`](../vs-agent/spec.md#vsa-adm-vt-fl-edit-editcredentialclaims); [`sendOobLink`](../vs-agent/spec.md#vsa-adm-vt-fl-send-sendooblink). Authentication follows [OBS-CFG-ENV-AGENT].
-- [OBS-INT-VSA-2] Claims are written with `editCredentialClaims` only while the flow is `VALIDATING`; when the agent answers `INVALID_STATE` the backend MUST keep the claims in the submission or decision and retry at the next flow poll while the flow is `VALIDATING`, and MUST NOT let the accept sequence of [OBS-VAL-ACCEPT-2] proceed past step (2) until the write has succeeded.
-- [OBS-INT-VSA-3] The backend MUST NOT call `validateFlow` ([OBS-VAL-ACCEPT-3]), `revokeFlowCredential`, or any method of the DIDComm, OpenID4VC and AnonCreds scopes, and MUST NOT create, modify or delete service entries other than its own.
+- [OBS-INT-VSA-1] The backend uses the Administration API v2 of the validator agent for exactly: [`getAgentInfo`](../vs-agent/spec.md#vsa-adm-ag-info-getagentinfo) (bootstrap); [`listServiceEndpoints`](../vs-agent/spec.md#vsa-adm-vt-se-list-listserviceendpoints), [`addServiceEndpoint`](../vs-agent/spec.md#vsa-adm-vt-se-add-addserviceendpoint) and [`updateServiceEndpoint`](../vs-agent/spec.md#vsa-adm-vt-se-update-updateserviceendpoint) for its own `EcosystemOnboardingService` entry only ([OBS-BOOT-SVC]); [`listFlows`](../vs-agent/spec.md#vsa-adm-vt-fl-list-listflows); [`editCredentialClaims`](../vs-agent/spec.md#vsa-adm-vt-fl-edit-editcredentialclaims); [`sendOobLink`](../vs-agent/spec.md#vsa-adm-vt-fl-send-sendooblink); [`validateFlow`](../vs-agent/spec.md#vsa-adm-vt-fl-validate-validateflow) ([OBS-VAL-ACCEPT-2], [OBS-VAL-TXFAIL-2], [OBS-VAL-POST-3]); [`rejectFlow`](../vs-agent/spec.md#vsa-adm-vt-fl-reject-rejectflow) ([OBS-VAL-REJECT]). Authentication follows [OBS-CFG-ENV-AGENT].
+- [OBS-INT-VSA-2] Claims are written with `editCredentialClaims` in the states the method accepts ([VSA-ADM-VT-FL-EDIT](../vs-agent/spec.md#vsa-adm-vt-fl-edit-editcredentialclaims)); the agent stores them without checking them, and the check happens in `validateFlow`. When the agent answers `INVALID_STATE` the backend MUST keep the claims in the submission or decision and retry at the next flow poll while the flow is in an accepted state, and MUST NOT let the accept sequence of [OBS-VAL-ACCEPT-2] proceed past step (2) until the write has succeeded.
+- [OBS-INT-VSA-3] The backend MUST NOT call `revokeFlowCredential` or any method of the DIDComm, OpenID4VC and AnonCreds scopes, and MUST NOT create, modify or delete service entries other than its own. `validateFlow` is called only in [OBS-VAL-ACCEPT-2], [OBS-VAL-TXFAIL-2] and [OBS-VAL-POST-3]; `rejectFlow` only in [OBS-VAL-REJECT-1].
 - [OBS-INT-VSA-4] Every `sendOobLink` call uses `url` = `{OBS_PUBLIC_URL}/cases/{participantId}` and a `message` that is the validator's text of the round; the same URL is used for every message of a case.
 
 #### [OBS-INT-VSA-POLL] Flow poll
 
-- [OBS-INT-VSA-POLL-1] Every `OBS_FLOW_POLL_INTERVAL_MS`, the backend MUST list the validator agent's flows with `role=validator`, paginating with the Admin API's cursor, and reconcile every flow whose `participantId` belongs to the deployment: an unknown `participantId` creates a case ([OBS-CASE-2]); the flow's `flowState` and `connectionState` update `F`; the flow's claims and proofs, `oobLinkUrl`, and, after issuance, the credential identifier, `digestJCS` and session reference are stored on the current round.
+- [OBS-INT-VSA-POLL-1] Every `OBS_FLOW_POLL_INTERVAL_MS`, the backend MUST list the validator agent's flows with `role=validator`, paginating with the Admin API's cursor, and reconcile every flow whose `participantId` belongs to the deployment: an unknown `participantId` creates a case ([OBS-CASE-2]); the flow's `flowState` and `connectionState` update `F`; the flow's claims and proofs, `oobLinkUrl`, and, after issuance, the credential identifier, `digestJCS` and session reference are stored on the current round. The flow's `validation` object (`submission`, `tx`) drives [OBS-TX-RESOLVE-6] and [OBS-VAL-TXFAIL].
 - [OBS-INT-VSA-POLL-2] Terminal flows (`COMPLETED`, `VALIDATED` without issuance, `CRED_REVOKED`, the `TERMINATED_*`, `ERROR`, `PARTICIPANT_*` states) need not be polled at every tick once reconciled; the backend SHOULD re-read them at a lower frequency to observe post-completion transitions (a new offer after `COMPLETED`, `CRED_REVOKED`).
 - [OBS-INT-VSA-POLL-3] The agent exposes no push channel for flow changes in this revision; the poll is the mechanism. A webhook is listed under [Upstream Dependencies and Open Items](#upstream-dependencies-and-open-items).
 
 ### [OBS-INT-MSG] Wallet-signed messages
 
-- [OBS-INT-MSG-1] The portal leads to exactly four VPR messages: `StartParticipantOP` ([MOD-PP-MSG-1](https://verana-labs.github.io/verifiable-trust-vpr-spec/versions/v4/#mod-pp-msg-1-start-participant-op)), `RenewParticipantOP` ([MOD-PP-MSG-2](https://verana-labs.github.io/verifiable-trust-vpr-spec/versions/v4/#mod-pp-msg-2-renew-participant-op)), `CancelParticipantOPLastRequest` ([MOD-PP-MSG-6](https://verana-labs.github.io/verifiable-trust-vpr-spec/versions/v4/#mod-pp-msg-6-cancel-participant-op-last-request)) and `SetParticipantOPtoValidated` ([MOD-PP-MSG-3](https://verana-labs.github.io/verifiable-trust-vpr-spec/versions/v4/#mod-pp-msg-3-set-participant-op-to-validated)). They are built, signed (Amino by default), fee-granted, simulated, previewed and broadcast per [VFE-TX](../verana-frontend/spec.md#vfe-tx-transaction-execution), by the shared signing utilities of the Verana Frontend codebase, with the transaction-record hook of [OBS-TX-WRITE].
+- [OBS-INT-MSG-1] The portal leads to exactly four VPR messages: `StartParticipantOP` ([MOD-PP-MSG-1](https://verana-labs.github.io/verifiable-trust-vpr-spec/versions/v4/#mod-pp-msg-1-start-participant-op)), `RenewParticipantOP` ([MOD-PP-MSG-2](https://verana-labs.github.io/verifiable-trust-vpr-spec/versions/v4/#mod-pp-msg-2-renew-participant-op)), `CancelParticipantOPLastRequest` ([MOD-PP-MSG-6](https://verana-labs.github.io/verifiable-trust-vpr-spec/versions/v4/#mod-pp-msg-6-cancel-participant-op-last-request)) and `SetParticipantOPtoValidated` ([MOD-PP-MSG-3](https://verana-labs.github.io/verifiable-trust-vpr-spec/versions/v4/#mod-pp-msg-3-set-participant-op-to-validated)). They are built, signed (Amino by default), fee-granted, simulated, previewed and broadcast per [VFE-TX](../verana-frontend/spec.md#vfe-tx-transaction-execution), by the shared signing utilities of the Verana Frontend codebase, with the transaction-record hook of [OBS-TX-WRITE]. `SetParticipantOPtoValidated` is led to only when `validateFlow` answered `submission` = `OPERATOR`, or as the fallback of [OBS-VAL-TXFAIL-2].
 - [OBS-INT-MSG-2] Renewal (`RenewParticipantOP`) is offered on the applicant's case page while `corporation_available_actions[]` contains it; it requires acceptance of the currently active governance framework version first ([OBS-APP-GF-4]); on success the case opens a renewal round ([OBS-CASE-4]) and the applicant journey resumes at the evidence step when the flow leaves `COMPLETED`.
 
 ## [OBS-DOC] Documents, Privacy and Audit
@@ -592,7 +617,7 @@ The backend API follows the conventions of the VS Agent Administration API v2 ([
 | Configuration | `/v1/config` | public deployment descriptor: ecosystem, schema, validator, roles, fees, prerequisites, requirements, claims mode, issuance (serves [OBS-APP-HOME]) |
 | Governance framework | `/v1/governance-framework` | active EGF version and documents, digest-verified document proxy, acceptance records ([OBS-APP-GF]) |
 | Corporations | `/v1/corporations` | discovery result for the session ([OBS-CORP-DISC]) and attention counts ([OBS-CORP-SEL-3]) |
-| Cases | `/v1/cases` | list and read cases in the applicant or validator scope; pre-flight and eligibility checks; submissions, drafts, documents, decisions and messages of a case |
+| Cases | `/v1/cases` | list and read cases in the applicant or validator scope; pre-flight and eligibility checks; submissions, drafts, documents, decisions and messages of a case; the accept, reject, retry and claims-completion actions of the validator |
 | Transactions | `/v1/transactions` | create and update transaction records ([OBS-TX-WRITE]) |
 | Health | `/v1/health` | liveness and readiness ([OBS-OPS]) |
 
@@ -615,7 +640,7 @@ The backend API follows the conventions of the VS Agent Administration API v2 ([
 
 ## Upstream Dependencies and Open Items
 
-- **VS Agent**: no push channel for flow changes (the portal polls `listFlows`; a webhook or WebSocket is desirable); no method to reject a flow with `problem-report vt-flow.validation-failed` (refusal is portal-only); the default `SetParticipantOPtoValidated` handler's issuance rule (issue if, and only if, the validated entry's `role` is `HOLDER` under the agent's `ISSUER` entry, with the container given by the agent's own setup for the schema) and the role of `validateFlow` (Direct Issuance trigger) should be stated explicitly; the applicant default handler should send the `onboarding-request` without claims for schemas it has no configuration for.
+- **VS Agent**: no push channel for flow changes (the portal polls `listFlows`; a webhook or WebSocket is desirable).
 - **vt-flow**: the `oob-link` field description suggests a capability token as the way to make the URL unique to the session; a per-case path satisfies the requirement without a secret.
 - **Verana Frontend codebase**: a callback between signing and broadcasting in the shared signing utilities ([OBS-TX-WRITE-4]); generalization of the corporation hook from "first grant wins" to the list of active grants with the selector of [VFE-CORP-SEL].
 - **Verana Frontend specification**: the Pending Tasks and Participant views may deep-link to `{serviceEndpoint}/cases/{participant_id}` of a validator's `EcosystemOnboardingService` entry ([OBS-BOOT-SVC-2]).
