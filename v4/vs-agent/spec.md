@@ -1,6 +1,6 @@
 # VS Agent v4 Specification
 
-**Latest Draft:** spec v4-draft7
+**Latest Draft:** spec v4-draft8
 
 ## Abstract
 
@@ -13,7 +13,7 @@ The **VS Agent** is a container that provides the full stack required to operate
 
 By combining these components, the VS Agent allows backends to expose identified, verifiable, and governance-aware services without implementing DID resolution, credential lifecycle management, DIDComm encryption, or trust-layer integration themselves. The VS Agent is intentionally service-shape-agnostic: conversational chatbots integrated with messaging applications such as the [Hologram Messaging App](https://hologram.chat) are one of several deployment patterns, alongside MCP tool servers, A2A agents, and plain HTTP APIs.
 
-This document specifies the normative behavior of a VS Agent implementation: its container configuration and bootstrap, its DID Document management, its credential acquisition and issuance flows, its indexer subscription and event model, its administration API, and its conformance to the Verifiable Trust specification.
+This document specifies the normative behavior of a VS Agent implementation: its container configuration and bootstrap, its DID Document management, its credential acquisition and issuance flows, its indexer subscription and event model, its administration API, its events API, and its conformance to the Verifiable Trust specification.
 
 ## About this Document
 
@@ -171,6 +171,8 @@ The table lists every environment variable of the VS Agent container. The subsec
 | [`ADMIN_API_TRUSTED_NETWORKS`](#vsa-vti-cfg-env-adm-administration-api) | OPTIONAL | Administration API |
 | [`ADMIN_API_PUBLIC_URL`](#vsa-vti-cfg-env-adm-administration-api) | CONDITIONAL | Administration API |
 | [`ADMIN_API_CORPORATION_ALLOWED_ACCOUNTS`](#vsa-vti-cfg-env-adm-administration-api) | CONDITIONAL | Administration API |
+| [`EVENTS_WEBHOOK_URL`](#vsa-vti-cfg-env-evt-events-api) | OPTIONAL | Events API |
+| [`EVENTS_WEBHOOK_API_KEY`](#vsa-vti-cfg-env-evt-events-api) | OPTIONAL | Events API |
 | [`OID4VC_CONFIG_FILE`](#vsa-vti-cfg-env-oid-openid4vc) | OPTIONAL | OpenID4VC |
 
 ##### [VSA-VTI-CFG-ENV-ID] Identity and Corporation
@@ -268,6 +270,15 @@ These variables configure the access model of the [Administration API](#administ
 | `ADMIN_API_TRUSTED_NETWORKS` | OPTIONAL | Comma-separated list of CIDR blocks. The agent classifies a request as trusted-network when the peer address of its TCP connection matches one block, and serves that request without authentication, in both modes. Default: `127.0.0.0/8,::1/128`. The operator MUST keep the source address of each public reverse proxy or ingress outside these blocks. See [Trusted networks](#trusted-networks). |
 | `ADMIN_API_PUBLIC_URL` | CONDITIONAL | Public `https://` origin (scheme + host + optional port, no trailing path) at which external callers reach the Admin API. REQUIRED when `ADMIN_API_AUTH_MODE` is `corporation`; MUST NOT be set otherwise. When set, the agent also publishes a `VsAgentAdminAPI` entry in its DID Document per [[VSA-VTI-DIDDOC]](#vsa-vti-diddoc-did-document-service-entries). |
 | `ADMIN_API_CORPORATION_ALLOWED_ACCOUNTS` | CONDITIONAL | Comma-separated list of Verana account addresses (the same identifiers that authenticate via [Authentication](#authentication)) entitled to invoke the Admin API as external callers. REQUIRED (non-empty) when `ADMIN_API_AUTH_MODE` is `corporation`: with no on-chain caller grant to check (see [Authorization](#authorization)), this allowlist is the sole authorization mechanism for external callers. Has no effect when `ADMIN_API_AUTH_MODE` is not `corporation`. |
+
+##### [VSA-VTI-CFG-ENV-EVT] Events API
+
+`EVENTS_WEBHOOK_URL` is the switch for the [Events API](#events-api). The agent delivers events when, and only when, the operator sets it.
+
+| Variable | Required | Description |
+|---|---|---|
+| `EVENTS_WEBHOOK_URL` | OPTIONAL | URL to which the agent delivers every event with HTTP `POST`. See [[VSA-EVT-DEL] Delivery](#vsa-evt-del-delivery). |
+| `EVENTS_WEBHOOK_API_KEY` | OPTIONAL | Static secret. When the operator sets it, the agent sends it in the `Authorization: Bearer` header of every delivery. The operator SHOULD manage it as a secret. |
 
 ##### [VSA-VTI-CFG-ENV-OID] OpenID4VC
 
@@ -1165,7 +1176,7 @@ The agent groups its methods in scopes. A scope is the first path segment after 
 |---|---|---|
 | Auth | `/v2/auth` | Authentication. |
 | Agent | `/v2/agent` | Identity of the agent, and the liveness and readiness probes. |
-| DIDComm | `/v2/didcomm` | Wire-level DIDComm state: connections, messages, presentations, and credential exchanges. |
+| DIDComm | `/v2/didcomm` | Wire-level DIDComm state, organized in protocol modules: connections, basic messages, presentations, credential exchanges, and extension protocols. |
 | OpenID4VC | `/v2/openid4vc` | OpenID4VCI and OpenID4VP state: credential exchanges, presentations, and signing certificates. |
 | AnonCreds | `/v2/anoncreds` | AnonCreds artifacts: credential definitions, revocation registries, and credential revocation. |
 | Verifiable Trust | `/v2/vt` | Verifiable Trust state: flows and service endpoints. |
@@ -1176,7 +1187,8 @@ The agent groups its methods in scopes. A scope is the first path segment after 
 - A path parameter, a query parameter, a request body field, and a response body field use camelCase. A field keeps this form even when it carries a VPR value whose on-chain name is snake_case: `participantSessionId` carries `ParticipantSession.id`.
 - A collection uses a plural noun, for example `/v2/didcomm/connections`.
 - A method that acts on one record puts the identifier of that record in the path, for example `/v2/didcomm/connections/{connectionId}`.
-- A method that performs an action on no single record uses a verb path segment, for example `/v2/didcomm/send-message`.
+- A method that performs an action on no single record uses a verb path segment, for example `/v2/anoncreds/revoke-credential`.
+- A method that executes a protocol step on one record appends a verb segment to the path of that record, for example `/v2/didcomm/credential-exchanges/{credentialExchangeId}/accept-request`.
 
 #### Pagination
 
@@ -1192,7 +1204,7 @@ Each such method returns:
 
 These names and bounds match [[TG-QRY-6]](../verana-graph/spec.md#graph-traversal-queries) of the Verana Graph specification.
 
-A collection that this specification bounds to a fixed number of records is **not** paginated: it returns a bare array, and the agent MUST ignore `limit` and `cursor` on it. [`listSigningCertificates`](#vsa-adm-oid-cs-list-listsigningcertificates) is the only such method — it returns one record per configured OpenID4VC capability, so at most two. Every other collection grows with use and MUST be paginated.
+A collection that this specification bounds to a fixed number of records is **not** paginated: it returns a bare array, and the agent MUST ignore `limit` and `cursor` on it. Two methods are of this kind: [`listSigningCertificates`](#vsa-adm-oid-cs-list-listsigningcertificates) returns one record per configured OpenID4VC capability, so at most two; [`listProtocols`](#vsa-adm-dc-proto-list-listprotocols) returns one record per protocol module, a set that the deployment fixes. Every other collection grows with use and MUST be paginated.
 
 A caller MUST treat a cursor as opaque. The agent MUST NOT use offset pagination.
 
@@ -1244,17 +1256,27 @@ The table lists every method of the Administration API. It is a non-normative ov
 | Agent | `getAgentInfo` | `GET` | `/v2/agent/info` | [[VSA-ADM-AG-INFO]](#vsa-adm-ag-info-getagentinfo) |
 |  | `getLiveness` | `GET` | `/v2/agent/health/live` | [[VSA-ADM-AG-LIVE]](#vsa-adm-ag-live-getliveness) |
 |  | `getReadiness` | `GET` | `/v2/agent/health/ready` | [[VSA-ADM-AG-READY]](#vsa-adm-ag-ready-getreadiness) |
-| DIDComm | `listConnections` | `GET` | `/v2/didcomm/connections` | [[VSA-ADM-DC-CN-LIST]](#vsa-adm-dc-cn-list-listconnections) |
+| DIDComm | `listProtocols` | `GET` | `/v2/didcomm/protocols` | [[VSA-ADM-DC-PROTO-LIST]](#vsa-adm-dc-proto-list-listprotocols) |
+|  | `listConnections` | `GET` | `/v2/didcomm/connections` | [[VSA-ADM-DC-CN-LIST]](#vsa-adm-dc-cn-list-listconnections) |
 |  | `getConnection` | `GET` | `/v2/didcomm/connections/{connectionId}` | [[VSA-ADM-DC-CN-GET]](#vsa-adm-dc-cn-get-getconnection) |
 |  | `deleteConnection` | `DELETE` | `/v2/didcomm/connections/{connectionId}` | [[VSA-ADM-DC-CN-DELETE]](#vsa-adm-dc-cn-delete-deleteconnection) |
-|  | `sendMessage` | `POST` | `/v2/didcomm/send-message` | [[VSA-ADM-DC-MS-SEND]](#vsa-adm-dc-ms-send-sendmessage) |
+|  | `sendBasicMessage` | `POST` | `/v2/didcomm/basic-messages` | [[VSA-ADM-DC-BM-SEND]](#vsa-adm-dc-bm-send-sendbasicmessage) |
+|  | `listBasicMessages` | `GET` | `/v2/didcomm/basic-messages` | [[VSA-ADM-DC-BM-LIST]](#vsa-adm-dc-bm-list-listbasicmessages) |
 |  | `createPresentationRequest` | `POST` | `/v2/didcomm/presentation-request` | [[VSA-ADM-DC-PR-CREATE]](#vsa-adm-dc-pr-create-createpresentationrequest) |
+|  | `acceptPresentationRequest` | `POST` | `/v2/didcomm/presentations/{proofExchangeId}/accept-request` | [[VSA-ADM-DC-PR-ACCEPT-REQ]](#vsa-adm-dc-pr-accept-req-acceptpresentationrequest) |
+|  | `acceptPresentation` | `POST` | `/v2/didcomm/presentations/{proofExchangeId}/accept-presentation` | [[VSA-ADM-DC-PR-ACCEPT]](#vsa-adm-dc-pr-accept-acceptpresentation) |
+|  | `declinePresentationExchange` | `POST` | `/v2/didcomm/presentations/{proofExchangeId}/decline` | [[VSA-ADM-DC-PR-DECLINE]](#vsa-adm-dc-pr-decline-declinepresentationexchange) |
 |  | `listPresentations` | `GET` | `/v2/didcomm/presentations` | [[VSA-ADM-DC-PR-LIST]](#vsa-adm-dc-pr-list-listpresentations) |
 |  | `getPresentation` | `GET` | `/v2/didcomm/presentations/{proofExchangeId}` | [[VSA-ADM-DC-PR-GET]](#vsa-adm-dc-pr-get-getpresentation) |
 |  | `deletePresentation` | `DELETE` | `/v2/didcomm/presentations/{proofExchangeId}` | [[VSA-ADM-DC-PR-DELETE]](#vsa-adm-dc-pr-delete-deletepresentation) |
 |  | `createCredentialOffer` | `POST` | `/v2/didcomm/credential-offer` | [[VSA-ADM-DC-CE-OFFER]](#vsa-adm-dc-ce-offer-createcredentialoffer) |
+|  | `acceptCredentialOffer` | `POST` | `/v2/didcomm/credential-exchanges/{credentialExchangeId}/accept-offer` | [[VSA-ADM-DC-CE-ACCEPT-OFFER]](#vsa-adm-dc-ce-accept-offer-acceptcredentialoffer) |
+|  | `acceptCredentialRequest` | `POST` | `/v2/didcomm/credential-exchanges/{credentialExchangeId}/accept-request` | [[VSA-ADM-DC-CE-ACCEPT-REQ]](#vsa-adm-dc-ce-accept-req-acceptcredentialrequest) |
+|  | `acceptCredential` | `POST` | `/v2/didcomm/credential-exchanges/{credentialExchangeId}/accept-credential` | [[VSA-ADM-DC-CE-ACCEPT-CRED]](#vsa-adm-dc-ce-accept-cred-acceptcredential) |
+|  | `declineCredentialExchange` | `POST` | `/v2/didcomm/credential-exchanges/{credentialExchangeId}/decline` | [[VSA-ADM-DC-CE-DECLINE]](#vsa-adm-dc-ce-decline-declinecredentialexchange) |
 |  | `listCredentialExchanges` | `GET` | `/v2/didcomm/credential-exchanges` | [[VSA-ADM-DC-CE-LIST]](#vsa-adm-dc-ce-list-listcredentialexchanges) |
 |  | `getCredentialExchange` | `GET` | `/v2/didcomm/credential-exchanges/{credentialExchangeId}` | [[VSA-ADM-DC-CE-GET]](#vsa-adm-dc-ce-get-getcredentialexchange) |
+|  | `deleteCredentialExchange` | `DELETE` | `/v2/didcomm/credential-exchanges/{credentialExchangeId}` | [[VSA-ADM-DC-CE-DELETE]](#vsa-adm-dc-ce-delete-deletecredentialexchange) |
 | OpenID4VC | `createCredentialOffer` | `POST` | `/v2/openid4vc/credential-offer` | [[VSA-ADM-OID-CE-OFFER]](#vsa-adm-oid-ce-offer-createcredentialoffer) |
 |  | `listCredentialExchanges` | `GET` | `/v2/openid4vc/credential-exchanges` | [[VSA-ADM-OID-CE-LIST]](#vsa-adm-oid-ce-list-listcredentialexchanges) |
 |  | `getCredentialExchange` | `GET` | `/v2/openid4vc/credential-exchanges/{credentialExchangeId}` | [[VSA-ADM-OID-CE-GET]](#vsa-adm-oid-ce-get-getcredentialexchange) |
@@ -1386,9 +1408,34 @@ Reports whether the agent can serve traffic now. An orchestrator withholds traff
 
 ### DIDComm Scope
 
-The methods of this scope operate on the wire-level DIDComm state of the agent. They are independent of the credential format, and independent of the Verifiable Trust layer.
+The methods of this scope operate on the wire-level DIDComm state of the agent. They are independent of the Verifiable Trust layer.
+
+The scope is organized in **protocol modules**. Each DIDComm protocol that the agent implements appears as one module, with its own path family, its own records, and its own [events](#events-api). A module exposes the steps of its protocol; it does not abstract them. When a protocol step needs a local decision, the agent emits a `state-updated` event and waits for the caller to invoke the matching method — unless the caller set `autoAccept` at the start of the exchange.
+
+This specification defines four core modules — [Connections](#vsa-adm-dc-cn-connections), [Basic Messages](#vsa-adm-dc-bm-basic-messages), [Presentations](#vsa-adm-dc-pr-presentations), and [Credential Exchanges](#vsa-adm-dc-ce-credential-exchanges) — and the pattern that every [extension protocol module](#vsa-adm-dc-ext-extension-protocol-modules) follows. A caller discovers the modules of a deployment with [`listProtocols`](#vsa-adm-dc-proto-list-listprotocols).
 
 The agent has no method that creates a bare connection invitation, and no method that consumes one. A DIDComm connection starts either from the invitation that [`createPresentationRequest`](#vsa-adm-dc-pr-create-createpresentationrequest) or [`createCredentialOffer`](#vsa-adm-dc-ce-offer-createcredentialoffer) produces, or from a peer that connects to the agent, for example to start a credential acquisition flow.
+
+#### [VSA-ADM-DC-PROTO] Protocol Discovery
+
+| Module | Method Name | HTTP Method | Relative REST API path | Requirements |
+| --- | --- | --- | --- | --- |
+| Protocol Discovery | `listProtocols` | `GET` | `/v2/didcomm/protocols` | [see](#vsa-adm-dc-proto-list-listprotocols) |
+
+##### [VSA-ADM-DC-PROTO-LIST] listProtocols
+
+Returns the protocol modules that this deployment serves.
+
+**Inputs**: none.
+
+**Output**: an array of module records — not a page, per the bounded-collection rule of [Pagination](#pagination). Each record contains:
+
+- `module` — the path segment of the module under `/v2/didcomm`, for example `basic-messages` or `receipts`.
+- `protocols` — array of the protocol URIs that the module implements, for example `["https://didcomm.org/basicmessage/1.0", "https://didcomm.org/basicmessage/2.0"]`.
+
+**Requirements**:
+
+- The agent MUST list every module that it serves under `/v2/didcomm`, the core modules included.
 
 #### Invitation parameters
 
@@ -1447,99 +1494,187 @@ Deletes a connection record. The agent MAY also close the related DIDComm sessio
 
 **Output**: empty body (HTTP `204`).
 
-#### [VSA-ADM-DC-MS] Messaging
+#### [VSA-ADM-DC-BM] Basic Messages
+
+Methods that send and read plain text messages, per the Basic Message protocol (`https://didcomm.org/basicmessage/1.0` and `https://didcomm.org/basicmessage/2.0`). The agent stores one message record per sent message and per received message. The agent emits a [`didcomm.basic-messages.message-received`](#vsa-evt-cat-event-catalog) event for each received message.
 
 | Module | Method Name | HTTP Method | Relative REST API path | Requirements |
 | --- | --- | --- | --- | --- |
-| Messaging | `sendMessage` | `POST` | `/v2/didcomm/send-message` | [see](#vsa-adm-dc-ms-send-sendmessage) |
+| Basic Messages | `sendBasicMessage` | `POST` | `/v2/didcomm/basic-messages` | [see](#vsa-adm-dc-bm-send-sendbasicmessage) |
+| Basic Messages | `listBasicMessages` | `GET` | `/v2/didcomm/basic-messages` | [see](#vsa-adm-dc-bm-list-listbasicmessages) |
 
-##### [VSA-ADM-DC-MS-SEND] sendMessage
+##### [VSA-ADM-DC-BM-SEND] sendBasicMessage
 
-Sends a DIDComm message on an established connection. The set of accepted `type` values is implementation-defined; an implementation commonly accepts `text`, `credential-issuance`, `credential-revocation`, `identity-proof-request`, `contextual-menu-update`, `profile`, and `terminate-connection`. The agent MUST reject a `type` that it does not implement with `INVALID_INPUT`.
+Sends a text message on an established connection.
 
 **Inputs** (request body):
 
-- `type` (REQUIRED) — one of the message types that the agent implements.
 - `connectionId` (REQUIRED) — target connection.
-- `id` (OPTIONAL) — UUID of the message. The agent generates one when the caller omits it.
-- `threadId` (OPTIONAL) — DIDComm thread identifier.
-- `timestamp` (OPTIONAL) — ISO 8601 timestamp.
-- fields specific to the type, for example `content` for `text`, `credentialDefinitionId` and `claims` for `credential-issuance`, or `requestedProofItems` for `identity-proof-request`.
+- `content` (REQUIRED) — text of the message.
 
 **Output**:
 
-- `id` — UUID of the submitted message, echoed or generated by the agent.
+- `id` — identifier of the resulting message record.
+
+**Errors**: `UNKNOWN_ID` (`404`) when no connection has the supplied identifier.
+
+##### [VSA-ADM-DC-BM-LIST] listBasicMessages
+
+Returns the message records that the agent stores.
+
+**Inputs** (all OPTIONAL query filters, in addition to the [pagination](#pagination) parameters):
+
+- `connectionId` — filter by connection.
+- `role` — `sender` or `receiver`.
+
+**Output**: a page of message records. Each record contains at minimum `id`, `connectionId`, `role`, `content`, `sentTime`, and `createdAt`.
 
 #### [VSA-ADM-DC-PR] Presentations
 
-Methods that request a presentation, and that inspect or delete a presentation exchange.
+Methods that wrap the Present Proof 2.0 protocol (`https://didcomm.org/present-proof/2.0`). The agent stores one presentation record per exchange, and emits a [`didcomm.presentations.state-updated`](#vsa-evt-cat-event-catalog) event at every state change.
+
+A record moves through the protocol states `request-sent`, `request-received`, `presentation-sent`, `presentation-received`, `declined`, `abandoned`, and `done`. The agent does not implement the proposal step: it MUST answer an inbound `propose-presentation` message with a problem report.
+
+The agent takes each role of the protocol:
+
+- **Verifier** — [`createPresentationRequest`](#vsa-adm-dc-pr-create-createpresentationrequest) sends the request. When the peer presents, the agent verifies the presentation, stores the result in `verified`, and sets the state to `presentation-received`. The caller then completes the exchange with [`acceptPresentation`](#vsa-adm-dc-pr-accept-acceptpresentation), or refuses it with [`declinePresentationExchange`](#vsa-adm-dc-pr-decline-declinepresentationexchange).
+- **Prover** — when a peer sends the agent a presentation request, the agent stores a record in state `request-received`. The caller answers it with [`acceptPresentationRequest`](#vsa-adm-dc-pr-accept-req-acceptpresentationrequest) or [`declinePresentationExchange`](#vsa-adm-dc-pr-decline-declinepresentationexchange).
 
 | Module | Method Name | HTTP Method | Relative REST API path | Requirements |
 | --- | --- | --- | --- | --- |
 | Presentations | `createPresentationRequest` | `POST` | `/v2/didcomm/presentation-request` | [see](#vsa-adm-dc-pr-create-createpresentationrequest) |
+| Presentations | `acceptPresentationRequest` | `POST` | `/v2/didcomm/presentations/{proofExchangeId}/accept-request` | [see](#vsa-adm-dc-pr-accept-req-acceptpresentationrequest) |
+| Presentations | `acceptPresentation` | `POST` | `/v2/didcomm/presentations/{proofExchangeId}/accept-presentation` | [see](#vsa-adm-dc-pr-accept-acceptpresentation) |
+| Presentations | `declinePresentationExchange` | `POST` | `/v2/didcomm/presentations/{proofExchangeId}/decline` | [see](#vsa-adm-dc-pr-decline-declinepresentationexchange) |
 | Presentations | `listPresentations` | `GET` | `/v2/didcomm/presentations` | [see](#vsa-adm-dc-pr-list-listpresentations) |
 | Presentations | `getPresentation` | `GET` | `/v2/didcomm/presentations/{proofExchangeId}` | [see](#vsa-adm-dc-pr-get-getpresentation) |
 | Presentations | `deletePresentation` | `DELETE` | `/v2/didcomm/presentations/{proofExchangeId}` | [see](#vsa-adm-dc-pr-delete-deletepresentation) |
 
 ##### [VSA-ADM-DC-PR-CREATE] createPresentationRequest
 
-Creates a Presentation Request invitation. The request defines the credentials and the attributes that the agent asks the holder to present.
+Creates a presentation request as verifier. The request defines the credentials and the attributes that the agent asks the holder to present.
 
 **Inputs** (request body):
 
 - `requestedCredentials` (REQUIRED) — array of requested credential descriptors. Each entry references a credential by `credentialDefinitionId` (AnonCreds) or by `jsonSchemaCredentialId` (JSON Schema Credential), and lists the requested `attributes`. When the entry omits `attributes`, the agent MUST request every attribute that the schema defines.
-- `callbackUrl` (OPTIONAL) — URL that the agent calls with HTTP `POST` when the presentation flow completes. The body contains `ref`, `proofExchangeId`, `status`, and `claims`.
-- `ref` (OPTIONAL) — correlation identifier from the caller, which the agent echoes in the callback.
+- `connectionId` (OPTIONAL) — an established connection to send the request on. When the caller omits it, the agent creates an Out-of-Band invitation instead.
 - `requireNonRevocation` (OPTIONAL, default `false`) — when `true`, the holder MUST supply a non-revocation proof at verification time.
-- `useLegacyDid` and `didcommVersion` (OPTIONAL) — see [Invitation parameters](#invitation-parameters).
+- `autoAccept` (OPTIONAL, default `false`) — when `true`, the agent completes its verifier steps itself: after it verifies a received presentation, it acknowledges the presentation with no [`acceptPresentation`](#vsa-adm-dc-pr-accept-acceptpresentation) call.
+- `useLegacyDid` and `didcommVersion` (OPTIONAL) — see [Invitation parameters](#invitation-parameters). The agent MUST ignore both when `connectionId` is present.
 
 **Output**:
 
-- `proofExchangeId` — flow identifier, for later tracking.
-- `url` — full DIDComm invitation URL.
-- `shortUrl` — short form of the URL, for a QR code, when the agent supports it.
+- `proofExchangeId` — exchange identifier, for later tracking.
+- `url` — full DIDComm invitation URL. Absent when `connectionId` is present.
+- `shortUrl` — short form of the URL, for a QR code, when the agent supports it. Absent when `connectionId` is present.
+
+**Errors**: `UNKNOWN_ID` (`404`) when `connectionId` resolves to no connection.
+
+##### [VSA-ADM-DC-PR-ACCEPT-REQ] acceptPresentationRequest
+
+Accepts a presentation request that a peer sent to this agent, and presents the matching credentials from the credential store of the agent.
+
+**Path parameters**:
+
+- `proofExchangeId` (REQUIRED) — exchange identifier.
+
+**Inputs**: none. The agent selects the credentials that satisfy the request.
+
+**Output**: the updated presentation record.
+
+**Errors**:
+
+- `INVALID_STATE` (`409`) — the exchange is not in state `request-received`.
+- `NO_COMPATIBLE_CREDENTIALS` (`409`) — the credential store holds no credential set that satisfies the request.
+
+##### [VSA-ADM-DC-PR-ACCEPT] acceptPresentation
+
+Acknowledges a received presentation as verifier, and completes the exchange. This method does not change the verification result: the agent verified the presentation when it received it, and stored the result in `verified`.
+
+**Path parameters**:
+
+- `proofExchangeId` (REQUIRED) — exchange identifier.
+
+**Inputs**: none.
+
+**Output**: the updated presentation record, in state `done`.
+
+**Errors**: `INVALID_STATE` (`409`) — the exchange is not in state `presentation-received`.
+
+##### [VSA-ADM-DC-PR-DECLINE] declinePresentationExchange
+
+Refuses the pending step of a presentation exchange, in either role. The agent sends a problem report to the peer and abandons the exchange.
+
+**Path parameters**:
+
+- `proofExchangeId` (REQUIRED) — exchange identifier.
+
+**Inputs** (request body):
+
+- `reason` (OPTIONAL) — text for the problem report.
+
+**Output**: the updated presentation record.
+
+**Errors**: `INVALID_STATE` (`409`) — the exchange is in a terminal state.
 
 ##### [VSA-ADM-DC-PR-LIST] listPresentations
 
-Returns the presentation flows that the agent created.
+Returns the presentation records that the agent stores.
 
-**Inputs**: the [pagination](#pagination) parameters.
+**Inputs** (all OPTIONAL query filters, in addition to the [pagination](#pagination) parameters):
 
-**Output**: a page of presentation records. Each record contains at minimum `proofExchangeId`, `state`, `requestedCredentials`, `claims`, `verified`, `threadId`, and `updatedAt`.
+- `connectionId` — filter by connection.
+- `threadId` — filter by DIDComm thread identifier.
+- `role` — `verifier` or `prover`.
+- `state` — one of the protocol states listed above.
+
+**Output**: a page of presentation records, with the same shape as in `getPresentation`.
 
 ##### [VSA-ADM-DC-PR-GET] getPresentation
 
-Retrieves one presentation by `proofExchangeId`.
+Retrieves one presentation record by `proofExchangeId`.
 
 **Path parameters**:
 
-- `proofExchangeId` (REQUIRED) — presentation flow identifier.
+- `proofExchangeId` (REQUIRED) — exchange identifier.
 
-**Output**: the presentation record.
+**Output**: the presentation record. It contains at minimum `proofExchangeId`, `state`, `role`, `connectionId`, `threadId`, `requestedCredentials`, `claims`, `verified`, `errorMessage`, `createdAt`, and `updatedAt`.
 
 ##### [VSA-ADM-DC-PR-DELETE] deletePresentation
 
-Deletes a presentation exchange record.
+Deletes a presentation record.
 
 **Path parameters**:
 
-- `proofExchangeId` (REQUIRED) — presentation flow identifier.
+- `proofExchangeId` (REQUIRED) — exchange identifier.
 
 **Output**: empty body (HTTP `204`).
 
 #### [VSA-ADM-DC-CE] Credential Exchanges
 
-Methods that offer a credential over DIDComm, and that inspect the issuance pipeline.
+Methods that wrap the Issue Credential 2.0 protocol (`https://didcomm.org/issue-credential/2.0`) for the AnonCreds format. The referenced credential definition and revocation registry belong to the [AnonCreds Scope](#anoncreds-scope). The agent stores one credential exchange record per exchange, and emits a [`didcomm.credential-exchanges.state-updated`](#vsa-evt-cat-event-catalog) event at every state change.
+
+A record moves through the protocol states `offer-sent`, `offer-received`, `request-sent`, `request-received`, `credential-issued`, `credential-received`, `declined`, `abandoned`, and `done`. The agent does not implement the proposal step: it MUST answer an inbound `propose-credential` message with a problem report.
+
+The agent takes each role of the protocol:
+
+- **Issuer** — [`createCredentialOffer`](#vsa-adm-dc-ce-offer-createcredentialoffer) sends the offer. When the peer requests the credential, the record reaches `request-received`, and the caller issues with [`acceptCredentialRequest`](#vsa-adm-dc-ce-accept-req-acceptcredentialrequest).
+- **Holder** — when a peer offers this agent a credential, the record reaches `offer-received`, and the caller requests with [`acceptCredentialOffer`](#vsa-adm-dc-ce-accept-offer-acceptcredentialoffer). When the credential arrives, the record reaches `credential-received`, and the caller stores it with [`acceptCredential`](#vsa-adm-dc-ce-accept-cred-acceptcredential).
 
 | Module | Method Name | HTTP Method | Relative REST API path | Requirements |
 | --- | --- | --- | --- | --- |
 | Credential Exchanges | `createCredentialOffer` | `POST` | `/v2/didcomm/credential-offer` | [see](#vsa-adm-dc-ce-offer-createcredentialoffer) |
+| Credential Exchanges | `acceptCredentialOffer` | `POST` | `/v2/didcomm/credential-exchanges/{credentialExchangeId}/accept-offer` | [see](#vsa-adm-dc-ce-accept-offer-acceptcredentialoffer) |
+| Credential Exchanges | `acceptCredentialRequest` | `POST` | `/v2/didcomm/credential-exchanges/{credentialExchangeId}/accept-request` | [see](#vsa-adm-dc-ce-accept-req-acceptcredentialrequest) |
+| Credential Exchanges | `acceptCredential` | `POST` | `/v2/didcomm/credential-exchanges/{credentialExchangeId}/accept-credential` | [see](#vsa-adm-dc-ce-accept-cred-acceptcredential) |
+| Credential Exchanges | `declineCredentialExchange` | `POST` | `/v2/didcomm/credential-exchanges/{credentialExchangeId}/decline` | [see](#vsa-adm-dc-ce-decline-declinecredentialexchange) |
 | Credential Exchanges | `listCredentialExchanges` | `GET` | `/v2/didcomm/credential-exchanges` | [see](#vsa-adm-dc-ce-list-listcredentialexchanges) |
 | Credential Exchanges | `getCredentialExchange` | `GET` | `/v2/didcomm/credential-exchanges/{credentialExchangeId}` | [see](#vsa-adm-dc-ce-get-getcredentialexchange) |
+| Credential Exchanges | `deleteCredentialExchange` | `DELETE` | `/v2/didcomm/credential-exchanges/{credentialExchangeId}` | [see](#vsa-adm-dc-ce-delete-deletecredentialexchange) |
 
 ##### [VSA-ADM-DC-CE-OFFER] createCredentialOffer
 
-Creates an AnonCreds credential offer invitation, with a preview of the offered claims. The referenced credential definition and revocation registry belong to the [AnonCreds Scope](#anoncreds-scope).
+Creates an AnonCreds credential offer as issuer, with a preview of the offered claims.
 
 **Inputs** (request body):
 
@@ -1547,21 +1682,88 @@ Creates an AnonCreds credential offer invitation, with a preview of the offered 
 - `claims` (REQUIRED) — array of name and value pairs that preview the attributes of the credential.
 - `revocationRegistryDefinitionId` (OPTIONAL) — REQUIRED only for a revocable credential.
 - `revocationRegistryIndex` (OPTIONAL) — REQUIRED only for a revocable credential.
-- `useLegacyDid` and `didcommVersion` (OPTIONAL) — see [Invitation parameters](#invitation-parameters).
+- `connectionId` (OPTIONAL) — an established connection to send the offer on. When the caller omits it, the agent creates an Out-of-Band invitation instead.
+- `autoAccept` (OPTIONAL, default `false`) — when `true`, the agent completes its issuer steps itself: it issues the credential on `request-received` with no [`acceptCredentialRequest`](#vsa-adm-dc-ce-accept-req-acceptcredentialrequest) call.
+- `useLegacyDid` and `didcommVersion` (OPTIONAL) — see [Invitation parameters](#invitation-parameters). The agent MUST ignore both when `connectionId` is present.
 
 **Output**:
 
-- `credentialExchangeId` — flow identifier.
-- `url` — full DIDComm invitation URL.
-- `shortUrl` — short form of the URL, when the agent supports it.
+- `credentialExchangeId` — exchange identifier.
+- `url` — full DIDComm invitation URL. Absent when `connectionId` is present.
+- `shortUrl` — short form of the URL, when the agent supports it. Absent when `connectionId` is present.
+
+**Errors**: `UNKNOWN_ID` (`404`) when `connectionId` resolves to no connection.
+
+##### [VSA-ADM-DC-CE-ACCEPT-OFFER] acceptCredentialOffer
+
+Accepts a credential offer that a peer sent to this agent, and requests the credential.
+
+**Path parameters**:
+
+- `credentialExchangeId` (REQUIRED) — exchange identifier.
+
+**Inputs**: none.
+
+**Output**: the updated credential exchange record.
+
+**Errors**: `INVALID_STATE` (`409`) — the exchange is not in state `offer-received`.
+
+##### [VSA-ADM-DC-CE-ACCEPT-REQ] acceptCredentialRequest
+
+Accepts a credential request as issuer, and issues the credential.
+
+**Path parameters**:
+
+- `credentialExchangeId` (REQUIRED) — exchange identifier.
+
+**Inputs**: none. The agent issues the claims that the offer previewed. A caller that wants different claims declines this exchange and starts a new offer.
+
+**Output**: the updated credential exchange record.
+
+**Errors**: `INVALID_STATE` (`409`) — the exchange is not in state `request-received`.
+
+##### [VSA-ADM-DC-CE-ACCEPT-CRED] acceptCredential
+
+Accepts a received credential as holder: the agent stores the credential in its credential store and acknowledges it to the issuer.
+
+**Path parameters**:
+
+- `credentialExchangeId` (REQUIRED) — exchange identifier.
+
+**Inputs**: none.
+
+**Output**: the updated credential exchange record, in state `done`.
+
+**Errors**: `INVALID_STATE` (`409`) — the exchange is not in state `credential-received`.
+
+##### [VSA-ADM-DC-CE-DECLINE] declineCredentialExchange
+
+Refuses the pending step of a credential exchange, in either role. The agent sends a problem report to the peer and abandons the exchange.
+
+**Path parameters**:
+
+- `credentialExchangeId` (REQUIRED) — exchange identifier.
+
+**Inputs** (request body):
+
+- `reason` (OPTIONAL) — text for the problem report.
+
+**Output**: the updated credential exchange record.
+
+**Errors**: `INVALID_STATE` (`409`) — the exchange is in a terminal state.
 
 ##### [VSA-ADM-DC-CE-LIST] listCredentialExchanges
 
 Returns the credential exchange records that the agent tracks.
 
-**Inputs**: the [pagination](#pagination) parameters.
+**Inputs** (all OPTIONAL query filters, in addition to the [pagination](#pagination) parameters):
 
-**Output**: a page of credential exchange records. Each record contains at minimum `credentialExchangeId`, `state`, `threadId`, `connectionId`, `credentialDefinitionId`, `schemaId`, `claims`, `errorMessage`, `createdAt`, and `updatedAt`.
+- `connectionId` — filter by connection.
+- `threadId` — filter by DIDComm thread identifier.
+- `role` — `issuer` or `holder`.
+- `state` — one of the protocol states listed above.
+
+**Output**: a page of credential exchange records, with the same shape as in `getCredentialExchange`.
 
 ##### [VSA-ADM-DC-CE-GET] getCredentialExchange
 
@@ -1571,7 +1773,43 @@ Retrieves one credential exchange record by identifier.
 
 - `credentialExchangeId` (REQUIRED) — exchange identifier.
 
-**Output**: the credential exchange record.
+**Output**: the credential exchange record. It contains at minimum `credentialExchangeId`, `state`, `role`, `threadId`, `connectionId`, `credentialDefinitionId`, `schemaId`, `claims`, `errorMessage`, `createdAt`, and `updatedAt`.
+
+##### [VSA-ADM-DC-CE-DELETE] deleteCredentialExchange
+
+Deletes a credential exchange record. It does not delete a stored credential, and it does not revoke an issued credential.
+
+**Path parameters**:
+
+- `credentialExchangeId` (REQUIRED) — exchange identifier.
+
+**Output**: empty body (HTTP `204`).
+
+#### [VSA-ADM-DC-EXT] Extension Protocol Modules
+
+The agent MAY implement DIDComm protocols beyond the core modules of this scope, for example through plug-ins. The agent exposes each one as an **extension protocol module**. The pattern below keeps every module consistent, so that a new protocol extends the API without a new API shape.
+
+[VSA-ADM-DC-EXT-1] The methods of an extension protocol module MUST live under `/v2/didcomm/{module}`, where `{module}` is the kebab-case module name that [`listProtocols`](#vsa-adm-dc-proto-list-listprotocols) reports.
+
+[VSA-ADM-DC-EXT-2] A method that sends a protocol message MUST use `POST /v2/didcomm/{module}/{action}`, where `{action}` is a kebab-case verb segment for the protocol action. The request body MUST carry `connectionId` (REQUIRED) and the fields of the message. The response MUST carry `id` — the identifier of the sent message.
+
+[VSA-ADM-DC-EXT-3] A module that stores records MUST expose them per the [API Conventions](#api-conventions): a paginated collection under `/v2/didcomm/{module}` paths, and one record by identifier.
+
+[VSA-ADM-DC-EXT-4] The agent MUST deliver each inbound message of an extension protocol module as a `didcomm.{module}.message-received` event, per [[VSA-EVT-CAT]](#vsa-evt-cat-event-catalog).
+
+[VSA-ADM-DC-EXT-5] The agent MUST answer every path of a module that it does not serve with HTTP `404`.
+
+The message and record definitions of an extension protocol module belong to the protocol specification that its protocol URI names, not to this document. The table lists the extension protocol modules in common use; it is non-normative.
+
+| Module | Protocol | Purpose |
+|---|---|---|
+| `receipts` | `https://didcomm.org/receipts/1.0` | Delivery state and read state of messages. |
+| `reactions` | `https://didcomm.org/reactions/1.0` | Emoji reactions to messages. |
+| `user-profile` | `https://didcomm.org/user-profile/1.0` | Exchange of peer profiles (name, avatar). |
+| `media-sharing` | `https://didcomm.org/media-sharing/1.0` | Sharing of media files. |
+| `calls` | `https://didcomm.org/calls/1.0` | Setup of audio calls and video calls. |
+| `action-menu` | `https://didcomm.org/action-menu/1.0` | Display and selection of contextual menus. |
+| `mrtd` | `https://didcomm.org/mrtd/1.0` | Exchange of machine-readable travel document data (MRZ, eMRTD). |
 
 ### OpenID4VC Scope
 
@@ -2181,3 +2419,70 @@ Removes a consumable service entry from the DID Document of the agent.
 - `DIDCOMM_ENTRY` (`409`) — `serviceEndpointId` refers to a `DIDCommMessaging` entry.
 - `LINKED_VP_ENTRY` (`409`) — `serviceEndpointId` refers to a `LinkedVerifiablePresentation` entry.
 - `ADMIN_API_ENTRY` (`409`) — `serviceEndpointId` refers to a `VsAgentAdminAPI` entry.
+
+## Events API
+
+The VS Agent notifies a backend of state changes through webhook events. The operator configures one consumer endpoint with `EVENTS_WEBHOOK_URL` (see [[VSA-VTI-CFG-ENV-EVT] Events API](#vsa-vti-cfg-env-evt-events-api)). When that variable is unset, the agent delivers no event.
+
+An event is a notification, not a state transfer. The records of the [Administration API](#administration-api) are the source of truth: an event tells the consumer that a record changed, and the consumer reads the record when it needs a guaranteed view. A consumer that misses an event recovers the current state from the corresponding `list` or `get` method.
+
+The event model covers every transport at the same level: the DIDComm modules, the OpenID4VC capabilities, the Verifiable Trust flows, and the indexer notifications each emit events of the same shape, to the same endpoint.
+
+### [VSA-EVT-DEL] Delivery
+
+[VSA-EVT-DEL-1] The agent MUST deliver each event with one HTTP `POST` request to `EVENTS_WEBHOOK_URL`. The request body is the [envelope](#vsa-evt-env-envelope), and the request carries the header `Content-Type: application/json`.
+
+[VSA-EVT-DEL-2] When the operator sets `EVENTS_WEBHOOK_API_KEY`, the agent MUST send the header `Authorization: Bearer {EVENTS_WEBHOOK_API_KEY}` with every delivery.
+
+[VSA-EVT-DEL-3] The agent MUST treat a response with an HTTP `2xx` status as a completed delivery, and every other outcome as a failed delivery. The agent MUST log a failed delivery, and MAY retry it.
+
+[VSA-EVT-DEL-4] The agent MUST NOT block DIDComm processing, flow processing, or an Administration API request on a delivery.
+
+[VSA-EVT-DEL-5] The agent SHOULD deliver events in emission order. A consumer MUST NOT depend on order, and MUST NOT depend on the delivery of every event: delivery is best-effort. A retry can duplicate a delivery, so a consumer MUST use the `id` field of the envelope to discard a duplicate.
+
+[VSA-EVT-DEL-6] Event data can carry personal data, for example the disclosed claims of a presentation. The operator MUST use an `https://` URL when the path to the consumer leaves the trusted network of the deployment.
+
+### [VSA-EVT-ENV] Envelope
+
+Every event is one JSON object:
+
+```json
+{
+  "id": "0b9df6f4-3f0e-4b3a-9c26-6a5f8e2d1c47",
+  "type": "didcomm.credential-exchanges.state-updated",
+  "timestamp": "2026-08-28T12:00:00Z",
+  "data": { "credentialExchangeId": "…", "state": "request-received", "previousState": "offer-sent" }
+}
+```
+
+- `id` — UUID of the event. The agent generates one per emission, and reuses it in a retry of the same delivery.
+- `type` — one of the types of the [Event Catalog](#vsa-evt-cat-event-catalog).
+- `timestamp` — ISO 8601 UTC datetime of the emission.
+- `data` — object whose shape the event type defines.
+
+An event type follows the grammar `{scope}.{module}.{event}`. The scope and the module mirror the path segments of the [Administration API](#administration-api), so that a consumer maps an event to the methods that read and progress the underlying record. There are two event kinds:
+
+- **`state-updated`** — a record changed state, or was created. `data` MUST hold the record, in the same shape as the `get` method of that record returns it, plus `previousState` — the state before the change, or `null` when the event reports the creation of the record.
+- **`message-received`** — an inbound DIDComm message arrived on a module. `data` holds the message, per the module definition.
+
+### [VSA-EVT-CAT] Event Catalog
+
+The agent MUST emit each event of this table when its trigger occurs.
+
+| `type` | Trigger | `data` |
+|---|---|---|
+| `didcomm.connections.state-updated` | A connection record is created or changes state, per [[VSA-ADM-DC-CN]](#vsa-adm-dc-cn-connections). | The connection record, as [`getConnection`](#vsa-adm-dc-cn-get-getconnection) returns it, plus `previousState`. |
+| `didcomm.basic-messages.message-received` | The agent receives a basic message, per [[VSA-ADM-DC-BM]](#vsa-adm-dc-bm-basic-messages). | The message record, as [`listBasicMessages`](#vsa-adm-dc-bm-list-listbasicmessages) returns it. |
+| `didcomm.presentations.state-updated` | A presentation record is created or changes state, per [[VSA-ADM-DC-PR]](#vsa-adm-dc-pr-presentations). | The presentation record, as [`getPresentation`](#vsa-adm-dc-pr-get-getpresentation) returns it, plus `previousState`. |
+| `didcomm.credential-exchanges.state-updated` | A credential exchange record is created or changes state, per [[VSA-ADM-DC-CE]](#vsa-adm-dc-ce-credential-exchanges). | The credential exchange record, as [`getCredentialExchange`](#vsa-adm-dc-ce-get-getcredentialexchange) returns it, plus `previousState`. |
+| `didcomm.{module}.message-received` | The agent receives a message of an extension protocol module, per [[VSA-ADM-DC-EXT-4]](#vsa-adm-dc-ext-extension-protocol-modules). | `connectionId`, `threadId`, and `message` — the plaintext message, per the protocol specification of the module. |
+| `openid4vc.credential-exchanges.state-updated` | An OpenID4VCI issuance session changes state, per [[VSA-ADM-OID-CE]](#vsa-adm-oid-ce-credential-exchanges). | The credential exchange record, as [`getCredentialExchange`](#vsa-adm-oid-ce-get-getcredentialexchange) returns it, plus `previousState`. |
+| `openid4vc.presentations.state-updated` | An OpenID4VP verification session changes state, per [[VSA-ADM-OID-PR]](#vsa-adm-oid-pr-presentations). | The verification session record, as [`getPresentation`](#vsa-adm-oid-pr-get-getpresentation) returns it, plus `previousState`. |
+| `vt.flows.state-updated` | The Flow State or the Connection State of a credential acquisition flow changes, per [[VSA-VTI-FLOW-STATE]](#vsa-vti-flow-state-flow-state). | The flow record, as [`listFlows`](#vsa-adm-vt-fl-list-listflows) returns it, plus `previousFlowState` and `previousConnectionState`. |
+| `indexer.notification` | The agent processes an `IndexerTransactionEvent`, per [[VSA-VTI-NOTIF]](#vsa-vti-notif-notifications). | The camelCase mapping of the `IndexerTransactionEvent`: `eventType`, `did`, `blockHeight`, `txHash`, `timestamp`, and `payload` (`module`, `action`, `messageType`, `txIndex`, `messageIndex`, `sender`, `relatedDids`, `entityType`, `entityId`). |
+
+Additional notes:
+
+- The agent MUST emit `indexer.notification` for every processed `IndexerTransactionEvent`, independent of `VERANA_INDEXER_DEFAULT_HANDLERS_OVERRIDE`: that variable disables default handlers, not events. The agent MUST NOT emit the event for a discarded idempotent duplicate (see [[VSA-VTI-NOTIF]](#vsa-vti-notif-notifications)).
+- The agent MUST emit a `state-updated` event also for a state change that `autoAccept` produces, so that a consumer observes an automated exchange and a manual exchange through the same stream.
+- A record deletion through the Administration API is a caller action, not a state change: the agent MUST NOT emit an event for it.
