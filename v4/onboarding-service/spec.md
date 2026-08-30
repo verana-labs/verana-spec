@@ -151,10 +151,7 @@ The table lists every environment variable of the OBS container. The subsection 
 | [`OBS_LINKED_VP_POLICY`](#obs-cfg-env-policy-onboarding-policy) | OPTIONAL | Onboarding policy |
 | [`OBS_REQUIREMENTS_FILE`](#obs-cfg-env-policy-onboarding-policy) | OPTIONAL | Onboarding policy |
 | [`OBS_DATABASE_URL`](#obs-cfg-env-rt-runtime) | REQUIRED | Runtime |
-| [`OBS_STORAGE_ENDPOINT`](#obs-cfg-env-rt-runtime) | CONDITIONAL | Runtime |
-| [`OBS_STORAGE_BUCKET`](#obs-cfg-env-rt-runtime) | CONDITIONAL | Runtime |
-| [`OBS_STORAGE_ACCESS_KEY`](#obs-cfg-env-rt-runtime) | CONDITIONAL | Runtime |
-| [`OBS_STORAGE_SECRET_KEY`](#obs-cfg-env-rt-runtime) | CONDITIONAL | Runtime |
+| [`OBS_STORAGE_DIR`](#obs-cfg-env-rt-runtime) | OPTIONAL | Runtime |
 | [`OBS_CASE_RETENTION_DAYS`](#obs-cfg-env-rt-runtime) | OPTIONAL | Runtime |
 | [`OBS_SESSION_LIFETIME_SECONDS`](#obs-cfg-env-rt-runtime) | OPTIONAL | Runtime |
 | [`OBS_LAUNCH_TOKEN_TTL_SECONDS`](#obs-cfg-env-rt-runtime) | OPTIONAL | Runtime |
@@ -210,7 +207,7 @@ The table lists every environment variable of the OBS container. The subsection 
 | Variable | Required | Description |
 | --- | --- | --- |
 | `OBS_DATABASE_URL` | REQUIRED | Connection URL of the relational database holding cases, rounds, submissions, step results, decisions, transaction reports, acceptances, the event cursor and the audit log. |
-| `OBS_STORAGE_ENDPOINT`, `OBS_STORAGE_BUCKET`, `OBS_STORAGE_ACCESS_KEY`, `OBS_STORAGE_SECRET_KEY` | CONDITIONAL | S3-compatible object storage for uploaded documents and external-step evidence. REQUIRED when the requirements file declares at least one document or one external step that produces evidence. The bucket MUST NOT be publicly readable. |
+| `OBS_STORAGE_DIR` | OPTIONAL | Directory of the filesystem where uploaded documents and external-step evidence are stored, typically a persistent volume mounted into the container. Default: `/data/obs`. The directory MUST exist, be writable by the service and readable by nothing else; it is never served directly by a web server. |
 | `OBS_CASE_RETENTION_DAYS` | OPTIONAL | Number of days after which the documents and personal data of a case in a terminal status are deleted ([OBS-DOC-4]). Default: `365`. |
 | `OBS_SESSION_LIFETIME_SECONDS` | OPTIONAL | Lifetime of a bearer session issued by [OBS-AUTH]. Default: `3600`. |
 | `OBS_LAUNCH_TOKEN_TTL_SECONDS` | OPTIONAL | Lifetime of an external-step launch URL ([OBS-STEP-EXT-2]). Default: `300`, maximum `900`. |
@@ -308,7 +305,7 @@ The service adopts the corporation context of the Verana Frontend ([VFE-CORP](..
 - [OBS-AUTHZ-3] A session acts in the **validator scope** when the acting Corporation is the validator Corporation: it MAY list every case of the deployment, read every submission, document and step result, and record decisions and notes. It acts in the **applicant scope** for every case whose applicant Corporation is the acting Corporation, and for the start of a new case: it MAY read those cases, record governance framework acceptances, provide evidence, perform applicant steps, send messages and report transactions. The same account and Corporation MAY hold both scopes (the validator Corporation onboarding a service of its own).
 - [OBS-AUTHZ-4] Authorization to sign is not the service's concern: the wallet signs in the client, and the chain enforces the operator grant. The service exposes the actions it offers per scope and state in `availableActions[]` ([OBS-CASE-ACT]).
 - [OBS-AUTHZ-5] A request that would change a round in a state that does not admit it (per [OBS-CASE-STATUS]) MUST be refused with `409` `INVALID_STATE`.
-- [OBS-AUTHZ-6] Document contents and step evidence are served only to sessions authorized on the case per [OBS-AUTHZ-3], through short-lived signed URLs or a service proxy; object-storage locations MUST never be exposed.
+- [OBS-AUTHZ-6] Document contents and step evidence are served only to sessions authorized on the case per [OBS-AUTHZ-3], through the service, which streams the file after the authorization check; storage paths MUST never be exposed.
 
 ## [OBS-CASE] Cases
 
@@ -553,7 +550,7 @@ The service never broadcasts and never looks transactions up on a chain RPC. Wha
 
 ## [OBS-DOC] Documents, Privacy and Audit
 
-- [OBS-DOC-1] Uploaded documents, external-step evidence and the personal data of submissions MUST be stored encrypted at rest, in the object storage of [OBS-CFG-ENV-RT] for files and in the database for structured content, and served only per [OBS-AUTHZ-6]. Implementations SHOULD scan uploads for malware before making them available to the validator.
+- [OBS-DOC-1] Uploaded documents, external-step evidence and the personal data of submissions MUST be stored encrypted at rest, files under `OBS_STORAGE_DIR` ([OBS-CFG-ENV-RT]) and structured content in the database, and served only per [OBS-AUTHZ-6]. Files are stored under service-generated names (never the uploaded file name) with their metadata in the database. Implementations SHOULD scan uploads for malware before making them available to the validator.
 - [OBS-DOC-2] Documents and evidence never leave the service: they are not sent to the validator agent, not attached to the DIDComm session and not anchored on chain. Only the agreed claims reach the agent ([OBS-INT-VSA-2]).
 - [OBS-DOC-3] For every acceptance the service MUST compute the **round summary digest** passed as `op_summary_digest`: the [JCS](https://www.rfc-editor.org/rfc/rfc8785) canonical form of `{ participantId, round, did, role, schemaId, claims, documents: [{ id, fileName, mediaType, sha384 }], fields, steps: [{ id, state, completedAt, summary }], gfAcceptance: { ecosystemId, gfvId, version, digestSri, acceptedBy, acceptedAt }, terms, decision: { feeTerms, discounts, effectiveUntil, validity, decidedBy, decidedAt } }`, hashed with SHA-384 and encoded as `sha384-<base64>`. The summary object is stored with the decision and exposed on the case, so that both parties can recompute the digest. An external step that signs the application signs this same summary, computed before the decision fields are set, and its signature is part of the step evidence.
 - [OBS-DOC-4] `OBS_CASE_RETENTION_DAYS` after a round reaches a terminal status, its documents, step evidence and the personal content of its submission MUST be deleted; the case, its reports, decisions, messages, notes, acceptances and summary digests are retained.
