@@ -880,7 +880,7 @@ Retrieve the activity timeline for a Trust Deposit row, ordered by `id` descendi
 
 Supports pagination through attributes `max_id`, `min_id`, `limit` and `sort`, as explained in [Pagination](#pagination).
 
-**Response:** `ActivityTimelineResponse` with `entity_type: "TrustDeposit"`. Each `ActivityItem`'s `msg` is one of `AdjustTrustDeposit` (MOD-TD-MSG-1, including the adjustment that creates the row), `ReclaimTrustDepositYield` (MOD-TD-MSG-2), `SlashTrustDeposit` (MOD-TD-MSG-5), `RepaySlashedTrustDeposit` (MOD-TD-MSG-6), `SlashParticipantTrustDeposit` (MOD-PP-MSG-12): the same PascalCase action-name vocabulary as `IndexerTransactionEvent.event_type` and every other `*History` method. (There is no deposit reclaim in v4: trust deposits are non-withdrawable and `MOD-TD-MSG-3` is void.)
+**Response:** `ActivityTimelineResponse` with `entity_type: "TrustDeposit"`. Each `ActivityItem`'s `msg` is one of `AdjustTrustDeposit` (MOD-TD-MSG-1, including the adjustment that creates the row), `ReclaimTrustDepositYield` (MOD-TD-MSG-2), `SlashTrustDeposit` (MOD-TD-MSG-5), `RepaySlashedTrustDeposit` (MOD-TD-MSG-6), `BurnEcosystemSlashedTrustDeposit` (MOD-TD-MSG-7, the burn that a `SlashParticipantTrustDeposit` transaction delegates to): the same PascalCase action-name vocabulary as `IndexerTransactionEvent.event_type` and every other `*History` method. (There is no deposit reclaim in v4: trust deposits are non-withdrawable and `MOD-TD-MSG-3` is void.)
 
 #### Delegation methods
 
@@ -1324,7 +1324,7 @@ Replay persisted indexer events scoped by the same membership filter as [`IDX-IN
 
 When **both** `dids` and `corporation_id` are present, only events matching **both** filters are returned (intersection). When **both** are absent, the response is unfiltered.
 
-**Response:** Inline `{ events: IndexerTransactionEvent[], count, after_block_height }`. Each `IndexerTransactionEvent` carries `type: "indexer-event"`, `event_type` (Cosmos action name, e.g. `StartParticipantOP`), `did`, `block_height`, `tx_hash`, `timestamp`, and `payload: { module, action, message_type, tx_index, message_index, sender, related_dids[], entity_type, entity_id }`.
+**Response:** Inline `{ events: IndexerTransactionEvent[], count, after_block_height }`. Each `IndexerTransactionEvent` carries `type: "indexer-event"`, `event_type` (the VPR method name in PascalCase, e.g. `StartParticipantOP`), `did`, `block_height`, `tx_hash`, `timestamp`, and `payload: { module, action, message_type, tx_index, message_index, sender, related_dids[], entity_type, entity_id }`.
 
 ##### IDX-INDEXER-SUB-1 Subscribe Indexer Events
 
