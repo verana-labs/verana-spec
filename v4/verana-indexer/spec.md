@@ -496,7 +496,7 @@ Retrieve the network-level Corporation module parameters. *Aligned with VPR [[MO
 
 (No method-specific parameters.)
 
-**Response:** `{ params: { ... } }` — the Corporation module parameter set as defined by VPR governance (e.g. minimum trust-deposit for Corporation creation, CGF document-size limits). Exact keys are determined by the on-chain parameter set.
+**Response:** `{ params: { ... } }` — the Corporation module parameter set as defined by VPR governance. VPR v4 [[GLO]](https://verana-labs.github.io/verifiable-trust-vpr-spec/versions/v4/#glo-global-variables) defines no Corporation-specific global variable, so the set MAY be empty; exact keys are determined by the on-chain parameter set.
 
 ##### IDX-CO-QRY-4 Get Corporation History
 
@@ -510,7 +510,7 @@ Retrieve the activity timeline for a Corporation, ordered by `id` descending (ne
 
 Supports pagination through attributes `max_id`, `min_id`, `limit` and `sort`, as explained in [Pagination](#pagination).
 
-**Response:** `ActivityTimelineResponse` with `entity_type: "Corporation"`. Each `ActivityItem`'s `msg` is one of `CreateCorporation`, `UpdateCorporation`, `AddCGFDocument`, `IncreaseCGFActiveVersion`, etc.
+**Response:** `ActivityTimelineResponse` with `entity_type: "Corporation"`. Each `ActivityItem`'s `msg` is one of `CreateCorporation`, `UpdateCorporation`, `AddGovernanceFrameworkDocument`, `IncreaseActiveGovernanceFrameworkVersion`, etc.
 
 #### Ecosystem methods
 
@@ -568,7 +568,7 @@ Retrieve the network-level Ecosystem module parameters. *Aligned with VPR [[MOD-
 
 (No method-specific parameters.)
 
-**Response:** `{ params: { trust_unit_price: decimal, ecosystem_trust_deposit: decimal } }` — the price-per-trust-unit and the trust-deposit required to create an Ecosystem, as defined by the Ecosystem module parameters.
+**Response:** `{ params: { ... } }` — the Ecosystem module parameter set as defined by VPR governance. VPR v4 [[GLO]](https://verana-labs.github.io/verifiable-trust-vpr-spec/versions/v4/#glo-global-variables) defines no Ecosystem-specific global variable (the v3 `trust_unit_price` and `ecosystem_trust_deposit` parameters no longer exist), so the set MAY be empty; exact keys are determined by the on-chain parameter set.
 
 ##### IDX-ES-QRY-4 Get Ecosystem History
 
@@ -582,7 +582,7 @@ Retrieve the activity timeline for an Ecosystem, ordered by `id` descending (new
 
 Supports pagination through attributes `max_id`, `min_id`, `limit` and `sort`, as explained in [Pagination](#pagination).
 
-**Response:** `ActivityTimelineResponse` — `{ entity_type: "Ecosystem", entity_id, activity: ActivityItem[] }`. Each `ActivityItem` has `id` (uint64; indexer-assigned monotonic per-row surrogate key, used as the pagination cursor — distinct from `entity_id`), `timestamp`, `block_height`, `entity_type`, `entity_id`, `msg` (e.g. `CreateEcosystem`, `AddGovernanceFrameworkDocument`), `account` (signer), and `changes` (object of changed fields). The same `ActivityTimelineResponse` shape is reused by every `*History` and the indexer-level `listChanges` method.
+**Response:** `ActivityTimelineResponse` — `{ entity_type: "Ecosystem", entity_id, activity: ActivityItem[] }`. Each `ActivityItem` has `id` (uint64; indexer-assigned monotonic per-row surrogate key, used as the pagination cursor — distinct from `entity_id`), `timestamp`, `block_height`, `entity_type`, `entity_id`, `msg` (the VPR method that produced the change, in the same PascalCase action-name vocabulary as `IndexerTransactionEvent.event_type`, e.g. `CreateEcosystem`, `AddGovernanceFrameworkDocument`), `account` (signer), and `changes` (object of changed fields). The same `ActivityTimelineResponse` shape is reused by every `*History` and the indexer-level `listChanges` method.
 
 #### Governance Framework methods
 
@@ -679,7 +679,7 @@ Retrieve the network-level Credential Schema module parameters. *Aligned with VP
 
 (No method-specific parameters.)
 
-**Response:** `{ params: { credential_schema_trust_deposit: decimal } }` — the trust-deposit required to register a Credential Schema, as defined by the Credential Schema module parameters.
+**Response:** `{ params: { credential_schema_schema_max_size, credential_schema_issuer_grantor_validation_validity_period_max_days, credential_schema_verifier_grantor_validation_validity_period_max_days, credential_schema_issuer_validation_validity_period_max_days, credential_schema_verifier_validation_validity_period_max_days, credential_schema_holder_validation_validity_period_max_days } }` — the Credential Schema global variables of VPR v4 [[GLO]](https://verana-labs.github.io/verifiable-trust-vpr-spec/versions/v4/#glo-global-variables): the maximum `json_schema` size and the per-role maximum validation validity periods, in days. Exact keys are determined by the on-chain parameter set. (The v3 `credential_schema_trust_deposit` parameter no longer exists: creating a Credential Schema requires no trust deposit in v4.)
 
 ##### IDX-CS-QRY-5 Get Credential Schema History
 
@@ -839,7 +839,7 @@ Retrieve the network-level Participant module parameters. *Aligned with VPR [[MO
 
 (No method-specific parameters.)
 
-**Response:** `{ params: { ... } }` — the Participant module parameter set as defined by VPR governance (e.g. trust-deposit requirements per role, validation-fee floors). Exact keys are determined by the on-chain parameter set.
+**Response:** `{ params: { ... } }` — the Participant module parameter set as defined by VPR governance. VPR v4 [[GLO]](https://verana-labs.github.io/verifiable-trust-vpr-spec/versions/v4/#glo-global-variables) defines no Participant-specific global variable, so the set MAY be empty; exact keys are determined by the on-chain parameter set.
 
 #### Trust Deposit methods
 
@@ -866,7 +866,7 @@ Retrieve the network-level Trust Deposit module parameters. *Aligned with VPR [[
 
 (No method-specific parameters.)
 
-**Response:** `{ params: { trust_deposit_rate, user_agent_reward_rate, trust_deposit_share_value, wallet_user_agent_reward_rate, trust_deposit_reclaim_burn_rate } }` — all decimals; the network governance rates that drive yield, reward distribution, share-value translation, and the burn fraction applied on reclaim.
+**Response:** `{ params: { trust_deposit_share_value, trust_deposit_rate, trust_deposit_max_yield_rate, trust_deposit_block_reward_share, wallet_user_agent_reward_rate, user_agent_reward_rate } }` — all decimals; the Trust Deposit global variables of VPR v4 [[GLO]](https://verana-labs.github.io/verifiable-trust-vpr-spec/versions/v4/#glo-global-variables): share-value translation, the deposit fraction of trust fees, the yield cap and block-reward share, and the agent reward rates. (The v3 `trust_deposit_reclaim_burn_rate` parameter no longer exists: trust deposits are non-withdrawable in v4 and `MOD-TD-MSG-3` is void.)
 
 ##### IDX-TD-QRY-3 Get Trust Deposit History
 
@@ -880,7 +880,7 @@ Retrieve the activity timeline for a Trust Deposit row, ordered by `id` descendi
 
 Supports pagination through attributes `max_id`, `min_id`, `limit` and `sort`, as explained in [Pagination](#pagination).
 
-**Response:** `ActivityTimelineResponse` with `entity_type: "TrustDeposit"`. Each `ActivityItem`'s `msg` is one of `CREATE_TRUST_DEPOSIT`, `ADJUST_TRUST_DEPOSIT`, `SLASH_TRUST_DEPOSIT`, `SLASH_PARTICIPANT_TRUST_DEPOSIT`, `RECLAIM_YIELD`, `RECLAIM_DEPOSIT`, `REPAY_SLASHED`.
+**Response:** `ActivityTimelineResponse` with `entity_type: "TrustDeposit"`. Each `ActivityItem`'s `msg` is one of `AdjustTrustDeposit` (MOD-TD-MSG-1, including the adjustment that creates the row), `ReclaimTrustDepositYield` (MOD-TD-MSG-2), `SlashTrustDeposit` (MOD-TD-MSG-5), `RepaySlashedTrustDeposit` (MOD-TD-MSG-6), `BurnEcosystemSlashedTrustDeposit` (MOD-TD-MSG-7, the burn that a `SlashParticipantTrustDeposit` transaction delegates to): the same PascalCase action-name vocabulary as `IndexerTransactionEvent.event_type` and every other `*History` method. (There is no deposit reclaim in v4: trust deposits are non-withdrawable and `MOD-TD-MSG-3` is void.)
 
 #### Delegation methods
 
@@ -1324,7 +1324,7 @@ Replay persisted indexer events scoped by the same membership filter as [`IDX-IN
 
 When **both** `dids` and `corporation_id` are present, only events matching **both** filters are returned (intersection). When **both** are absent, the response is unfiltered.
 
-**Response:** Inline `{ events: IndexerTransactionEvent[], count, after_block_height }`. Each `IndexerTransactionEvent` carries `type: "indexer-event"`, `event_type` (Cosmos action name, e.g. `StartParticipantOP`), `did`, `block_height`, `tx_hash`, `timestamp`, and `payload: { module, action, message_type, tx_index, message_index, sender, related_dids[], entity_type, entity_id }`.
+**Response:** Inline `{ events: IndexerTransactionEvent[], count, after_block_height }`. Each `IndexerTransactionEvent` carries `type: "indexer-event"`, `event_type` (the VPR method name in PascalCase, e.g. `StartParticipantOP`), `did`, `block_height`, `tx_hash`, `timestamp`, and `payload: { module, action, message_type, tx_index, message_index, sender, related_dids[], entity_type, entity_id }`.
 
 ##### IDX-INDEXER-SUB-1 Subscribe Indexer Events
 
