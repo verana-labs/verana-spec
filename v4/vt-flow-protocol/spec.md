@@ -52,7 +52,7 @@ The protocol is identified by the message type URI of the first vt-flow message 
 | **Credential Schema** | An on-chain resource in the VPR that defines the format and validation rules for a credential. Each schema has onboarding modes (`issuer_onboarding_mode`, `verifier_onboarding_mode`, `holder_onboarding_mode`) that determine whether an Onboarding Process is required. |
 | **Participant** | An on-chain record granting a DID a specific role (`ISSUER`, `VERIFIER`, `HOLDER`, `ISSUER_GRANTOR`, `VERIFIER_GRANTOR`) for a schema. Obtained either directly (`OPEN` mode) or through an Onboarding Process. |
 | **Onboarding Process (OP)** | An on-chain state transition used when a Credential Schema requires validator approval. Initiated with `StartParticipantOP`, transitioned to `VALIDATED` with `SetParticipantOPtoValidated`. |
-| **Participant Session** | An on-chain record created by `CreateOrUpdateParticipantSession` that binds a specific credential issuance to a validator's Participant. Identified by `participant_session_id`. The same transaction anchors the credential's `digestJCS` in the VPR `Digest` store ([MOD-DI-MSG-1][vpr-di-msg-1]); the digest is not stored on the `ParticipantSession` entry. |
+| **Participant Session** | An on-chain record created by `CreateOrUpdateParticipantSession` that binds a specific credential issuance to a validator's Participant. Identified by `participant_session_id`. |
 | **vt-flow session** | A DIDComm conversation between an Applicant and a Validator identified by the `thid` of the first vt-flow message. |
 | **Superprotocol / Subprotocol** | Per [RFC 0003][rfc0003], `vt-flow` is the outer (super)protocol; Issue Credential V2 runs nested inside a vt-flow session and is linked via `~thread.pthid`. |
 
@@ -64,17 +64,6 @@ Two identifiers carry session semantics in vt-flow. They serve different layers 
 |---|---|---|
 | `thid` (DIDComm `~thread.thid`) | DIDComm correlation | Links all vt-flow messages in one session, and carried as `pthid` on all Issue Credential V2 subprotocol messages. Equals the `@id` of the initial `onboarding-request` or `issuance-request`. |
 | `participant_session_id` (vt-flow message body field) | On-chain / VPR | Identifier used for `CreateOrUpdateParticipantSession`. Also used by the Validator to re-attach an existing flow to a new DIDComm connection on reconnection (see [Reconnection](#reconnection)). |
-
-### Agent and Wallet Agent Participant Ids
-
-VPR [MOD-PP-MSG-10][vpr-msg-10] defines two OPTIONAL `CreateOrUpdateParticipantSession` fields, `agent_participant_id` and `wallet_agent_participant_id`. They identify the issuer Participants of the User Agent and wallet credentials of a **Verifiable User Agent** peer, so that user-agent rewards can be distributed. They are set only by VUAs, **MUST NOT** be set when the peer is a Verifiable Service, and a peer that sets them illegitimately **MUST** be refused.
-
-Both parties of a vt-flow session are Verifiable Services (see [Verifiable Service Identity Check](#verifiable-service-identity-check)). Therefore, in vt-flow 1.0:
-
-- `onboarding-request` and `issuance-request` **MUST NOT** carry `agent_participant_id` or `wallet_agent_participant_id`. A Validator that receives either field **MUST** reject the request with `problem-report` code `vt-flow.agent-participant-id-not-allowed`.
-- The Validator **MUST NOT** set `agent_participant_id` or `wallet_agent_participant_id` in the `CreateOrUpdateParticipantSession` transaction of a vt-flow session; no user-agent or wallet-agent reward is distributed for a credential issued over vt-flow.
-
-A future version of this protocol MAY define a VUA-applicant profile that carries these fields with the semantics of [MOD-PP-MSG-10][vpr-msg-10].
 
 ### Roles
 
@@ -327,7 +316,7 @@ Sent by the Validator when additional information outside of DIDComm is required
 
 | Field | Type | Required | Description |
 |---|---|---|---|
-| `url` | string | REQUIRED | Absolute HTTPS URL where the Applicant completes the OOB step. **MUST** be unique to this session (e.g. a per-session path). It SHOULD NOT carry a bearer secret: the receiving portal authenticates the Applicant itself, and the URL is stored in the flow record and exposed through the Validator agent's Administration API (`oobLinkUrl`). |
+| `url` | string | REQUIRED | Absolute HTTPS URL where the Applicant completes the OOB step. **MUST** be unique to this session (e.g. a per-session path). |
 | `description` | string | REQUIRED | Human-readable explanation. Follows DIDComm l10n conventions ([RFC 0043][rfc0043]). |
 | `expires_time` | string (ISO 8601) | OPTIONAL | Deadline after which the URL becomes invalid. |
 
@@ -410,7 +399,7 @@ Values for `who_retries`, `impact`, and `where` follow RFC 0035 conventions (low
 **Verification before Ack:** The Applicant **MUST NOT** send the Issue Credential V2 `ack` until it has verified the received credential. Before sending the Ack, the Applicant **MUST**:
 1. Query the VPR to confirm the Validator has an active `ISSUER` Participant for the schema.
 2. Confirm that the `ParticipantSession` identified by `participant_session_id` exists on-chain and references the Validator's `ISSUER` Participant ([VPR MOD-PP-QRY-5][vpr-qry-5]).
-3. Recompute the credential's `digestJCS` as specified in [W3C VTCs: Determining Credential Issuance Time][vt-spec-digest] and locate the corresponding `Digest` entry with [VPR Get Digest][vpr-di-qry-1]. The entry MUST exist: `CreateOrUpdateParticipantSession` anchors the digest in the VPR `Digest` store ([MOD-DI-MSG-1][vpr-di-msg-1]), not on the `ParticipantSession` entry, and its `created` timestamp is the credential's effective issuance time.
+3. Recompute the credential's `digestJCS` as specified in [W3C VTCs: Determining Credential Issuance Time][vt-spec-digest] and locate the corresponding `Digest` entry with [VPR Get Digest][vpr-di-qry-1]. The entry MUST exist: `CreateOrUpdateParticipantSession` anchors the digest in the VPR `Digest` store ([MOD-DI-MSG-1][vpr-di-msg-1]), and its `created` timestamp is the credential's effective issuance time.
 
 If verification succeeds, the Applicant sends the Ack. If verification fails, the Applicant sends a subprotocol problem-report instead and the subprotocol transitions to `abandoned`; the vt-flow session transitions to `ERROR`.
 
@@ -582,7 +571,6 @@ Error codes are carried in the adopted `problem-report`'s `description.code` fie
 | `vt-flow.unsupported-message` | Either | Received a message type not supported in the current state. Note: if this is the first message on the connection, senders **SHOULD** prefer `vt-flow.or-required` / `vt-flow.ir-required` over the generic code. | `none` | `connection` |
 | `vt-flow.invalid-participant-id` | Validator | `participant_id` does not exist, does not reference the Validator's Participant, or is in the wrong `op_state`. | `you` | `thread` |
 | `vt-flow.invalid-schema-id` | Validator | `schema_id` does not exist or is not supported by the Validator. | `you` | `thread` |
-| `vt-flow.agent-participant-id-not-allowed` | Validator | Request carries `agent_participant_id` or `wallet_agent_participant_id`. Both fields are reserved for Verifiable User Agent peers (VPR [MOD-PP-MSG-10][vpr-msg-10]) and **MUST NOT** be sent by a Verifiable Service; see [Agent and Wallet Agent Participant Ids](#agent-and-wallet-agent-participant-ids). | `you` | `thread` |
 | `vt-flow.invalid-claims` | Validator | Submitted `claims` do not satisfy the schema. | `you` | `thread` |
 | `vt-flow.invalid-participant-session-id` | Validator | `participant_session_id` is malformed or collides with an existing session. | `you` | `thread` |
 | `vt-flow.not-a-verifiable-service` | Either | Peer's DID does not satisfy [[VS-CONN-VS]][vt-spec-conn-vs]. | `none` | `connection` |
@@ -713,7 +701,6 @@ Additional format identifiers **MAY** be negotiated by mutual agreement.
 [rfc0453]: https://github.com/hyperledger/aries-rfcs/blob/main/features/0453-issue-credential-v2/README.md
 [rfc0593]: https://github.com/hyperledger/aries-rfcs/blob/main/features/0593-json-ld-cred-attach/README.md
 [vpr-v4]: https://verana-labs.github.io/verifiable-trust-vpr-spec/
-[vpr-msg-10]: https://verana-labs.github.io/verifiable-trust-vpr-spec/versions/v4/#mod-pp-msg-10-create-or-update-participant-session
 [vpr-qry-5]: https://verana-labs.github.io/verifiable-trust-vpr-spec/versions/v4/#mod-pp-qry-5-get-participantsession
 [vpr-di-msg-1]: https://verana-labs.github.io/verifiable-trust-vpr-spec/versions/v4/#mod-di-msg-1-store-digest
 [vpr-di-qry-1]: https://verana-labs.github.io/verifiable-trust-vpr-spec/versions/v4/#mod-di-qry-1-get-digest
