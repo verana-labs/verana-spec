@@ -1915,9 +1915,16 @@ Revokes one AnonCreds credential at registry level, addressed by revocation regi
 - `revocationRegistryDefinitionId` (REQUIRED) — the revocation registry definition that the credential is registered in.
 - `revocationRegistryIndex` (REQUIRED) — index of the credential in the registry.
 
-**Output**: confirmation of the revocation.
+**Output** (HTTP `200`): a revocation record. The record MUST contain these fields:
 
-> A W3C (`jsonld`) Verifiable Trust Credential has no credential-level revocation mechanism in v4. To invalidate such a credential, a Corporation operator revokes the HOLDER `Participant` entry on the VPR ([[MOD-PP-MSG-9]](https://verana-labs.github.io/verifiable-trust-vpr-spec/#mod-pp-msg-9-revoke-participant)). See [[VSA-ADM-VT-FL-REVOKE]](#vsa-adm-vt-fl-revoke-revokeflowcredential).
+- `revocationRegistryDefinitionId` — the same value as the input field.
+- `revocationRegistryIndex` — the same value as the input field.
+- `revokedAt` — the time of the revocation status list that the agent published for this revocation. The format is an ISO 8601 string with milliseconds.
+
+**Requirements**:
+
+- The agent MUST set `revokedAt` to the `timestamp` field of the revocation status list that it published. AnonCreds gives this field in seconds. The agent MUST change the value to the ISO 8601 format.
+- The agent MUST NOT set `revokedAt` to the time when it received the request. The value identifies the status list that the agent published. The caller uses the value to know when the revocation started.
 
 ### Verifiable Trust Scope
 
@@ -2050,7 +2057,7 @@ This method performs **credential-level** revocation only, and only for a creden
 
 - `reason` (OPTIONAL) — reason for the revocation, for a human reader.
 
-**Output**: confirmation of the revocation.
+**Output**: the flow record after the update. The record has the same fields as the records that [[VSA-ADM-VT-FL-LIST] `listFlows`](#vsa-adm-vt-fl-list-listflows) defines.
 
 **Requirements**:
 
