@@ -510,7 +510,7 @@ Retrieve the activity timeline for a Corporation, ordered by `id` descending (ne
 
 Supports pagination through attributes `max_id`, `min_id`, `limit` and `sort`, as explained in [Pagination](#pagination).
 
-**Response:** `ActivityTimelineResponse` with `entity_type: "Corporation"`. Each `ActivityItem`'s `msg` is one of `CreateNewCorporation`, `UpdateCorporation`, `AddGovernanceFrameworkDocument`, `IncreaseActiveGovernanceFrameworkVersion`, etc.
+**Response:** `ActivityTimelineResponse` with `entity_type: "Corporation"`. Each `ActivityItem`'s `msg` is one of `CreateCorporation`, `UpdateCorporation`, `AddGovernanceFrameworkDocument`, `IncreaseActiveGovernanceFrameworkVersion`, etc.
 
 #### Ecosystem methods
 
@@ -582,7 +582,7 @@ Retrieve the activity timeline for an Ecosystem, ordered by `id` descending (new
 
 Supports pagination through attributes `max_id`, `min_id`, `limit` and `sort`, as explained in [Pagination](#pagination).
 
-**Response:** `ActivityTimelineResponse` — `{ entity_type: "Ecosystem", entity_id, activity: ActivityItem[] }`. Each `ActivityItem` has `id` (uint64; indexer-assigned monotonic per-row surrogate key, used as the pagination cursor — distinct from `entity_id`), `timestamp`, `block_height`, `entity_type`, `entity_id`, `msg` (the VPR method that produced the change, in the same PascalCase action-name vocabulary as `IndexerTransactionEvent.event_type`, e.g. `CreateNewEcosystem`, `AddGovernanceFrameworkDocument`), `account` (signer), and `changes` (object of changed fields). The same `ActivityTimelineResponse` shape is reused by every `*History` and the indexer-level `listChanges` method.
+**Response:** `ActivityTimelineResponse` — `{ entity_type: "Ecosystem", entity_id, activity: ActivityItem[] }`. Each `ActivityItem` has `id` (uint64; indexer-assigned monotonic per-row surrogate key, used as the pagination cursor — distinct from `entity_id`), `timestamp`, `block_height`, `entity_type`, `entity_id`, `msg` (the VPR method that produced the change, in the same PascalCase action-name vocabulary as `IndexerTransactionEvent.event_type`, e.g. `CreateEcosystem`, `AddGovernanceFrameworkDocument`), `account` (signer), and `changes` (object of changed fields). The same `ActivityTimelineResponse` shape is reused by every `*History` and the indexer-level `listChanges` method.
 
 #### Governance Framework methods
 
