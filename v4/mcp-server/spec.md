@@ -368,7 +368,7 @@ This section catalogs every MCP tool exposed by the Verana MCP Server. Tools are
 
 ### [VMS-TOOLS-LEDGER] Ledger Tools (VPR Msgs)
 
-Ledger tools MUST follow the transaction-flow contract of [[VMS-TX]](#vms-tx-transaction-flow). The MCP server MUST expose only the **delegable** subset of VPR Msgs — those whose upstream `Signers` column is `corporation + operator` — plus `MOD-CO-MSG-1` (`createNewCorporation`) which is open to any account.
+Ledger tools MUST follow the transaction-flow contract of [[VMS-TX]](#vms-tx-transaction-flow). The MCP server MUST expose only the **delegable** subset of VPR Msgs — those whose upstream `Signers` column is `corporation + operator` — plus `MOD-CO-MSG-1` (`createCorporation`) which is open to any account.
 
 Msgs marked `governance proposal` in the upstream specification MUST NOT be exposed: they require a chain-level governance vote and are out of scope for an operator-driven MCP server.
 
@@ -378,14 +378,14 @@ Msgs marked `module call` (e.g. `MOD-DE-MSG-1` Grant Fee Allowance, `MOD-DE-MSG-
 
 | Tool | Upstream Msg | Description |
 |---|---|---|
-| `verana.ledger.co.createNewCorporation` | [`MOD-CO-MSG-1`](https://verana-labs.github.io/verifiable-trust-vpr-spec/#mod-co-msg-1-create-new-corporation) | Atomically create a Cosmos SDK group + group policy and a `Corporation` VPR entry bound to it. Open to any account; typically used during initial corporate bootstrap. The newly-created Corporation's `policy_address` becomes the on-chain account that subsequently signs as `corporation` for delegable Msgs. |
+| `verana.ledger.co.createCorporation` | [`MOD-CO-MSG-1`](https://verana-labs.github.io/verifiable-trust-vpr-spec/#mod-co-msg-1-create-corporation) | Atomically create a Cosmos SDK group + group policy and a `Corporation` VPR entry bound to it. Open to any account; typically used during initial corporate bootstrap. The newly-created Corporation's `policy_address` becomes the on-chain account that subsequently signs as `corporation` for delegable Msgs. |
 | `verana.ledger.co.updateCorporation` | [`MOD-CO-MSG-2`](https://verana-labs.github.io/verifiable-trust-vpr-spec/#mod-co-msg-2-update-corporation) | Rotate the bound Corporation's `did`. |
 
 #### [VMS-TOOLS-LEDGER-ES] Ecosystem Module
 
 | Tool | Upstream Msg | Description |
 |---|---|---|
-| `verana.ledger.es.createEcosystem` | [`MOD-ES-MSG-1`](https://verana-labs.github.io/verifiable-trust-vpr-spec/#mod-es-msg-1-create-new-ecosystem) | Create a new `Ecosystem` controlled by the bound Corporation. |
+| `verana.ledger.es.createEcosystem` | [`MOD-ES-MSG-1`](https://verana-labs.github.io/verifiable-trust-vpr-spec/#mod-es-msg-1-create-ecosystem) | Create a new `Ecosystem` controlled by the bound Corporation. |
 | `verana.ledger.es.updateEcosystem` | [`MOD-ES-MSG-2`](https://verana-labs.github.io/verifiable-trust-vpr-spec/#mod-es-msg-2-update-ecosystem) | Update an `Ecosystem` controlled by the bound Corporation. |
 | `verana.ledger.es.archiveEcosystem` | [`MOD-ES-MSG-3`](https://verana-labs.github.io/verifiable-trust-vpr-spec/#mod-es-msg-3-archive-ecosystem) | Archive an `Ecosystem` controlled by the bound Corporation. |
 
@@ -400,7 +400,7 @@ Msgs marked `module call` (e.g. `MOD-DE-MSG-1` Grant Fee Allowance, `MOD-DE-MSG-
 
 | Tool | Upstream Msg | Description |
 |---|---|---|
-| `verana.ledger.cs.createCredentialSchema` | [`MOD-CS-MSG-1`](https://verana-labs.github.io/verifiable-trust-vpr-spec/#mod-cs-msg-1-create-new-credential-schema) | Create a new `CredentialSchema` owned by an Ecosystem of the bound Corporation. |
+| `verana.ledger.cs.createCredentialSchema` | [`MOD-CS-MSG-1`](https://verana-labs.github.io/verifiable-trust-vpr-spec/#mod-cs-msg-1-create-credential-schema) | Create a new `CredentialSchema` owned by an Ecosystem of the bound Corporation. |
 | `verana.ledger.cs.updateCredentialSchema` | [`MOD-CS-MSG-2`](https://verana-labs.github.io/verifiable-trust-vpr-spec/#mod-cs-msg-2-update-credential-schema) | Update a `CredentialSchema` owned by an Ecosystem of the bound Corporation. |
 | `verana.ledger.cs.archiveCredentialSchema` | [`MOD-CS-MSG-3`](https://verana-labs.github.io/verifiable-trust-vpr-spec/#mod-cs-msg-3-archive-credential-schema) | Archive a `CredentialSchema` owned by an Ecosystem of the bound Corporation. |
 

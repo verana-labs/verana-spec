@@ -1007,7 +1007,7 @@ Retrieve the `x/group` state backing a Corporation: the group, the group policy 
 - **Policy:** `policy: { address, version, decision_policy }` — `address` equals the Corporation's `policy_address`; `decision_policy` is the `x/group` decision policy surfaced verbatim (a `ThresholdDecisionPolicy` `{ threshold, windows: { voting_period, min_execution_period } }` or a `PercentageDecisionPolicy` `{ percentage, windows: { … } }`).
 - **Members:** `members[]` — each `{ address, weight (decimal string), metadata, added_at }`. The full list is returned inline, not paginated: corporation groups are small by construction.
 
-The group and policy admin is not surfaced separately: per [[MOD-CO-MSG-1]](https://verana-labs.github.io/verifiable-trust-vpr-spec/versions/v4/#mod-co-msg-1-create-new-corporation), `group_policy_as_admin` is always `true`, so the admin of both the group and the group policy is the `policy.address` itself.
+The group and policy admin is not surfaced separately: per [[MOD-CO-MSG-1]](https://verana-labs.github.io/verifiable-trust-vpr-spec/versions/v4/#mod-co-msg-1-create-corporation), `group_policy_as_admin` is always `true`, so the admin of both the group and the group policy is the `policy.address` itself.
 
 ##### IDX-GR-QRY-2 List Corporations By Member
 
