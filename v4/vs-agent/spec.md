@@ -1262,6 +1262,7 @@ The table lists every method of the Administration API. It is a non-normative ov
 |  | `deleteConnection` | `DELETE` | `/v2/didcomm/connections/{connectionId}` | [[VSA-ADM-DC-CN-DELETE]](#vsa-adm-dc-cn-delete-deleteconnection) |
 |  | `sendBasicMessage` | `POST` | `/v2/didcomm/basic-messages` | [[VSA-ADM-DC-BM-SEND]](#vsa-adm-dc-bm-send-sendbasicmessage) |
 |  | `listBasicMessages` | `GET` | `/v2/didcomm/basic-messages` | [[VSA-ADM-DC-BM-LIST]](#vsa-adm-dc-bm-list-listbasicmessages) |
+|  | `sendReceipts` | `POST` | `/v2/didcomm/receipts` | [[VSA-ADM-DC-RC-SEND]](#vsa-adm-dc-rc-send-sendreceipts) |
 |  | `createPresentationRequest` | `POST` | `/v2/didcomm/presentation-request` | [[VSA-ADM-DC-PR-CREATE]](#vsa-adm-dc-pr-create-createpresentationrequest) |
 |  | `acceptPresentationRequest` | `POST` | `/v2/didcomm/presentations/{proofExchangeId}/accept-request` | [[VSA-ADM-DC-PR-ACCEPT-REQ]](#vsa-adm-dc-pr-accept-req-acceptpresentationrequest) |
 |  | `acceptPresentation` | `POST` | `/v2/didcomm/presentations/{proofExchangeId}/accept-presentation` | [[VSA-ADM-DC-PR-ACCEPT]](#vsa-adm-dc-pr-accept-acceptpresentation) |
@@ -1413,7 +1414,7 @@ The methods of this scope operate on the wire-level DIDComm state of the agent. 
 
 The scope is organized in **protocol modules**. Each DIDComm protocol that the agent implements appears as one module, with its own path family, its own records, and its own [events](#events-api). A module exposes the steps of its protocol; it does not abstract them. When a protocol step needs a local decision, the agent emits a `state-updated` event and waits for the caller to invoke the matching method — unless the caller set `autoAccept` at the start of the exchange.
 
-This specification defines four core modules — [Connections](#vsa-adm-dc-cn-connections), [Basic Messages](#vsa-adm-dc-bm-basic-messages), [Presentations](#vsa-adm-dc-pr-presentations), and [Credential Exchanges](#vsa-adm-dc-ce-credential-exchanges) — and the pattern that every [extension protocol module](#vsa-adm-dc-ext-extension-protocol-modules) follows. A caller discovers the modules of a deployment with [`listProtocols`](#vsa-adm-dc-proto-list-listprotocols).
+This specification defines five core modules — [Connections](#vsa-adm-dc-cn-connections), [Basic Messages](#vsa-adm-dc-bm-basic-messages), [Receipts](#vsa-adm-dc-rc-receipts), [Presentations](#vsa-adm-dc-pr-presentations), and [Credential Exchanges](#vsa-adm-dc-ce-credential-exchanges) — and the pattern that every [extension protocol module](#vsa-adm-dc-ext-extension-protocol-modules) follows. A caller discovers the modules of a deployment with [`listProtocols`](#vsa-adm-dc-proto-list-listprotocols).
 
 The agent has no method that creates a bare connection invitation, and no method that consumes one. A DIDComm connection starts either from the invitation that [`createPresentationRequest`](#vsa-adm-dc-pr-create-createpresentationrequest) or [`createCredentialOffer`](#vsa-adm-dc-ce-offer-createcredentialoffer) produces, or from a peer that connects to the agent, for example to start a credential acquisition flow.
 
@@ -1529,6 +1530,31 @@ Returns the message records that the agent stores.
 - `role` — `sender` or `receiver`.
 
 **Output**: a page of message records. Each record contains at minimum `id`, `connectionId`, `role`, `content`, `sentTime`, and `createdAt`.
+
+#### [VSA-ADM-DC-RC] Receipts
+
+Methods that report and request the delivery state and the read state of messages, per the Receipts protocol (`https://didcomm.org/receipts/1.0`). A receipt refers to a message by its identifier and carries one state: `created`, `submitted`, `received`, `viewed`, or `deleted`.
+
+The module stores no record. The agent delivers each inbound `message-receipts` message as a [`didcomm.receipts.message-received`](#vsa-evt-cat-event-catalog) event.
+
+| Module | Method Name | HTTP Method | Relative REST API path | Requirements |
+| --- | --- | --- | --- | --- |
+| Receipts | `sendReceipts` | `POST` | `/v2/didcomm/receipts` | [see](#vsa-adm-dc-rc-send-sendreceipts) |
+
+##### [VSA-ADM-DC-RC-SEND] sendReceipts
+
+Sends message receipts on an established connection.
+
+**Inputs** (request body):
+
+- `connectionId` (REQUIRED) — connection to send the receipts on.
+- `receipts` (REQUIRED) — array of receipts. Each entry carries `messageId` (REQUIRED), `state` (REQUIRED), and `timestamp` (OPTIONAL, ISO 8601 datetime).
+
+**Output**:
+
+- `id` — identifier of the sent message.
+
+**Errors**: `UNKNOWN_ID` (`404`) when no connection has the supplied identifier.
 
 #### [VSA-ADM-DC-PR] Presentations
 
@@ -1808,7 +1834,6 @@ The message and record definitions of an extension protocol module belong to the
 
 | Module | Protocol | Purpose |
 |---|---|---|
-| `receipts` | `https://didcomm.org/receipts/1.0` | Delivery state and read state of messages. |
 | `reactions` | `https://didcomm.org/reactions/1.0` | Emoji reactions to messages. |
 | `user-profile` | `https://didcomm.org/user-profile/1.0` | Exchange of peer profiles (name, avatar). |
 | `media-sharing` | `https://didcomm.org/media-sharing/1.0` | Sharing of media files. |
@@ -2446,7 +2471,7 @@ Removes a consumable service entry from the DID Document of the agent.
 
 The VS Agent notifies a backend of state changes through webhook events. The operator configures one consumer endpoint with `EVENTS_WEBHOOK_URL` (see [[VSA-VTI-CFG-ENV-EVT] Events API](#vsa-vti-cfg-env-evt-events-api)). When that variable is unset, the agent delivers no event.
 
-An event is a notification, not a state transfer. The records of the [Administration API](#administration-api) are the source of truth: an event tells the consumer that a record changed, and the consumer reads the record when it needs a guaranteed view. A consumer that misses an event recovers the current state from the corresponding `list` or `get` method.
+An event is a notification, not a state transfer. The records of the [Administration API](#administration-api) are the source of truth: an event tells the consumer that a record changed, and the consumer reads the record when it needs a guaranteed view. A consumer that misses an event recovers the current state from the corresponding `list` or `get` method. A `message-received` event of a module that stores no record — for example [Receipts](#vsa-adm-dc-rc-receipts) — has no recovery path: a consumer MUST NOT depend on it for state it cannot afford to lose.
 
 The event model covers every transport at the same level: the DIDComm modules, the OpenID4VC capabilities, and the Verifiable Trust flows each emit events of the same shape, to the same endpoint. The indexer notifications of [[VSA-VTI-NOTIF]](#vsa-vti-notif-notifications) are internal to the agent and emit no event: a backend that needs chain events consumes the [indexer events endpoint](../verana-indexer/spec.md#idx-indexer-qry-6-list-indexer-events) directly.
 
@@ -2495,6 +2520,7 @@ The agent MUST emit each event of this table when its trigger occurs.
 |---|---|---|
 | `didcomm.connections.state-updated` | A connection record is created or changes state, per [[VSA-ADM-DC-CN]](#vsa-adm-dc-cn-connections). | The connection record, as [`getConnection`](#vsa-adm-dc-cn-get-getconnection) returns it, plus `previousState`. |
 | `didcomm.basic-messages.message-received` | The agent receives a basic message, per [[VSA-ADM-DC-BM]](#vsa-adm-dc-bm-basic-messages). | The message record, as [`listBasicMessages`](#vsa-adm-dc-bm-list-listbasicmessages) returns it. |
+| `didcomm.receipts.message-received` | The agent receives a `message-receipts` message, per [[VSA-ADM-DC-RC]](#vsa-adm-dc-rc-receipts). | `connectionId` and `receipts` — the entries of the message, each with `messageId`, `state`, and `timestamp`. |
 | `didcomm.presentations.state-updated` | A presentation record is created or changes state, per [[VSA-ADM-DC-PR]](#vsa-adm-dc-pr-presentations). | The presentation record, as [`getPresentation`](#vsa-adm-dc-pr-get-getpresentation) returns it, plus `previousState`. |
 | `didcomm.credential-exchanges.state-updated` | A credential exchange record is created or changes state, per [[VSA-ADM-DC-CE]](#vsa-adm-dc-ce-credential-exchanges). | The credential exchange record, as [`getCredentialExchange`](#vsa-adm-dc-ce-get-getcredentialexchange) returns it, plus `previousState`. |
 | `didcomm.{module}.message-received` | The agent receives a message of an extension protocol module, per [[VSA-ADM-DC-EXT-4]](#vsa-adm-dc-ext-extension-protocol-modules). | `connectionId`, `threadId`, and `message` — the plaintext message, per the protocol specification of the module. |
