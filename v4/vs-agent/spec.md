@@ -1232,7 +1232,7 @@ The agent MUST return a JSON body with each response whose HTTP status is `400` 
 - `code` — a stable token that identifies the condition. A caller MAY branch on it.
 - `message` — text for a human reader. A caller MUST NOT parse it.
 
-The envelope and the shared codes match [[TG-ERR-1]](../verana-graph/spec.md#error-responses) of the Verana Graph specification. The two APIs use one error vocabulary: `INVALID_INPUT` for a request that fails validation, `UNKNOWN_ID` for an identifier that resolves to no record, and `INVALID_CURSOR` for a cursor the agent refuses. The Administration API adds the codes that authentication and mutation need, which a read-only public API does not: `UNAUTHENTICATED`, `FORBIDDEN`, `INVALID_STATE`, and `INTERNAL`.
+The envelope and the shared codes match [[TG-ERR-1]](../verana-graph/spec.md#error-responses) of the Verana Graph specification. The two APIs use one error vocabulary: `INVALID_INPUT` for a request that fails validation, `UNKNOWN_ID` for an identifier that resolves to no record, and `INVALID_CURSOR` for a cursor the agent refuses. The Administration API adds the codes that authentication and mutation need, which a read-only public API does not: `UNAUTHENTICATED`, `FORBIDDEN`, `INVALID_STATE`, and `INTERNAL`. This shared vocabulary is not exhaustive: a method can add codes of its own — for example `NO_COMPATIBLE_CREDENTIALS` — and defines each one in place.
 
 Each method below lists only the codes that are specific to it. These codes apply to every method:
 
@@ -1295,6 +1295,7 @@ The table lists every method of the Administration API. It is a non-normative ov
 |  | `deleteRevocationRegistry` | `DELETE` | `/v2/anoncreds/revocation-registries/{revocationRegistryDefinitionId}` | [[VSA-ADM-AC-RR-DELETE]](#vsa-adm-ac-rr-delete-deleterevocationregistry) |
 |  | `revokeCredential` | `POST` | `/v2/anoncreds/revoke-credential` | [[VSA-ADM-AC-CR-REVOKE]](#vsa-adm-ac-cr-revoke-revokecredential) |
 | Verifiable Trust | `listFlows` | `GET` | `/v2/vt/flows` | [[VSA-ADM-VT-FL-LIST]](#vsa-adm-vt-fl-list-listflows) |
+|  | `getFlow` | `GET` | `/v2/vt/flows/{participantSessionId}` | [[VSA-ADM-VT-FL-GET]](#vsa-adm-vt-fl-get-getflow) |
 |  | `editCredentialClaims` | `PUT` | `/v2/vt/flows/{participantSessionId}/claims` | [[VSA-ADM-VT-FL-EDIT]](#vsa-adm-vt-fl-edit-editcredentialclaims) |
 |  | `sendOobLink` | `POST` | `/v2/vt/flows/{participantSessionId}/oob-link` | [[VSA-ADM-VT-FL-SEND]](#vsa-adm-vt-fl-send-sendooblink) |
 |  | `validateFlow` | `POST` | `/v2/vt/flows/{participantSessionId}/validate` | [[VSA-ADM-VT-FL-VALIDATE]](#vsa-adm-vt-fl-validate-validateflow) |
@@ -1535,6 +1536,8 @@ Methods that wrap the Present Proof 2.0 protocol (`https://didcomm.org/present-p
 
 A record moves through the protocol states `request-sent`, `request-received`, `presentation-sent`, `presentation-received`, `declined`, `abandoned`, and `done`. The agent does not implement the proposal step: it MUST answer an inbound `propose-presentation` message with a problem report.
 
+The two refusal states differ by cause: an exchange ends in `declined` when the caller refuses a pending step through [`declinePresentationExchange`](#vsa-adm-dc-pr-decline-declinepresentationexchange), and in `abandoned` when the exchange fails — the peer sent a problem report, or an error stopped the protocol.
+
 The agent takes each role of the protocol:
 
 - **Verifier** — [`createPresentationRequest`](#vsa-adm-dc-pr-create-createpresentationrequest) sends the request. When the peer presents, the agent verifies the presentation, stores the result in `verified`, and sets the state to `presentation-received`. The caller then completes the exchange with [`acceptPresentation`](#vsa-adm-dc-pr-accept-acceptpresentation), or refuses it with [`declinePresentationExchange`](#vsa-adm-dc-pr-decline-declinepresentationexchange).
@@ -1603,7 +1606,7 @@ Acknowledges a received presentation as verifier, and completes the exchange. Th
 
 ##### [VSA-ADM-DC-PR-DECLINE] declinePresentationExchange
 
-Refuses the pending step of a presentation exchange, in either role. The agent sends a problem report to the peer and abandons the exchange.
+Refuses the pending step of a presentation exchange, in either role. The agent sends a problem report to the peer and ends the exchange in state `declined`.
 
 **Path parameters**:
 
@@ -1613,7 +1616,7 @@ Refuses the pending step of a presentation exchange, in either role. The agent s
 
 - `reason` (OPTIONAL) — text for the problem report.
 
-**Output**: the updated presentation record.
+**Output**: the updated presentation record, in state `declined`.
 
 **Errors**: `INVALID_STATE` (`409`) — the exchange is in a terminal state.
 
@@ -1655,6 +1658,8 @@ Deletes a presentation record.
 Methods that wrap the Issue Credential 2.0 protocol (`https://didcomm.org/issue-credential/2.0`) for the AnonCreds format. The referenced credential definition and revocation registry belong to the [AnonCreds Scope](#anoncreds-scope). The agent stores one credential exchange record per exchange, and emits a [`didcomm.credential-exchanges.state-updated`](#vsa-evt-cat-event-catalog) event at every state change.
 
 A record moves through the protocol states `offer-sent`, `offer-received`, `request-sent`, `request-received`, `credential-issued`, `credential-received`, `declined`, `abandoned`, and `done`. The agent does not implement the proposal step: it MUST answer an inbound `propose-credential` message with a problem report.
+
+The two refusal states differ by cause: an exchange ends in `declined` when the caller refuses a pending step through [`declineCredentialExchange`](#vsa-adm-dc-ce-decline-declinecredentialexchange), and in `abandoned` when the exchange fails — the peer sent a problem report, or an error stopped the protocol.
 
 The agent takes each role of the protocol:
 
@@ -1738,7 +1743,7 @@ Accepts a received credential as holder: the agent stores the credential in its 
 
 ##### [VSA-ADM-DC-CE-DECLINE] declineCredentialExchange
 
-Refuses the pending step of a credential exchange, in either role. The agent sends a problem report to the peer and abandons the exchange.
+Refuses the pending step of a credential exchange, in either role. The agent sends a problem report to the peer and ends the exchange in state `declined`.
 
 **Path parameters**:
 
@@ -1748,7 +1753,7 @@ Refuses the pending step of a credential exchange, in either role. The agent sen
 
 - `reason` (OPTIONAL) — text for the problem report.
 
-**Output**: the updated credential exchange record.
+**Output**: the updated credential exchange record, in state `declined`.
 
 **Errors**: `INVALID_STATE` (`409`) — the exchange is in a terminal state.
 
@@ -1817,7 +1822,7 @@ The methods of this scope operate on the OpenID4VC state of the agent. The agent
 
 The scope mirrors the [DIDComm Scope](#didcomm-scope): a credential offer and a presentation request produce a URL that the caller renders as a QR code or sends as a link, and each one starts an exchange that the caller then reads by identifier. Two differences follow from the protocol:
 
-- OpenID4VC has no persistent connection, so this scope has no Connections module and no Messaging module. Each exchange is independent.
+- OpenID4VC has no persistent connection, so this scope has no Connections module and no Basic Messages module. Each exchange is independent.
 - The agent has two OpenID4VC capabilities, and an operator configures one or both: the **issuer** capability serves [Credential Exchanges](#vsa-adm-oid-ce-credential-exchanges), and the **verifier** capability serves [Presentations](#vsa-adm-oid-pr-presentations). When the configuration does not define a capability, the agent MUST refuse each method of that capability with `CAPABILITY_NOT_CONFIGURED` (`409`).
 
 The agent MUST issue and MUST verify only the credential formats that [[VSA-VTI-CFG-ENV-OID] OpenID4VC](#vsa-vti-cfg-env-oid-openid4vc) declares. At present that is the SD-JWT VC format `dc+sd-jwt`.
@@ -2174,6 +2179,7 @@ The following methods list and progress the credential acquisition flows that th
 | Module | Method Name | HTTP Method | Relative REST API path | Requirements |
 | --- | --- | --- | --- | --- |
 | Flow Management | `listFlows` | `GET` | `/v2/vt/flows` | [see](#vsa-adm-vt-fl-list-listflows) |
+| Flow Management | `getFlow` | `GET` | `/v2/vt/flows/{participantSessionId}` | [see](#vsa-adm-vt-fl-get-getflow) |
 | Flow Management | `editCredentialClaims` | `PUT` | `/v2/vt/flows/{participantSessionId}/claims` | [see](#vsa-adm-vt-fl-edit-editcredentialclaims) |
 | Flow Management | `sendOobLink` | `POST` | `/v2/vt/flows/{participantSessionId}/oob-link` | [see](#vsa-adm-vt-fl-send-sendooblink) |
 | Flow Management | `validateFlow` | `POST` | `/v2/vt/flows/{participantSessionId}/validate` | [see](#vsa-adm-vt-fl-validate-validateflow) |
@@ -2201,12 +2207,28 @@ Lists and inspects the credential acquisition flows that the agent handles.
 - the applicable `participantId` values;
 - `schemaId`;
 - `participantSessionId`;
+- `flowState` — the current Flow State, per [Flow State](#vsa-vti-flow-state-flow-state);
+- `connectionState` — the current Connection State, per [Flow State](#vsa-vti-flow-state-flow-state);
 - `lastEventAt` — timestamp of the last event;
 - the submitted credential claims and proofs;
 - `oobLinkUrl` — the outstanding `OOB_LINK` URL, when one exists;
 - after the agent generates a credential: the identifier of the offered credential, its `digestJCS`, and the reference to the on-chain `ParticipantSession`.
 
 **Requirements**: none beyond the Admin API access checks (see [Authorization](#authorization)).
+
+##### [VSA-ADM-VT-FL-GET] getFlow
+
+Returns one credential acquisition flow record.
+
+**Path parameters**:
+
+- `participantSessionId` (REQUIRED) — identifier of the target flow.
+
+**Inputs**: none.
+
+**Output**: the flow record, in the shape that [`listFlows`](#vsa-adm-vt-fl-list-listflows) defines.
+
+**Errors**: `UNKNOWN_ID` (`404`) — `participantSessionId` resolves to no flow.
 
 ##### [VSA-ADM-VT-FL-EDIT] editCredentialClaims
 
@@ -2426,7 +2448,7 @@ The VS Agent notifies a backend of state changes through webhook events. The ope
 
 An event is a notification, not a state transfer. The records of the [Administration API](#administration-api) are the source of truth: an event tells the consumer that a record changed, and the consumer reads the record when it needs a guaranteed view. A consumer that misses an event recovers the current state from the corresponding `list` or `get` method.
 
-The event model covers every transport at the same level: the DIDComm modules, the OpenID4VC capabilities, the Verifiable Trust flows, and the indexer notifications each emit events of the same shape, to the same endpoint.
+The event model covers every transport at the same level: the DIDComm modules, the OpenID4VC capabilities, and the Verifiable Trust flows each emit events of the same shape, to the same endpoint. The indexer notifications of [[VSA-VTI-NOTIF]](#vsa-vti-notif-notifications) are internal to the agent and emit no event: a backend that needs chain events consumes the [indexer events endpoint](../verana-indexer/spec.md#idx-indexer-qry-6-list-indexer-events) directly.
 
 ### [VSA-EVT-DEL] Delivery
 
@@ -2462,7 +2484,7 @@ Every event is one JSON object:
 
 An event type follows the grammar `{scope}.{module}.{event}`. The scope and the module mirror the path segments of the [Administration API](#administration-api), so that a consumer maps an event to the methods that read and progress the underlying record. There are two event kinds:
 
-- **`state-updated`** — a record changed state, or was created. `data` MUST hold the record, in the same shape as the `get` method of that record returns it, plus `previousState` — the state before the change, or `null` when the event reports the creation of the record.
+- **`state-updated`** — a record changed state, or was created. `data` MUST hold the record, in the same shape as the `get` method of that record returns it, plus `previousState` — the state before the change, or `null` when the event reports the creation of the record. For a record with more than one state field, the catalog row replaces `previousState` with one previous-state field per state field, each with the same semantics.
 - **`message-received`** — an inbound DIDComm message arrived on a module. `data` holds the message, per the module definition.
 
 ### [VSA-EVT-CAT] Event Catalog
@@ -2478,11 +2500,9 @@ The agent MUST emit each event of this table when its trigger occurs.
 | `didcomm.{module}.message-received` | The agent receives a message of an extension protocol module, per [[VSA-ADM-DC-EXT-4]](#vsa-adm-dc-ext-extension-protocol-modules). | `connectionId`, `threadId`, and `message` — the plaintext message, per the protocol specification of the module. |
 | `openid4vc.credential-exchanges.state-updated` | An OpenID4VCI issuance session changes state, per [[VSA-ADM-OID-CE]](#vsa-adm-oid-ce-credential-exchanges). | The credential exchange record, as [`getCredentialExchange`](#vsa-adm-oid-ce-get-getcredentialexchange) returns it, plus `previousState`. |
 | `openid4vc.presentations.state-updated` | An OpenID4VP verification session changes state, per [[VSA-ADM-OID-PR]](#vsa-adm-oid-pr-presentations). | The verification session record, as [`getPresentation`](#vsa-adm-oid-pr-get-getpresentation) returns it, plus `previousState`. |
-| `vt.flows.state-updated` | The Flow State or the Connection State of a credential acquisition flow changes, per [[VSA-VTI-FLOW-STATE]](#vsa-vti-flow-state-flow-state). | The flow record, as [`listFlows`](#vsa-adm-vt-fl-list-listflows) returns it, plus `previousFlowState` and `previousConnectionState`. |
-| `indexer.notification` | The agent processes an `IndexerTransactionEvent`, per [[VSA-VTI-NOTIF]](#vsa-vti-notif-notifications). | The camelCase mapping of the `IndexerTransactionEvent`: `eventType`, `did`, `blockHeight`, `txHash`, `timestamp`, and `payload` (`module`, `action`, `messageType`, `txIndex`, `messageIndex`, `sender`, `relatedDids`, `entityType`, `entityId`). |
+| `vt.flows.state-updated` | The Flow State or the Connection State of a credential acquisition flow changes, per [[VSA-VTI-FLOW-STATE]](#vsa-vti-flow-state-flow-state). | The flow record, as [`getFlow`](#vsa-adm-vt-fl-get-getflow) returns it, plus `previousFlowState` and `previousConnectionState`. |
 
 Additional notes:
 
-- The agent MUST emit `indexer.notification` for every processed `IndexerTransactionEvent`, independent of `VERANA_INDEXER_DEFAULT_HANDLERS_OVERRIDE`: that variable disables default handlers, not events. The agent MUST NOT emit the event for a discarded idempotent duplicate (see [[VSA-VTI-NOTIF]](#vsa-vti-notif-notifications)).
-- The agent MUST emit a `state-updated` event also for a state change that `autoAccept` produces, so that a consumer observes an automated exchange and a manual exchange through the same stream.
+- The agent MUST emit a `state-updated` event for a state change that `autoAccept` produces, so that a consumer observes an automated exchange and a manual exchange through the same stream.
 - A record deletion through the Administration API is a caller action, not a state change: the agent MUST NOT emit an event for it.
