@@ -2509,7 +2509,7 @@ Every event is one JSON object:
 
 An event type follows the grammar `{scope}.{module}.{event}`. The scope and the module mirror the path segments of the [Administration API](#administration-api), so that a consumer maps an event to the methods that read and progress the underlying record. There are two event kinds:
 
-- **`state-updated`** — a record changed state, or was created. `data` MUST hold the record, in the same shape as the `get` method of that record returns it, plus `previousState` — the state before the change, or `null` when the event reports the creation of the record. For a record with more than one state field, the catalog row replaces `previousState` with one previous-state field per state field, each with the same semantics.
+- **`state-updated`** — a record changed state, or was created. `data` MUST hold the record, in the same shape as the `get` method of that record returns it, plus `previousState` — the state before the change, or `null` when the event reports the creation of the record.
 - **`message-received`** — an inbound DIDComm message arrived on a module. `data` holds the message, per the module definition.
 
 The type `vpr.notification` is the one exception to the grammar: it reports a transaction on the Verana Public Registry, which the agent observes through the indexer; it mirrors no Administration API path, and belongs to neither kind.
@@ -2528,7 +2528,7 @@ The agent MUST emit each event of this table when its trigger occurs.
 | `didcomm.{module}.message-received` | The agent receives a message of an extension protocol module, per [[VSA-ADM-DC-EXT-4]](#vsa-adm-dc-ext-extension-protocol-modules). | `connectionId`, `threadId`, and `message` — the plaintext message, per the protocol specification of the module. |
 | `openid4vc.credential-exchanges.state-updated` | An OpenID4VCI issuance session changes state, per [[VSA-ADM-OID-CE]](#vsa-adm-oid-ce-credential-exchanges). | The credential exchange record, as [`getCredentialExchange`](#vsa-adm-oid-ce-get-getcredentialexchange) returns it, plus `previousState`. |
 | `openid4vc.presentations.state-updated` | An OpenID4VP verification session changes state, per [[VSA-ADM-OID-PR]](#vsa-adm-oid-pr-presentations). | The verification session record, as [`getPresentation`](#vsa-adm-oid-pr-get-getpresentation) returns it, plus `previousState`. |
-| `vt.flows.state-updated` | The Flow State or the Connection State of a credential acquisition flow changes, per [[VSA-VTI-FLOW-STATE]](#vsa-vti-flow-state-flow-state). | The flow record, as [`getFlow`](#vsa-adm-vt-fl-get-getflow) returns it, plus `previousFlowState` and `previousConnectionState`. |
+| `vt.flows.state-updated` | The Flow State of a credential acquisition flow changes, per [[VSA-VTI-FLOW-STATE]](#vsa-vti-flow-state-flow-state). | The flow record, as [`getFlow`](#vsa-adm-vt-fl-get-getflow) returns it, plus `previousState`. |
 | `vpr.notification` | The agent processes an `IndexerTransactionEvent`, per [[VSA-VTI-NOTIF]](#vsa-vti-notif-notifications). | The camelCase mapping of the `IndexerTransactionEvent`: `eventType`, `did`, `blockHeight`, `txHash`, `timestamp`, and `payload` (`module`, `action`, `messageType`, `txIndex`, `messageIndex`, `sender`, `relatedDids`, `entityType`, `entityId`); plus `changes` — the current state of the affected entity, when the agent resolved it. |
 
 Additional notes:
