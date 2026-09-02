@@ -1919,12 +1919,7 @@ Revokes one AnonCreds credential at registry level, addressed by revocation regi
 
 - `revocationRegistryDefinitionId` — the same value as the input field.
 - `revocationRegistryIndex` — the same value as the input field.
-- `revokedAt` — the time of the revocation status list that the agent published for this revocation. The format is an ISO 8601 string with milliseconds.
-
-**Requirements**:
-
-- The agent MUST set `revokedAt` to the `timestamp` field of the revocation status list that it published. AnonCreds gives this field in seconds. The agent MUST change the value to the ISO 8601 format.
-- The agent MUST NOT set `revokedAt` to the time when it received the request. The value identifies the status list that the agent published. The caller uses the value to know when the revocation started.
+- `revokedAt` — the time of the revocation status list that the agent published for this revocation. The format is an ISO 8601 string with milliseconds. This time can be different from the time when the agent received the request.
 
 ### Verifiable Trust Scope
 
