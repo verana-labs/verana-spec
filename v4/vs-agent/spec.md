@@ -190,7 +190,7 @@ The table lists every environment variable of the VS Agent container. The subsec
 | `VERANA_INDEXER_BASE_URL` | REQUIRED | Verana indexer API URL (e.g., `https://idx.testnet.verana.network`). |
 | `VERANA_CHAIN_ID` | OPTIONAL | Chain ID. |
 | `VERANA_INDEXER_SUBSCRIPTION_SCOPE` | OPTIONAL | Scope of the indexer subscription and of the REST catch-up: `did` (default) subscribes to the agent's own DID only, `corporation` subscribes to every event of `VERANA_CORPORATION_ID`. |
-| `VERANA_INDEXER_DEFAULT_HANDLERS_OVERRIDE` | OPTIONAL | Comma-separated list of indexer `event_type` names whose default handler is disabled, or `*` for all of them. A backend behind the agent then reacts to those notifications itself. State synchronisation is never affected. |
+| `VERANA_INDEXER_DEFAULT_HANDLERS_OVERRIDE` | OPTIONAL | Comma-separated list of indexer `event_type` names whose default handler is disabled, or `*` for all of them. The operator sets it when a backend implements the reaction itself: the backend observes each chain event through the [`vpr.notification`](#vsa-evt-cat-event-catalog) event. State synchronisation is never affected. |
 | `VERANA_GAS_ADJUSTMENT` | OPTIONAL | Multiplier the agent applies to the simulated gas of each transaction it signs. Default: `1.5`. A simulation signs with an empty signature and runs against the state of the moment, so it reports less gas than the delivery consumes; the multiplier covers that difference. Raise it when a transaction reports `out of gas` although its simulation succeeded. |
 | `VERANA_AUTO_TRIGGER_RESOLVER` | OPTIONAL | Whether the agent sends `TriggerResolver` by itself after it publishes a credential or changes a service endpoint. Default: `true`. Set it to `false` when the operator triggers the resolver out of band. |
 
@@ -2473,7 +2473,7 @@ The VS Agent notifies a backend of state changes through webhook events. The ope
 
 An event is a notification, not a state transfer. The records of the [Administration API](#administration-api) are the source of truth: an event tells the consumer that a record changed, and the consumer reads the record when it needs a guaranteed view. A consumer that misses an event recovers the current state from the corresponding `list` or `get` method. A `message-received` event of a module that stores no record — for example [Receipts](#vsa-adm-dc-rc-receipts) — has no recovery path: a consumer MUST NOT depend on it for state it cannot afford to lose.
 
-The event model covers every transport at the same level: the DIDComm modules, the OpenID4VC capabilities, and the Verifiable Trust flows each emit events of the same shape, to the same endpoint. The indexer notifications of [[VSA-VTI-NOTIF]](#vsa-vti-notif-notifications) are internal to the agent and emit no event: a backend that needs chain events consumes the [indexer events endpoint](../verana-indexer/spec.md#idx-indexer-qry-6-list-indexer-events) directly.
+The event model covers every transport at the same level: the DIDComm modules, the OpenID4VC capabilities, the Verifiable Trust flows, and the indexer notifications of [[VSA-VTI-NOTIF]](#vsa-vti-notif-notifications) each emit events of the same shape, to the same endpoint.
 
 ### [VSA-EVT-DEL] Delivery
 
@@ -2512,6 +2512,8 @@ An event type follows the grammar `{scope}.{module}.{event}`. The scope and the 
 - **`state-updated`** — a record changed state, or was created. `data` MUST hold the record, in the same shape as the `get` method of that record returns it, plus `previousState` — the state before the change, or `null` when the event reports the creation of the record. For a record with more than one state field, the catalog row replaces `previousState` with one previous-state field per state field, each with the same semantics.
 - **`message-received`** — an inbound DIDComm message arrived on a module. `data` holds the message, per the module definition.
 
+The type `vpr.notification` is the one exception to the grammar: it reports a transaction on the Verana Public Registry, which the agent observes through the indexer; it mirrors no Administration API path, and belongs to neither kind.
+
 ### [VSA-EVT-CAT] Event Catalog
 
 The agent MUST emit each event of this table when its trigger occurs.
@@ -2527,8 +2529,11 @@ The agent MUST emit each event of this table when its trigger occurs.
 | `openid4vc.credential-exchanges.state-updated` | An OpenID4VCI issuance session changes state, per [[VSA-ADM-OID-CE]](#vsa-adm-oid-ce-credential-exchanges). | The credential exchange record, as [`getCredentialExchange`](#vsa-adm-oid-ce-get-getcredentialexchange) returns it, plus `previousState`. |
 | `openid4vc.presentations.state-updated` | An OpenID4VP verification session changes state, per [[VSA-ADM-OID-PR]](#vsa-adm-oid-pr-presentations). | The verification session record, as [`getPresentation`](#vsa-adm-oid-pr-get-getpresentation) returns it, plus `previousState`. |
 | `vt.flows.state-updated` | The Flow State or the Connection State of a credential acquisition flow changes, per [[VSA-VTI-FLOW-STATE]](#vsa-vti-flow-state-flow-state). | The flow record, as [`getFlow`](#vsa-adm-vt-fl-get-getflow) returns it, plus `previousFlowState` and `previousConnectionState`. |
+| `vpr.notification` | The agent processes an `IndexerTransactionEvent`, per [[VSA-VTI-NOTIF]](#vsa-vti-notif-notifications). | The camelCase mapping of the `IndexerTransactionEvent`: `eventType`, `did`, `blockHeight`, `txHash`, `timestamp`, and `payload` (`module`, `action`, `messageType`, `txIndex`, `messageIndex`, `sender`, `relatedDids`, `entityType`, `entityId`); plus `changes` — the current state of the affected entity, when the agent resolved it. |
 
 Additional notes:
 
+- The agent MUST emit `vpr.notification` for every processed `IndexerTransactionEvent`, independent of `VERANA_INDEXER_DEFAULT_HANDLERS_OVERRIDE`: that variable disables default handlers, not events. The agent MUST NOT emit the event for a discarded idempotent duplicate (see [[VSA-VTI-NOTIF]](#vsa-vti-notif-notifications)).
+- A consumer that misses a `vpr.notification` event recovers from the [indexer events endpoint](../verana-indexer/spec.md#idx-indexer-qry-6-list-indexer-events), with `after_block_height` set to the last block it processed. The indexer, not the agent, is the durable source of chain events.
 - The agent MUST emit a `state-updated` event for a state change that `autoAccept` produces, so that a consumer observes an automated exchange and a manual exchange through the same stream.
 - A record deletion through the Administration API is a caller action, not a state change: the agent MUST NOT emit an event for it.
