@@ -1263,6 +1263,18 @@ The table lists every method of the Administration API. It is a non-normative ov
 |  | `sendBasicMessage` | `POST` | `/v2/didcomm/basic-messages` | [[VSA-ADM-DC-BM-SEND]](#vsa-adm-dc-bm-send-sendbasicmessage) |
 |  | `listBasicMessages` | `GET` | `/v2/didcomm/basic-messages` | [[VSA-ADM-DC-BM-LIST]](#vsa-adm-dc-bm-list-listbasicmessages) |
 |  | `sendReceipts` | `POST` | `/v2/didcomm/receipts` | [[VSA-ADM-DC-RC-SEND]](#vsa-adm-dc-rc-send-sendreceipts) |
+|  | `sendReactions` | `POST` | `/v2/didcomm/reactions` | [[VSA-ADM-DC-RA-SEND]](#vsa-adm-dc-ra-send-sendreactions) |
+|  | `sendProfile` | `POST` | `/v2/didcomm/user-profile` | [[VSA-ADM-DC-UP-SEND]](#vsa-adm-dc-up-send-sendprofile) |
+|  | `requestProfile` | `POST` | `/v2/didcomm/user-profile/request` | [[VSA-ADM-DC-UP-REQUEST]](#vsa-adm-dc-up-request-requestprofile) |
+|  | `shareMedia` | `POST` | `/v2/didcomm/media-sharing` | [[VSA-ADM-DC-MS-SHARE]](#vsa-adm-dc-ms-share-sharemedia) |
+|  | `offerCall` | `POST` | `/v2/didcomm/calls` | [[VSA-ADM-DC-CL-OFFER]](#vsa-adm-dc-cl-offer-offercall) |
+|  | `acceptCall` | `POST` | `/v2/didcomm/calls/accept` | [[VSA-ADM-DC-CL-ACCEPT]](#vsa-adm-dc-cl-accept-acceptcall) |
+|  | `rejectCall` | `POST` | `/v2/didcomm/calls/reject` | [[VSA-ADM-DC-CL-REJECT]](#vsa-adm-dc-cl-reject-rejectcall) |
+|  | `endCall` | `POST` | `/v2/didcomm/calls/end` | [[VSA-ADM-DC-CL-END]](#vsa-adm-dc-cl-end-endcall) |
+|  | `sendMenu` | `POST` | `/v2/didcomm/action-menu` | [[VSA-ADM-DC-AM-SEND]](#vsa-adm-dc-am-send-sendmenu) |
+|  | `sendQuestion` | `POST` | `/v2/didcomm/question-answer` | [[VSA-ADM-DC-QA-SEND]](#vsa-adm-dc-qa-send-sendquestion) |
+|  | `requestMrz` | `POST` | `/v2/didcomm/mrtd/request-mrz` | [[VSA-ADM-DC-MRTD-MRZ]](#vsa-adm-dc-mrtd-mrz-requestmrz) |
+|  | `requestEmrtdData` | `POST` | `/v2/didcomm/mrtd/request-emrtd` | [[VSA-ADM-DC-MRTD-EMRTD]](#vsa-adm-dc-mrtd-emrtd-requestemrtddata) |
 |  | `createPresentationRequest` | `POST` | `/v2/didcomm/presentation-request` | [[VSA-ADM-DC-PR-CREATE]](#vsa-adm-dc-pr-create-createpresentationrequest) |
 |  | `acceptPresentationRequest` | `POST` | `/v2/didcomm/presentations/{proofExchangeId}/accept-request` | [[VSA-ADM-DC-PR-ACCEPT-REQ]](#vsa-adm-dc-pr-accept-req-acceptpresentationrequest) |
 |  | `acceptPresentation` | `POST` | `/v2/didcomm/presentations/{proofExchangeId}/accept-presentation` | [[VSA-ADM-DC-PR-ACCEPT]](#vsa-adm-dc-pr-accept-acceptpresentation) |
@@ -1414,7 +1426,9 @@ The methods of this scope operate on the wire-level DIDComm state of the agent. 
 
 The scope is organized in **protocol modules**. Each DIDComm protocol that the agent implements appears as one module, with its own path family, its own records, and its own [events](#events-api). A module exposes the steps of its protocol; it does not abstract them. When a protocol step needs a local decision, the agent emits a `state-updated` event and waits for the caller to invoke the matching method — unless the caller set `autoAccept` at the start of the exchange.
 
-This specification defines five core modules — [Connections](#vsa-adm-dc-cn-connections), [Basic Messages](#vsa-adm-dc-bm-basic-messages), [Receipts](#vsa-adm-dc-rc-receipts), [Presentations](#vsa-adm-dc-pr-presentations), and [Credential Exchanges](#vsa-adm-dc-ce-credential-exchanges) — and the pattern that every [extension protocol module](#vsa-adm-dc-ext-extension-protocol-modules) follows. A caller discovers the modules of a deployment with [`listProtocols`](#vsa-adm-dc-proto-list-listprotocols).
+This specification defines the modules [Connections](#vsa-adm-dc-cn-connections), [Basic Messages](#vsa-adm-dc-bm-basic-messages), [Receipts](#vsa-adm-dc-rc-receipts), [Presentations](#vsa-adm-dc-pr-presentations), [Credential Exchanges](#vsa-adm-dc-ce-credential-exchanges), [Reactions](#vsa-adm-dc-ra-reactions), [User Profile](#vsa-adm-dc-up-user-profile), [Media Sharing](#vsa-adm-dc-ms-media-sharing), [Calls](#vsa-adm-dc-cl-calls), [Action Menu](#vsa-adm-dc-am-action-menu), [Question Answer](#vsa-adm-dc-qa-question-answer), and [MRTD](#vsa-adm-dc-mrtd-mrtd) — and the pattern that every [extension protocol module](#vsa-adm-dc-ext-extension-protocol-modules) follows.
+
+Connections, Basic Messages, Presentations, and Credential Exchanges are REQUIRED. Every other module is OPTIONAL: the agent MUST answer every path of a module that it does not serve with HTTP `404`. A caller discovers the modules of a deployment with [`listProtocols`](#vsa-adm-dc-proto-list-listprotocols).
 
 The agent has no method that creates a bare connection invitation, and no method that consumes one. A DIDComm connection starts either from the invitation that [`createPresentationRequest`](#vsa-adm-dc-pr-create-createpresentationrequest) or [`createCredentialOffer`](#vsa-adm-dc-ce-offer-createcredentialoffer) produces, or from a peer that connects to the agent, for example to start a credential acquisition flow.
 
@@ -1816,6 +1830,268 @@ Deletes a credential exchange record. It does not delete a stored credential, an
 
 **Output**: empty body (HTTP `204`).
 
+#### [VSA-ADM-DC-RA] Reactions
+
+Methods that send emoji reactions to messages, per the Reactions protocol (`https://didcomm.org/reactions/1.0`). A reaction refers to a message by its identifier and carries one action: `react` or `unreact`.
+
+The module stores no record. The agent delivers each inbound `message-reactions` message as a [`didcomm.reactions.message-received`](#vsa-evt-cat-event-catalog) event.
+
+| Module | Method Name | HTTP Method | Relative REST API path | Requirements |
+| --- | --- | --- | --- | --- |
+| Reactions | `sendReactions` | `POST` | `/v2/didcomm/reactions` | [see](#vsa-adm-dc-ra-send-sendreactions) |
+
+##### [VSA-ADM-DC-RA-SEND] sendReactions
+
+Sends message reactions on an established connection.
+
+**Inputs** (request body):
+
+- `connectionId` (REQUIRED) — connection to send the reactions on.
+- `reactions` (REQUIRED) — array of reactions. Each entry carries `messageId` (REQUIRED), `emoji` (REQUIRED), `action` (REQUIRED, `react` or `unreact`), and `timestamp` (OPTIONAL, ISO 8601 datetime).
+
+**Output**:
+
+- `id` — identifier of the sent message.
+
+**Errors**: `UNKNOWN_ID` (`404`) when no connection has the supplied identifier.
+
+#### [VSA-ADM-DC-UP] User Profile
+
+Methods that exchange peer profiles, per the User Profile protocol (`https://didcomm.org/user-profile/1.0`). A profile carries the fields `displayName`, `displayPicture`, `displayIcon`, `description`, and `preferredLanguage`, each OPTIONAL.
+
+The module stores the profile of the agent itself, which the agent builds from its configuration. The agent delivers each inbound `profile` message as a [`didcomm.user-profile.message-received`](#vsa-evt-cat-event-catalog) event.
+
+| Module | Method Name | HTTP Method | Relative REST API path | Requirements |
+| --- | --- | --- | --- | --- |
+| User Profile | `sendProfile` | `POST` | `/v2/didcomm/user-profile` | [see](#vsa-adm-dc-up-send-sendprofile) |
+| User Profile | `requestProfile` | `POST` | `/v2/didcomm/user-profile/request` | [see](#vsa-adm-dc-up-request-requestprofile) |
+
+##### [VSA-ADM-DC-UP-SEND] sendProfile
+
+Sends a profile on an established connection.
+
+**Inputs** (request body):
+
+- `connectionId` (REQUIRED) — connection to send the profile on.
+- `profile` (OPTIONAL) — the profile fields to send. When absent, the agent sends its stored profile.
+- `sendBackYours` (OPTIONAL, default `false`) — when `true`, asks the peer to answer with its own profile.
+
+**Output**:
+
+- `id` — identifier of the sent message.
+
+**Errors**: `UNKNOWN_ID` (`404`) when no connection has the supplied identifier.
+
+##### [VSA-ADM-DC-UP-REQUEST] requestProfile
+
+Asks the peer of a connection for its profile.
+
+**Inputs** (request body):
+
+- `connectionId` (REQUIRED) — connection to send the request on.
+- `query` (OPTIONAL) — array of profile field names of interest; every field when absent.
+
+**Output**:
+
+- `id` — identifier of the sent message.
+
+**Errors**: `UNKNOWN_ID` (`404`) when no connection has the supplied identifier.
+
+#### [VSA-ADM-DC-MS] Media Sharing
+
+Methods that share and request media files, per the Media Sharing protocol (`https://didcomm.org/media-sharing/1.0`). The module shares media descriptors; the media itself travels out of band, through the `uri` of each item.
+
+The module stores no record that the API exposes. The agent delivers each inbound `share-media` message as a [`didcomm.media-sharing.message-received`](#vsa-evt-cat-event-catalog) event.
+
+| Module | Method Name | HTTP Method | Relative REST API path | Requirements |
+| --- | --- | --- | --- | --- |
+| Media Sharing | `shareMedia` | `POST` | `/v2/didcomm/media-sharing` | [see](#vsa-adm-dc-ms-share-sharemedia) |
+
+##### [VSA-ADM-DC-MS-SHARE] shareMedia
+
+Shares media items on an established connection.
+
+**Inputs** (request body):
+
+- `connectionId` (REQUIRED) — connection to share the items on.
+- `description` (OPTIONAL) — text that describes the share.
+- `items` (REQUIRED) — array of items. Each entry carries `uri` (REQUIRED), `mimeType` (REQUIRED), `fileName` (OPTIONAL), `description` (OPTIONAL), `byteCount` (OPTIONAL), `ciphering` (OPTIONAL) — algorithm and parameters when the media at `uri` is encrypted — and `metadata` (OPTIONAL).
+
+**Output**:
+
+- `id` — identifier of the sent message.
+
+**Errors**: `UNKNOWN_ID` (`404`) when no connection has the supplied identifier.
+
+#### [VSA-ADM-DC-CL] Calls
+
+Methods that set up and end audio calls and video calls, per the Calls protocol (`https://didcomm.org/calls/1.0`). The protocol carries call signalling; the call itself travels out of band, per the `parameters` of the offer and the accept.
+
+The module stores no record. The agent delivers each inbound call message as a [`didcomm.calls.message-received`](#vsa-evt-cat-event-catalog) event.
+
+| Module | Method Name | HTTP Method | Relative REST API path | Requirements |
+| --- | --- | --- | --- | --- |
+| Calls | `offerCall` | `POST` | `/v2/didcomm/calls` | [see](#vsa-adm-dc-cl-offer-offercall) |
+| Calls | `acceptCall` | `POST` | `/v2/didcomm/calls/accept` | [see](#vsa-adm-dc-cl-accept-acceptcall) |
+| Calls | `rejectCall` | `POST` | `/v2/didcomm/calls/reject` | [see](#vsa-adm-dc-cl-reject-rejectcall) |
+| Calls | `endCall` | `POST` | `/v2/didcomm/calls/end` | [see](#vsa-adm-dc-cl-end-endcall) |
+
+##### [VSA-ADM-DC-CL-OFFER] offerCall
+
+Offers a call on an established connection.
+
+**Inputs** (request body):
+
+- `connectionId` (REQUIRED) — connection to offer the call on.
+- `callType` (REQUIRED) — `audio`, `video`, or `service`.
+- `parameters` (REQUIRED) — transport parameters of the call, for example a WebRTC session descriptor or a room URL.
+- `description` (OPTIONAL) — text that describes the call.
+- `offerStartTime` (OPTIONAL) — ISO 8601 datetime at which the call starts.
+- `offerExpirationTime` (OPTIONAL) — ISO 8601 datetime at which the offer expires.
+
+**Output**:
+
+- `id` — identifier of the sent message. The message thread of the offer identifies the call in the other methods.
+
+**Errors**: `UNKNOWN_ID` (`404`) when no connection has the supplied identifier.
+
+##### [VSA-ADM-DC-CL-ACCEPT] acceptCall
+
+Accepts a call that a peer offered.
+
+**Inputs** (request body):
+
+- `connectionId` (REQUIRED) — connection of the call.
+- `threadId` (REQUIRED) — thread of the call offer.
+- `parameters` (REQUIRED) — transport parameters of the accepting side.
+
+**Output**:
+
+- `id` — identifier of the sent message.
+
+**Errors**: `UNKNOWN_ID` (`404`) when no connection has the supplied identifier.
+
+##### [VSA-ADM-DC-CL-REJECT] rejectCall
+
+Rejects a call that a peer offered.
+
+**Inputs** (request body):
+
+- `connectionId` (REQUIRED) — connection of the call.
+- `threadId` (REQUIRED) — thread of the call offer.
+
+**Output**:
+
+- `id` — identifier of the sent message.
+
+**Errors**: `UNKNOWN_ID` (`404`) when no connection has the supplied identifier.
+
+##### [VSA-ADM-DC-CL-END] endCall
+
+Ends a call.
+
+**Inputs** (request body):
+
+- `connectionId` (REQUIRED) — connection of the call.
+- `threadId` (REQUIRED) — thread of the call offer.
+
+**Output**:
+
+- `id` — identifier of the sent message.
+
+**Errors**: `UNKNOWN_ID` (`404`) when no connection has the supplied identifier.
+
+#### [VSA-ADM-DC-AM] Action Menu
+
+Methods that display contextual menus, per the Action Menu protocol (`https://didcomm.org/action-menu/1.0`). The agent takes the responder role: it sends menus, and the peer requests a menu or performs an option.
+
+The module stores no record that the API exposes. The agent delivers each inbound `menu-request` and `perform` message as a [`didcomm.action-menu.message-received`](#vsa-evt-cat-event-catalog) event.
+
+| Module | Method Name | HTTP Method | Relative REST API path | Requirements |
+| --- | --- | --- | --- | --- |
+| Action Menu | `sendMenu` | `POST` | `/v2/didcomm/action-menu` | [see](#vsa-adm-dc-am-send-sendmenu) |
+
+##### [VSA-ADM-DC-AM-SEND] sendMenu
+
+Sends a menu on an established connection.
+
+**Inputs** (request body):
+
+- `connectionId` (REQUIRED) — connection to send the menu on.
+- `menu` (REQUIRED) — the menu: `title` (REQUIRED), `description` (OPTIONAL), and `options` (REQUIRED) — array of entries, each with `name` (REQUIRED), `title` (REQUIRED), and `description` (OPTIONAL).
+
+**Output**:
+
+- `id` — identifier of the sent message.
+
+**Errors**: `UNKNOWN_ID` (`404`) when no connection has the supplied identifier.
+
+#### [VSA-ADM-DC-QA] Question Answer
+
+Methods that ask the peer a question with a fixed set of answers, per the Question Answer protocol (`https://didcomm.org/questionanswer/1.0`). The agent takes the questioner role: it sends the question, and the peer answers with one of the valid responses.
+
+The module stores no record that the API exposes. The agent delivers each inbound `answer` message as a [`didcomm.question-answer.message-received`](#vsa-evt-cat-event-catalog) event.
+
+| Module | Method Name | HTTP Method | Relative REST API path | Requirements |
+| --- | --- | --- | --- | --- |
+| Question Answer | `sendQuestion` | `POST` | `/v2/didcomm/question-answer` | [see](#vsa-adm-dc-qa-send-sendquestion) |
+
+##### [VSA-ADM-DC-QA-SEND] sendQuestion
+
+Sends a question on an established connection.
+
+**Inputs** (request body):
+
+- `connectionId` (REQUIRED) — connection to send the question on.
+- `question` (REQUIRED) — text of the question.
+- `validResponses` (REQUIRED) — array of entries, each with `text` (REQUIRED) — an answer the peer can select.
+- `detail` (OPTIONAL) — additional text for the question.
+
+**Output**:
+
+- `id` — identifier of the sent message. The answer arrives on the thread of the question.
+
+**Errors**: `UNKNOWN_ID` (`404`) when no connection has the supplied identifier.
+
+#### [VSA-ADM-DC-MRTD] MRTD
+
+Methods that request machine-readable travel document data, per the MRTD protocol (`https://didcomm.org/mrtd/1.0`). The agent requests the data; the peer answers with an `mrz-data` or an `emrtd-data` message, or refuses with a problem report (refused, timeout).
+
+The module stores no record. The agent delivers each inbound `mrz-data`, `emrtd-data`, and problem report message as a [`didcomm.mrtd.message-received`](#vsa-evt-cat-event-catalog) event.
+
+| Module | Method Name | HTTP Method | Relative REST API path | Requirements |
+| --- | --- | --- | --- | --- |
+| MRTD | `requestMrz` | `POST` | `/v2/didcomm/mrtd/request-mrz` | [see](#vsa-adm-dc-mrtd-mrz-requestmrz) |
+| MRTD | `requestEmrtdData` | `POST` | `/v2/didcomm/mrtd/request-emrtd` | [see](#vsa-adm-dc-mrtd-emrtd-requestemrtddata) |
+
+##### [VSA-ADM-DC-MRTD-MRZ] requestMrz
+
+Asks the peer of a connection for the machine-readable zone of its travel document.
+
+**Inputs** (request body):
+
+- `connectionId` (REQUIRED) — connection to send the request on.
+
+**Output**:
+
+- `id` — identifier of the sent message.
+
+**Errors**: `UNKNOWN_ID` (`404`) when no connection has the supplied identifier.
+
+##### [VSA-ADM-DC-MRTD-EMRTD] requestEmrtdData
+
+Asks the peer of a connection for the data groups of its electronic travel document.
+
+**Inputs** (request body):
+
+- `connectionId` (REQUIRED) — connection to send the request on.
+
+**Output**:
+
+- `id` — identifier of the sent message.
+
+**Errors**: `UNKNOWN_ID` (`404`) when no connection has the supplied identifier.
+
 #### [VSA-ADM-DC-EXT] Extension Protocol Modules
 
 The agent MAY implement DIDComm protocols beyond the core modules of this scope, for example through plug-ins. The agent exposes each one as an **extension protocol module**. The pattern below keeps every module consistent, so that a new protocol extends the API without a new API shape.
@@ -1830,16 +2106,7 @@ The agent MAY implement DIDComm protocols beyond the core modules of this scope,
 
 [VSA-ADM-DC-EXT-5] The agent MUST answer every path of a module that it does not serve with HTTP `404`.
 
-The message and record definitions of an extension protocol module belong to the protocol specification that its protocol URI names, not to this document. The table lists the extension protocol modules in common use; it is non-normative.
-
-| Module | Protocol | Purpose |
-|---|---|---|
-| `reactions` | `https://didcomm.org/reactions/1.0` | Emoji reactions to messages. |
-| `user-profile` | `https://didcomm.org/user-profile/1.0` | Exchange of peer profiles (name, avatar). |
-| `media-sharing` | `https://didcomm.org/media-sharing/1.0` | Sharing of media files. |
-| `calls` | `https://didcomm.org/calls/1.0` | Setup of audio calls and video calls. |
-| `action-menu` | `https://didcomm.org/action-menu/1.0` | Display and selection of contextual menus. |
-| `mrtd` | `https://didcomm.org/mrtd/1.0` | Exchange of machine-readable travel document data (MRZ, eMRTD). |
+The message and record definitions of an extension protocol module belong to the protocol specification that its protocol URI names, not to this document.
 
 ### OpenID4VC Scope
 
@@ -2523,6 +2790,13 @@ The agent MUST emit each event of this table when its trigger occurs.
 | `didcomm.connections.state-updated` | A connection record is created or changes state, per [[VSA-ADM-DC-CN]](#vsa-adm-dc-cn-connections). | The connection record, as [`getConnection`](#vsa-adm-dc-cn-get-getconnection) returns it, plus `previousState`. |
 | `didcomm.basic-messages.message-received` | The agent receives a basic message, per [[VSA-ADM-DC-BM]](#vsa-adm-dc-bm-basic-messages). | The message record, as [`listBasicMessages`](#vsa-adm-dc-bm-list-listbasicmessages) returns it. |
 | `didcomm.receipts.message-received` | The agent receives a `message-receipts` message, per [[VSA-ADM-DC-RC]](#vsa-adm-dc-rc-receipts). | `connectionId` and `receipts` — the entries of the message, each with `messageId`, `state`, and `timestamp`. |
+| `didcomm.reactions.message-received` | The agent receives a `message-reactions` message, per [[VSA-ADM-DC-RA]](#vsa-adm-dc-ra-reactions). | `connectionId` and `reactions` — the entries of the message, each with `messageId`, `emoji`, `action`, and `timestamp`. |
+| `didcomm.user-profile.message-received` | The agent receives a `profile` message, per [[VSA-ADM-DC-UP]](#vsa-adm-dc-up-user-profile). | `connectionId`, `threadId`, and `profile` — the received profile fields. |
+| `didcomm.media-sharing.message-received` | The agent receives a `share-media` message, per [[VSA-ADM-DC-MS]](#vsa-adm-dc-ms-media-sharing). | `connectionId`, `threadId`, and `message` — the plaintext message, per the protocol specification. |
+| `didcomm.calls.message-received` | The agent receives a call message, per [[VSA-ADM-DC-CL]](#vsa-adm-dc-cl-calls). | `connectionId`, `threadId`, and `message` — the plaintext message, per the protocol specification. |
+| `didcomm.action-menu.message-received` | The agent receives a `menu-request` or a `perform` message, per [[VSA-ADM-DC-AM]](#vsa-adm-dc-am-action-menu). | `connectionId`, `threadId`, and `message` — the plaintext message, per the protocol specification. |
+| `didcomm.question-answer.message-received` | The agent receives an `answer` message, per [[VSA-ADM-DC-QA]](#vsa-adm-dc-qa-question-answer). | `connectionId`, `threadId`, and `response` — the text of the selected response. |
+| `didcomm.mrtd.message-received` | The agent receives an `mrz-data`, an `emrtd-data`, or a problem report message, per [[VSA-ADM-DC-MRTD]](#vsa-adm-dc-mrtd-mrtd). | `connectionId`, `threadId`, and `message` — the plaintext message, per the protocol specification. |
 | `didcomm.presentations.state-updated` | A presentation record is created or changes state, per [[VSA-ADM-DC-PR]](#vsa-adm-dc-pr-presentations). | The presentation record, as [`getPresentation`](#vsa-adm-dc-pr-get-getpresentation) returns it, plus `previousState`. |
 | `didcomm.credential-exchanges.state-updated` | A credential exchange record is created or changes state, per [[VSA-ADM-DC-CE]](#vsa-adm-dc-ce-credential-exchanges). | The credential exchange record, as [`getCredentialExchange`](#vsa-adm-dc-ce-get-getcredentialexchange) returns it, plus `previousState`. |
 | `didcomm.{module}.message-received` | The agent receives a message of an extension protocol module, per [[VSA-ADM-DC-EXT-4]](#vsa-adm-dc-ext-extension-protocol-modules). | `connectionId`, `threadId`, and `message` — the plaintext message, per the protocol specification of the module. |
