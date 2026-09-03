@@ -1266,7 +1266,7 @@ The table lists every method of the Administration API. It is a non-normative ov
 |  | `listBasicMessages` | `GET` | `/v2/didcomm/basic-messages` | [[VSA-ADM-DC-BM-LIST]](#vsa-adm-dc-bm-list-listbasicmessages) |
 |  | `sendReceipts` | `POST` | `/v2/didcomm/receipts` | [[VSA-ADM-DC-RC-SEND]](#vsa-adm-dc-rc-send-sendreceipts) |
 |  | `sendReactions` | `POST` | `/v2/didcomm/reactions` | [[VSA-ADM-DC-RA-SEND]](#vsa-adm-dc-ra-send-sendreactions) |
-|  | `sendProfile` | `POST` | `/v2/didcomm/user-profile` | [[VSA-ADM-DC-UP-SEND]](#vsa-adm-dc-up-send-sendprofile) |
+|  | `sendProfile` | `POST` | `/v2/didcomm/user-profile/send` | [[VSA-ADM-DC-UP-SEND]](#vsa-adm-dc-up-send-sendprofile) |
 |  | `requestProfile` | `POST` | `/v2/didcomm/user-profile/request` | [[VSA-ADM-DC-UP-REQUEST]](#vsa-adm-dc-up-request-requestprofile) |
 |  | `shareMedia` | `POST` | `/v2/didcomm/media-sharing` | [[VSA-ADM-DC-MS-SHARE]](#vsa-adm-dc-ms-share-sharemedia) |
 |  | `offerCall` | `POST` | `/v2/didcomm/calls` | [[VSA-ADM-DC-CL-OFFER]](#vsa-adm-dc-cl-offer-offercall) |
@@ -1553,7 +1553,7 @@ Returns the message records that the agent stores.
 
 Methods that report and request the delivery state and the read state of messages, per the Receipts protocol (`https://didcomm.org/receipts/1.0`). A receipt refers to a message by its identifier and carries one state: `created`, `submitted`, `received`, `viewed`, or `deleted`.
 
-The module stores no record. The agent delivers each inbound `message-receipts` message as a [`didcomm.receipts.message-received`](#vsa-evt-cat-event-catalog) event.
+The module stores no record. The agent delivers each inbound `message-receipts` message as a [`didcomm.receipts.message-receipts-received`](#vsa-evt-cat-event-catalog) event.
 
 | Module | Method Name | HTTP Method | Relative REST API path | Requirements |
 | --- | --- | --- | --- | --- |
@@ -1838,7 +1838,7 @@ Deletes a credential exchange record. It does not delete a stored credential, an
 
 Methods that send emoji reactions to messages, per the Reactions protocol (`https://didcomm.org/reactions/1.0`). A reaction refers to a message by its identifier and carries one action: `react` or `unreact`.
 
-The module stores no record. The agent delivers each inbound `message-reactions` message as a [`didcomm.reactions.message-received`](#vsa-evt-cat-event-catalog) event.
+The module stores no record. The agent delivers each inbound `message-reactions` message as a [`didcomm.reactions.message-reactions-received`](#vsa-evt-cat-event-catalog) event.
 
 | Module | Method Name | HTTP Method | Relative REST API path | Requirements |
 | --- | --- | --- | --- | --- |
@@ -1861,15 +1861,15 @@ Sends message reactions on an established connection.
 
 #### [VSA-ADM-DC-UP] User Profile
 
-Methods that exchange peer profiles, per the User Profile protocol (`https://didcomm.org/user-profile/1.0`). A profile carries the fields `displayName`, `displayPicture`, `displayIcon`, `description`, and `preferredLanguage`, each OPTIONAL.
+Methods that exchange peer profiles, per the User Profile protocol (`https://didcomm.org/user-profile/1.0`). A profile carries the fields `displayName`, `displayPicture`, `displayIcon`, `description`, and `preferredLanguage`, each OPTIONAL. `displayPicture` and `displayIcon` each carry `mimeType` and the content, as `links` — array of URLs — or as `base64`.
 
-The module stores the profile of the agent itself, which the agent builds from its configuration. The agent delivers each inbound `profile` and `request-profile` message as a [`didcomm.user-profile.message-received`](#vsa-evt-cat-event-catalog) event.
+The module stores the profile of the agent itself. The agent derives its default values from the claims of its ECS-Service credential (see [ECS Participants and Credentials](#ecs-participants-and-credentials)): `name` as `displayName`, `description` as `description`, and `logoUri` as `displayPicture`, as a link. When the agent holds no ECS-Service credential, the agent stores no default value.
 
-The agent MUST NOT answer a `request-profile` message itself, and MUST NOT answer a `profile` message that carries `sendBackYours` itself: the caller observes the event and answers with [`sendProfile`](#vsa-adm-dc-up-send-sendprofile), on the thread of the received message.
+The agent delivers each inbound `profile` message as a [`didcomm.user-profile.profile-received`](#vsa-evt-cat-event-catalog) event, and each inbound `request-profile` message as a [`didcomm.user-profile.request-profile-received`](#vsa-evt-cat-event-catalog) event. The agent MUST NOT answer a `request-profile` message or a `sendBackYours` flag itself: the caller observes the event and answers with [`sendProfile`](#vsa-adm-dc-up-send-sendprofile), on the thread of the received message.
 
 | Module | Method Name | HTTP Method | Relative REST API path | Requirements |
 | --- | --- | --- | --- | --- |
-| User Profile | `sendProfile` | `POST` | `/v2/didcomm/user-profile` | [see](#vsa-adm-dc-up-send-sendprofile) |
+| User Profile | `sendProfile` | `POST` | `/v2/didcomm/user-profile/send` | [see](#vsa-adm-dc-up-send-sendprofile) |
 | User Profile | `requestProfile` | `POST` | `/v2/didcomm/user-profile/request` | [see](#vsa-adm-dc-up-request-requestprofile) |
 
 ##### [VSA-ADM-DC-UP-SEND] sendProfile
@@ -1887,7 +1887,10 @@ Sends a profile on an established connection.
 
 - `id` — identifier of the sent message.
 
-**Errors**: `UNKNOWN_ID` (`404`) when no connection has the supplied identifier.
+**Errors**:
+
+- `UNKNOWN_ID` (`404`) — no connection has the supplied identifier.
+- `INVALID_STATE` (`409`) — `profile` is absent and the agent stores no profile values.
 
 ##### [VSA-ADM-DC-UP-REQUEST] requestProfile
 
@@ -1908,7 +1911,7 @@ Asks the peer of a connection for its profile.
 
 Methods that share and request media files, per the Media Sharing protocol (`https://didcomm.org/media-sharing/1.0`). The module shares media descriptors; the media itself travels out of band, through the `uri` of each item.
 
-The module stores no record that the API exposes. The agent delivers each inbound `share-media` message as a [`didcomm.media-sharing.message-received`](#vsa-evt-cat-event-catalog) event.
+The module stores no record that the API exposes. The agent delivers each inbound `share-media` message as a [`didcomm.media-sharing.share-media-received`](#vsa-evt-cat-event-catalog) event, and each inbound `request-media` message as a [`didcomm.media-sharing.request-media-received`](#vsa-evt-cat-event-catalog) event. The agent MUST NOT answer a `request-media` message itself: the caller observes the event and answers with [`shareMedia`](#vsa-adm-dc-ms-share-sharemedia), on the thread of the request.
 
 | Module | Method Name | HTTP Method | Relative REST API path | Requirements |
 | --- | --- | --- | --- | --- |
@@ -1922,6 +1925,7 @@ Shares media items on an established connection.
 
 - `connectionId` (REQUIRED) — connection to share the items on.
 - `description` (OPTIONAL) — text that describes the share.
+- `threadId` (OPTIONAL) — thread of the `request-media` message that this share answers.
 - `items` (REQUIRED) — array of items. Each entry carries `id` (OPTIONAL) — item identifier, generated by the agent when absent; a peer refers to the item by it — `uri` (REQUIRED), `mimeType` (REQUIRED), `fileName` (OPTIONAL), `description` (OPTIONAL), `byteCount` (OPTIONAL), `ciphering` (OPTIONAL) — algorithm and parameters when the media at `uri` is encrypted — and `metadata` (OPTIONAL).
 
 **Output**:
@@ -1934,7 +1938,7 @@ Shares media items on an established connection.
 
 Methods that set up and end audio calls and video calls, per the Calls protocol (`https://didcomm.org/calls/1.0`). The protocol carries call signalling; the call itself travels out of band, per the `parameters` of the offer and the accept.
 
-The module stores no record. The agent delivers each inbound call message as a [`didcomm.calls.message-received`](#vsa-evt-cat-event-catalog) event.
+The module stores no record. The agent delivers each inbound call message as its matching [event](#vsa-evt-cat-event-catalog): `didcomm.calls.call-offer-received`, `call-accept-received`, `call-reject-received`, or `call-end-received`.
 
 | Module | Method Name | HTTP Method | Relative REST API path | Requirements |
 | --- | --- | --- | --- | --- |
@@ -2012,7 +2016,7 @@ Ends a call.
 
 Methods that display contextual menus, per the Action Menu protocol (`https://didcomm.org/action-menu/1.0`). The agent takes the responder role: it sends menus, and the peer requests a menu or performs an option.
 
-The module stores no record that the API exposes. The agent delivers each inbound `menu-request` and `perform` message as a [`didcomm.action-menu.message-received`](#vsa-evt-cat-event-catalog) event.
+The module stores no record that the API exposes. The agent delivers each inbound `menu-request` message as a [`didcomm.action-menu.menu-request-received`](#vsa-evt-cat-event-catalog) event, and each inbound `perform` message as a [`didcomm.action-menu.perform-received`](#vsa-evt-cat-event-catalog) event.
 
 | Module | Method Name | HTTP Method | Relative REST API path | Requirements |
 | --- | --- | --- | --- | --- |
@@ -2040,7 +2044,7 @@ Sends a menu on an established connection.
 
 Methods that ask the peer a question with a fixed set of answers, per the Question Answer protocol (`https://didcomm.org/questionanswer/1.0`). The agent takes the questioner role: it sends the question, and the peer answers with one of the valid responses.
 
-The module stores no record that the API exposes. The agent delivers each inbound `answer` message as a [`didcomm.question-answer.message-received`](#vsa-evt-cat-event-catalog) event.
+The module stores no record that the API exposes. The agent delivers each inbound `answer` message as a [`didcomm.question-answer.answer-received`](#vsa-evt-cat-event-catalog) event.
 
 | Module | Method Name | HTTP Method | Relative REST API path | Requirements |
 | --- | --- | --- | --- | --- |
@@ -2067,11 +2071,11 @@ Sends a question on an established connection.
 
 Methods that request machine-readable travel document data, per the MRTD protocol (`https://didcomm.org/mrtd/1.0`). The agent requests the data; the peer answers with an `mrz-data` or an `emrtd-data` message, or refuses with a problem report (refused, timeout).
 
-The module stores no record. The agent parses and verifies each received travel document itself, and delivers the result — not the wire message — as a [`didcomm.mrtd.message-received`](#vsa-evt-cat-event-catalog) event. Besides `connectionId` and `threadId`, the event `data` carries:
+The module stores no record. The agent parses and verifies each received travel document itself, and delivers the result — not the wire message — through the [events of the catalog](#vsa-evt-cat-event-catalog). Besides `connectionId` and `threadId`, the event `data` carries:
 
-- for an `mrz-data` message — `mrzData`: `raw` — the machine-readable zone as received — and `parsed` — `format`, `fields`, and `valid`;
-- for an `emrtd-data` message — `dataGroups`: `raw` — the data groups as received — `parsed` — the decoded fields and `valid` — and `verification` — the check of the Document Security Object against the CSCA master list of `MASTER_LIST_CSCA_LOCATION`: `authenticity`, `integrity`, and `details`;
-- for a problem report — `reason`: `e.p.mrz-refused`, `e.p.emrtd-refused`, `e.p.mrz-timeout`, or `e.p.emrtd-timeout`.
+- `didcomm.mrtd.mrz-data-received` — `mrzData`: `raw` — the machine-readable zone as received — and `parsed` — `format`, `fields`, and `valid`;
+- `didcomm.mrtd.emrtd-data-received` — `dataGroups`: `raw` — the data groups as received — `parsed` — the decoded fields and `valid` — and `verification` — the check of the Document Security Object against the CSCA master list of `MASTER_LIST_CSCA_LOCATION`: `authenticity`, `integrity`, and `details`;
+- `didcomm.mrtd.problem-report-received` — `reason`: `e.p.mrz-refused`, `e.p.emrtd-refused`, `e.p.mrz-timeout`, or `e.p.emrtd-timeout`.
 
 | Module | Method Name | HTTP Method | Relative REST API path | Requirements |
 | --- | --- | --- | --- | --- |
@@ -2116,7 +2120,7 @@ The agent MAY implement DIDComm protocols beyond the core modules of this scope,
 
 [VSA-ADM-DC-EXT-3] A module that stores records MUST expose them per the [API Conventions](#api-conventions): a paginated collection under `/v2/didcomm/{module}` paths, and one record by identifier.
 
-[VSA-ADM-DC-EXT-4] The agent MUST deliver each inbound message of an extension protocol module as a `didcomm.{module}.message-received` event, per [[VSA-EVT-CAT]](#vsa-evt-cat-event-catalog).
+[VSA-ADM-DC-EXT-4] The agent MUST deliver each inbound message of an extension protocol module as a message event `didcomm.{module}.{message-type}-received`, where `{message-type}` is the kebab-case name of the message in the protocol specification of the module. The `data` of each event belongs to the module definition, as its messages and records do, and MUST carry `connectionId` and `threadId`.
 
 [VSA-ADM-DC-EXT-5] The agent MUST answer every path of a module that it does not serve with HTTP `404`.
 
@@ -2752,7 +2756,7 @@ Removes a consumable service entry from the DID Document of the agent.
 
 The VS Agent notifies a backend of state changes through webhook events. The operator configures one consumer endpoint with `EVENTS_WEBHOOK_URL` (see [[VSA-VTI-CFG-ENV-EVT] Events API](#vsa-vti-cfg-env-evt-events-api)). When that variable is unset, the agent delivers no event.
 
-An event is a notification, not a state transfer. The records of the [Administration API](#administration-api) are the source of truth: an event tells the consumer that a record changed, and the consumer reads the record when it needs a guaranteed view. A consumer that misses an event recovers the current state from the corresponding `list` or `get` method. A `message-received` event of a module that stores no record — for example [Receipts](#vsa-adm-dc-rc-receipts) — has no recovery path: a consumer MUST NOT depend on it for state it cannot afford to lose.
+An event is a notification, not a state transfer. The records of the [Administration API](#administration-api) are the source of truth: an event tells the consumer that a record changed, and the consumer reads the record when it needs a guaranteed view. A consumer that misses an event recovers the current state from the corresponding `list` or `get` method. A message event (`…-received`) of a module that stores no record — for example [Receipts](#vsa-adm-dc-rc-receipts) — has no recovery path: a consumer MUST NOT depend on it for state it cannot afford to lose.
 
 The event model covers every transport at the same level: the DIDComm modules, the OpenID4VC capabilities, the Verifiable Trust flows, and the indexer notifications of [[VSA-VTI-NOTIF]](#vsa-vti-notif-notifications) each emit events of the same shape, to the same endpoint.
 
@@ -2791,7 +2795,7 @@ Every event is one JSON object:
 An event type follows the grammar `{scope}.{module}.{event}`. The scope and the module mirror the path segments of the [Administration API](#administration-api), so that a consumer maps an event to the methods that read and progress the underlying record. There are two event kinds:
 
 - **`state-updated`** — a record changed state, or was created. `data` MUST hold the record, in the same shape as the `get` method of that record returns it, plus `previousState` — the state before the change, or `null` when the event reports the creation of the record. For a record with more than one state field, the catalog row replaces `previousState` with one previous-state field per state field, each with the same semantics.
-- **`message-received`** — an inbound DIDComm message arrived on a module. `data` holds the message, per the module definition.
+- **message events** — an inbound DIDComm message arrived on a module. The event segment is the kebab-case message name of the protocol, with the suffix `-received` — one event type per message kind, so that a consumer branches on `type` alone; `data` holds the received content, per the module definition. The rule binds every module, the [extension protocol modules](#vsa-adm-dc-ext-extension-protocol-modules) included ([[VSA-ADM-DC-EXT-4]](#vsa-adm-dc-ext-extension-protocol-modules)).
 
 The type `vpr.notification` is the one exception to the grammar: it reports a transaction on the Verana Public Registry, which the agent observes through the indexer; it mirrors no Administration API path, and belongs to neither kind.
 
@@ -2803,17 +2807,24 @@ The agent MUST emit each event of this table when its trigger occurs.
 |---|---|---|
 | `didcomm.connections.state-updated` | A connection record is created or changes state, per [[VSA-ADM-DC-CN]](#vsa-adm-dc-cn-connections). | The connection record, as [`getConnection`](#vsa-adm-dc-cn-get-getconnection) returns it, plus `previousState`. |
 | `didcomm.basic-messages.message-received` | The agent receives a basic message, per [[VSA-ADM-DC-BM]](#vsa-adm-dc-bm-basic-messages). | The message record, as [`listBasicMessages`](#vsa-adm-dc-bm-list-listbasicmessages) returns it. |
-| `didcomm.receipts.message-received` | The agent receives a `message-receipts` message, per [[VSA-ADM-DC-RC]](#vsa-adm-dc-rc-receipts). | `connectionId` and `receipts` — the entries of the message, each with `messageId`, `state`, and `timestamp`. |
-| `didcomm.reactions.message-received` | The agent receives a `message-reactions` message, per [[VSA-ADM-DC-RA]](#vsa-adm-dc-ra-reactions). | `connectionId` and `reactions` — the entries of the message, each with `messageId`, `emoji`, `action`, and `timestamp`. |
-| `didcomm.user-profile.message-received` | The agent receives a `profile` or a `request-profile` message, per [[VSA-ADM-DC-UP]](#vsa-adm-dc-up-user-profile). | `connectionId`, `threadId`, and — for a `profile` message — `profile` and `sendBackYours`; for a `request-profile` message — `query`. |
-| `didcomm.media-sharing.message-received` | The agent receives a `share-media` message, per [[VSA-ADM-DC-MS]](#vsa-adm-dc-ms-media-sharing). | `connectionId`, `threadId`, and `message` — the plaintext message, per the protocol specification. |
-| `didcomm.calls.message-received` | The agent receives a call message, per [[VSA-ADM-DC-CL]](#vsa-adm-dc-cl-calls). | `connectionId`, `threadId`, and `message` — the plaintext message, per the protocol specification. |
-| `didcomm.action-menu.message-received` | The agent receives a `menu-request` or a `perform` message, per [[VSA-ADM-DC-AM]](#vsa-adm-dc-am-action-menu). | `connectionId`, `threadId`, and `message` — the plaintext message, per the protocol specification. |
-| `didcomm.question-answer.message-received` | The agent receives an `answer` message, per [[VSA-ADM-DC-QA]](#vsa-adm-dc-qa-question-answer). | `connectionId`, `threadId`, and `response` — the text of the selected response. |
-| `didcomm.mrtd.message-received` | The agent receives an `mrz-data`, an `emrtd-data`, or a problem report message, per [[VSA-ADM-DC-MRTD]](#vsa-adm-dc-mrtd-mrtd). | `connectionId`, `threadId`, and the parsed and verified result that [[VSA-ADM-DC-MRTD]](#vsa-adm-dc-mrtd-mrtd) defines. |
+| `didcomm.receipts.message-receipts-received` | The agent receives a `message-receipts` message, per [[VSA-ADM-DC-RC]](#vsa-adm-dc-rc-receipts). | `connectionId` and `receipts` — the entries of the message, each with `messageId`, `state`, and `timestamp`. |
+| `didcomm.reactions.message-reactions-received` | The agent receives a `message-reactions` message, per [[VSA-ADM-DC-RA]](#vsa-adm-dc-ra-reactions). | `connectionId` and `reactions` — the entries of the message, each with `messageId`, `emoji`, `action`, and `timestamp`. |
+| `didcomm.user-profile.profile-received` | The agent receives a `profile` message, per [[VSA-ADM-DC-UP]](#vsa-adm-dc-up-user-profile). | `connectionId`, `threadId`, `profile` — the received profile fields — and `sendBackYours`. |
+| `didcomm.user-profile.request-profile-received` | The agent receives a `request-profile` message, per [[VSA-ADM-DC-UP]](#vsa-adm-dc-up-user-profile). | `connectionId`, `threadId`, and `query` — the requested profile field names. |
+| `didcomm.media-sharing.share-media-received` | The agent receives a `share-media` message, per [[VSA-ADM-DC-MS]](#vsa-adm-dc-ms-media-sharing). | `connectionId`, `threadId`, `description`, and `items` — the shared items, per [[VSA-ADM-DC-MS]](#vsa-adm-dc-ms-media-sharing). |
+| `didcomm.media-sharing.request-media-received` | The agent receives a `request-media` message, per [[VSA-ADM-DC-MS]](#vsa-adm-dc-ms-media-sharing). | `connectionId`, `threadId`, `description`, and `itemIds` — the requested item identifiers. |
+| `didcomm.calls.call-offer-received` | The agent receives a `call-offer` message, per [[VSA-ADM-DC-CL]](#vsa-adm-dc-cl-calls). | `connectionId`, `threadId`, `callType`, `parameters`, `description`, `offerStartTime`, and `offerExpirationTime`. |
+| `didcomm.calls.call-accept-received` | The agent receives a `call-accept` message, per [[VSA-ADM-DC-CL]](#vsa-adm-dc-cl-calls). | `connectionId`, `threadId`, and `parameters`. |
+| `didcomm.calls.call-reject-received` | The agent receives a `call-reject` message, per [[VSA-ADM-DC-CL]](#vsa-adm-dc-cl-calls). | `connectionId` and `threadId`. |
+| `didcomm.calls.call-end-received` | The agent receives a `call-end` message, per [[VSA-ADM-DC-CL]](#vsa-adm-dc-cl-calls). | `connectionId` and `threadId`. |
+| `didcomm.action-menu.menu-request-received` | The agent receives a `menu-request` message, per [[VSA-ADM-DC-AM]](#vsa-adm-dc-am-action-menu). | `connectionId` and `threadId`. |
+| `didcomm.action-menu.perform-received` | The agent receives a `perform` message, per [[VSA-ADM-DC-AM]](#vsa-adm-dc-am-action-menu). | `connectionId`, `threadId`, `name` — the performed option — and `params` — the filled form parameters, when the option carried a form. |
+| `didcomm.question-answer.answer-received` | The agent receives an `answer` message, per [[VSA-ADM-DC-QA]](#vsa-adm-dc-qa-question-answer). | `connectionId`, `threadId`, and `response` — the text of the selected response. |
+| `didcomm.mrtd.mrz-data-received` | The agent receives an `mrz-data` message, per [[VSA-ADM-DC-MRTD]](#vsa-adm-dc-mrtd-mrtd). | `connectionId`, `threadId`, and `mrzData` — the parsed result, per [[VSA-ADM-DC-MRTD]](#vsa-adm-dc-mrtd-mrtd). |
+| `didcomm.mrtd.emrtd-data-received` | The agent receives an `emrtd-data` message, per [[VSA-ADM-DC-MRTD]](#vsa-adm-dc-mrtd-mrtd). | `connectionId`, `threadId`, and `dataGroups` — the parsed and verified result, per [[VSA-ADM-DC-MRTD]](#vsa-adm-dc-mrtd-mrtd). |
+| `didcomm.mrtd.problem-report-received` | The agent receives an MRTD problem report, per [[VSA-ADM-DC-MRTD]](#vsa-adm-dc-mrtd-mrtd). | `connectionId`, `threadId`, and `reason`. |
 | `didcomm.presentations.state-updated` | A presentation record is created or changes state, per [[VSA-ADM-DC-PR]](#vsa-adm-dc-pr-presentations). | The presentation record, as [`getPresentation`](#vsa-adm-dc-pr-get-getpresentation) returns it, plus `previousState`. |
 | `didcomm.credential-exchanges.state-updated` | A credential exchange record is created or changes state, per [[VSA-ADM-DC-CE]](#vsa-adm-dc-ce-credential-exchanges). | The credential exchange record, as [`getCredentialExchange`](#vsa-adm-dc-ce-get-getcredentialexchange) returns it, plus `previousState`. |
-| `didcomm.{module}.message-received` | The agent receives a message of an extension protocol module, per [[VSA-ADM-DC-EXT-4]](#vsa-adm-dc-ext-extension-protocol-modules). | `connectionId`, `threadId`, and `message` — the plaintext message, per the protocol specification of the module. |
 | `openid4vc.credential-exchanges.state-updated` | An OpenID4VCI issuance session changes state, per [[VSA-ADM-OID-CE]](#vsa-adm-oid-ce-credential-exchanges). | The credential exchange record, as [`getCredentialExchange`](#vsa-adm-oid-ce-get-getcredentialexchange) returns it, plus `previousState`. |
 | `openid4vc.presentations.state-updated` | An OpenID4VP verification session changes state, per [[VSA-ADM-OID-PR]](#vsa-adm-oid-pr-presentations). | The verification session record, as [`getPresentation`](#vsa-adm-oid-pr-get-getpresentation) returns it, plus `previousState`. |
 | `vt.flows.state-updated` | The Flow State or the Connection State of a credential acquisition flow changes, per [[VSA-VTI-FLOW-STATE]](#vsa-vti-flow-state-flow-state). | The flow record, as [`getFlow`](#vsa-adm-vt-fl-get-getflow) returns it, plus `previousFlowState` and `previousConnectionState`. |
