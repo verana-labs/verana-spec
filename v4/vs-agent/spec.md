@@ -559,6 +559,8 @@ The agent MUST complete its [Bootstrap Sequence](#vsa-vti-boot-bootstrap-sequenc
 > [[VT-ECS-JSON-SCHEMA-VPR-CONFIG]](https://verana-labs.github.io/verifiable-trust-spec/#vt-ecs-json-schema-vpr-config-essential-schema-vpr-configuration) requires `holder_onboarding_mode` = `ISSUER_ONBOARDING_PROCESS` for the ECS-Organization, ECS-Persona, and ECS-Service credential schemas. The agent obtains an ECS credential through an onboarding process only.
 
 > As defined in [[VS-CONN-VS]](https://verana-labs.github.io/verifiable-trust-spec/#vs-conn-vs-requirements-for-a-vs-to-accept-a-connection-from-another-service), a validator agent CAN accept connections from a not-yet-verifiable agent if and only if the purpose of the connection is the issuance of [VT-ECS-ORG-CRED-W3C], [VT-ECS-PERSONA-CRED-W3C], or [VT-ECS-SERVICE-CRED-W3C] credentials.
+>
+> The Validator MUST establish this purpose from the VPR, not from the peer's claim. An on-chain `Participant` MUST exist. It MUST have `op_state = PENDING`, a `did` equal to the peer, a `validator_participant_id` that the Validator controls, and one of the ECS credential schemas above. The `participant_id` in the Onboarding Request MUST match this entry.
 
 ##### ECS Standalone Mode
 
@@ -2468,9 +2470,11 @@ Revokes one AnonCreds credential at registry level, addressed by revocation regi
 - `revocationRegistryDefinitionId` (REQUIRED) — the revocation registry definition that the credential is registered in.
 - `revocationRegistryIndex` (REQUIRED) — index of the credential in the registry.
 
-**Output**: confirmation of the revocation.
+**Output** (HTTP `200`): a revocation record. The record MUST contain these fields:
 
-> A W3C (`jsonld`) Verifiable Trust Credential has no credential-level revocation mechanism in v4. To invalidate such a credential, a Corporation operator revokes the HOLDER `Participant` entry on the VPR ([[MOD-PP-MSG-9]](https://verana-labs.github.io/verifiable-trust-vpr-spec/#mod-pp-msg-9-revoke-participant)). See [[VSA-ADM-VT-FL-REVOKE]](#vsa-adm-vt-fl-revoke-revokeflowcredential).
+- `revocationRegistryDefinitionId` — the same value as the input field.
+- `revocationRegistryIndex` — the same value as the input field.
+- `revokedAt` — the time of the revocation status list that the agent published for this revocation. The format is an ISO 8601 string with milliseconds. This time can be different from the time when the agent received the request.
 
 ### Verifiable Trust Scope
 
@@ -2620,7 +2624,7 @@ This method performs **credential-level** revocation only, and only for a creden
 
 - `reason` (OPTIONAL) — reason for the revocation, for a human reader.
 
-**Output**: confirmation of the revocation.
+**Output**: the flow record after the update. The record has the same fields as the records that [[VSA-ADM-VT-FL-LIST] `listFlows`](#vsa-adm-vt-fl-list-listflows) defines.
 
 **Requirements**:
 
@@ -2794,7 +2798,7 @@ Every event is one JSON object:
 
 An event type follows the grammar `{scope}.{module}.{event}`. The scope and the module mirror the path segments of the [Administration API](#administration-api), so that a consumer maps an event to the methods that read and progress the underlying record. There are two event kinds:
 
-- **`state-updated`** — a record changed state, or was created. `data` MUST hold the record, in the same shape as the `get` method of that record returns it, plus `previousState` — the state before the change, or `null` when the event reports the creation of the record. For a record with more than one state field, the catalog row replaces `previousState` with one previous-state field per state field, each with the same semantics.
+- **`state-updated`** — a record changed state, or was created. `data` MUST hold the record, in the same shape as the `get` method of that record returns it, plus `previousState` — the state before the change, or `null` when the event reports the creation of the record.
 - **message events** — an inbound DIDComm message arrived on a module. The event segment is the kebab-case message name of the protocol, with the suffix `-received` — one event type per message kind, so that a consumer branches on `type` alone; `data` holds the received content, per the module definition. The rule binds every module, the [extension protocol modules](#vsa-adm-dc-ext-extension-protocol-modules) included ([[VSA-ADM-DC-EXT-4]](#vsa-adm-dc-ext-extension-protocol-modules)).
 
 The type `vpr.notification` is the one exception to the grammar: it reports a transaction on the Verana Public Registry, which the agent observes through the indexer; it mirrors no Administration API path, and belongs to neither kind.
@@ -2827,7 +2831,7 @@ The agent MUST emit each event of this table when its trigger occurs.
 | `didcomm.credential-exchanges.state-updated` | A credential exchange record is created or changes state, per [[VSA-ADM-DC-CE]](#vsa-adm-dc-ce-credential-exchanges). | The credential exchange record, as [`getCredentialExchange`](#vsa-adm-dc-ce-get-getcredentialexchange) returns it, plus `previousState`. |
 | `openid4vc.credential-exchanges.state-updated` | An OpenID4VCI issuance session changes state, per [[VSA-ADM-OID-CE]](#vsa-adm-oid-ce-credential-exchanges). | The credential exchange record, as [`getCredentialExchange`](#vsa-adm-oid-ce-get-getcredentialexchange) returns it, plus `previousState`. |
 | `openid4vc.presentations.state-updated` | An OpenID4VP verification session changes state, per [[VSA-ADM-OID-PR]](#vsa-adm-oid-pr-presentations). | The verification session record, as [`getPresentation`](#vsa-adm-oid-pr-get-getpresentation) returns it, plus `previousState`. |
-| `vt.flows.state-updated` | The Flow State or the Connection State of a credential acquisition flow changes, per [[VSA-VTI-FLOW-STATE]](#vsa-vti-flow-state-flow-state). | The flow record, as [`getFlow`](#vsa-adm-vt-fl-get-getflow) returns it, plus `previousFlowState` and `previousConnectionState`. |
+| `vt.flows.state-updated` | The Flow State of a credential acquisition flow changes, per [[VSA-VTI-FLOW-STATE]](#vsa-vti-flow-state-flow-state). | The flow record, as [`getFlow`](#vsa-adm-vt-fl-get-getflow) returns it, plus `previousState`. |
 | `vpr.notification` | The agent processes an `IndexerTransactionEvent`, per [[VSA-VTI-NOTIF]](#vsa-vti-notif-notifications). | The camelCase mapping of the `IndexerTransactionEvent`: `eventType`, `did`, `blockHeight`, `txHash`, `timestamp`, and `payload` (`module`, `action`, `messageType`, `txIndex`, `messageIndex`, `sender`, `relatedDids`, `entityType`, `entityId`); plus `changes` — the current state of the affected entity, when the agent resolved it. |
 
 Additional notes:
