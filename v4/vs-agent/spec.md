@@ -167,6 +167,7 @@ The table lists every environment variable of the VS Agent container. The subsec
 | [`ECS_CLAIMS_SERVICE_PRIVACY_POLICY_URI`](#vsa-vti-cfg-env-ecs-ecs-credential-claims) | CONDITIONAL | ECS Credential Claims |
 | [`PUBLIC_API_BASE_URL`](#vsa-vti-cfg-env-rt-agent-runtime) | REQUIRED | Agent Runtime |
 | [`AGENT_PUBLIC_DID_METHOD`](#vsa-vti-cfg-env-rt-agent-runtime) | OPTIONAL | Agent Runtime |
+| [`MASTER_LIST_CSCA_LOCATION`](#vsa-vti-cfg-env-rt-agent-runtime) | OPTIONAL | Agent Runtime |
 | [`ADMIN_API_AUTH_MODE`](#vsa-vti-cfg-env-adm-administration-api) | OPTIONAL | Administration API |
 | [`ADMIN_API_TRUSTED_NETWORKS`](#vsa-vti-cfg-env-adm-administration-api) | OPTIONAL | Administration API |
 | [`ADMIN_API_PUBLIC_URL`](#vsa-vti-cfg-env-adm-administration-api) | CONDITIONAL | Administration API |
@@ -259,6 +260,7 @@ The agent derives the remaining claims of each schema, and reads no variable for
 |---|---|---|
 | `PUBLIC_API_BASE_URL` | REQUIRED | Public `https://` base URL at which a peer reaches the public endpoints of the agent. The agent derives its DID from this value and composes each protocol URL from it verbatim. A base path is allowed. The agent MUST reject a URL that carries a username or a password. See [[VSA-VTI-BOOT-DID] DID Creation](#vsa-vti-boot-did-did-creation). |
 | `AGENT_PUBLIC_DID_METHOD` | OPTIONAL | DID method the agent uses when it creates its DID on first startup: `webvh` (default) or `web`. The agent MUST reject any other value. See [[VSA-VTI-BOOT-DID] DID Creation](#vsa-vti-boot-did-did-creation). |
+| `MASTER_LIST_CSCA_LOCATION` | OPTIONAL | Location of the CSCA master list against which the [MRTD module](#vsa-adm-dc-mrtd-mrtd) verifies the Document Security Object of received eMRTD data. Has no effect when the deployment does not serve that module. |
 
 ##### [VSA-VTI-CFG-ENV-ADM] Administration API
 
@@ -1426,9 +1428,11 @@ The methods of this scope operate on the wire-level DIDComm state of the agent. 
 
 The scope is organized in **protocol modules**. Each DIDComm protocol that the agent implements appears as one module, with its own path family, its own records, and its own [events](#events-api). A module exposes the steps of its protocol; it does not abstract them. When a protocol step needs a local decision, the agent emits a `state-updated` event and waits for the caller to invoke the matching method — unless the caller set `autoAccept` at the start of the exchange.
 
-This specification defines the modules [Connections](#vsa-adm-dc-cn-connections), [Basic Messages](#vsa-adm-dc-bm-basic-messages), [Receipts](#vsa-adm-dc-rc-receipts), [Presentations](#vsa-adm-dc-pr-presentations), [Credential Exchanges](#vsa-adm-dc-ce-credential-exchanges), [Reactions](#vsa-adm-dc-ra-reactions), [User Profile](#vsa-adm-dc-up-user-profile), [Media Sharing](#vsa-adm-dc-ms-media-sharing), [Calls](#vsa-adm-dc-cl-calls), [Action Menu](#vsa-adm-dc-am-action-menu), [Question Answer](#vsa-adm-dc-qa-question-answer), and [MRTD](#vsa-adm-dc-mrtd-mrtd) — and the pattern that every [extension protocol module](#vsa-adm-dc-ext-extension-protocol-modules) follows.
+This specification defines the core modules — [Connections](#vsa-adm-dc-cn-connections), [Basic Messages](#vsa-adm-dc-bm-basic-messages), [Receipts](#vsa-adm-dc-rc-receipts), [Presentations](#vsa-adm-dc-pr-presentations), [Credential Exchanges](#vsa-adm-dc-ce-credential-exchanges), [Reactions](#vsa-adm-dc-ra-reactions), [User Profile](#vsa-adm-dc-up-user-profile), [Media Sharing](#vsa-adm-dc-ms-media-sharing), [Calls](#vsa-adm-dc-cl-calls), [Action Menu](#vsa-adm-dc-am-action-menu), [Question Answer](#vsa-adm-dc-qa-question-answer), and [MRTD](#vsa-adm-dc-mrtd-mrtd) — and the pattern that every [extension protocol module](#vsa-adm-dc-ext-extension-protocol-modules) follows.
 
-Connections, Basic Messages, Presentations, and Credential Exchanges are REQUIRED. Every other module is OPTIONAL: the agent MUST answer every path of a module that it does not serve with HTTP `404`. A caller discovers the modules of a deployment with [`listProtocols`](#vsa-adm-dc-proto-list-listprotocols).
+Connections, Basic Messages, Presentations, and Credential Exchanges are REQUIRED. Every other core module is OPTIONAL: the agent MUST answer every path of a module that it does not serve with HTTP `404`. A caller discovers the modules of a deployment with [`listProtocols`](#vsa-adm-dc-proto-list-listprotocols).
+
+> Non-normative: the protocol URI of each module names its protocol definition. Receipts, User Profile, and Media Sharing are defined at [didcomm.org](https://didcomm.org); Action Menu ([RFC 0509](https://github.com/decentralized-identity/aries-rfcs/tree/main/features/0509-action-menu)) and Question Answer ([RFC 0113](https://github.com/decentralized-identity/aries-rfcs/tree/main/features/0113-question-answer)) in the Aries RFCs. Reactions, Calls, and MRTD have no formal definition yet: [credo-ts-didcomm-ext](https://github.com/openwallet-foundation/credo-ts-didcomm-ext) defines them.
 
 The agent has no method that creates a bare connection invitation, and no method that consumes one. A DIDComm connection starts either from the invitation that [`createPresentationRequest`](#vsa-adm-dc-pr-create-createpresentationrequest) or [`createCredentialOffer`](#vsa-adm-dc-ce-offer-createcredentialoffer) produces, or from a peer that connects to the agent, for example to start a credential acquisition flow.
 
@@ -1859,7 +1863,9 @@ Sends message reactions on an established connection.
 
 Methods that exchange peer profiles, per the User Profile protocol (`https://didcomm.org/user-profile/1.0`). A profile carries the fields `displayName`, `displayPicture`, `displayIcon`, `description`, and `preferredLanguage`, each OPTIONAL.
 
-The module stores the profile of the agent itself, which the agent builds from its configuration. The agent delivers each inbound `profile` message as a [`didcomm.user-profile.message-received`](#vsa-evt-cat-event-catalog) event.
+The module stores the profile of the agent itself, which the agent builds from its configuration. The agent delivers each inbound `profile` and `request-profile` message as a [`didcomm.user-profile.message-received`](#vsa-evt-cat-event-catalog) event.
+
+The agent MUST NOT answer a `request-profile` message itself, and MUST NOT answer a `profile` message that carries `sendBackYours` itself: the caller observes the event and answers with [`sendProfile`](#vsa-adm-dc-up-send-sendprofile), on the thread of the received message.
 
 | Module | Method Name | HTTP Method | Relative REST API path | Requirements |
 | --- | --- | --- | --- | --- |
@@ -1875,6 +1881,7 @@ Sends a profile on an established connection.
 - `connectionId` (REQUIRED) — connection to send the profile on.
 - `profile` (OPTIONAL) — the profile fields to send. When absent, the agent sends its stored profile.
 - `sendBackYours` (OPTIONAL, default `false`) — when `true`, asks the peer to answer with its own profile.
+- `threadId` (OPTIONAL) — thread of the `request-profile` or `profile` message that this profile answers.
 
 **Output**:
 
@@ -1915,7 +1922,7 @@ Shares media items on an established connection.
 
 - `connectionId` (REQUIRED) — connection to share the items on.
 - `description` (OPTIONAL) — text that describes the share.
-- `items` (REQUIRED) — array of items. Each entry carries `uri` (REQUIRED), `mimeType` (REQUIRED), `fileName` (OPTIONAL), `description` (OPTIONAL), `byteCount` (OPTIONAL), `ciphering` (OPTIONAL) — algorithm and parameters when the media at `uri` is encrypted — and `metadata` (OPTIONAL).
+- `items` (REQUIRED) — array of items. Each entry carries `id` (OPTIONAL) — item identifier, generated by the agent when absent; a peer refers to the item by it — `uri` (REQUIRED), `mimeType` (REQUIRED), `fileName` (OPTIONAL), `description` (OPTIONAL), `byteCount` (OPTIONAL), `ciphering` (OPTIONAL) — algorithm and parameters when the media at `uri` is encrypted — and `metadata` (OPTIONAL).
 
 **Output**:
 
@@ -2018,7 +2025,10 @@ Sends a menu on an established connection.
 **Inputs** (request body):
 
 - `connectionId` (REQUIRED) — connection to send the menu on.
-- `menu` (REQUIRED) — the menu: `title` (REQUIRED), `description` (OPTIONAL), and `options` (REQUIRED) — array of entries, each with `name` (REQUIRED), `title` (REQUIRED), and `description` (OPTIONAL).
+- `menu` (REQUIRED) — the menu: `title` (REQUIRED), `description` (REQUIRED), and `options` (REQUIRED) — array of entries, each with:
+  - `name` (REQUIRED), `title` (REQUIRED), `description` (REQUIRED);
+  - `disabled` (OPTIONAL, default `false`) — the option is displayed but cannot be performed;
+  - `form` (OPTIONAL) — a form the peer fills before it performs the option: `description` (REQUIRED), `submitLabel` (REQUIRED), and `params` (REQUIRED) — array of entries, each with `name` (REQUIRED), `title` (REQUIRED), `description` (REQUIRED), and OPTIONAL `default`, `required`, and `type`.
 
 **Output**:
 
@@ -2057,7 +2067,11 @@ Sends a question on an established connection.
 
 Methods that request machine-readable travel document data, per the MRTD protocol (`https://didcomm.org/mrtd/1.0`). The agent requests the data; the peer answers with an `mrz-data` or an `emrtd-data` message, or refuses with a problem report (refused, timeout).
 
-The module stores no record. The agent delivers each inbound `mrz-data`, `emrtd-data`, and problem report message as a [`didcomm.mrtd.message-received`](#vsa-evt-cat-event-catalog) event.
+The module stores no record. The agent parses and verifies each received travel document itself, and delivers the result — not the wire message — as a [`didcomm.mrtd.message-received`](#vsa-evt-cat-event-catalog) event. Besides `connectionId` and `threadId`, the event `data` carries:
+
+- for an `mrz-data` message — `mrzData`: `raw` — the machine-readable zone as received — and `parsed` — `format`, `fields`, and `valid`;
+- for an `emrtd-data` message — `dataGroups`: `raw` — the data groups as received — `parsed` — the decoded fields and `valid` — and `verification` — the check of the Document Security Object against the CSCA master list of `MASTER_LIST_CSCA_LOCATION`: `authenticity`, `integrity`, and `details`;
+- for a problem report — `reason`: `e.p.mrz-refused`, `e.p.emrtd-refused`, `e.p.mrz-timeout`, or `e.p.emrtd-timeout`.
 
 | Module | Method Name | HTTP Method | Relative REST API path | Requirements |
 | --- | --- | --- | --- | --- |
@@ -2791,12 +2805,12 @@ The agent MUST emit each event of this table when its trigger occurs.
 | `didcomm.basic-messages.message-received` | The agent receives a basic message, per [[VSA-ADM-DC-BM]](#vsa-adm-dc-bm-basic-messages). | The message record, as [`listBasicMessages`](#vsa-adm-dc-bm-list-listbasicmessages) returns it. |
 | `didcomm.receipts.message-received` | The agent receives a `message-receipts` message, per [[VSA-ADM-DC-RC]](#vsa-adm-dc-rc-receipts). | `connectionId` and `receipts` — the entries of the message, each with `messageId`, `state`, and `timestamp`. |
 | `didcomm.reactions.message-received` | The agent receives a `message-reactions` message, per [[VSA-ADM-DC-RA]](#vsa-adm-dc-ra-reactions). | `connectionId` and `reactions` — the entries of the message, each with `messageId`, `emoji`, `action`, and `timestamp`. |
-| `didcomm.user-profile.message-received` | The agent receives a `profile` message, per [[VSA-ADM-DC-UP]](#vsa-adm-dc-up-user-profile). | `connectionId`, `threadId`, and `profile` — the received profile fields. |
+| `didcomm.user-profile.message-received` | The agent receives a `profile` or a `request-profile` message, per [[VSA-ADM-DC-UP]](#vsa-adm-dc-up-user-profile). | `connectionId`, `threadId`, and — for a `profile` message — `profile` and `sendBackYours`; for a `request-profile` message — `query`. |
 | `didcomm.media-sharing.message-received` | The agent receives a `share-media` message, per [[VSA-ADM-DC-MS]](#vsa-adm-dc-ms-media-sharing). | `connectionId`, `threadId`, and `message` — the plaintext message, per the protocol specification. |
 | `didcomm.calls.message-received` | The agent receives a call message, per [[VSA-ADM-DC-CL]](#vsa-adm-dc-cl-calls). | `connectionId`, `threadId`, and `message` — the plaintext message, per the protocol specification. |
 | `didcomm.action-menu.message-received` | The agent receives a `menu-request` or a `perform` message, per [[VSA-ADM-DC-AM]](#vsa-adm-dc-am-action-menu). | `connectionId`, `threadId`, and `message` — the plaintext message, per the protocol specification. |
 | `didcomm.question-answer.message-received` | The agent receives an `answer` message, per [[VSA-ADM-DC-QA]](#vsa-adm-dc-qa-question-answer). | `connectionId`, `threadId`, and `response` — the text of the selected response. |
-| `didcomm.mrtd.message-received` | The agent receives an `mrz-data`, an `emrtd-data`, or a problem report message, per [[VSA-ADM-DC-MRTD]](#vsa-adm-dc-mrtd-mrtd). | `connectionId`, `threadId`, and `message` — the plaintext message, per the protocol specification. |
+| `didcomm.mrtd.message-received` | The agent receives an `mrz-data`, an `emrtd-data`, or a problem report message, per [[VSA-ADM-DC-MRTD]](#vsa-adm-dc-mrtd-mrtd). | `connectionId`, `threadId`, and the parsed and verified result that [[VSA-ADM-DC-MRTD]](#vsa-adm-dc-mrtd-mrtd) defines. |
 | `didcomm.presentations.state-updated` | A presentation record is created or changes state, per [[VSA-ADM-DC-PR]](#vsa-adm-dc-pr-presentations). | The presentation record, as [`getPresentation`](#vsa-adm-dc-pr-get-getpresentation) returns it, plus `previousState`. |
 | `didcomm.credential-exchanges.state-updated` | A credential exchange record is created or changes state, per [[VSA-ADM-DC-CE]](#vsa-adm-dc-ce-credential-exchanges). | The credential exchange record, as [`getCredentialExchange`](#vsa-adm-dc-ce-get-getcredentialexchange) returns it, plus `previousState`. |
 | `didcomm.{module}.message-received` | The agent receives a message of an extension protocol module, per [[VSA-ADM-DC-EXT-4]](#vsa-adm-dc-ext-extension-protocol-modules). | `connectionId`, `threadId`, and `message` — the plaintext message, per the protocol specification of the module. |
