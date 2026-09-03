@@ -557,6 +557,8 @@ The agent MUST complete its [Bootstrap Sequence](#vsa-vti-boot-bootstrap-sequenc
 > [[VT-ECS-JSON-SCHEMA-VPR-CONFIG]](https://verana-labs.github.io/verifiable-trust-spec/#vt-ecs-json-schema-vpr-config-essential-schema-vpr-configuration) requires `holder_onboarding_mode` = `ISSUER_ONBOARDING_PROCESS` for the ECS-Organization, ECS-Persona, and ECS-Service credential schemas. The agent obtains an ECS credential through an onboarding process only.
 
 > As defined in [[VS-CONN-VS]](https://verana-labs.github.io/verifiable-trust-spec/#vs-conn-vs-requirements-for-a-vs-to-accept-a-connection-from-another-service), a validator agent CAN accept connections from a not-yet-verifiable agent if and only if the purpose of the connection is the issuance of [VT-ECS-ORG-CRED-W3C], [VT-ECS-PERSONA-CRED-W3C], or [VT-ECS-SERVICE-CRED-W3C] credentials.
+>
+> The Validator MUST establish this purpose from the VPR, not from the peer's claim. An on-chain `Participant` MUST exist. It MUST have `op_state = PENDING`, a `did` equal to the peer, a `validator_participant_id` that the Validator controls, and one of the ECS credential schemas above. The `participant_id` in the Onboarding Request MUST match this entry.
 
 ##### ECS Standalone Mode
 
