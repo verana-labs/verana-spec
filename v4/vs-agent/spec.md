@@ -2165,7 +2165,7 @@ A wallet MUST follow the URLs that the Admin API and the metadata return. The ag
 
 #### [VSA-ADM-OID-CE] Credential Exchanges
 
-Methods that offer a credential over OpenID4VCI, and that inspect the issuance pipeline. The agent serves them only when the configuration defines the issuer capability.
+Methods that offer a credential over OpenID4VCI, and that inspect, delete, or revoke an issuance session. The agent serves them only when the configuration defines the issuer capability.
 
 | Module | Method Name | HTTP Method | Relative REST API path | Requirements |
 | --- | --- | --- | --- | --- |
@@ -2188,7 +2188,7 @@ Creates a pre-authorized OpenID4VCI credential offer for one credential configur
 
 - The agent MUST reject a `claims` object that holds a name that the credential configuration does not list.
 - The agent MUST reject a `claims` object that omits a claim that the credential configuration lists, or that holds an empty value for one.
-- The agent MUST NOT accept a value for `vct`, `iat`, `exp`, `iss`, or `cnf`. These names belong to the credential envelope.
+- The agent MUST NOT accept a value for `vct`, `iat`, `exp`, `iss`, `cnf`, or `status`. These names belong to the credential envelope.
 - The offer MUST expire after the `ttlSeconds` value of the credential configuration.
 
 **Output**:
