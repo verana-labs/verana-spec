@@ -166,7 +166,7 @@ The user journey is: connect wallet → discover Corporations the account can ac
 
 ### [VFE-TX-FEEGRANT] Fee Payer Election
 
-- [VFE-TX-FEEGRANT-1] Before broadcasting a delegable Msg, the frontend MUST check [`IDX-DE-QRY-5 List Fee Grants`](../verana-indexer/spec.md#idx-de-qry-5-list-fee-grants) with `grantor_corporation_id=<acting>&grantee=<account>&msg_type=<Msg>&only_active=true`. If an active grant covers the Msg type (and its `remaining_spend`, when limited, covers the estimated fee), the transaction's fee `granter` MUST be set to the Corporation's `policy_address`; otherwise the connected account pays.
+- [VFE-TX-FEEGRANT-1] Before broadcasting a delegable Msg, the frontend MUST check [`IDX-DE-QRY-5 List Fee Grants`](../verana-indexer/spec.md#idx-de-qry-5-list-fee-grants) with `grantor_corporation_id=<acting>&grantee=<account>&msg_type=<Msg>&only_active=true`. If an active grant covers the Msg type (and its `remaining_spend`, when limited, covers the estimated fee), the transaction's fee `granter` MUST be set to the Corporation's `policy_address`; otherwise the connected account pays. If the fee-grant query fails or the route is unavailable, the frontend MUST fall back to the connected account as payer, SHOULD say so in the cost preview, and MUST NOT block the transaction on the lookup.
 - [VFE-TX-FEEGRANT-2] The cost preview ([VFE-TX-SIM]) MUST state who pays the network fee (corporation via fee grant, or the connected account).
 
 ### [VFE-TX-SIM] Simulation and Cost Preview
