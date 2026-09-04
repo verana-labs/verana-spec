@@ -171,8 +171,9 @@ The user journey is: connect wallet → discover Corporations the account can ac
 
 ### [VFE-TX-SIM] Simulation and Cost Preview
 
-- [VFE-TX-SIM-1] Every transaction flow MUST show, before broadcast, a confirmation step with: a plain-language description of the effect, the estimated **network fee** (gas simulation against RPC), the estimated **trust fees and trust deposit** per [VFE-TX-COSTS] where applicable, the fee payer per [VFE-TX-FEEGRANT], and any irreversibility warning (revoke, slash, archive).
-- [VFE-TX-SIM-2] Cancel MUST abort without side effects; Confirm broadcasts exactly the previewed Msg set.
+- [VFE-TX-SIM-1] Every transaction flow MUST show, before broadcast, a confirmation step with, in this order: a plain-language description of the effect; the signing mode of [VFE-CORP-CAPS-5] for the connected account (**Operator**, direct execution; **Governance Proposal**, the fallback of [VFE-TX-FALLBACK]; or account-signed, for the group Msgs of [VFE-CORP-PROP-5]); the simulated **network fee** (gas simulation against RPC); the fee payer per [VFE-TX-FEEGRANT]; then the estimated **trust fees and trust deposit** per [VFE-TX-COSTS] where applicable, and any irreversibility warning (revoke, slash, archive).
+- [VFE-TX-SIM-2] Cancel and dismissal (Escape, backdrop) MUST abort without side effects. Confirm broadcasts the byte-identical Msg set that was simulated: every input the Msg set depends on, including a proposal's title and summary, is collected before the simulation, never after it.
+- [VFE-TX-SIM-3] Confirm MUST be disabled while the simulation runs. When the chain rejects the simulation, the confirmation MUST display the chain's rejection text and keep Confirm disabled until a retry succeeds, so that on-chain authorization failures surface before the wallet prompt (this is how [VFE-CORP-CAPS-4] is met).
 
 ### [VFE-TX-COSTS] Trust Fee and Deposit Estimation
 
