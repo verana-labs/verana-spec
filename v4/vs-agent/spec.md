@@ -2190,7 +2190,7 @@ Creates a pre-authorized OpenID4VCI credential offer for one credential configur
 - A `claims` object MAY omit a claim that the credential configuration lists; the agent then omits that claim from the credential. The agent MUST reject a `claims` object that holds an empty value for a claim it names.
 - The agent MUST reject a `claims` object that names no claim of the credential configuration.
 - The agent MUST NOT accept a value for `vct`, `iat`, `exp`, `iss`, `cnf`, or `status`. These names belong to the credential envelope.
-- The offer MUST expire after the `ttlSeconds` value of the credential configuration.
+- The credential MUST expire after the `ttlSeconds` value of the credential configuration (its `exp` claim). The offer itself expires after the credential offer lifetime of the agent, independent of `ttlSeconds`.
 
 **Output**:
 
@@ -2241,11 +2241,19 @@ The `state` is one of `OfferCreated`, `OfferUriRetrieved`, `AuthorizationInitiat
 
 Deletes an issuance session record. It does not delete a credential that a wallet holds, and it does not revoke it.
 
+**Requirements**:
+
+- When the configuration enables revocation and the credential of the session is on the status list and not revoked, the agent MUST refuse the deletion with `INVALID_STATE` (`409`), so that a credential never becomes unrevocable.
+
 **Path parameters**:
 
 - `credentialExchangeId` (REQUIRED) — identifier of the issuance session.
 
 **Output**: empty body (HTTP `204`).
+
+**Errors**:
+
+- `INVALID_STATE` (`409`) — the credential of the session is on the status list and not revoked.
 
 ##### [VSA-ADM-OID-CE-REVOKE] revokeCredential
 
