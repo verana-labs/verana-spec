@@ -76,6 +76,7 @@ The user journey is: connect wallet → discover Corporations the account can ac
 | `NEXT_PUBLIC_VERANA_EXPLORER_URL` | REQUIRED | Block explorer base URL, used for transaction and account links. |
 | `NEXT_PUBLIC_VERANA_VISUALIZER_URL` | OPTIONAL | Read-only explorer/visualizer base URL, used for entity deep links. |
 | `NEXT_PUBLIC_VERANA_TOPUP_VS` | OPTIONAL | DID of the Verifiable Service used by the Get VNA flow ([VFE-PAGE-ACCT]). |
+| `NEXT_PUBLIC_VERANA_OPERATOR_ONLY` | OPTIONAL | `true` restricts discovery to operator grants ([VFE-CORP-DISC-1]): no group membership, no Create Corporation entry, no proposal fallback. Set by the onboarding portal build. Default unset. |
 | `NEXT_PUBLIC_VERANA_SIGN_DIRECT_MODE` | OPTIONAL | `true` to prefer SIGN_MODE_DIRECT when the wallet supports it; defaults to Amino for wallet compatibility. |
 | `NEXT_PUBLIC_SESSION_LIFETIME_SECONDS` | OPTIONAL | Session persistence lifetime. Default 86400. |
 | `NEXT_PUBLIC_LOW_BALANCE_WARN_UVNA` | OPTIONAL | Balance threshold (uvna) under which a low-balance warning is shown. |
@@ -120,6 +121,8 @@ The user journey is: connect wallet → discover Corporations the account can ac
 - [VFE-CORP-DISC-1] On wallet connect (and on the refresh triggers of [VFE-CORP-DISC-4]), the frontend MUST discover every Corporation the connected account can act for, from exactly two sources:
   1. **Operator grants** — [`IDX-DE-QRY-1 List Operator Authorizations`](../verana-indexer/spec.md#idx-de-qry-1-list-operator-authorizations) with `operator=<account>&only_active=true`: each entry yields a `corporation_id` and the account's authorized `msg_types[]` for it.
   2. **Group membership** — [`IDX-GR-QRY-2 List Corporations By Member`](../verana-indexer/spec.md#idx-gr-qry-2-list-corporations-by-member) with `account=<account>`: each entry yields a `corporation_id` and the member's voting `weight`.
+
+  Portal mode: when `NEXT_PUBLIC_VERANA_OPERATOR_ONLY` is `true` (the onboarding portal build, [VFE-OBS-11]), discovery uses source 1 only; the build then offers neither the **Create new Corporation** entry of [VFE-CORP-CREATE-1] nor the proposal fallback of [VFE-CORP-CAPS-3].
 - [VFE-CORP-DISC-2] The discovered set is the union of both sources. For each Corporation, the frontend MUST resolve display data via [`IDX-CO-QRY-1 Get Corporation`](../verana-indexer/spec.md#idx-co-qry-1-get-corporation) and record the account's **membership kinds**: *Operator* (source 1), *Member* (source 2), or both.
 - [VFE-CORP-DISC-3] VS-operator grants (`VSOperatorAuthorization`) MUST NOT be used for discovery: `vs_operator` accounts are agent accounts and are out of the frontend's audience.
 - [VFE-CORP-DISC-4] Discovery MUST be re-run when: the wallet account changes; a `GrantOperatorAuthorization` / `RevokeOperatorAuthorization` or group-membership event (`UpdateGroupMembers`, `payload.module = "group"`) involving the connected account or the acting Corporation is received on the event stream ([VFE-DATA-WS]); or the user explicitly refreshes.
