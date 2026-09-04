@@ -302,7 +302,7 @@ The agent MUST validate the configuration file at startup, and MUST refuse to st
 | `verifier.requestSigner` | OPTIONAL. `x5c` (default) or `did`. With `did`, the agent names its DID as the client identifier of an authorization request, and the signing key MUST be published under `authentication`. |
 | `trust` | CONDITIONAL. Defines `resolverUrl` (an `https://` Verana resolver), `timeoutMs` (1 to 30000), `allowedDidWebHosts` (the exact issuer DID hosts the agent resolves), `credentialIssuerCertificates` (valid self-issued CA roots that carry `keyCertSign`, with no duplicate), and OPTIONAL `developmentCertificateFingerprints`. REQUIRED when `verifier` is present. |
 | `revocation` | OPTIONAL. `enabled` (boolean) and `size` (status list capacity, default 131072). When enabled, each issued credential carries a `status` claim that points at the status list of the agent. |
-| `credentialConfigurations` | REQUIRED. Array. Each entry declares a unique `id`, the `format` `dc+sd-jwt`, an `https://` `vct`, an `https://` `vtjscId`, `name`, an OPTIONAL `description`, `claims`, a `disclosureFrame` that is a subset of `claims`, and a `ttlSeconds` between 60 and 31536000. |
+| `credentialConfigurations` | REQUIRED. Array. Each entry declares a unique `id`, the `format` `dc+sd-jwt`, an `https://` `vct`, an `https://` `vtjscId`, `name`, an OPTIONAL `description`, `claims` (the names an offer may carry), a `disclosureFrame` that is a subset of `claims`, and a `ttlSeconds` between 60 and 31536000. |
 | `verifierPolicies` | REQUIRED. Array. Each entry maps a unique `id` to one `credentialConfigurationId` and to a `requestedClaims` subset of the claims of that configuration. |
 | `publicApiBaseUrl` | MUST NOT be present. The agent injects the trusted value from `PUBLIC_API_BASE_URL`. |
 
@@ -2187,7 +2187,8 @@ Creates a pre-authorized OpenID4VCI credential offer for one credential configur
 **Requirements**:
 
 - The agent MUST reject a `claims` object that holds a name that the credential configuration does not list.
-- The agent MUST reject a `claims` object that omits a claim that the credential configuration lists, or that holds an empty value for one.
+- A `claims` object MAY omit a claim that the credential configuration lists; the agent then omits that claim from the credential. The agent MUST reject a `claims` object that holds an empty value for a claim it names.
+- The agent MUST reject a `claims` object that names no claim of the credential configuration.
 - The agent MUST NOT accept a value for `vct`, `iat`, `exp`, `iss`, `cnf`, or `status`. These names belong to the credential envelope.
 - The offer MUST expire after the `ttlSeconds` value of the credential configuration.
 
