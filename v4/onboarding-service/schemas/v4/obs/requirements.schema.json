@@ -1,0 +1,166 @@
+{
+  "$id": "https://verana-labs.github.io/verana-spec/v4/onboarding-service/schemas/v4/obs/requirements.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Ecosystem Onboarding Service requirements file",
+  "description": "Evidence workflow of a round of an Onboarding Process: the ordered steps, the documents to upload, the additional fields to fill, the external steps performed on the service's own pages, per-schema links for missing prerequisite credentials, and instructions. See [OBS-CFG-REQ] and [OBS-STEP] of the Ecosystem Onboarding Service v4 Specification.",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "steps": {
+      "type": "array",
+      "default": [],
+      "items": { "$ref": "#/$defs/Step" }
+    },
+    "documents": {
+      "type": "array",
+      "default": [],
+      "items": { "$ref": "#/$defs/DocumentRequirement" }
+    },
+    "fields": {
+      "type": "array",
+      "default": [],
+      "items": { "$ref": "#/$defs/FieldRequirement" }
+    },
+    "credentialLinks": {
+      "type": "object",
+      "description": "Maps a CredentialSchema.id (as a decimal string) to the URL shown to an applicant that lacks a credential of that schema. Overrides the default link of [OBS-APP-ELIG-4].",
+      "propertyNames": { "pattern": "^[0-9]+$" },
+      "additionalProperties": { "type": "string", "format": "uri", "pattern": "^https://" }
+    },
+    "instructions": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "applicant": { "$ref": "#/$defs/LocalizedText", "description": "Markdown shown to the applicant with the evidence steps." },
+        "validator": { "$ref": "#/$defs/LocalizedText", "description": "Markdown shown to the validator with the review." }
+      }
+    }
+  },
+  "$defs": {
+    "LocalizedText": {
+      "description": "A string, or an object keyed by BCP 47 language tag.",
+      "oneOf": [
+        { "type": "string", "maxLength": 16384 },
+        {
+          "type": "object",
+          "minProperties": 1,
+          "propertyNames": { "pattern": "^[A-Za-z]{2,3}(-[A-Za-z0-9]{2,8})*$" },
+          "additionalProperties": { "type": "string", "maxLength": 16384 }
+        }
+      ]
+    },
+    "Identifier": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9-]{0,63}$"
+    },
+    "ParticipantRole": {
+      "type": "string",
+      "enum": ["ISSUER_GRANTOR", "VERIFIER_GRANTOR", "ISSUER", "VERIFIER", "HOLDER"]
+    },
+    "Step": {
+      "type": "object",
+      "required": ["id", "type", "title"],
+      "properties": {
+        "id": { "$ref": "#/$defs/Identifier", "description": "Unique among steps." },
+        "type": { "type": "string", "enum": ["claims", "documents", "fields", "external"] },
+        "for": { "type": "string", "enum": ["applicant", "validator"], "default": "applicant" },
+        "roles": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "$ref": "#/$defs/ParticipantRole" },
+          "description": "Applicant roles the step applies to. Absent: every offered role."
+        },
+        "required": { "type": "boolean", "default": true },
+        "title": { "$ref": "#/$defs/LocalizedText" },
+        "description": { "$ref": "#/$defs/LocalizedText" },
+        "documents": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": { "$ref": "#/$defs/Identifier" },
+          "description": "Ids of the documents collected by a documents step."
+        },
+        "fields": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": { "$ref": "#/$defs/Identifier" },
+          "description": "Ids of the fields collected by a fields step."
+        },
+        "external": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["completion"],
+          "properties": {
+            "completion": { "type": "string", "enum": ["obs"], "description": "The service marks the step completed from its own page." },
+            "evidence": { "type": "string", "enum": ["none", "file", "record"], "default": "none" },
+            "mediaTypes": {
+              "type": "array",
+              "minItems": 1,
+              "uniqueItems": true,
+              "items": { "type": "string", "pattern": "^[a-z]+/[A-Za-z0-9!#$&^_.+-]+$" },
+              "description": "Media types of the evidence file, when evidence is file."
+            }
+          }
+        }
+      },
+      "allOf": [
+        { "if": { "properties": { "type": { "const": "documents" } } }, "then": { "required": ["documents"] } },
+        { "if": { "properties": { "type": { "const": "fields" } } }, "then": { "required": ["fields"] } },
+        { "if": { "properties": { "type": { "const": "external" } } }, "then": { "required": ["external"] } },
+        { "if": { "properties": { "type": { "const": "claims" } } }, "then": { "properties": { "for": { "const": "applicant" } } } }
+      ],
+      "additionalProperties": false
+    },
+    "DocumentRequirement": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "label", "mediaTypes", "maxSizeBytes"],
+      "properties": {
+        "id": { "$ref": "#/$defs/Identifier", "description": "Unique among documents." },
+        "label": { "$ref": "#/$defs/LocalizedText" },
+        "description": { "$ref": "#/$defs/LocalizedText" },
+        "mediaTypes": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": { "type": "string", "pattern": "^[a-z]+/[A-Za-z0-9!#$&^_.+-]+$" },
+          "description": "Accepted IANA media types, verified from the uploaded content."
+        },
+        "maxSizeBytes": { "type": "integer", "minimum": 1, "maximum": 1073741824 },
+        "required": { "type": "boolean", "default": true },
+        "multiple": { "type": "boolean", "default": false, "description": "Whether several files may be uploaded for this requirement." }
+      }
+    },
+    "FieldRequirement": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "label", "type"],
+      "properties": {
+        "id": { "$ref": "#/$defs/Identifier", "description": "Unique among fields." },
+        "label": { "$ref": "#/$defs/LocalizedText" },
+        "description": { "$ref": "#/$defs/LocalizedText" },
+        "type": { "type": "string", "enum": ["text", "textarea", "number", "date", "url", "select"] },
+        "required": { "type": "boolean", "default": true },
+        "options": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["value", "label"],
+            "properties": {
+              "value": { "type": "string", "maxLength": 256 },
+              "label": { "$ref": "#/$defs/LocalizedText" }
+            }
+          },
+          "description": "Required when type is select."
+        },
+        "pattern": { "type": "string", "maxLength": 512, "description": "ECMAScript regular expression a text value must match." },
+        "min": { "type": "number" },
+        "max": { "type": "number" },
+        "maxLength": { "type": "integer", "minimum": 1, "maximum": 16384 }
+      }
+    }
+  }
+}
