@@ -2300,6 +2300,7 @@ Creates an OpenID4VP authorization request for one verifier policy. The policy n
 **Errors**:
 
 - `UNKNOWN_POLICY` (`400`) — no verifier policy has the supplied identifier.
+- `INVALID_STATE` (`409`) — the request selects the `did` signer, through `requestSigner` or through the configuration, and the DID of the agent does not publish the signing key under `authentication`.
 - `CAPABILITY_NOT_CONFIGURED` (`409`) — the configuration does not define the verifier capability.
 
 ##### [VSA-ADM-OID-PR-LIST] listPresentations
