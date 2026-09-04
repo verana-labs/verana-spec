@@ -12,7 +12,7 @@ The **Verifiable Trust Flow Protocol** (`vt-flow`) is a DIDComm superprotocol th
 
 `vt-flow` covers two flow variants defined in the [VS Agent Specification](../vs-agent/spec.md):
 
-- **Onboarding Process** ([VSA-VTI-FLOW-OP](../vs-agent/spec.md#vsa-vti-flow-op-onboarding-processes)) — required when a Credential Schema's onboarding mode is `GRANTOR_ONBOARDING_PROCESS` or `ECOSYSTEM_ONBOARDING_PROCESS`. The Applicant first creates an on-chain Onboarding Process (`StartParticipantOP`) before DIDComm interaction. The Validator performs off-chain validation, transitions the on-chain `Participant` to `VALIDATED` (`SetParticipantOPtoValidated`), then — **optionally** — issues a credential. Validation-only outcomes (no issuance) are valid terminal states.
+- **Onboarding Process** ([VSA-VTI-FLOW-OP](../vs-agent/spec.md#vsa-vti-flow-op-onboarding-processes)) — required when a Credential Schema's onboarding mode is `GRANTOR_ONBOARDING_PROCESS` or `ECOSYSTEM_ONBOARDING_PROCESS`. The Applicant first creates an on-chain Onboarding Process (`StartParticipantOP`) before DIDComm interaction. The Validator performs off-chain validation, transitions the on-chain `Participant` to `VALIDATED` (`SetParticipantOPtoValidated`), then issues a credential when the validated `Participant` role is `HOLDER`, and issues none for any other role (see [Issuance After Validation](../vs-agent/spec.md#vsa-vti-flow-op-issue-issuance-after-validation)). Validation-only outcomes are the terminal states of the other roles.
 - **Credential Direct Issuance** ([VSA-VTI-FLOW-DI](../vs-agent/spec.md#vsa-vti-flow-di-credential-direct-issuance)) — used when the Applicant is a `HOLDER`, the Validator is an `ISSUER`, and the schema permits direct issuance (`holder_onboarding_mode` = `PERMISSIONLESS`). No on-chain Onboarding Process is required.
 
 Both variants share the same state machine, message set, and error model. They differ only in the initial request message (`onboarding-request` vs `issuance-request`) and in whether an on-chain Onboarding Process precedes credential delivery.
@@ -70,7 +70,7 @@ Two identifiers carry session semantics in vt-flow. They serve different layers 
 Two roles participate in `vt-flow`:
 
 - **Applicant** — the party requesting a credential. Always initiates the DIDComm connection. The Applicant may be any of: `ISSUER_GRANTOR`, `VERIFIER_GRANTOR`, `ISSUER`, `VERIFIER`, or `HOLDER`, depending on the schema and target Participant role.
-- **Validator** — the party authorized to validate and (optionally) issue the credential. The Validator may be an `ECOSYSTEM` controller, `ISSUER_GRANTOR`, `VERIFIER_GRANTOR`, or `ISSUER`.
+- **Validator** — the party authorized to validate and, when the Applicant is a `HOLDER`, issue the credential. The Validator may be an `ECOSYSTEM` controller, `ISSUER_GRANTOR`, `VERIFIER_GRANTOR`, or `ISSUER`.
 
 The valid Applicant/Validator pairings are enumerated in the [VS Agent Specification](../vs-agent/spec.md#vsa-vti-flow-op-onboarding-processes).
 
@@ -115,10 +115,11 @@ All states enumerated below are normative.
 | `AWAITING_IR` | Validator | Direct Issuance | `ESTABLISHED`. `issuance-request` expected but not yet received, or last request was rejected (Applicant may retry). |
 | `OOB_PENDING` | Both | Both | `ESTABLISHED`. Validator sent an `oob-link`; awaiting Applicant completion. |
 | `VALIDATING` | Both | Both | `ESTABLISHED`. Validator performing off-chain validation (Onboarding Process) or processing an accepted issuance request (Direct Issuance). |
-| `VALIDATED` | Both | Onboarding Process | `ESTABLISHED`. Validator called `SetParticipantOPtoValidated` on-chain; `op_state` is now `VALIDATED`. In the Onboarding Process flow, this is a valid terminal state if no credential will be issued. |
+| `VALIDATED` | Both | Onboarding Process | `ESTABLISHED`. Validator called `SetParticipantOPtoValidated` on-chain; `op_state` is now `VALIDATED`. Terminal state when the validated `Participant` role is not `HOLDER`: no credential is issued. When the role is `HOLDER`, the Validator sends `offer-credential` (transition to `CRED_OFFERED`), or moves to `VALIDATED_PENDING_CLAIMS` when it holds no claim set that satisfies the schema (see [Issuance After Validation](../vs-agent/spec.md#vsa-vti-flow-op-issue-issuance-after-validation)). |
+| `VALIDATED_PENDING_CLAIMS` | Validator | Onboarding Process | `ESTABLISHED`. `op_state` is `VALIDATED` and the role is `HOLDER`, but the Validator holds no claim set that satisfies the schema. The Validator obtains the claims out of band, then sends `offer-credential`. The Applicant stays in `VALIDATED`. |
 | `CRED_OFFERED` | Both | Both | `ESTABLISHED`. Issue Credential V2 subprotocol in flight. Applicant verifies on-chain digest while in this state; acceptance transitions to `COMPLETED`. |
 | `COMPLETED` | Both | Both | `ESTABLISHED`. Credential delivered, verified, and accepted (Issue Credential V2 Ack sent). Connection remains open for future updates. |
-| `CRED_REVOKED` | Both | Both | `ESTABLISHED`. Validator sent `credential-state-change` with `state=REVOKED`. Applicant removed the linked VP and deleted the credential. Connection remains open. |
+| `CRED_REVOKED` | Both | Both | `ESTABLISHED`. Validator sent `credential-state-change` with `state=REVOKED`. Applicant removed the linked VP, if any, and deleted the credential. Connection remains open. |
 | `TERMINATED_BY_VALIDATOR` | Both | Both | `TERMINATED`. Validator explicitly terminated the flow (rejection, timeout, or policy decision). |
 | `TERMINATED_BY_APPLICANT` | Both | Both | `TERMINATED`. Applicant explicitly terminated the flow. |
 | `ERROR` | Both | Both | `TERMINATED`. Unrecoverable protocol error (subprotocol `abandoned`, VS-CONN-VS failure, unreachable peer). |
@@ -160,11 +161,14 @@ Applicant                          VPR (Chain)                    Validator
     │                                  │ 4. SetParticipantOPtoValidated │
     │                                  │<─────────────────────────────│
     │                                  │                              │
-    │   Flow State: VALIDATED (valid terminal if no issuance)         │
+    │   Flow State: VALIDATED (terminal unless role is HOLDER)        │
     │                                  │                              │
-    │ ────── steps 5-10 optional: only if validator issues credential │
+    │ ────── steps 5-10: only when the validated role is HOLDER       │
     │                                  │                              │
     │                                  │ 5. Generate credential       │
+    │                                  │                              │
+    │   5b. credential-terms           │                              │
+    │ <───────────────────────────────────────────────────────────────│
     │                                  │                              │
     │ ┌────── Issue Credential V2 subprotocol (pthid = vt-flow thid) ─┐
     │ │ 6. offer-credential            │                              │ │
@@ -212,6 +216,9 @@ Applicant                          VPR (Chain)                    Validator
     │ <───────────────────────────────────────────────────────────────│
     │                                  │                              │
     │                                  │ 3. Generate credential       │
+    │                                  │                              │
+    │   3b. credential-terms           │                              │
+    │ <───────────────────────────────────────────────────────────────│
     │                                  │                              │
     │ ┌────── Issue Credential V2 subprotocol (pthid = vt-flow thid) ─┐
     │ │ 4. offer-credential            │                              │ │
@@ -339,6 +346,31 @@ Informational message sent by the Validator after a request is accepted and vali
 |---|---|---|---|
 | `comment` | string | OPTIONAL | Human-readable status. |
 
+### credential-terms
+
+Sent by the Validator before `offer-credential`: in an Onboarding Process after Flow State `VALIDATED`, in Direct Issuance after the `issuance-request` is accepted. It states the format of the credential about to be offered and how the Applicant is expected to present it.
+
+```json
+{
+  "@type": "https://didcomm.org/vt-flow/1.0/credential-terms",
+  "@id": "<uuid>",
+  "~thread": { "thid": "<vt-flow thid>" },
+  "credential_format": "JSON_LD",
+  "present_as_linked_vp": true
+}
+```
+
+| Field | Type | Required | Description |
+|---|---|---|---|
+| `credential_format` | string | REQUIRED | Format of the credential to be offered. `JSON_LD` (a W3C JSON-LD Verifiable Trust Credential delivered as `aries/ld-proof-vc@v1.0`) is the only value defined in this version. |
+| `present_as_linked_vp` | boolean | REQUIRED | Whether the Applicant publishes the credential, once accepted, as a `LinkedVerifiablePresentation` entry of its DID Document (VT-CRED-W3C-LINKED-VP of the [Verifiable Trust Specification][vt-spec]). |
+
+- The Validator **MUST** send `credential-terms` before the first `offer-credential` of a session, and **MAY** send it again before a later offer (credential update, renewal); the most recent terms apply to the next offer.
+- The Applicant **MUST** check the terms against the rules it can read: ECS Service, Organization and Persona credentials MUST be presented as linked VPs (VS-REQ-2 to VS-REQ-4); ECS Badge and UserAgent credentials MUST NOT be declared in a DID Document; the presentation policy of the `CredentialSchema` entry, when the VPR carries one. An Applicant that cannot honour the terms **MUST** answer with `problem-report` code `vt-flow.unsupported-terms` and **MUST NOT** accept the offer; the Validator **MAY** send corrected terms. Otherwise the Applicant stores the terms on the session, applies them when it accepts the credential, and keeps them with the credential for its later update, renewal and revocation.
+- An `offer-credential` received without prior `credential-terms` in the session is treated as `credential_format` = `JSON_LD` and `present_as_linked_vp` = `true`.
+
+`credential-terms` does not change the Flow State.
+
 ### credential-state-change
 
 Sent by the Validator to notify the Applicant of a post-issuance change to the credential's status. The connection remains open after `COMPLETED` specifically to carry these updates.
@@ -364,7 +396,7 @@ Sent by the Validator to notify the Applicant of a post-issuance change to the c
 
 | Value | Applicant response |
 |---|---|
-| `REVOKED` | Applicant **MUST** remove the corresponding `LinkedVerifiablePresentation` from its DID Document (if present) and delete the credential from its credential store. Flow State transitions to `CRED_REVOKED`. The DIDComm connection remains open. |
+| `REVOKED` | Applicant **MUST** remove the corresponding `LinkedVerifiablePresentation` from its DID Document, when the credential was presented as one, and delete the credential from its credential store. Flow State transitions to `CRED_REVOKED`. The DIDComm connection remains open. |
 
 **Forward compatibility:** Receivers **MUST** accept messages with unknown `state` values without error and **MAY** ignore them. This allows future versions to extend the enum (e.g., `REACTIVATED`, `SUSPENDED`, `UNSUSPENDED`, `RENEWED`) without breaking v1.0 parsers.
 
@@ -392,9 +424,9 @@ Values for `who_retries`, `impact`, and `where` follow RFC 0035 conventions (low
 
 `vt-flow` invokes [Issue Credential V2 (RFC 0453)][rfc0453] on a **new thread** whose messages **MUST** carry `~thread.pthid` equal to the parent vt-flow session's `thid`.
 
-**Initiation:** The Validator initiates the subprotocol by sending `offer-credential`. The subprotocol MAY start at any time after Flow State `VALIDATED` (Onboarding Process) or after accepting the request (Direct Issuance). The only hard constraint is: **the `issue-credential` message MUST NOT be sent until `CreateOrUpdateParticipantSession` has succeeded on-chain.**
+**Initiation:** The Validator sends [`credential-terms`](#credential-terms), then initiates the subprotocol by sending `offer-credential`. In an Onboarding Process, the subprotocol runs only when the validated `Participant` role is `HOLDER`, and MAY start at any time after Flow State `VALIDATED` once the Validator holds a claim set that satisfies the `json_schema` of the schema (see [Issuance After Validation](../vs-agent/spec.md#vsa-vti-flow-op-issue-issuance-after-validation)); in Direct Issuance, it MAY start after accepting the request. The only hard constraint is: **the `issue-credential` message MUST NOT be sent until `CreateOrUpdateParticipantSession` has succeeded on-chain.**
 
-**Credential format:** vt-flow is credential-format-agnostic; format selection is negotiated inside the Issue Credential V2 subprotocol. Implementations **MUST** support at least the `aries/ld-proof-vc@v1.0` format (W3C JSON-LD Verifiable Credential, [RFC 0593][rfc0593]) for ECS credentials.
+**Credential format and presentation:** in this version, vt-flow issues W3C Verifiable Trust Credentials only, delivered in the `aries/ld-proof-vc@v1.0` format (W3C JSON-LD Verifiable Credential, [RFC 0593][rfc0593]) inside the Issue Credential V2 subprotocol, and whether the Applicant publishes the credential it accepts as a `LinkedVerifiablePresentation` entry of its DID Document (VT-CRED-W3C-LINKED-VP of the [Verifiable Trust Specification][vt-spec]) is set by the [`credential-terms`](#credential-terms) message of the session (default: published). Other credential formats and further presentation policies will be defined in future versions of this protocol.
 
 **Verification before Ack:** The Applicant **MUST NOT** send the Issue Credential V2 `ack` until it has verified the received credential. Before sending the Ack, the Applicant **MUST**:
 1. Query the VPR to confirm the Validator has an active `ISSUER` Participant for the schema.
@@ -505,6 +537,8 @@ stateDiagram-v2
     OOB_PENDING --> VALIDATING: OOB complete
     VALIDATING --> VALIDATED: validation complete
     VALIDATED --> CRED_OFFERED: offer-credential sent
+    VALIDATED --> VALIDATED_PENDING_CLAIMS: claims missing or invalid
+    VALIDATED_PENDING_CLAIMS --> CRED_OFFERED: offer-credential sent
     CRED_OFFERED --> COMPLETED: Ack received
 
     VALIDATED --> [*]: validation-only terminal
@@ -518,6 +552,7 @@ stateDiagram-v2
     VALIDATING --> PARTICIPANT_SLASHED: on-chain slash
     AWAITING_OR --> TERMINATED_BY_VALIDATOR: reject
     AWAITING_IR --> TERMINATED_BY_VALIDATOR: reject
+    VALIDATING --> TERMINATED_BY_VALIDATOR: reject
     COMPLETED --> TERMINATED_BY_VALIDATOR: close session
     ERROR --> [*]
     TERMINATED_BY_VALIDATOR --> [*]
@@ -555,6 +590,7 @@ All vt-flow message types use the base URI `https://didcomm.org/vt-flow/1.0/`.
 | issuance-request | `https://didcomm.org/vt-flow/1.0/issuance-request` |
 | oob-link | `https://didcomm.org/vt-flow/1.0/oob-link` |
 | validating | `https://didcomm.org/vt-flow/1.0/validating` |
+| credential-terms | `https://didcomm.org/vt-flow/1.0/credential-terms` |
 | credential-state-change | `https://didcomm.org/vt-flow/1.0/credential-state-change` |
 | problem-report (adopted) | `https://didcomm.org/report-problem/1.0/problem-report` |
 
@@ -575,7 +611,9 @@ Error codes are carried in the adopted `problem-report`'s `description.code` fie
 | `vt-flow.invalid-participant-session-id` | Validator | `participant_session_id` is malformed or collides with an existing session. | `you` | `thread` |
 | `vt-flow.not-a-verifiable-service` | Either | Peer's DID does not satisfy [[VS-CONN-VS]][vt-spec-conn-vs]. | `none` | `connection` |
 | `vt-flow.validation-failed` | Validator | Off-chain validation of submitted documentation failed. | `you` (OPTIONAL) | `thread` |
+| `vt-flow.validation-refused` | Validator | The Validator refused the request after its off-chain validation; the flow is terminated. | `none` | `thread` |
 | `vt-flow.oob-expired` | Validator | OOB link expired before Applicant completed the step. | `you` | `thread` |
+| `vt-flow.unsupported-terms` | Applicant | The Applicant cannot honour the `credential-terms`, or they conflict with the Verifiable Trust rules. | `you` | `thread` |
 | `vt-flow.session-terminated` | Either | Party explicitly terminated the session. | `none` | `thread` |
 | `vt-flow.internal-error` | Either | Unspecified error. | varies | `thread` |
 
