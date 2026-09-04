@@ -296,17 +296,21 @@ The agent MUST validate the configuration file at startup, and MUST refuse to st
 |---|---|
 | `issuer` | CONDITIONAL. Defines the issuer capability: `id`, `displayName`, and exactly one signing mode. REQUIRED when `verifier` is absent. |
 | `issuer.requireWalletAttestation` | OPTIONAL. When `true`, `issuer.walletAttestationCertificates` MUST hold the configured X.509 roots. |
+| `issuer.metadataSigner` | OPTIONAL. `x5c` (default) or `did`. With `did`, the agent signs the credential issuer metadata with the DID of the agent, and the signing key MUST be published under `authentication`. |
+| `issuer.keyAttestationCertificates` | OPTIONAL. X.509 roots for OpenID4VCI key attestations. When absent, the agent neither advertises nor accepts the `attestation` proof type. |
 | `verifier` | CONDITIONAL. Defines the verifier capability: `id`, `displayName`, and exactly one signing mode. REQUIRED when `issuer` is absent. |
+| `verifier.requestSigner` | OPTIONAL. `x5c` (default) or `did`. With `did`, the agent names its DID as the client identifier of an authorization request, and the signing key MUST be published under `authentication`. |
 | `trust` | CONDITIONAL. Defines `resolverUrl` (an `https://` Verana resolver), `timeoutMs` (1 to 30000), `allowedDidWebHosts` (the exact issuer DID hosts the agent resolves), `credentialIssuerCertificates` (valid self-issued CA roots that carry `keyCertSign`, with no duplicate), and OPTIONAL `developmentCertificateFingerprints`. REQUIRED when `verifier` is present. |
-| `credentialConfigurations` | REQUIRED. Array. Each entry declares a unique `id`, the `format` `dc+sd-jwt`, an `https://` `vct`, an `https://` `vtjscId`, `name`, `claims`, a `disclosureFrame` that is a subset of `claims`, and a `ttlSeconds` between 60 and 31536000. |
-| `verifierPolicies` | REQUIRED. Array. Each entry maps a unique `id` to one `credentialConfigurationId` and to a subset of the claims of that configuration. |
+| `revocation` | OPTIONAL. `enabled` (boolean) and `size` (status list capacity, default 131072). When enabled, each issued credential carries a `status` claim that points at the status list of the agent. |
+| `credentialConfigurations` | REQUIRED. Array. Each entry declares a unique `id`, the `format` `dc+sd-jwt`, an `https://` `vct`, an `https://` `vtjscId`, `name`, an OPTIONAL `description`, `claims` (the names an offer may carry), a `disclosureFrame` that is a subset of `claims`, and a `ttlSeconds` between 60 and 31536000. |
+| `verifierPolicies` | REQUIRED. Array. Each entry maps a unique `id` to one `credentialConfigurationId` and to a `requestedClaims` subset of the claims of that configuration. |
 | `publicApiBaseUrl` | MUST NOT be present. The agent injects the trusted value from `PUBLIC_API_BASE_URL`. |
 
-A `claims` entry MUST NOT name `vct`, `iat`, `exp`, `iss`, or `cnf`. These names belong to the credential envelope.
+A `claims` entry MUST NOT name `vct`, `iat`, `exp`, `iss`, `cnf`, or `status`. These names belong to the credential envelope.
 
 Each capability declares exactly one signing mode:
 
-- **Development signing** (`signing.development`) — the agent generates and persists a self-signed P-256 certificate for the capability, with a DNS SAN derived from `PUBLIC_API_BASE_URL` and a DID URI SAN that carries the DID of the agent. Before it completes startup, the agent MUST publish the resulting public key in its DID Document: under `assertionMethod` for the issuer capability, and under `authentication` for the verifier capability. The method identifier MUST be deterministic per capability, so that a restart is idempotent. When both capabilities share one DID, the agent MUST publish the two keys in sequence, so that it keeps both relationships. Development signing is unsuitable for production.
+- **Development signing** (`signing.development`, which holds `enabled: true` and a `commonName`) — the agent generates and persists a self-signed P-256 certificate for the capability, with a DNS SAN derived from `PUBLIC_API_BASE_URL` and a DID URI SAN that carries the DID of the agent. Before it completes startup, the agent MUST publish the resulting public key in its DID Document: under `assertionMethod` for the issuer capability, and under `authentication` for the verifier capability. The method identifier MUST be deterministic per capability, so that a restart is idempotent. When both capabilities share one DID, the agent MUST publish the two keys in sequence, so that it keeps both relationships. Development signing is unsuitable for production.
 - **Configured signing** (`signing.configured`) — the operator supplies `certificateChain` (a non-self-signed leaf first, then any intermediate, then the root) and the `privateJwk` P-256 key of that leaf. Each leaf MUST carry the DID of the agent as a URI SAN. The agent MUST NOT publish a configured key itself; the operator publishes it under `assertionMethod` or `authentication` before startup.
 
 ### [VSA-VTI-DIDCOMM] DIDComm Support
@@ -1297,6 +1301,8 @@ The table lists every method of the Administration API. It is a non-normative ov
 | OpenID4VC | `createCredentialOffer` | `POST` | `/v2/openid4vc/credential-offer` | [[VSA-ADM-OID-CE-OFFER]](#vsa-adm-oid-ce-offer-createcredentialoffer) |
 |  | `listCredentialExchanges` | `GET` | `/v2/openid4vc/credential-exchanges` | [[VSA-ADM-OID-CE-LIST]](#vsa-adm-oid-ce-list-listcredentialexchanges) |
 |  | `getCredentialExchange` | `GET` | `/v2/openid4vc/credential-exchanges/{credentialExchangeId}` | [[VSA-ADM-OID-CE-GET]](#vsa-adm-oid-ce-get-getcredentialexchange) |
+|  | `deleteCredentialExchange` | `DELETE` | `/v2/openid4vc/credential-exchanges/{credentialExchangeId}` | [[VSA-ADM-OID-CE-DELETE]](#vsa-adm-oid-ce-delete-deletecredentialexchange) |
+|  | `revokeCredential` | `POST` | `/v2/openid4vc/credential-exchanges/{credentialExchangeId}/revoke` | [[VSA-ADM-OID-CE-REVOKE]](#vsa-adm-oid-ce-revoke-revokecredential) |
 |  | `createPresentationRequest` | `POST` | `/v2/openid4vc/presentation-request` | [[VSA-ADM-OID-PR-CREATE]](#vsa-adm-oid-pr-create-createpresentationrequest) |
 |  | `listPresentations` | `GET` | `/v2/openid4vc/presentations` | [[VSA-ADM-OID-PR-LIST]](#vsa-adm-oid-pr-list-listpresentations) |
 |  | `getPresentation` | `GET` | `/v2/openid4vc/presentations/{proofExchangeId}` | [[VSA-ADM-OID-PR-GET]](#vsa-adm-oid-pr-get-getpresentation) |
@@ -2135,7 +2141,7 @@ The methods of this scope operate on the OpenID4VC state of the agent. The agent
 The scope mirrors the [DIDComm Scope](#didcomm-scope): a credential offer and a presentation request produce a URL that the caller renders as a QR code or sends as a link, and each one starts an exchange that the caller then reads by identifier. Two differences follow from the protocol:
 
 - OpenID4VC has no persistent connection, so this scope has no Connections module and no Basic Messages module. Each exchange is independent.
-- The agent has two OpenID4VC capabilities, and an operator configures one or both: the **issuer** capability serves [Credential Exchanges](#vsa-adm-oid-ce-credential-exchanges), and the **verifier** capability serves [Presentations](#vsa-adm-oid-pr-presentations). When the configuration does not define a capability, the agent MUST refuse each method of that capability with `CAPABILITY_NOT_CONFIGURED` (`409`).
+- The agent has two OpenID4VC capabilities, and an operator configures one or both: the **issuer** capability serves [Credential Exchanges](#vsa-adm-oid-ce-credential-exchanges), and the **verifier** capability serves [Presentations](#vsa-adm-oid-pr-presentations). When the configuration does not define a capability, the agent MUST refuse each method of that capability with `CAPABILITY_NOT_CONFIGURED` (`409`). The agent MUST answer the same code when a method needs a feature of a capability that the configuration does not enable, such as revocation.
 
 The agent MUST issue and MUST verify only the credential formats that [[VSA-VTI-CFG-ENV-OID] OpenID4VC](#vsa-vti-cfg-env-oid-openid4vc) declares. At present that is the SD-JWT VC format `dc+sd-jwt`.
 
@@ -2151,6 +2157,7 @@ The agent serves the wallet-facing OpenID4VC endpoints on its public listener. T
 | `/oid4vci/{issuerId}/...` | Wallet token traffic and credential traffic for the issuer capability. |
 | `/oid4vp/{verifierId}/...` | Authorization request traffic and authorization response traffic for the verifier capability. |
 | `/oid4vc/vct/{credentialConfigurationId}` | SD-JWT VC type metadata for one credential configuration. |
+| `/oid4vc/status-list/{listId}` | The signed Token Status List of the issuer capability, when the configuration enables revocation. |
 
 The agent MUST extend the type metadata of each credential configuration with `relatedJsonSchemaCredentialId`, set to the `vtjscId` of that configuration, so that a wallet can verify the schema governance and the accreditation of the issuer through the Verana resolver.
 
@@ -2158,13 +2165,15 @@ A wallet MUST follow the URLs that the Admin API and the metadata return. The ag
 
 #### [VSA-ADM-OID-CE] Credential Exchanges
 
-Methods that offer a credential over OpenID4VCI, and that inspect the issuance pipeline. The agent serves them only when the configuration defines the issuer capability.
+Methods that offer a credential over OpenID4VCI, and that inspect, delete, or revoke an issuance session. The agent serves them only when the configuration defines the issuer capability.
 
 | Module | Method Name | HTTP Method | Relative REST API path | Requirements |
 | --- | --- | --- | --- | --- |
 | Credential Exchanges | `createCredentialOffer` | `POST` | `/v2/openid4vc/credential-offer` | [see](#vsa-adm-oid-ce-offer-createcredentialoffer) |
 | Credential Exchanges | `listCredentialExchanges` | `GET` | `/v2/openid4vc/credential-exchanges` | [see](#vsa-adm-oid-ce-list-listcredentialexchanges) |
 | Credential Exchanges | `getCredentialExchange` | `GET` | `/v2/openid4vc/credential-exchanges/{credentialExchangeId}` | [see](#vsa-adm-oid-ce-get-getcredentialexchange) |
+| Credential Exchanges | `deleteCredentialExchange` | `DELETE` | `/v2/openid4vc/credential-exchanges/{credentialExchangeId}` | [see](#vsa-adm-oid-ce-delete-deletecredentialexchange) |
+| Credential Exchanges | `revokeCredential` | `POST` | `/v2/openid4vc/credential-exchanges/{credentialExchangeId}/revoke` | [see](#vsa-adm-oid-ce-revoke-revokecredential) |
 
 ##### [VSA-ADM-OID-CE-OFFER] createCredentialOffer
 
@@ -2178,9 +2187,10 @@ Creates a pre-authorized OpenID4VCI credential offer for one credential configur
 **Requirements**:
 
 - The agent MUST reject a `claims` object that holds a name that the credential configuration does not list.
-- The agent MUST reject a `claims` object that omits a claim that the credential configuration lists, or that holds an empty value for one.
-- The agent MUST NOT accept a value for `vct`, `iat`, `exp`, `iss`, or `cnf`. These names belong to the credential envelope.
-- The offer MUST expire after the `ttlSeconds` value of the credential configuration.
+- A `claims` object MAY omit a claim that the credential configuration lists; the agent then omits that claim from the credential. The agent MUST reject a `claims` object that holds an empty value for a claim it names.
+- The agent MUST reject a `claims` object that names no claim of the credential configuration.
+- The agent MUST NOT accept a value for `vct`, `iat`, `exp`, `iss`, `cnf`, or `status`. These names belong to the credential envelope.
+- The credential MUST expire after the `ttlSeconds` value of the credential configuration (its `exp` claim). The offer itself expires after the credential offer lifetime of the agent, independent of `ttlSeconds`.
 
 **Output**:
 
@@ -2218,10 +2228,52 @@ Retrieves one issuance session by identifier.
 - `state` — state of the issuance session.
 - `createdAt` — ISO 8601 UTC datetime at which the agent created the offer.
 - `expiresAt` — ISO 8601 UTC datetime after which the offer is no longer valid. The agent omits this field when the offer does not expire.
+- `updatedAt` — ISO 8601 UTC datetime at which the session last changed.
+- `errorMessage` — OPTIONAL. The error that stopped the session.
+
+The `state` is one of `OfferCreated`, `OfferUriRetrieved`, `AuthorizationInitiated`, `AuthorizationGranted`, `AccessTokenRequested`, `AccessTokenCreated`, `CredentialRequestReceived`, `CredentialsPartiallyIssued`, `Completed`, or `Error`.
 
 **Requirements**:
 
 - The output MUST NOT include the claim values of the credential, the offer URL, or the pre-authorized code. A caller that reads an issuance session learns its state, not its content.
+
+##### [VSA-ADM-OID-CE-DELETE] deleteCredentialExchange
+
+Deletes an issuance session record. It does not delete a credential that a wallet holds, and it does not revoke it.
+
+**Requirements**:
+
+- When the configuration enables revocation and the credential of the session is on the status list and not revoked, the agent MUST refuse the deletion with `INVALID_STATE` (`409`), so that a credential never becomes unrevocable.
+
+**Path parameters**:
+
+- `credentialExchangeId` (REQUIRED) — identifier of the issuance session.
+
+**Output**: empty body (HTTP `204`).
+
+**Errors**:
+
+- `INVALID_STATE` (`409`) — the credential of the session is on the status list and not revoked.
+
+##### [VSA-ADM-OID-CE-REVOKE] revokeCredential
+
+Marks every credential that the session issued as revoked on the Token Status List of the issuer capability (see `revocation` in [[VSA-VTI-CFG-ENV-OID] OpenID4VC](#vsa-vti-cfg-env-oid-openid4vc)).
+
+**Path parameters**:
+
+- `credentialExchangeId` (REQUIRED) — identifier of the issuance session.
+
+**Requirements**:
+
+- The agent MUST publish the re-signed status list at the `status_list.uri` of the credential before it answers.
+- A second call on a revoked session MUST succeed and change nothing.
+
+**Output**: empty body (HTTP `204`).
+
+**Errors**:
+
+- `INVALID_STATE` (`409`) — the session has issued no credential yet.
+- `CAPABILITY_NOT_CONFIGURED` (`409`) — the configuration does not define the issuer capability, or does not enable revocation.
 
 #### [VSA-ADM-OID-PR] Presentations
 
@@ -2257,6 +2309,7 @@ Creates an OpenID4VP authorization request for one verifier policy. The policy n
 **Errors**:
 
 - `UNKNOWN_POLICY` (`400`) — no verifier policy has the supplied identifier.
+- `INVALID_STATE` (`409`) — the request selects the `did` signer, through `requestSigner` or through the configuration, and the DID of the agent does not publish the signing key under `authentication`.
 - `CAPABILITY_NOT_CONFIGURED` (`409`) — the configuration does not define the verifier capability.
 
 ##### [VSA-ADM-OID-PR-LIST] listPresentations
@@ -2283,12 +2336,17 @@ Retrieves one verification session by identifier, with its trust result.
 - `proofExchangeId` — identifier of the verification session.
 - `policyId` — the verifier policy of the request.
 - `state` — state of the verification session.
+- `createdAt` — ISO 8601 UTC datetime at which the agent created the request.
+- `updatedAt` — ISO 8601 UTC datetime at which the session last changed.
+- `errorMessage` — OPTIONAL. The error that stopped the session.
 - `cryptographicVerified` — `true` when the agent verified the OpenID4VP response, the nonce, the audience, the holder binding, the SD-JWT disclosure, the signature, and the X.509 chain.
 - `accepted` — `true` only when the trust decision returns the verdict `TRUSTED_AUTHORIZED`. See [Trust decision](#trust-decision).
 - `trust` — the trust verdict. The agent omits this field until it verifies the response. It contains:
   - `verdict` — one of `TRUSTED_AUTHORIZED`, `TRUSTED_NOT_AUTHORIZED`, `UNTRUSTED`, or `RESOLVER_UNAVAILABLE`.
   - `evidence` — the basis of the verdict: `did` of the issuer, `trustStatus` from the resolver, `vtjscId` of the credential configuration, `authorized`, the `queries` that the agent ran, and an OPTIONAL `note`.
 - `credential` — the presented credential. The agent omits this field until it verifies the response. It contains `vct` and `disclosedClaims`.
+
+The `state` is one of `RequestCreated`, `RequestUriRetrieved`, `ResponseVerified`, or `Error`. The agent MAY compute the trust verdict once, when it first reads a verified session, and store it with the session; it MUST NOT store a `RESOLVER_UNAVAILABLE` verdict, so that the next read retries the resolver. `listPresentations` MUST NOT trigger the trust decision: it reports the stored verdict, and for a verified session that the agent has not decided yet it reports `cryptographicVerified` `true`, `accepted` `false`, and omits `trust` and `credential`.
 
 **Requirements**:
 
