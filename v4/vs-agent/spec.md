@@ -235,8 +235,10 @@ The table lists every environment variable of the VS Agent container. The subsec
 | [`ECS_CLAIMS_SERVICE_TERMS_AND_CONDITIONS_URI`](#vsa-vti-cfg-env-ecs-ecs-credential-claims) | CONDITIONAL | ECS Credential Claims |
 | [`ECS_CLAIMS_SERVICE_PRIVACY_POLICY_URI`](#vsa-vti-cfg-env-ecs-ecs-credential-claims) | CONDITIONAL | ECS Credential Claims |
 | [`PUBLIC_API_BASE_URL`](#vsa-vti-cfg-env-rt-agent-runtime) | REQUIRED | Agent Runtime |
+| [`PUBLIC_API_PORT`](#vsa-vti-cfg-env-rt-agent-runtime) | OPTIONAL | Agent Runtime |
 | [`AGENT_PUBLIC_DID_METHOD`](#vsa-vti-cfg-env-rt-agent-runtime) | OPTIONAL | Agent Runtime |
 | [`MASTER_LIST_CSCA_LOCATION`](#vsa-vti-cfg-env-rt-agent-runtime) | OPTIONAL | Agent Runtime |
+| [`ADMIN_API_PORT`](#vsa-vti-cfg-env-adm-administration-api) | OPTIONAL | Administration API |
 | [`ADMIN_API_AUTH_MODE`](#vsa-vti-cfg-env-adm-administration-api) | OPTIONAL | Administration API |
 | [`ADMIN_API_TRUSTED_NETWORKS`](#vsa-vti-cfg-env-adm-administration-api) | OPTIONAL | Administration API |
 | [`ADMIN_API_PUBLIC_URL`](#vsa-vti-cfg-env-adm-administration-api) | CONDITIONAL | Administration API |
@@ -244,6 +246,8 @@ The table lists every environment variable of the VS Agent container. The subsec
 | [`EVENTS_WEBHOOK_URL`](#vsa-vti-cfg-env-evt-events-api) | OPTIONAL | Events API |
 | [`EVENTS_WEBHOOK_API_KEY`](#vsa-vti-cfg-env-evt-events-api) | OPTIONAL | Events API |
 | [`OID4VC_CONFIG_FILE`](#vsa-vti-cfg-env-oid-openid4vc) | OPTIONAL | OpenID4VC |
+| [`AGENT_LOG_LEVEL`](#vsa-vti-cfg-env-log-logging) | OPTIONAL | Logging |
+| [`ADMIN_API_LOG_LEVEL`](#vsa-vti-cfg-env-log-logging) | OPTIONAL | Logging |
 
 #### [VSA-VTI-CFG-ENV-ID] Identity and Corporation
 
@@ -328,15 +332,17 @@ The agent derives the remaining claims of each schema, and reads no variable for
 | Variable | Required | Description |
 |---|---|---|
 | `PUBLIC_API_BASE_URL` | REQUIRED | Public `https://` base URL at which a peer reaches the public endpoints of the agent. The agent derives its DID from this value and composes each protocol URL from it verbatim. A base path is allowed. The agent MUST reject a URL that carries a username or a password. See [[VSA-VTI-BOOT-DID] DID Creation](#vsa-vti-boot-did-did-creation). |
+| `PUBLIC_API_PORT` | OPTIONAL | TCP port on which the container serves the [public endpoints](#public-endpoints), the DIDComm inbound endpoint included. Default: `3001`. The deployment maps `PUBLIC_API_BASE_URL` to this port; the agent never derives a URL from it. |
 | `AGENT_PUBLIC_DID_METHOD` | OPTIONAL | DID method the agent uses when it creates its DID on first startup: `webvh` (default) or `web`. The agent MUST reject any other value. See [[VSA-VTI-BOOT-DID] DID Creation](#vsa-vti-boot-did-did-creation). |
 | `MASTER_LIST_CSCA_LOCATION` | OPTIONAL | Location of the CSCA master list against which the [MRTD module](#vsa-adm-dc-mrtd-mrtd) verifies the Document Security Object of received eMRTD data. Has no effect when the deployment does not serve that module. |
 
 #### [VSA-VTI-CFG-ENV-ADM] Administration API
 
-These variables configure the access model of the [Administration API](#administration-api).
+These variables configure the listener and the access model of the [Administration API](#administration-api).
 
 | Variable | Required | Description |
 |---|---|---|
+| `ADMIN_API_PORT` | OPTIONAL | TCP port on which the container serves the Administration API. Default: `3000`. It MUST differ from `PUBLIC_API_PORT`: the two listeners apply different access rules (see [Trusted networks](#vsa-adm-access-net-trusted-networks)). |
 | `ADMIN_API_AUTH_MODE` | OPTIONAL | Single value selecting whether the agent accepts external requests: `internal` (default) or `corporation`. It applies to external requests only. See [Trusted networks](#vsa-adm-access-net-trusted-networks). |
 | `ADMIN_API_TRUSTED_NETWORKS` | OPTIONAL | Comma-separated list of CIDR blocks. The agent classifies a request as trusted-network when the peer address of its TCP connection matches one block, and serves that request without authentication, in both modes. Default: `127.0.0.0/8,::1/128`. The operator MUST keep the source address of each public reverse proxy or ingress outside these blocks. See [Trusted networks](#vsa-adm-access-net-trusted-networks). |
 | `ADMIN_API_PUBLIC_URL` | CONDITIONAL | Public `https://` origin (scheme + host + optional port, no trailing path) at which external callers reach the Admin API. REQUIRED when `ADMIN_API_AUTH_MODE` is `corporation`; MUST NOT be set otherwise. When set, the agent also publishes a `VsAgentAdminAPI` entry in its DID Document per [[VSA-VTI-DIDDOC]](#vsa-vti-diddoc-did-document-service-entries). |
@@ -377,6 +383,17 @@ Each capability declares exactly one signing mode:
 
 - **Development signing** (`signing.development`) — the agent generates and persists a self-signed P-256 certificate for the capability, with a DNS SAN derived from `PUBLIC_API_BASE_URL` and a DID URI SAN that carries the DID of the agent. Before it completes startup, the agent MUST publish the resulting public key in its DID Document: under `assertionMethod` for the issuer capability, and under `authentication` for the verifier capability. The method identifier MUST be deterministic per capability, so that a restart is idempotent. When both capabilities share one DID, the agent MUST publish the two keys in sequence, so that it keeps both relationships. Development signing is unsuitable for production.
 - **Configured signing** (`signing.configured`) — the operator supplies `certificateChain` (a non-self-signed leaf first, then any intermediate, then the root) and the `privateJwk` P-256 key of that leaf. Each leaf MUST carry the DID of the agent as a URI SAN. The agent MUST NOT publish a configured key itself; the operator publishes it under `assertionMethod` or `authentication` before startup.
+
+#### [VSA-VTI-CFG-ENV-LOG] Logging
+
+These variables set the verbosity of the two log streams of the agent. See [Observability](#observability) for the conditions the agent MUST log at each level.
+
+| Variable | Required | Description |
+|---|---|---|
+| `AGENT_LOG_LEVEL` | OPTIONAL | Minimum level of the agent log: DIDComm, flows, indexer processing, DID and credential operations. One of `trace`, `debug`, `info`, `warn`, `error`, `off`. Default: `warn`. |
+| `ADMIN_API_LOG_LEVEL` | OPTIONAL | Minimum level of the Administration API log: request handling and authentication. Same values. Default: `info`. |
+
+The agent MUST reject any other value at step 1 of the [Bootstrap Sequence](#vsa-vti-boot-bootstrap-sequence). A level `off` silences the stream, the conditions of [Observability](#observability) included; an operator SHOULD NOT use it in production.
 
 ## Public Endpoints
 
@@ -458,7 +475,7 @@ Example fragment of the resulting DID Document:
 
 ### [VSA-PUB-DIDCOMM] DIDComm Inbound Endpoint
 
-[VSA-PUB-DIDCOMM-1] The `serviceEndpoint` of each `DIDCommMessaging` entry of the DID Document is an inbound DIDComm endpoint of the agent. Each one MUST be an `https://` or a `wss://` URL at the host, the port, and the base path of `PUBLIC_API_BASE_URL`. When the operator configures no endpoint, the agent MUST derive one WebSocket endpoint from `PUBLIC_API_BASE_URL`, with the `wss` scheme.
+[VSA-PUB-DIDCOMM-1] The `serviceEndpoint` of each `DIDCommMessaging` entry of the DID Document is an inbound DIDComm endpoint of the agent. Each one MUST be an `https://` or a `wss://` URL at the host, the port, and the base path of `PUBLIC_API_BASE_URL`. The agent MUST derive one WebSocket endpoint from `PUBLIC_API_BASE_URL`, with the `wss` scheme.
 
 [VSA-PUB-DIDCOMM-2] On an `https://` endpoint the agent MUST accept a DIDComm message as the body of an HTTP `POST`; on a `wss://` endpoint the agent MUST accept a WebSocket upgrade and read each DIDComm message as one WebSocket message. On either endpoint the agent MUST accept both envelopes, per [[VSA-VTI-DIDCOMM-1]](#vsa-vti-didcomm-didcomm-support).
 
@@ -3178,6 +3195,8 @@ The agent reports its state through [`getLiveness`](#vsa-adm-ag-live-getliveness
 | A received credential fails verification | Error | The credential is rejected. | [[VSA-VTI-FLOW-VERIFY]](#vsa-vti-flow-verify-credential-verification) |
 | An event delivery fails | Error | The agent MAY retry. | [[VSA-EVT-DEL-3]](#vsa-evt-del-delivery) |
 
+The Level column names the minimum `AGENT_LOG_LEVEL` or `ADMIN_API_LOG_LEVEL` at which the entry appears ([[VSA-VTI-CFG-ENV-LOG]](#vsa-vti-cfg-env-log-logging)).
+
 The agent MUST NOT log a bearer token, a credential offer URL, or an authorization request URL (see [Security Considerations](#security-considerations)).
 
 ## Appendix A: Requirement Index
@@ -3353,6 +3372,7 @@ Every identifier of this document, in lexical order. A section identifier links 
 | `VSA-VTI-CFG-ENV-ECS` | [ECS Credential Claims](#vsa-vti-cfg-env-ecs-ecs-credential-claims) | Container Environment Variables |
 | `VSA-VTI-CFG-ENV-EVT` | [Events API](#vsa-vti-cfg-env-evt-events-api) | Container Environment Variables |
 | `VSA-VTI-CFG-ENV-ID` | [Identity and Corporation](#vsa-vti-cfg-env-id-identity-and-corporation) | Container Environment Variables |
+| `VSA-VTI-CFG-ENV-LOG` | [Logging](#vsa-vti-cfg-env-log-logging) | Container Environment Variables |
 | `VSA-VTI-CFG-ENV-MODE` | [Agent Configuration Mode](#vsa-vti-cfg-env-mode-agent-configuration-mode) | Container Environment Variables |
 | `VSA-VTI-CFG-ENV-NET` | [Network Configuration](#vsa-vti-cfg-env-net-network-configuration) | Container Environment Variables |
 | `VSA-VTI-CFG-ENV-OID` | [OpenID4VC](#vsa-vti-cfg-env-oid-openid4vc) | Container Environment Variables |
@@ -3393,5 +3413,5 @@ Every identifier of this document, in lexical order. A section identifier links 
 ## Appendix B: Change Log
 
 - **v4-draft9** — Restructured the document by interface: System Overview, Configuration, Public Endpoints, DIDComm Interface, Administration API, Events API, VPR and Indexer Interface, Agent Lifecycle, Verifiable Trust Behaviors, Data and State. Every existing requirement identifier is unchanged. New sections consolidate statements that were repeated: [[VSA-DC-CONN]](#vsa-dc-conn-connection-acceptance-policy), [[VSA-VTI-FLOW-ISSUE]](#vsa-vti-flow-issue-credential-issuance-and-acceptance), [[VSA-VTI-FLOW-VERIFY]](#vsa-vti-flow-verify-credential-verification), [[VSA-VT-LVP]](#vsa-vt-lvp-linked-vp-management), [[VSA-VPR-TX]](#vsa-vpr-tx-on-chain-transactions), [[VSA-VPR-QRY]](#vsa-vpr-qry-indexer-queries), [[VSA-PUB-LISTENER]](#vsa-pub-listener-public-listener), [[VSA-PUB-DID]](#vsa-pub-did-did-document-and-did-log), [[VSA-DATA]](#vsa-data-persistent-state). Normative sections that had no identifier received one. Added the conformance targets, the requirement-identifier conventions, the datetime encoding rule, the **Events** field of the state-changing methods, and this index.
-- **v4-draft9, second revision** — Public Endpoints now covers every public path family: DID Document and DID log for `did:web` and `did:webvh` ([[VSA-PUB-DID]](#vsa-pub-did-did-document-and-did-log)), DIDComm inbound endpoints ([[VSA-PUB-DIDCOMM]](#vsa-pub-didcomm-didcomm-inbound-endpoint)), linked presentations and VTJSC documents ([[VSA-PUB-VT]](#vsa-pub-vt-verifiable-trust-resources)), AnonCreds registry resources in both DID method layouts and tails files ([[VSA-PUB-AC]](#vsa-pub-ac-anoncreds-registry-resources)), short URLs ([[VSA-PUB-INV]](#vsa-pub-inv-invitation-parameters)). `createPresentationRequest` and `createCredentialOffer` return the invitation object as `invitation` instead of a `url` built on an agent-configured base; the caller owns the link. The `AnonCredsRegistry` and `relativeRef` entries join the agent-managed service entries of [[VSA-VTI-DIDDOC]](#vsa-vti-diddoc-did-document-service-entries).
+- **v4-draft9, second revision** — Public Endpoints now covers every public path family: DID Document and DID log for `did:web` and `did:webvh` ([[VSA-PUB-DID]](#vsa-pub-did-did-document-and-did-log)), DIDComm inbound endpoints ([[VSA-PUB-DIDCOMM]](#vsa-pub-didcomm-didcomm-inbound-endpoint)), linked presentations and VTJSC documents ([[VSA-PUB-VT]](#vsa-pub-vt-verifiable-trust-resources)), AnonCreds registry resources in both DID method layouts and tails files ([[VSA-PUB-AC]](#vsa-pub-ac-anoncreds-registry-resources)), short URLs ([[VSA-PUB-INV]](#vsa-pub-inv-invitation-parameters)). `createPresentationRequest` and `createCredentialOffer` return the invitation object as `invitation` instead of a `url` built on an agent-configured base; the caller owns the link. Configuration gains `PUBLIC_API_PORT`, `ADMIN_API_PORT`, and the Logging group ([[VSA-VTI-CFG-ENV-LOG]](#vsa-vti-cfg-env-log-logging)); the DIDComm endpoint is derived from `PUBLIC_API_BASE_URL` with no override. The `AnonCredsRegistry` and `relativeRef` entries join the agent-managed service entries of [[VSA-VTI-DIDDOC]](#vsa-vti-diddoc-did-document-service-entries).
 - **v4-draft8** and earlier — see the git history of this file.
