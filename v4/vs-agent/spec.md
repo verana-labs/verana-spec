@@ -390,7 +390,7 @@ The table lists every public path family. A path is relative to `PUBLIC_API_BASE
 | `/.well-known/did.jsonl`, or `/did.jsonl` under a base path | DID log | `AGENT_PUBLIC_DID_METHOD` = `webvh` | [[VSA-PUB-DID]](#vsa-pub-did-did-document-and-did-log) |
 | The `serviceEndpoint` of each `DIDCommMessaging` entry | Inbound DIDComm | Always | [[VSA-PUB-DIDCOMM]](#vsa-pub-didcomm-didcomm-inbound-endpoint) |
 | The `serviceEndpoint` of each `LinkedVerifiablePresentation` entry; the `id` of each VTJSC | Verifiable Trust resources | Always | [[VSA-PUB-VT]](#vsa-pub-vt-verifiable-trust-resources) |
-| The `serviceEndpoint` of the `AnonCredsRegistry` entry and the paths below it; the `tailsLocation` of each revocation registry | AnonCreds objects, did:web layout | Always | [[VSA-PUB-AC]](#vsa-pub-ac-anoncreds-registry-resources) |
+| The `serviceEndpoint` of the `AnonCredsRegistry` entry and the paths below it; the `tailsLocation` of each revocation registry | AnonCreds objects, did:web layout | `AGENT_PUBLIC_DID_METHOD` = `web` | [[VSA-PUB-AC]](#vsa-pub-ac-anoncreds-registry-resources) |
 | `/resources/{resourceId}` | AnonCreds objects, did:webvh attested resources | `AGENT_PUBLIC_DID_METHOD` = `webvh` | [[VSA-PUB-AC]](#vsa-pub-ac-anoncreds-registry-resources) |
 | The short URL that a method returns as `shortUrl` | Invitation resolution | When the agent supports short URLs | [[VSA-PUB-INV]](#vsa-pub-inv-invitation-parameters) |
 | `/.well-known/openid-credential-issuer`, `/.well-known/oauth-authorization-server`, `/.well-known/jwt-vc-issuer`, `/oid4vci/…`, `/oid4vp/…`, `/oid4vc/vct/…` | OpenID4VC | `OID4VC_CONFIG_FILE` set | [[VSA-PUB-OID]](#vsa-pub-oid-openid4vc-public-protocol-endpoints) |
@@ -424,7 +424,7 @@ The DID Document of the agent carries the kinds of service entry below. The agen
 | `DIDCommMessaging` | [[VS-SVC-2]](https://verana-labs.github.io/verifiable-trust-spec/#vs-svc-service-declaration) | The agent, from its container configuration | No |
 | `LinkedVerifiablePresentation` | [[VS-SVC-6]](https://verana-labs.github.io/verifiable-trust-spec/#vs-svc-service-declaration) | The agent, from the credential acquisition flows ([Linked VP Management](#vsa-vt-lvp-linked-vp-management)) and from [[VSA-VTI-VTJSC]](#vsa-vti-vtjsc-vtjsc-management) | No |
 | `VsAgentAdminAPI` | This section | The agent, from `ADMIN_API_PUBLIC_URL` | No |
-| `AnonCredsRegistry` (`#anoncreds`) | [[VSA-PUB-AC-2]](#vsa-pub-ac-anoncreds-registry-resources) | The agent, from `PUBLIC_API_BASE_URL` | No |
+| `AnonCredsRegistry` (`#anoncreds`), `did:web` only | [[VSA-PUB-AC-2]](#vsa-pub-ac-anoncreds-registry-resources) | The agent, from `PUBLIC_API_BASE_URL` | No |
 | `relativeRef` (`#files`), `did:webvh` only | [[VSA-PUB-AC-3]](#vsa-pub-ac-anoncreds-registry-resources) | The agent, from `PUBLIC_API_BASE_URL` | No |
 | Consumable entries: `MCP`, `A2A`, `LinkedDomains`, any type an ecosystem defines | [[VS-SVC-3]](https://verana-labs.github.io/verifiable-trust-vpr-spec/#vs-svc-service-declaration) | The caller | Yes |
 
@@ -480,11 +480,11 @@ The agent publishes its Verifiable Trust credentials — the ECS credentials it 
 
 ### [VSA-PUB-AC] AnonCreds Registry Resources
 
-The agent is the AnonCreds registry of the objects it creates through the [AnonCreds Scope](#anoncreds-scope): schemas, credential definitions, revocation registry definitions, revocation status lists, and tails files. A holder or a verifier resolves each object from the identifier that the credential carries, and that identifier leads to the public listener of the agent.
+The agent is the AnonCreds registry of the objects it creates through the [AnonCreds Scope](#anoncreds-scope): schemas, credential definitions, revocation registry definitions, revocation status lists, and tails files. The layout of the registry follows the DID method of the agent: the `did:web` AnonCreds method for `did:web`, attested resources for `did:webvh`. An agent implements the layout of its own method only. A holder or a verifier resolves each object from the identifier that the credential carries, and that identifier leads to the public listener of the agent.
 
 [VSA-PUB-AC-1] The agent MUST serve every AnonCreds object that it created at the location that the identifier of that object resolves to, for as long as a credential that references the object can be presented.
 
-[VSA-PUB-AC-2] **did:web layout.** The agent MUST publish a service entry of type `AnonCredsRegistry`, with `id` `<DID>#anoncreds` and `serviceEndpoint` `{PUBLIC_API_BASE_URL}/anoncreds/v1`, and MUST serve the objects it identifies with the `did:web` AnonCreds method ([credo-ts-didweb-anoncreds](https://github.com/2060-io/credo-ts-didweb-anoncreds)) below that endpoint:
+[VSA-PUB-AC-2] **did:web layout.** When `AGENT_PUBLIC_DID_METHOD` is `web`, the agent MUST publish a service entry of type `AnonCredsRegistry`, with `id` `<DID>#anoncreds` and `serviceEndpoint` `{PUBLIC_API_BASE_URL}/anoncreds/v1`, and MUST serve the objects it identifies with the `did:web` AnonCreds method ([credo-ts-didweb-anoncreds](https://github.com/2060-io/credo-ts-didweb-anoncreds)) below that endpoint:
 
 | Path below the `AnonCredsRegistry` endpoint | Object | Identifier of the object |
 |---|---|---|
@@ -493,11 +493,11 @@ The agent is the AnonCreds registry of the objects it creates through the [AnonC
 | `/revRegDef/{revocationRegistryDefinitionId}` | Revocation registry definition | `<DID>?service=anoncreds&relativeRef=/revRegDef/{revocationRegistryDefinitionId}` |
 | `/revStatus/{revocationRegistryDefinitionId}[/{timestamp}]` | Revocation status list, current or at `timestamp` | The `statusListEndpoint` of the revocation registry definition metadata |
 
-Each response is a JSON object with `resource` — the object — and `resourceMetadata`. The metadata of a revocation registry definition MUST carry `statusListEndpoint`, the URL of its status list. The agent MUST answer an unknown identifier with HTTP `404`. An agent whose DID is `did:webvh` serves this layout for its parallel `did:web` DID ([[VSA-PUB-DID-4]](#vsa-pub-did-did-document-and-did-log)).
+Each response is a JSON object with `resource` — the object — and `resourceMetadata`. The metadata of a revocation registry definition MUST carry `statusListEndpoint`, the URL of its status list. The agent MUST answer an unknown identifier with HTTP `404`.
 
 [VSA-PUB-AC-3] **did:webvh layout.** When `AGENT_PUBLIC_DID_METHOD` is `webvh`, the agent MUST publish the implicit `#files` service entry of type `relativeRef` with `serviceEndpoint` `PUBLIC_API_BASE_URL`, and MUST serve each AnonCreds object that it created as an attested resource of the `did:webvh` AnonCreds method at `/resources/{resourceId}`, where `<DID>/resources/{resourceId}` is the identifier of the object, as [DID-WEBVH](https://identity.foundation/didwebvh/) defines attested resources. The agent MAY serve `GET /resources?resourceType={type}` — with an OPTIONAL `relatedJsonSchemaCredentialId` filter — as a listing of its attested resources of one type.
 
-[VSA-PUB-AC-4] **Tails files.** The agent MUST serve the tails file of each revocation registry definition it created at the `tailsLocation` that the definition declares. That URL MUST be under `PUBLIC_API_BASE_URL`; the reference layout is `/anoncreds/v1/tails/{tailsFileId}`. The agent MUST answer an unknown or malformed `tailsFileId` with HTTP `404`.
+[VSA-PUB-AC-4] **Tails files.** The agent MUST serve the tails file of each revocation registry definition it created at the `tailsLocation` that the definition declares. That URL MUST be under `PUBLIC_API_BASE_URL`; its path is the agent's choice. The agent MUST answer an unknown or malformed `tailsFileId` with HTTP `404`.
 
 ### [VSA-PUB-OID] OpenID4VC Public Protocol Endpoints
 
@@ -3309,7 +3309,7 @@ Every identifier of this document, in lexical order. A section identifier links 
 | `VSA-OVR-DT` | [Datetime encoding](#vsa-ovr-dt-datetime-encoding) | About this Document |
 | `VSA-PUB-AC` | [AnonCreds Registry Resources](#vsa-pub-ac-anoncreds-registry-resources) | Public Endpoints |
 | `VSA-PUB-AC-1` | The agent MUST serve every AnonCreds object that it created at the location that the identifier of that object resolves to, for as long a… |  |
-| `VSA-PUB-AC-2` | **did:web layout.** The agent MUST publish a service entry of type `AnonCredsRegistry`, with `id` `<DID>#anoncreds` and `serviceEndpoint`… |  |
+| `VSA-PUB-AC-2` | **did:web layout.** When `AGENT_PUBLIC_DID_METHOD` is `web`, the agent MUST publish a service entry of type `AnonCredsRegistry`, with `id… |  |
 | `VSA-PUB-AC-3` | **did:webvh layout.** When `AGENT_PUBLIC_DID_METHOD` is `webvh`, the agent MUST publish the implicit `#files` service entry of type `rela… |  |
 | `VSA-PUB-AC-4` | **Tails files.** The agent MUST serve the tails file of each revocation registry definition it created at the `tailsLocation` that the de… |  |
 | `VSA-PUB-DID` | [DID Document and DID Log](#vsa-pub-did-did-document-and-did-log) | Public Endpoints |
