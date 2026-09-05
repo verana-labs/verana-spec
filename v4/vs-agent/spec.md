@@ -237,7 +237,7 @@ The table lists every environment variable of the VS Agent container. The subsec
 | [`PUBLIC_API_BASE_URL`](#vsa-vti-cfg-env-rt-agent-runtime) | REQUIRED | Agent Runtime |
 | [`PUBLIC_API_PORT`](#vsa-vti-cfg-env-rt-agent-runtime) | OPTIONAL | Agent Runtime |
 | [`AGENT_PUBLIC_DID_METHOD`](#vsa-vti-cfg-env-rt-agent-runtime) | OPTIONAL | Agent Runtime |
-| [`MASTER_LIST_CSCA_LOCATION`](#vsa-vti-cfg-env-rt-agent-runtime) | OPTIONAL | Agent Runtime |
+| [`MRTD_MASTER_LIST_CSCA_LOCATION`](#vsa-vti-cfg-env-rt-agent-runtime) | OPTIONAL | Agent Runtime |
 | [`ADMIN_API_PORT`](#vsa-vti-cfg-env-adm-administration-api) | OPTIONAL | Administration API |
 | [`ADMIN_API_AUTH_MODE`](#vsa-vti-cfg-env-adm-administration-api) | OPTIONAL | Administration API |
 | [`ADMIN_API_TRUSTED_NETWORKS`](#vsa-vti-cfg-env-adm-administration-api) | OPTIONAL | Administration API |
@@ -334,7 +334,7 @@ The agent derives the remaining claims of each schema, and reads no variable for
 | `PUBLIC_API_BASE_URL` | REQUIRED | Public `https://` base URL at which a peer reaches the public endpoints of the agent. The agent derives its DID from this value and composes each protocol URL from it verbatim. A base path is allowed. The agent MUST reject a URL that carries a username or a password. See [[VSA-VTI-BOOT-DID] DID Creation](#vsa-vti-boot-did-did-creation). |
 | `PUBLIC_API_PORT` | OPTIONAL | TCP port on which the container serves the [public endpoints](#public-endpoints), the DIDComm inbound endpoint included. Default: `3001`. The deployment maps `PUBLIC_API_BASE_URL` to this port; the agent never derives a URL from it. |
 | `AGENT_PUBLIC_DID_METHOD` | OPTIONAL | DID method the agent uses when it creates its DID on first startup: `webvh` (default) or `web`. The agent MUST reject any other value. See [[VSA-VTI-BOOT-DID] DID Creation](#vsa-vti-boot-did-did-creation). |
-| `MASTER_LIST_CSCA_LOCATION` | OPTIONAL | Location of the CSCA master list against which the [MRTD module](#vsa-adm-dc-mrtd-mrtd) verifies the Document Security Object of received eMRTD data. Has no effect when the deployment does not serve that module. |
+| `MRTD_MASTER_LIST_CSCA_LOCATION` | OPTIONAL | Location of the CSCA master list against which the [MRTD module](#vsa-adm-dc-mrtd-mrtd) verifies the Document Security Object of received eMRTD data. Has no effect when the deployment does not serve that module. |
 
 #### [VSA-VTI-CFG-ENV-ADM] Administration API
 
@@ -1666,7 +1666,7 @@ Methods that request machine-readable travel document data, per the MRTD protoco
 The module stores no record. The agent parses and verifies each received travel document itself, and delivers the result — not the wire message — through the [events of the catalog](#vsa-evt-cat-event-catalog). Besides `connectionId` and `threadId`, the event `data` carries:
 
 - `didcomm.mrtd.mrz-data-received` — `mrzData`: `raw` — the machine-readable zone as received — and `parsed` — `format`, `fields`, and `valid`;
-- `didcomm.mrtd.emrtd-data-received` — `dataGroups`: `raw` — the data groups as received — `parsed` — the decoded fields and `valid` — and `verification` — the check of the Document Security Object against the CSCA master list of `MASTER_LIST_CSCA_LOCATION`: `authenticity`, `integrity`, and `details`;
+- `didcomm.mrtd.emrtd-data-received` — `dataGroups`: `raw` — the data groups as received — `parsed` — the decoded fields and `valid` — and `verification` — the check of the Document Security Object against the CSCA master list of `MRTD_MASTER_LIST_CSCA_LOCATION`: `authenticity`, `integrity`, and `details`;
 - `didcomm.mrtd.problem-report-received` — `reason`: `e.p.mrz-refused`, `e.p.emrtd-refused`, `e.p.mrz-timeout`, or `e.p.emrtd-timeout`.
 
 | Module | Method Name | HTTP Method | Relative REST API path | Requirements |
