@@ -133,7 +133,7 @@ Additionally, a Corporation controller needs to remotely query and manage the st
 | Interface | Counterpart | Direction | Transport | Section |
 |---|---|---|---|---|
 | Configuration | Operator | Inbound, at startup | Environment variables, one JSON file | [[VSA-VTI-CFG]](#vsa-vti-cfg-configuration) |
-| Public Endpoints | DID resolvers, OpenID4VC wallets, DIDComm peers | Inbound | HTTPS under `PUBLIC_API_BASE_URL` | [Public Endpoints](#public-endpoints) |
+| Public Endpoints | DID resolvers, AnonCreds holders and verifiers, OpenID4VC wallets, DIDComm peers | Inbound | HTTPS under `PUBLIC_API_BASE_URL` | [Public Endpoints](#public-endpoints) |
 | DIDComm | Peer VS Agents, personal wallets | Both | DIDComm v1 and v2 | [DIDComm Interface](#didcomm-interface) |
 | Administration API | Backend; Verana frontend and MCP server in `corporation` mode | Inbound | REST / JSON | [Administration API](#administration-api) |
 | Events API | Backend | Outbound | HTTP `POST` webhook | [Events API](#events-api) |
@@ -380,34 +380,55 @@ Each capability declares exactly one signing mode:
 
 ## Public Endpoints
 
-The agent serves a public HTTPS surface at `PUBLIC_API_BASE_URL`. Every path of this section is reachable by any peer, with no authentication: DID resolvers read the DID Document, DIDComm peers deliver messages, OpenID4VC wallets run their protocol traffic. None of these paths belongs to the [Administration API](#administration-api).
+The agent serves a public HTTPS surface under `PUBLIC_API_BASE_URL`. Every path of this section is reachable by any peer, with no authentication: DID resolvers read the DID Document and the DID log, verifiers dereference the linked presentations and the AnonCreds objects, DIDComm peers deliver messages, wallets follow invitation links and run their OpenID4VC traffic.
+
+The table lists every public path family. A path is relative to `PUBLIC_API_BASE_URL`; when that URL carries a base path, the deployment forwards the base path to the agent or strips it in front of the agent, and the agent serves the same shape either way.
+
+| Path family | Purpose | Served | Section |
+|---|---|---|---|
+| `/.well-known/did.json`, or `/did.json` under a base path | DID Document | Always | [[VSA-PUB-DID]](#vsa-pub-did-did-document-and-did-log) |
+| `/.well-known/did.jsonl`, or `/did.jsonl` under a base path | DID log | `AGENT_PUBLIC_DID_METHOD` = `webvh` | [[VSA-PUB-DID]](#vsa-pub-did-did-document-and-did-log) |
+| The `serviceEndpoint` of each `DIDCommMessaging` entry | Inbound DIDComm | Always | [[VSA-PUB-DIDCOMM]](#vsa-pub-didcomm-didcomm-inbound-endpoint) |
+| The `serviceEndpoint` of each `LinkedVerifiablePresentation` entry; the `id` of each VTJSC | Verifiable Trust resources | Always | [[VSA-PUB-VT]](#vsa-pub-vt-verifiable-trust-resources) |
+| The `serviceEndpoint` of the `AnonCredsRegistry` entry and the paths below it; the `tailsLocation` of each revocation registry | AnonCreds objects, did:web layout | Always | [[VSA-PUB-AC]](#vsa-pub-ac-anoncreds-registry-resources) |
+| `/resources/{resourceId}` | AnonCreds objects, did:webvh attested resources | `AGENT_PUBLIC_DID_METHOD` = `webvh` | [[VSA-PUB-AC]](#vsa-pub-ac-anoncreds-registry-resources) |
+| The short URL that a method returns as `shortUrl` | Invitation resolution | When the agent supports short URLs | [[VSA-PUB-INV]](#vsa-pub-inv-invitation-parameters) |
+| `/.well-known/openid-credential-issuer`, `/.well-known/oauth-authorization-server`, `/.well-known/jwt-vc-issuer`, `/oid4vci/…`, `/oid4vp/…`, `/oid4vc/vct/…` | OpenID4VC | `OID4VC_CONFIG_FILE` set | [[VSA-PUB-OID]](#vsa-pub-oid-openid4vc-public-protocol-endpoints) |
 
 ### [VSA-PUB-LISTENER] Public Listener
 
-[VSA-PUB-LISTENER-1] The agent MUST serve every path of this section under `PUBLIC_API_BASE_URL`, and MUST compose each URL that it publishes for a peer — in its DID Document, in an invitation, in OpenID4VC metadata — from that value verbatim, per [[VSA-VTI-CFG-ENV-RT]](#vsa-vti-cfg-env-rt-agent-runtime).
+[VSA-PUB-LISTENER-1] The agent MUST serve every path of this section under `PUBLIC_API_BASE_URL`, and MUST compose each URL that it publishes for a peer — in its DID Document, in a credential, in an invitation, in OpenID4VC metadata — from that value verbatim, per [[VSA-VTI-CFG-ENV-RT]](#vsa-vti-cfg-env-rt-agent-runtime).
 
-[VSA-PUB-LISTENER-2] The public endpoints are not part of the Administration API. The agent MUST NOT require Administration API authentication on a public path, and a caller MUST NOT address a public path through the Administration API port (see [Trusted networks](#vsa-adm-access-net-trusted-networks)).
+[VSA-PUB-LISTENER-2] The agent MUST answer a public path that this section does not define, or that belongs to a feature the deployment does not enable, with HTTP `404`.
+
+[VSA-PUB-LISTENER-3] A peer discovers every public URL from a document the agent publishes — the DID Document, a credential, an invitation, OpenID4VC metadata — or from an Administration API response. Where this section fixes a path, the agent MUST serve it at that path. Where this section leaves the path to the agent, a peer MUST follow the published URL and MUST NOT construct it.
 
 ### [VSA-PUB-DID] DID Document and DID Log
 
-[VSA-PUB-DID-1] The agent MUST serve its DID Document at the location that its DID method resolves from the DID, and, for `did:webvh`, the DID log beside it, per [[VSA-VTI-BOOT-DID]](#vsa-vti-boot-did-did-creation).
+[VSA-PUB-DID-1] The agent MUST serve its DID Document at the location that [DID-WEB](https://w3c-ccg.github.io/did-method-web/) resolves from its DID location (see [[VSA-VTI-BOOT-DID]](#vsa-vti-boot-did-did-creation)): `/.well-known/did.json` when `PUBLIC_API_BASE_URL` carries no path, and `<path>/did.json` when it carries one. The agent MUST answer the other of these two paths with HTTP `404`, so that a deployment answers on one shape.
 
-[VSA-PUB-DID-2] The agent MUST serve each Verifiable Presentation that a `LinkedVerifiablePresentation` entry of its DID Document references at the `serviceEndpoint` of that entry, so that any wallet, issuer, or verifier that resolves the DID can retrieve and verify the presentation.
+[VSA-PUB-DID-2] The agent MUST serve each Verifiable Presentation that a `LinkedVerifiablePresentation` entry of its DID Document references at the `serviceEndpoint` of that entry, so that any wallet, issuer, or verifier that resolves the DID can retrieve and verify the presentation. See [[VSA-PUB-VT]](#vsa-pub-vt-verifiable-trust-resources) for the content.
 
 [VSA-PUB-DID-3] The agent MUST publish an updated DID Document each time one of its service entries changes — through [[VSA-ADM-VT-SE]](#vsa-adm-vt-se-service-endpoint-management), through [Linked VP Management](#vsa-vt-lvp-linked-vp-management), through [[VSA-VTI-VTJSC]](#vsa-vti-vtjsc-vtjsc-management), or through a change of `ADMIN_API_PUBLIC_URL` — and a peer that resolves the DID MUST NOT observe a partial DID Document at any time.
 
+[VSA-PUB-DID-4] When `AGENT_PUBLIC_DID_METHOD` is `webvh`, the agent MUST serve its DID log at `did.jsonl` beside `did.json`, as [DID-WEBVH](https://identity.foundation/didwebvh/) defines it, and MUST serve, at `did.json`, the parallel `did:web` DID Document that [DID-WEBVH § Publishing a Parallel did:web DID](https://identity.foundation/didwebvh/v1.0/#publishing-a-parallel-didweb-did) defines. The parallel document is the form that a peer which does not resolve `did:webvh` uses, and the form that the `useLegacyDid` [invitation parameter](#vsa-pub-inv-invitation-parameters) advertises.
+
+[VSA-PUB-DID-5] The agent SHOULD send `Cache-Control: no-cache` with the DID Document and with the DID log. Both change while the agent runs — a new linked presentation, a new service entry, a new log entry — and a resolver that caches them observes a stale trust state.
+
 ### [VSA-VTI-DIDDOC] DID Document Service Entries
 
-The DID Document of the agent carries four kinds of service entry. The agent maintains the first three itself; a caller manages the fourth through the Administration API.
+The DID Document of the agent carries the kinds of service entry below. The agent maintains every kind itself, except the consumable entries, which a caller manages through the Administration API.
 
 | `type` | Required by | Maintained by | Mutable through [[VSA-ADM-VT-SE]](#vsa-adm-vt-se-service-endpoint-management) |
 |---|---|---|---|
 | `DIDCommMessaging` | [[VS-SVC-2]](https://verana-labs.github.io/verifiable-trust-spec/#vs-svc-service-declaration) | The agent, from its container configuration | No |
 | `LinkedVerifiablePresentation` | [[VS-SVC-6]](https://verana-labs.github.io/verifiable-trust-spec/#vs-svc-service-declaration) | The agent, from the credential acquisition flows ([Linked VP Management](#vsa-vt-lvp-linked-vp-management)) and from [[VSA-VTI-VTJSC]](#vsa-vti-vtjsc-vtjsc-management) | No |
 | `VsAgentAdminAPI` | This section | The agent, from `ADMIN_API_PUBLIC_URL` | No |
+| `AnonCredsRegistry` (`#anoncreds`) | [[VSA-PUB-AC-2]](#vsa-pub-ac-anoncreds-registry-resources) | The agent, from `PUBLIC_API_BASE_URL` | No |
+| `relativeRef` (`#files`), `did:webvh` only | [[VSA-PUB-AC-3]](#vsa-pub-ac-anoncreds-registry-resources) | The agent, from `PUBLIC_API_BASE_URL` | No |
 | Consumable entries: `MCP`, `A2A`, `LinkedDomains`, any type an ecosystem defines | [[VS-SVC-3]](https://verana-labs.github.io/verifiable-trust-vpr-spec/#vs-svc-service-declaration) | The caller | Yes |
 
-[VSA-VTI-DIDDOC-1] A caller MUST NOT create, modify, or delete a `DIDCommMessaging`, a `LinkedVerifiablePresentation`, or a `VsAgentAdminAPI` entry through the Administration API. The agent MUST refuse such a request, per [[VSA-ADM-VT-SE]](#vsa-adm-vt-se-service-endpoint-management).
+[VSA-VTI-DIDDOC-1] A caller MUST NOT create, modify, or delete a `DIDCommMessaging`, a `LinkedVerifiablePresentation`, a `VsAgentAdminAPI`, an `AnonCredsRegistry`, or a `relativeRef` entry through the Administration API. The agent MUST refuse such a request, per [[VSA-ADM-VT-SE]](#vsa-adm-vt-se-service-endpoint-management).
 
 In addition to the `DIDCommMessaging` entry mandated by [[VS-SVC-2]](https://verana-labs.github.io/verifiable-trust-spec/#vs-svc-service-declaration) and the `LinkedVerifiablePresentation` entries produced by the credential-acquisition flows and by [[VSA-VTI-VTJSC] VTJSC Management](#vsa-vti-vtjsc-vtjsc-management), the VS Agent MAY publish a `VsAgentAdminAPI` service entry in its DID Document.
 
@@ -437,13 +458,52 @@ Example fragment of the resulting DID Document:
 
 ### [VSA-PUB-DIDCOMM] DIDComm Inbound Endpoint
 
-The `serviceEndpoint` of the `DIDCommMessaging` entry is the inbound DIDComm endpoint of the agent. The agent accepts both DIDComm envelopes on it, per [[VSA-VTI-DIDCOMM]](#vsa-vti-didcomm-didcomm-support).
+[VSA-PUB-DIDCOMM-1] The `serviceEndpoint` of each `DIDCommMessaging` entry of the DID Document is an inbound DIDComm endpoint of the agent. Each one MUST be an `https://` or a `wss://` URL at the host, the port, and the base path of `PUBLIC_API_BASE_URL`. When the operator configures no endpoint, the agent MUST derive one WebSocket endpoint from `PUBLIC_API_BASE_URL`, with the `wss` scheme.
+
+[VSA-PUB-DIDCOMM-2] On an `https://` endpoint the agent MUST accept a DIDComm message as the body of an HTTP `POST`; on a `wss://` endpoint the agent MUST accept a WebSocket upgrade and read each DIDComm message as one WebSocket message. On either endpoint the agent MUST accept both envelopes, per [[VSA-VTI-DIDCOMM-1]](#vsa-vti-didcomm-didcomm-support).
+
+[VSA-PUB-DIDCOMM-3] For each endpoint, the DID Document MUST carry one DIDComm v1 service entry and one DIDComm v2 service entry, each as its specification defines it, so that a peer of either envelope reaches the agent, per [[VSA-VTI-DIDCOMM-2]](#vsa-vti-didcomm-didcomm-support).
+
+### [VSA-PUB-VT] Verifiable Trust Resources
+
+The agent publishes its Verifiable Trust credentials — the ECS credentials it holds, and the VTJSCs it issues as an Ecosystem controller — as documents that a resolver dereferences from the DID Document. Each document is served under `PUBLIC_API_BASE_URL`; the path is the agent's choice, and the DID Document and the credentials carry the resulting URLs.
+
+[VSA-PUB-VT-1] The agent MUST serve each linked Verifiable Presentation at the `serviceEndpoint` of its `LinkedVerifiablePresentation` entry, as a JSON document that holds the presentation and the credential it wraps, per [[VT-CRED-W3C-LINKED-VP]](https://verana-labs.github.io/verifiable-trust-spec/#vt-cred-w3c-linked-vp-w3c-vtc-linked-vp).
+
+[VSA-PUB-VT-2] The agent MUST serve each VTJSC that it issues at the URL that is the `id` of that credential, as a JSON document, so that a credential definition, an OpenID4VC credential configuration, or a verifier that names the VTJSC by `relatedJsonSchemaCredentialId` or by `credentialSchema.id` dereferences it. The URL MUST be under `PUBLIC_API_BASE_URL`, and MUST NOT change while the VTJSC is published.
+
+[VSA-PUB-VT-3] When `AGENT_PUBLIC_DID_METHOD` is `webvh` and the agent holds an ECS-Service credential, the agent SHOULD also expose that credential's presentation under the `#whois` `LinkedVerifiablePresentation` entry that [DID-WEBVH](https://identity.foundation/didwebvh/) defines as the implicit service of a DID, with the same `serviceEndpoint` as the entry of [[VSA-VT-LVP]](#vsa-vt-lvp-linked-vp-management). The `#whois` entry is a convenience for `did:webvh` resolvers; the Verana resolver discovers the credential through the entry of [[VT-CRED-W3C-LINKED-VP]](https://verana-labs.github.io/verifiable-trust-spec/#vt-cred-w3c-linked-vp-w3c-vtc-linked-vp).
+
+[VSA-PUB-VT-4] The agent MAY serve placeholder resources for the `logoUri`, `termsAndConditionsUri`, and `privacyPolicyUri` claims of its ECS credentials, so that an operator with no resources of its own can point the [[VSA-VTI-CFG-ENV-ECS]](#vsa-vti-cfg-env-ecs-ecs-credential-claims) variables at them. An agent that serves them MUST serve them at `/vt/default/logo.svg`, `/vt/default/terms.html`, and `/vt/default/privacy.html`, and MUST keep their content stable while a credential that carries their digest is published.
+
+> Non-normative: the reference implementation serves the presentations and the VTJSCs under `/vt/`, with names such as `schemas-<schema>-vtc-vp.json` for a linked presentation and `schemas-<schema>-jsc.json` for a VTJSC. A peer does not depend on these names.
+
+### [VSA-PUB-AC] AnonCreds Registry Resources
+
+The agent is the AnonCreds registry of the objects it creates through the [AnonCreds Scope](#anoncreds-scope): schemas, credential definitions, revocation registry definitions, revocation status lists, and tails files. A holder or a verifier resolves each object from the identifier that the credential carries, and that identifier leads to the public listener of the agent.
+
+[VSA-PUB-AC-1] The agent MUST serve every AnonCreds object that it created at the location that the identifier of that object resolves to, for as long as a credential that references the object can be presented.
+
+[VSA-PUB-AC-2] **did:web layout.** The agent MUST publish a service entry of type `AnonCredsRegistry`, with `id` `<DID>#anoncreds` and `serviceEndpoint` `{PUBLIC_API_BASE_URL}/anoncreds/v1`, and MUST serve the objects it identifies with the `did:web` AnonCreds method ([credo-ts-didweb-anoncreds](https://github.com/2060-io/credo-ts-didweb-anoncreds)) below that endpoint:
+
+| Path below the `AnonCredsRegistry` endpoint | Object | Identifier of the object |
+|---|---|---|
+| `/schema/{schemaId}` | Schema | `<DID>?service=anoncreds&relativeRef=/schema/{schemaId}` |
+| `/credDef/{credentialDefinitionId}` | Credential definition | `<DID>?service=anoncreds&relativeRef=/credDef/{credentialDefinitionId}` |
+| `/revRegDef/{revocationRegistryDefinitionId}` | Revocation registry definition | `<DID>?service=anoncreds&relativeRef=/revRegDef/{revocationRegistryDefinitionId}` |
+| `/revStatus/{revocationRegistryDefinitionId}[/{timestamp}]` | Revocation status list, current or at `timestamp` | The `statusListEndpoint` of the revocation registry definition metadata |
+
+Each response is a JSON object with `resource` — the object — and `resourceMetadata`. The metadata of a revocation registry definition MUST carry `statusListEndpoint`, the URL of its status list. The agent MUST answer an unknown identifier with HTTP `404`. An agent whose DID is `did:webvh` serves this layout for its parallel `did:web` DID ([[VSA-PUB-DID-4]](#vsa-pub-did-did-document-and-did-log)).
+
+[VSA-PUB-AC-3] **did:webvh layout.** When `AGENT_PUBLIC_DID_METHOD` is `webvh`, the agent MUST publish the implicit `#files` service entry of type `relativeRef` with `serviceEndpoint` `PUBLIC_API_BASE_URL`, and MUST serve each AnonCreds object that it created as an attested resource of the `did:webvh` AnonCreds method at `/resources/{resourceId}`, where `<DID>/resources/{resourceId}` is the identifier of the object, as [DID-WEBVH](https://identity.foundation/didwebvh/) defines attested resources. The agent MAY serve `GET /resources?resourceType={type}` — with an OPTIONAL `relatedJsonSchemaCredentialId` filter — as a listing of its attested resources of one type.
+
+[VSA-PUB-AC-4] **Tails files.** The agent MUST serve the tails file of each revocation registry definition it created at the `tailsLocation` that the definition declares. That URL MUST be under `PUBLIC_API_BASE_URL`; the reference layout is `/anoncreds/v1/tails/{tailsFileId}`. The agent MUST answer an unknown or malformed `tailsFileId` with HTTP `404`.
 
 ### [VSA-PUB-OID] OpenID4VC Public Protocol Endpoints
 
 The agent serves this section only when `OID4VC_CONFIG_FILE` is set (see [[VSA-VTI-CFG-ENV-OID]](#vsa-vti-cfg-env-oid-openid4vc)).
 
-The agent serves the wallet-facing OpenID4VC endpoints on its public listener. They are **not** part of the Administration API, they carry no Admin API authentication, and a caller MUST NOT address them through the Admin API port:
+The agent serves the wallet-facing OpenID4VC endpoints on its public listener:
 
 | Path | Purpose |
 |---|---|
@@ -458,12 +518,18 @@ A wallet MUST follow the URLs that the Admin API and the metadata return. The ag
 
 ### [VSA-PUB-INV] Invitation Parameters
 
-A DIDComm exchange that the agent starts with no established connection begins with an Out-of-Band invitation. [`createPresentationRequest`](#vsa-adm-dc-pr-create-createpresentationrequest) and [`createCredentialOffer`](#vsa-adm-dc-ce-offer-createcredentialoffer) return the invitation as `url`, and as `shortUrl` when the agent supports a short form. A short URL resolves on the public listener; this version of the specification does not define its format or the path that resolves it.
+A DIDComm exchange that the agent starts with no established connection begins with an Out-of-Band invitation. [`createPresentationRequest`](#vsa-adm-dc-pr-create-createpresentationrequest) and [`createCredentialOffer`](#vsa-adm-dc-ce-offer-createcredentialoffer) return the invitation as `invitation` — the Out-of-Band invitation object — and as `shortUrl` when the agent supports a short form. The agent does not build a URL around the invitation: the caller decides where a link lands, and encodes the invitation as the `oob` query parameter of that URL, per [Aries RFC 0434](https://github.com/decentralized-identity/aries-rfcs/tree/main/features/0434-outofband) for DIDComm v1 and [DIDComm Messaging § Out of Band Messages](https://identity.foundation/didcomm-messaging/spec/#out-of-band-messages) for DIDComm v2.
 
 Each method that produces an Out-of-Band invitation accepts these OPTIONAL parameters:
 
-- `useLegacyDid` — when the DID of the agent is `did:webvh`, force the invitation to advertise the legacy `did:web` form.
+- `useLegacyDid` — when the DID of the agent is `did:webvh`, force the invitation to advertise the legacy `did:web` form (see [[VSA-PUB-DID-4]](#vsa-pub-did-did-document-and-did-log)).
 - `didcommVersion` — `v1` or `v2`. The agent implements both, per [[VSA-VTI-DIDCOMM-1]](#vsa-vti-didcomm-didcomm-support). When the caller omits this field, the agent MUST use `v2`.
+
+**Short URLs.** A short URL stands in for the encoded invitation, so that a QR code stays small and a wallet fetches the invitation from the agent.
+
+[VSA-PUB-INV-1] When the agent returns a `shortUrl`, that URL MUST be under `PUBLIC_API_BASE_URL`, and the agent MUST resolve it for as long as the exchange that produced it is not in a terminal state. The path shape is the agent's choice ([[VSA-PUB-LISTENER-3]](#vsa-pub-listener-public-listener)).
+
+[VSA-PUB-INV-2] On `GET` of a short URL, the agent MUST answer with the Out-of-Band invitation as a JSON body of type `application/json` — the same object that the method returned as `invitation` — as [Aries RFC 0434 § Short URL](https://github.com/decentralized-identity/aries-rfcs/tree/main/features/0434-outofband#url-shortening) defines the resolution of a shortened invitation. The agent MUST answer an unknown short URL with HTTP `404`.
 
 ## DIDComm Interface
 
@@ -1099,8 +1165,8 @@ Creates a presentation request as verifier. The request defines the credentials 
 **Output**:
 
 - `proofExchangeId` — exchange identifier, for later tracking.
-- `url` — full DIDComm invitation URL. Absent when `connectionId` is present.
-- `shortUrl` — short form of the URL, for a QR code, when the agent supports it. Absent when `connectionId` is present.
+- `invitation` — the Out-of-Band invitation, as a JSON object, in the envelope that `didcommVersion` selects. Absent when `connectionId` is present.
+- `shortUrl` — a URL under `PUBLIC_API_BASE_URL` that resolves to the same invitation, per [[VSA-PUB-INV-2]](#vsa-pub-inv-invitation-parameters), for a QR code that stays small. Present when the agent supports short URLs, absent when `connectionId` is present.
 
 **Errors**: `UNKNOWN_ID` (`404`) when `connectionId` resolves to no connection.
 
@@ -1235,8 +1301,8 @@ Creates an AnonCreds credential offer as issuer, with a preview of the offered c
 **Output**:
 
 - `credentialExchangeId` — exchange identifier.
-- `url` — full DIDComm invitation URL. Absent when `connectionId` is present.
-- `shortUrl` — short form of the URL, when the agent supports it. Absent when `connectionId` is present.
+- `invitation` — the Out-of-Band invitation, as a JSON object, in the envelope that `didcommVersion` selects. Absent when `connectionId` is present.
+- `shortUrl` — a URL under `PUBLIC_API_BASE_URL` that resolves to the same invitation, per [[VSA-PUB-INV-2]](#vsa-pub-inv-invitation-parameters), for a QR code that stays small. Present when the agent supports short URLs, absent when `connectionId` is present.
 
 **Errors**: `UNKNOWN_ID` (`404`) when `connectionId` resolves to no connection.
 
@@ -2141,7 +2207,7 @@ The following methods manage the **additional consumable** service entries decla
 | Service Endpoint Management | `updateServiceEndpoint` | `PATCH` | `/v2/vt/service-endpoints/{serviceEndpointId}` | [see](#vsa-adm-vt-se-update-updateserviceendpoint) |
 | Service Endpoint Management | `deleteServiceEndpoint` | `DELETE` | `/v2/vt/service-endpoints/{serviceEndpointId}` | [see](#vsa-adm-vt-se-delete-deleteserviceendpoint) |
 
-A caller MUST NOT use these methods on an entry that the agent maintains itself — `DIDCommMessaging`, `LinkedVerifiablePresentation`, or `VsAgentAdminAPI` — per [[VSA-VTI-DIDDOC-1]](#vsa-vti-diddoc-did-document-service-entries).
+A caller MUST NOT use these methods on an entry that the agent maintains itself — `DIDCommMessaging`, `LinkedVerifiablePresentation`, `VsAgentAdminAPI`, `AnonCredsRegistry`, or `relativeRef` — per [[VSA-VTI-DIDDOC-1]](#vsa-vti-diddoc-did-document-service-entries). The methods below name the error code of the first three; the agent MUST refuse an `AnonCredsRegistry` or a `relativeRef` entry with `INVALID_INPUT` (`400`).
 
 The `serviceEndpoint` field of these methods is the `serviceEndpoint` property of the DID Document, as [DID-CORE] defines it.
 
@@ -3057,6 +3123,8 @@ The table lists the state that the agent holds, and whether the agent MUST keep 
 | Flow records, keyed by `participantSessionId` | Persistent | [[VSA-ADM-VT-FL]](#vsa-adm-vt-fl-flow-management), [[VSA-VTI-FLOW-STATE]](#vsa-vti-flow-state-flow-state) |
 | Connection, basic message, presentation, and credential exchange records | Persistent | [DIDComm Scope](#didcomm-scope) |
 | AnonCreds credential definitions, revocation registries, status lists | Persistent | [AnonCreds Scope](#anoncreds-scope) |
+| AnonCreds tails files and `did:webvh` attested resources | Persistent, for as long as a credential can reference them | [[VSA-PUB-AC]](#vsa-pub-ac-anoncreds-registry-resources) |
+| Short URL records | Persistent until the exchange ends | [[VSA-PUB-INV]](#vsa-pub-inv-invitation-parameters) |
 | OpenID4VC issuance sessions and verification sessions | Persistent until deleted or expired | [OpenID4VC Scope](#openid4vc-scope) |
 | OpenID4VC development signing certificates | Persistent | [[VSA-VTI-CFG-ENV-OID]](#vsa-vti-cfg-env-oid-openid4vc) |
 | Profile of the agent (User Profile module) | Persistent | [[VSA-ADM-DC-UP]](#vsa-adm-dc-up-user-profile) |
@@ -3239,16 +3307,34 @@ Every identifier of this document, in lexical order. A section identifier links 
 | `VSA-EVT-DEL-6` | Event data can carry personal data, for example the disclosed claims of a presentation. |  |
 | `VSA-EVT-ENV` | [Envelope](#vsa-evt-env-envelope) | Events API |
 | `VSA-OVR-DT` | [Datetime encoding](#vsa-ovr-dt-datetime-encoding) | About this Document |
+| `VSA-PUB-AC` | [AnonCreds Registry Resources](#vsa-pub-ac-anoncreds-registry-resources) | Public Endpoints |
+| `VSA-PUB-AC-1` | The agent MUST serve every AnonCreds object that it created at the location that the identifier of that object resolves to, for as long a… |  |
+| `VSA-PUB-AC-2` | **did:web layout.** The agent MUST publish a service entry of type `AnonCredsRegistry`, with `id` `<DID>#anoncreds` and `serviceEndpoint`… |  |
+| `VSA-PUB-AC-3` | **did:webvh layout.** When `AGENT_PUBLIC_DID_METHOD` is `webvh`, the agent MUST publish the implicit `#files` service entry of type `rela… |  |
+| `VSA-PUB-AC-4` | **Tails files.** The agent MUST serve the tails file of each revocation registry definition it created at the `tailsLocation` that the de… |  |
 | `VSA-PUB-DID` | [DID Document and DID Log](#vsa-pub-did-did-document-and-did-log) | Public Endpoints |
-| `VSA-PUB-DID-1` | The agent MUST serve its DID Document at the location that its DID method resolves from the DID, and, for `did:webvh`, the DID log beside… |  |
+| `VSA-PUB-DID-1` | The agent MUST serve its DID Document at the location that DID-WEB resolves from its DID location (see VSA-VTI-BOOT-DID): |  |
 | `VSA-PUB-DID-2` | The agent MUST serve each Verifiable Presentation that a `LinkedVerifiablePresentation` entry of its DID Document references at the `serv… |  |
 | `VSA-PUB-DID-3` | The agent MUST publish an updated DID Document each time one of its service entries changes — through VSA-ADM-VT-SE, through Linked VP Ma… |  |
+| `VSA-PUB-DID-4` | When `AGENT_PUBLIC_DID_METHOD` is `webvh`, the agent MUST serve its DID log at `did.jsonl` beside `did.json`, as DID-WEBVH defines it, an… |  |
+| `VSA-PUB-DID-5` | The agent SHOULD send `Cache-Control: |  |
 | `VSA-PUB-DIDCOMM` | [DIDComm Inbound Endpoint](#vsa-pub-didcomm-didcomm-inbound-endpoint) | Public Endpoints |
+| `VSA-PUB-DIDCOMM-1` | The `serviceEndpoint` of each `DIDCommMessaging` entry of the DID Document is an inbound DIDComm endpoint of the agent. |  |
+| `VSA-PUB-DIDCOMM-2` | On an `https://` endpoint the agent MUST accept a DIDComm message as the body of an HTTP `POST`; on a `wss://` endpoint the agent MUST ac… |  |
+| `VSA-PUB-DIDCOMM-3` | For each endpoint, the DID Document MUST carry one DIDComm v1 service entry and one DIDComm v2 service entry, each as its specification d… |  |
 | `VSA-PUB-INV` | [Invitation Parameters](#vsa-pub-inv-invitation-parameters) | Public Endpoints |
+| `VSA-PUB-INV-1` | When the agent returns a `shortUrl`, that URL MUST be under `PUBLIC_API_BASE_URL`, and the agent MUST resolve it for as long as the excha… |  |
+| `VSA-PUB-INV-2` | On `GET` of a short URL, the agent MUST answer with the Out-of-Band invitation as a JSON body of type `application/json` — the same objec… |  |
 | `VSA-PUB-LISTENER` | [Public Listener](#vsa-pub-listener-public-listener) | Public Endpoints |
 | `VSA-PUB-LISTENER-1` | The agent MUST serve every path of this section under `PUBLIC_API_BASE_URL`, and MUST compose each URL that it publishes for a peer — in… |  |
-| `VSA-PUB-LISTENER-2` | The public endpoints are not part of the Administration API. |  |
+| `VSA-PUB-LISTENER-2` | The agent MUST answer a public path that this section does not define, or that belongs to a feature the deployment does not enable, with… |  |
+| `VSA-PUB-LISTENER-3` | A peer discovers every public URL from a document the agent publishes — the DID Document, a credential, an invitation, OpenID4VC metadata… |  |
 | `VSA-PUB-OID` | [OpenID4VC Public Protocol Endpoints](#vsa-pub-oid-openid4vc-public-protocol-endpoints) | Public Endpoints |
+| `VSA-PUB-VT` | [Verifiable Trust Resources](#vsa-pub-vt-verifiable-trust-resources) | Public Endpoints |
+| `VSA-PUB-VT-1` | The agent MUST serve each linked Verifiable Presentation at the `serviceEndpoint` of its `LinkedVerifiablePresentation` entry, as a JSON… |  |
+| `VSA-PUB-VT-2` | The agent MUST serve each VTJSC that it issues at the URL that is the `id` of that credential, as a JSON document, so that a credential d… |  |
+| `VSA-PUB-VT-3` | When `AGENT_PUBLIC_DID_METHOD` is `webvh` and the agent holds an ECS-Service credential, the agent SHOULD also expose that credential's p… |  |
+| `VSA-PUB-VT-4` | The agent MAY serve placeholder resources for the `logoUri`, `termsAndConditionsUri`, and `privacyPolicyUri` claims of its ECS credential… |  |
 | `VSA-VPR-QRY` | [Indexer Queries](#vsa-vpr-qry-indexer-queries) | VPR and Indexer Interface |
 | `VSA-VPR-TX` | [On-chain Transactions](#vsa-vpr-tx-on-chain-transactions) | VPR and Indexer Interface |
 | `VSA-VPR-TX-1` | The agent MUST sign each of these messages with its `vs_operator` account, and MUST simulate the gas of each transaction and apply `VERAN… |  |
@@ -3278,7 +3364,7 @@ Every identifier of this document, in lexical order. A section identifier links 
 | `VSA-VTI-DIDCOMM-1` | A VS Agent MUST implement DIDComm v1 (Aries-style) and DIDComm v2 (DIF DIDComm Messaging). |  |
 | `VSA-VTI-DIDCOMM-2` | The agent MUST publish a `DIDCommMessaging` service entry that reaches both envelopes, per VS-SVC-2. |  |
 | `VSA-VTI-DIDDOC` | [DID Document Service Entries](#vsa-vti-diddoc-did-document-service-entries) | Public Endpoints |
-| `VSA-VTI-DIDDOC-1` | A caller MUST NOT create, modify, or delete a `DIDCommMessaging`, a `LinkedVerifiablePresentation`, or a `VsAgentAdminAPI` entry through… |  |
+| `VSA-VTI-DIDDOC-1` | A caller MUST NOT create, modify, or delete a `DIDCommMessaging`, a `LinkedVerifiablePresentation`, a `VsAgentAdminAPI`, an `AnonCredsReg… |  |
 | `VSA-VTI-ECS` | [ECS Participants and Credentials](#vsa-vti-ecs-ecs-participants-and-credentials) | Participant and Credential Acquisition Logic |
 | `VSA-VTI-ECS-DELEGATED` | [ECS Delegated Mode](#vsa-vti-ecs-delegated-ecs-delegated-mode) | ECS Participants and Credentials |
 | `VSA-VTI-ECS-STANDALONE` | [ECS Standalone Mode](#vsa-vti-ecs-standalone-ecs-standalone-mode) | ECS Participants and Credentials |
@@ -3307,4 +3393,5 @@ Every identifier of this document, in lexical order. A section identifier links 
 ## Appendix B: Change Log
 
 - **v4-draft9** — Restructured the document by interface: System Overview, Configuration, Public Endpoints, DIDComm Interface, Administration API, Events API, VPR and Indexer Interface, Agent Lifecycle, Verifiable Trust Behaviors, Data and State. Every existing requirement identifier is unchanged. New sections consolidate statements that were repeated: [[VSA-DC-CONN]](#vsa-dc-conn-connection-acceptance-policy), [[VSA-VTI-FLOW-ISSUE]](#vsa-vti-flow-issue-credential-issuance-and-acceptance), [[VSA-VTI-FLOW-VERIFY]](#vsa-vti-flow-verify-credential-verification), [[VSA-VT-LVP]](#vsa-vt-lvp-linked-vp-management), [[VSA-VPR-TX]](#vsa-vpr-tx-on-chain-transactions), [[VSA-VPR-QRY]](#vsa-vpr-qry-indexer-queries), [[VSA-PUB-LISTENER]](#vsa-pub-listener-public-listener), [[VSA-PUB-DID]](#vsa-pub-did-did-document-and-did-log), [[VSA-DATA]](#vsa-data-persistent-state). Normative sections that had no identifier received one. Added the conformance targets, the requirement-identifier conventions, the datetime encoding rule, the **Events** field of the state-changing methods, and this index.
+- **v4-draft9, second revision** — Public Endpoints now covers every public path family: DID Document and DID log for `did:web` and `did:webvh` ([[VSA-PUB-DID]](#vsa-pub-did-did-document-and-did-log)), DIDComm inbound endpoints ([[VSA-PUB-DIDCOMM]](#vsa-pub-didcomm-didcomm-inbound-endpoint)), linked presentations and VTJSC documents ([[VSA-PUB-VT]](#vsa-pub-vt-verifiable-trust-resources)), AnonCreds registry resources in both DID method layouts and tails files ([[VSA-PUB-AC]](#vsa-pub-ac-anoncreds-registry-resources)), short URLs ([[VSA-PUB-INV]](#vsa-pub-inv-invitation-parameters)). `createPresentationRequest` and `createCredentialOffer` return the invitation object as `invitation` instead of a `url` built on an agent-configured base; the caller owns the link. The `AnonCredsRegistry` and `relativeRef` entries join the agent-managed service entries of [[VSA-VTI-DIDDOC]](#vsa-vti-diddoc-did-document-service-entries).
 - **v4-draft8** and earlier — see the git history of this file.
