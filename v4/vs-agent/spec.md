@@ -19,6 +19,8 @@ This document specifies the normative behavior of a VS Agent implementation: its
 
 In order to fully understand the concepts developed in this document, you should have some basic knowledge of DID, DIDComm, AnonCreds, the Verifiable Trust model, and the [ToIP stack](https://www.trustoverip.org/toip-model/). All terms used in this specification are defined in the [Terminology](#terminology) section.
 
+**Version axes.** Three version numbers appear around the VS Agent, and they move independently. The `v4` of this document is the Verana release its specification belongs to, shared by every component specification under `v4/`. The `/v2` prefix of the Administration API is the version of that API alone. An implementation carries its own version, for example `vs-agent 2.0.0`. Prose that names a version names its axis: "Verana v4", "Administration API v2", "vs-agent 2.x".
+
 ### Audience
 
 This document has three audiences, and is written so that each one can use it on its own:
