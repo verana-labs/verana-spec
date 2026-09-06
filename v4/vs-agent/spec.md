@@ -445,7 +445,7 @@ The DID Document of the agent carries the kinds of service entry below. The agen
 | `VsAgentAdminAPI` | This section | The agent, from `ADMIN_API_PUBLIC_URL` | No |
 | `AnonCredsRegistry` (`#anoncreds`), `did:web` only | [[VSA-PUB-AC-2]](#vsa-pub-ac-anoncreds-registry-resources) | The agent, from `PUBLIC_API_BASE_URL` | No |
 | `relativeRef` (`#files`), `did:webvh` only | [[VSA-PUB-AC-3]](#vsa-pub-ac-anoncreds-registry-resources) | The agent, from `PUBLIC_API_BASE_URL` | No |
-| Consumable entries: `MCP`, `A2A`, `LinkedDomains`, any type an ecosystem defines | [[VS-SVC-3]](https://verana-labs.github.io/verifiable-trust-vpr-spec/#vs-svc-service-declaration) | The caller | Yes |
+| Consumable entries: `MCP`, `A2A`, `LinkedDomains`, any type an ecosystem defines | [[VS-SVC-3]](https://verana-labs.github.io/verifiable-trust-spec/#vs-svc-service-declaration) | The caller | Yes |
 
 [VSA-VTI-DIDDOC-1] A caller MUST NOT create, modify, or delete a `DIDCommMessaging`, a `LinkedVerifiablePresentation`, a `VsAgentAdminAPI`, an `AnonCredsRegistry`, or a `relativeRef` entry through the Administration API. The agent MUST refuse such a request, per [[VSA-ADM-VT-SE]](#vsa-adm-vt-se-service-endpoint-management).
 
@@ -491,7 +491,7 @@ The agent publishes its Verifiable Trust credentials — the ECS credentials it 
 
 [VSA-PUB-VT-2] The agent MUST serve each VTJSC that it issues at the URL that is the `id` of that credential, as a JSON document, so that a credential definition, an OpenID4VC credential configuration, or a verifier that names the VTJSC by `relatedJsonSchemaCredentialId` or by `credentialSchema.id` dereferences it. The URL MUST be under `PUBLIC_API_BASE_URL`, and MUST NOT change while the VTJSC is published.
 
-[VSA-PUB-VT-3] When `AGENT_PUBLIC_DID_METHOD` is `webvh` and the agent holds an ECS-Service credential, the agent SHOULD also expose that credential's presentation under the `#whois` `LinkedVerifiablePresentation` entry that [DID-WEBVH](https://identity.foundation/didwebvh/) defines as the implicit service of a DID, with the same `serviceEndpoint` as the entry of [[VSA-VT-LVP]](#vsa-vt-lvp-linked-vp-management). The `#whois` entry is a convenience for `did:webvh` resolvers; the Verana resolver discovers the credential through the entry of [[VT-CRED-W3C-LINKED-VP]](https://verana-labs.github.io/verifiable-trust-spec/#vt-cred-w3c-linked-vp-w3c-vtc-linked-vp).
+[VSA-PUB-VT-3] When `AGENT_PUBLIC_DID_METHOD` is `webvh` and the agent holds an ECS-Service credential, the agent SHOULD also expose that credential's presentation under the `#whois` `LinkedVerifiablePresentation` entry that [DID-WEBVH](https://identity.foundation/didwebvh/) defines as the implicit service of a DID, with the same `serviceEndpoint` as the entry of [[VSA-VT-LVP]](#vsa-vt-lvp-linked-vp-management). The `#whois` entry is an addition for `did:webvh` resolvers, never a replacement: its fragment does not satisfy [[VT-CRED-W3C-LINKED-VP]](https://verana-labs.github.io/verifiable-trust-spec/#vt-cred-w3c-linked-vp-w3c-vtc-linked-vp), which requires a fragment that starts with `#vpr-schemas-` and ends with `-vtc-vp`, so the agent MUST keep the entry of [[VSA-VT-LVP]](#vsa-vt-lvp-linked-vp-management) beside it. The Verana resolver discovers the credential through the required entry and deduplicates the two by `digestJCS`.
 
 [VSA-PUB-VT-4] The agent MAY serve placeholder resources for the `logoUri`, `termsAndConditionsUri`, and `privacyPolicyUri` claims of its ECS credentials, so that an operator with no resources of its own can point the [[VSA-VTI-CFG-ENV-ECS]](#vsa-vti-cfg-env-ecs-ecs-credential-claims) variables at them. An agent that serves them MUST serve them at `/vt/default/logo.svg`, `/vt/default/terms.html`, and `/vt/default/privacy.html`, and MUST keep their content stable while a credential that carries their digest is published.
 
@@ -606,7 +606,7 @@ The following table maps the agent-level message names used in this specificatio
 | OOB_LINK | [`oob-link`](../vt-flow-protocol/spec.md#oob-link) | Validator | When additional out-of-DIDComm information is needed. |
 | VALIDATING | [`validating`](../vt-flow-protocol/spec.md#validating) | Validator | When off-chain validation begins. |
 | Credential offer / accept | [Issue Credential V2 subprotocol](../vt-flow-protocol/spec.md#subprotocols) | Both | Validator issues `offer-credential`; Applicant verifies and sends `ack`. |
-| CRED_STATE_CHANGE | [`credential-state-change`](../vt-flow-protocol/spec.md#credential-state-change) | Validator | Credential status change (e.g., `REVOKED`). See [Validator Updates](#vsa-vti-flow-upd-validator-updates) and [Revoke Participant / Slash Participant Trust Deposit](#vsa-vti-flow-op-revoke-revoke-participant-slash-participant-trust-deposit). |
+| CRED_STATE_CHANGE | [`credential-state-change`](../vt-flow-protocol/spec.md#credential-state-change) | Validator | Credential status change (e.g., `REVOKED`). See [Validator Updates](#vsa-vti-flow-upd-validator-updates) and [Revoke Participant / Slash Participant Trust Deposit](#vsa-vti-flow-op-revoke-revoke-participant--slash-participant-trust-deposit). |
 | ERROR | [`problem-report` (adopted)](../vt-flow-protocol/spec.md#problem-report-adopted) | Either | Protocol error or explicit termination. Error codes are listed in the [protocol spec Error Codes registry](../vt-flow-protocol/spec.md#error-codes). |
 
 ## Administration API
@@ -2085,7 +2085,7 @@ Lists and inspects the credential acquisition flows that the agent handles.
 - `peerDid` — DID of the remote peer.
 - `participantId` — applicant or validator `Participant` identifier. When `role` is `applicant`, `participantId` is the validator `Participant`. When `role` is `validator`, `participantId` is the applicant `Participant`.
 - `schemaId` — credential schema identifier.
-- `participantSessionId` — DIDComm session identifier.
+- `participantSessionId` — identifier of the on-chain `ParticipantSession` of the flow. It is distinct from the DIDComm thread identifier, per [Two Identifiers, Two Purposes](../vt-flow-protocol/spec.md#two-identifiers-two-purposes) of the vt-flow protocol.
 
 **Output**: a page of flow records. Each record MUST include at minimum:
 
@@ -2249,8 +2249,7 @@ Returns the consumable service entries currently declared in the DID Document of
 
 **Requirements**:
 
-- The agent MUST exclude an entry whose `type` is `DIDCommMessaging` or `LinkedVerifiablePresentation` (the agent manages it automatically — see the preamble).
-- The agent MUST exclude an entry whose `type` is `VsAgentAdminAPI` (the agent manages it automatically — see the preamble).
+- The agent MUST exclude an entry whose `type` is `DIDCommMessaging`, `LinkedVerifiablePresentation`, `VsAgentAdminAPI`, `AnonCredsRegistry`, or `relativeRef` (the agent manages it automatically — see the preamble).
 - The output MUST reflect the DID Document that the agent currently publishes.
 
 ##### [VSA-ADM-VT-SE-ADD] addServiceEndpoint
@@ -2267,7 +2266,7 @@ Adds a new consumable service entry to the DID Document of the agent.
 
 **Requirements**:
 
-- The agent MUST refuse `type = DIDCommMessaging`, `type = LinkedVerifiablePresentation`, and `type = VsAgentAdminAPI` (the agent manages such an entry automatically — see the preamble).
+- The agent MUST refuse `type = DIDCommMessaging`, `type = LinkedVerifiablePresentation`, `type = VsAgentAdminAPI`, `type = AnonCredsRegistry`, and `type = relativeRef` (the agent manages such an entry automatically — see the preamble).
 - The agent MUST refuse the request when the resulting `id` collides with an existing entry of the DID Document.
 - The agent MUST validate the shape of `serviceEndpoint` per [DID-CORE] before it publishes.
 
@@ -2278,6 +2277,7 @@ Adds a new consumable service entry to the DID Document of the agent.
 - `DIDCOMM_ENTRY` (`409`) — the caller tried to add a `DIDCommMessaging` entry.
 - `LINKED_VP_ENTRY` (`409`) — the caller tried to add a `LinkedVerifiablePresentation` entry.
 - `ADMIN_API_ENTRY` (`409`) — the caller tried to add a `VsAgentAdminAPI` entry.
+- `INVALID_INPUT` (`400`) — the caller tried to add an `AnonCredsRegistry` or a `relativeRef` entry.
 
 ##### [VSA-ADM-VT-SE-UPDATE] updateServiceEndpoint
 
@@ -2298,7 +2298,7 @@ The caller MUST supply `type`, `serviceEndpoint`, or both.
 
 **Requirements**:
 
-- The agent MUST refuse to update an entry whose existing `type` is `DIDCommMessaging`, `LinkedVerifiablePresentation`, or `VsAgentAdminAPI`, and MUST refuse to change the `type` of an entry to `DIDCommMessaging`, `LinkedVerifiablePresentation`, or `VsAgentAdminAPI` (the agent manages such an entry automatically — see the preamble).
+- The agent MUST refuse to update an entry whose existing `type` is `DIDCommMessaging`, `LinkedVerifiablePresentation`, `VsAgentAdminAPI`, `AnonCredsRegistry`, or `relativeRef`, and MUST refuse to change the `type` of an entry to one of these (the agent manages such an entry automatically — see the preamble).
 - The agent MUST validate the shape of the new `serviceEndpoint` per [DID-CORE] before it publishes.
 
 **Errors**:
@@ -2306,6 +2306,7 @@ The caller MUST supply `type`, `serviceEndpoint`, or both.
 - `DIDCOMM_ENTRY` (`409`) — `serviceEndpointId` refers to a `DIDCommMessaging` entry, or the requested change produces one.
 - `LINKED_VP_ENTRY` (`409`) — `serviceEndpointId` refers to a `LinkedVerifiablePresentation` entry, or the requested change produces one.
 - `ADMIN_API_ENTRY` (`409`) — `serviceEndpointId` refers to a `VsAgentAdminAPI` entry, or the requested change produces one.
+- `INVALID_INPUT` (`400`) — `serviceEndpointId` refers to an `AnonCredsRegistry` or a `relativeRef` entry, or the requested change produces one.
 - `INVALID_SERVICE_ENDPOINT` (`400`) — `serviceEndpoint` does not conform to [DID-CORE].
 
 ##### [VSA-ADM-VT-SE-DELETE] deleteServiceEndpoint
@@ -2322,13 +2323,14 @@ Removes a consumable service entry from the DID Document of the agent.
 
 **Requirements**:
 
-- The agent MUST refuse the request when `serviceEndpointId` refers to a `DIDCommMessaging`, a `LinkedVerifiablePresentation`, or a `VsAgentAdminAPI` entry (the agent manages such an entry automatically — see the preamble).
+- The agent MUST refuse the request when `serviceEndpointId` refers to a `DIDCommMessaging`, a `LinkedVerifiablePresentation`, a `VsAgentAdminAPI`, an `AnonCredsRegistry`, or a `relativeRef` entry (the agent manages such an entry automatically — see the preamble).
 
 **Errors**:
 
 - `DIDCOMM_ENTRY` (`409`) — `serviceEndpointId` refers to a `DIDCommMessaging` entry.
 - `LINKED_VP_ENTRY` (`409`) — `serviceEndpointId` refers to a `LinkedVerifiablePresentation` entry.
 - `ADMIN_API_ENTRY` (`409`) — `serviceEndpointId` refers to a `VsAgentAdminAPI` entry.
+- `INVALID_INPUT` (`400`) — `serviceEndpointId` refers to an `AnonCredsRegistry` or a `relativeRef` entry.
 
 ## Events API
 
@@ -2491,7 +2493,7 @@ These notifications are emitted when a `Participant` entry whose `did` equals th
 | `SetParticipantOPtoValidated` [[MOD-PP-MSG-3]](https://verana-labs.github.io/verifiable-trust-vpr-spec/#mod-pp-msg-3-set-participant-op-to-validated) | Validator has set the agent's `Participant.op_state` to `VALIDATED`. | For Validator: Progress the credential acquisition flow (see [new onboarding process](#vsa-vti-flow-op-new-new-onboarding-process)). For Applicant: refresh cached authorization state (see [Authorization Notifications](#vsa-vti-notif-auth-authorization-notifications)). |
 | `CreateRootParticipant` [[MOD-PP-MSG-7]](https://verana-labs.github.io/verifiable-trust-vpr-spec/#mod-pp-msg-7-create-root-participant) | A root `Participant` (no validator parent) has been created with the agent's DID. | N/A. |
 | `SetParticipantEffectiveUntil` [[MOD-PP-MSG-8]](https://verana-labs.github.io/verifiable-trust-vpr-spec/#mod-pp-msg-8-set-participant-effective-until) | Validator or ancestor has set or adjusted the agent's `Participant.effective_until`. | Refresh cached authorization state (see [Authorization Notifications](#vsa-vti-notif-auth-authorization-notifications)). |
-| `RevokeParticipant` [[MOD-PP-MSG-9]](https://verana-labs.github.io/verifiable-trust-vpr-spec/#mod-pp-msg-9-revoke-participant) | Validator, ancestor, or Ecosystem controller has revoked the agent's `Participant` entry. | Remove the corresponding linked VP from the DID Document (if any) and delete the credential from the credential store (HOLDER `Participant` only). For non-HOLDER `Participant`, terminate every in-flight downstream flow it serves as Validator for (see [Revoke Participant / Slash Participant Trust Deposit](#vsa-vti-flow-op-revoke-revoke-participant-slash-participant-trust-deposit)). |
+| `RevokeParticipant` [[MOD-PP-MSG-9]](https://verana-labs.github.io/verifiable-trust-vpr-spec/#mod-pp-msg-9-revoke-participant) | Validator, ancestor, or Ecosystem controller has revoked the agent's `Participant` entry. | Remove the corresponding linked VP from the DID Document (if any) and delete the credential from the credential store (HOLDER `Participant` only). For non-HOLDER `Participant`, terminate every in-flight downstream flow it serves as Validator for (see [Revoke Participant / Slash Participant Trust Deposit](#vsa-vti-flow-op-revoke-revoke-participant--slash-participant-trust-deposit)). |
 | `SlashParticipantTrustDeposit` [[MOD-PP-MSG-12]](https://verana-labs.github.io/verifiable-trust-vpr-spec/#mod-pp-msg-12-slash-participant-trust-deposit) | Validator, ancestor, or Ecosystem controller has slashed the agent's `Participant.deposit`. | Same as `RevokeParticipant`: clean up linked VP / credential / downstream flow state. |
 | `RepayParticipantSlashedTrustDeposit` [[MOD-PP-MSG-13]](https://verana-labs.github.io/verifiable-trust-vpr-spec/#mod-pp-msg-13-repay-participant-slashed-trust-deposit) | The agent's slashed trust deposit has been repaid (confirmation of own tx). | N/A. |
 | `CancelParticipantOPLastRequest` [[MOD-PP-MSG-6]](https://verana-labs.github.io/verifiable-trust-vpr-spec/#mod-pp-msg-6-cancel-participant-op-last-request) | An applicant has cancelled a pending Onboarding Process. | Clean up the associated flow state (see [Cancel OP Last Request](#vsa-vti-flow-op-cancel-cancel-op-last-request)). |
@@ -2540,7 +2542,7 @@ Besides the subscription of [[VSA-VTI-NOTIF]](#vsa-vti-notif-notifications), the
 | Startup and reconnection | [`IDX-INDEXER-QRY-6` List Indexer Events](../verana-indexer/spec.md#idx-indexer-qry-6-list-indexer-events) after `last_seen_block` | Catch up the events that the WebSocket does not replay. | [[VSA-VTI-NOTIF]](#vsa-vti-notif-notifications) |
 | On each `Participant` notification | [`IDX-DE-QRY-2` List VS Operator Authorizations](../verana-indexer/spec.md#idx-de-qry-2-list-vs-operator-authorizations), [`IDX-DE-QRY-4` Get VS Operator Authorization](../verana-indexer/spec.md#idx-de-qry-4-get-vs-operator-authorization) | Refresh the cached `VSOperatorAuthorization` records. | [[VSA-VTI-NOTIF-AUTH]](#vsa-vti-notif-auth-authorization-notifications) |
 | Before it accepts a connection | Resolution of the peer per [[VS-CONN-VS]](https://verana-labs.github.io/verifiable-trust-spec/#vs-conn-vs-requirements-for-a-vs-to-accept-a-connection-from-another-service); the `Participant` entry of the peer | Verify the peer, or establish the ECS issuance purpose. | [[VSA-DC-CONN]](#vsa-dc-conn-connection-acceptance-policy) |
-| Before it accepts a credential | The `Participant` entry of the Validator; [`MOD-PP-QRY-5` Get ParticipantSession](https://verana-labs.github.io/verifiable-trust-vpr-spec/versions/v4/#mod-pp-qry-5-get-participantsession); [`IDX-DI-QRY-1` Get Digest](../verana-indexer/spec.md#idx-di-qry-1-get-digest) | Verify the issuer, the session, and the anchored digest. | [[VSA-VTI-FLOW-VERIFY]](#vsa-vti-flow-verify-credential-verification) |
+| Before it accepts a credential | The `Participant` entry of the Validator; [`IDX-PP-QRY-6` Get Participant Session](../verana-indexer/spec.md#idx-pp-qry-6-get-participant-session); [`IDX-DI-QRY-1` Get Digest](../verana-indexer/spec.md#idx-di-qry-1-get-digest) | Verify the issuer, the session, and the anchored digest. | [[VSA-VTI-FLOW-VERIFY]](#vsa-vti-flow-verify-credential-verification) |
 | Before it starts a flow | The `CredentialSchema` and the `Ecosystem` of the flow | Check the schema modes and the [[WL-ECS]](https://verana-labs.github.io/verifiable-trust-spec/#wl-ecs-ecosystem-whitelists-and-vpr-scheme-resolution) whitelist. | [ECS Participants and Credentials](#vsa-vti-ecs-ecs-participants-and-credentials) |
 | Before it accepts an OpenID4VP presentation | [`IDX-VT-QRY-1` Resolve](../verana-indexer/spec.md#idx-vt-qry-1-resolve) for the issuer DID | Obtain the trust status of the issuer and its authorization for the `vtjscId`. | [[VSA-VTI-FLOW-VERIFY-OID]](#vsa-vti-flow-verify-oid-openid4vp-trust-decision) |
 
@@ -2978,8 +2980,8 @@ The agent verifies a credential before it accepts it, on each channel it receive
 At step 4 of [Credential Issuance and Acceptance](#vsa-vti-flow-issue-credential-issuance-and-acceptance), the applicant MUST verify the received credential before accepting it:
 
 - Verify that the validator is authorized by the ecosystem to issue credentials for this schema: query the VPR via the indexer to confirm that `validator_participant.role` is `ISSUER` and that the `Participant` is active.
-- Verify that the `ParticipantSession` created at step 2 exists on-chain and references the validator's ISSUER `Participant` entry (see [[MOD-PP-QRY-5]](https://verana-labs.github.io/verifiable-trust-vpr-spec/versions/v4/#mod-pp-qry-5-get-participantsession)).
-- Recompute the credential's `digestJCS` as specified in [W3C VTCs: Determining Credential Issuance Time](https://verana-labs.github.io/verifiable-trust-spec/versions/v4/#w3c-vtcs-determining-credential-issuance-time) and locate the corresponding `Digest` entry via [Get Digest](https://verana-labs.github.io/verifiable-trust-vpr-spec/versions/v4/#mod-di-qry-1-get-digest). The entry MUST exist — the digest is anchored in the `Digest` store by the transaction of step 2, not on the `ParticipantSession` entry — and its `created` timestamp is the credential's effective issuance time.
+- Verify that the `ParticipantSession` created at step 2 exists on-chain and references the validator's ISSUER `Participant` entry (see [[IDX-PP-QRY-6]](../verana-indexer/spec.md#idx-pp-qry-6-get-participant-session)).
+- Recompute the credential's `digestJCS` as specified in [W3C VTCs: Determining Credential Issuance Time](https://verana-labs.github.io/verifiable-trust-spec/versions/v4/#w3c-vtcs-determining-credential-issuance-time) and locate the corresponding `Digest` entry via [`IDX-DI-QRY-1` Get Digest](../verana-indexer/spec.md#idx-di-qry-1-get-digest). The entry MUST exist — the digest is anchored in the `Digest` store by the transaction of step 2, not on the `ParticipantSession` entry — and its `created` timestamp is the credential's effective issuance time.
 - If any check fails, the applicant MUST reject the credential and log the error.
 
 ##### [VSA-VTI-FLOW-VERIFY-OID] OpenID4VP Trust Decision
@@ -3039,7 +3041,7 @@ sequenceDiagram
 
 2. The Applicant receives the `SelfCreateParticipant` event from the indexer for its own transaction (see [Participant Notifications](#vsa-vti-notif-pp-participant-notifications)) and records the resulting `participant_id` for later use.
 
-> Participant Self Creation does not open a DIDComm session, does not create any Flow State entry, and does not involve a Validator. The corporation MUST nevertheless ensure that its self-created `Participant` complies with the Ecosystem's EGF — an OPEN-mode `Participant` CAN still be revoked or slashed by ecosystem governance (see [Revoke Participant / Slash Participant Trust Deposit](#vsa-vti-flow-op-revoke-revoke-participant-slash-participant-trust-deposit)).
+> Participant Self Creation does not open a DIDComm session, does not create any Flow State entry, and does not involve a Validator. The corporation MUST nevertheless ensure that its self-created `Participant` complies with the Ecosystem's EGF — an OPEN-mode `Participant` CAN still be revoked or slashed by ecosystem governance (see [Revoke Participant / Slash Participant Trust Deposit](#vsa-vti-flow-op-revoke-revoke-participant--slash-participant-trust-deposit)).
 
 #### [VSA-VTI-FLOW-MISC] Additional Considerations
 
@@ -3398,7 +3400,7 @@ Every identifier of this document, in lexical order. A section identifier links 
 | `VSA-VTI-FLOW-OP-CANCEL` | [Cancel OP Last Request](#vsa-vti-flow-op-cancel-cancel-op-last-request) | Onboarding Processes |
 | `VSA-VTI-FLOW-OP-NEW` | [New Onboarding Process](#vsa-vti-flow-op-new-new-onboarding-process) | Onboarding Processes |
 | `VSA-VTI-FLOW-OP-RENEW` | [Renew Onboarding Process](#vsa-vti-flow-op-renew-renew-onboarding-process) | Onboarding Processes |
-| `VSA-VTI-FLOW-OP-REVOKE` | [Revoke Participant / Slash Participant Trust Deposit](#vsa-vti-flow-op-revoke-revoke-participant-slash-participant-trust-deposit) | Onboarding Processes |
+| `VSA-VTI-FLOW-OP-REVOKE` | [Revoke Participant / Slash Participant Trust Deposit](#vsa-vti-flow-op-revoke-revoke-participant--slash-participant-trust-deposit) | Onboarding Processes |
 | `VSA-VTI-FLOW-SELF` | [Participant Self Creation](#vsa-vti-flow-self-participant-self-creation) | Participant and Credential Acquisition Flows |
 | `VSA-VTI-FLOW-STATE` | [Flow State](#vsa-vti-flow-state-flow-state) | Participant and Credential Acquisition Flows |
 | `VSA-VTI-FLOW-UPD` | [Validator Updates](#vsa-vti-flow-upd-validator-updates) | Participant and Credential Acquisition Flows |
@@ -3415,5 +3417,5 @@ Every identifier of this document, in lexical order. A section identifier links 
 ## Appendix B: Change Log
 
 - **v4-draft9** — Restructured the document by interface: System Overview, Configuration, Public Endpoints, DIDComm Interface, Administration API, Events API, VPR and Indexer Interface, Agent Lifecycle, Verifiable Trust Behaviors, Data and State. Every existing requirement identifier is unchanged. New sections consolidate statements that were repeated: [[VSA-DC-CONN]](#vsa-dc-conn-connection-acceptance-policy), [[VSA-VTI-FLOW-ISSUE]](#vsa-vti-flow-issue-credential-issuance-and-acceptance), [[VSA-VTI-FLOW-VERIFY]](#vsa-vti-flow-verify-credential-verification), [[VSA-VT-LVP]](#vsa-vt-lvp-linked-vp-management), [[VSA-VPR-TX]](#vsa-vpr-tx-on-chain-transactions), [[VSA-VPR-QRY]](#vsa-vpr-qry-indexer-queries), [[VSA-PUB-LISTENER]](#vsa-pub-listener-public-listener), [[VSA-PUB-DID]](#vsa-pub-did-did-document-and-did-log), [[VSA-DATA]](#vsa-data-persistent-state). Normative sections that had no identifier received one. Added the conformance targets, the requirement-identifier conventions, the datetime encoding rule, the **Events** field of the state-changing methods, and this index.
-- **v4-draft9, second revision** — Public Endpoints now covers every public path family: DID Document and DID log for `did:web` and `did:webvh` ([[VSA-PUB-DID]](#vsa-pub-did-did-document-and-did-log)), DIDComm inbound endpoints ([[VSA-PUB-DIDCOMM]](#vsa-pub-didcomm-didcomm-inbound-endpoint)), linked presentations and VTJSC documents ([[VSA-PUB-VT]](#vsa-pub-vt-verifiable-trust-resources)), AnonCreds registry resources in both DID method layouts and tails files ([[VSA-PUB-AC]](#vsa-pub-ac-anoncreds-registry-resources)), short URLs ([[VSA-PUB-INV]](#vsa-pub-inv-invitation-parameters)). `createPresentationRequest` and `createCredentialOffer` return the invitation object as `invitation` instead of a `url` built on an agent-configured base; the caller owns the link. Configuration gains `PUBLIC_API_PORT`, `ADMIN_API_PORT`, and the Logging group ([[VSA-VTI-CFG-ENV-LOG]](#vsa-vti-cfg-env-log-logging)); the DIDComm endpoint is derived from `PUBLIC_API_BASE_URL` with no override. The `AnonCredsRegistry` and `relativeRef` entries join the agent-managed service entries of [[VSA-VTI-DIDDOC]](#vsa-vti-diddoc-did-document-service-entries).
+- **v4-draft9, second revision** — Public Endpoints now covers every public path family: DID Document and DID log for `did:web` and `did:webvh` ([[VSA-PUB-DID]](#vsa-pub-did-did-document-and-did-log)), DIDComm inbound endpoints ([[VSA-PUB-DIDCOMM]](#vsa-pub-didcomm-didcomm-inbound-endpoint)), linked presentations and VTJSC documents ([[VSA-PUB-VT]](#vsa-pub-vt-verifiable-trust-resources)), AnonCreds registry resources in both DID method layouts and tails files ([[VSA-PUB-AC]](#vsa-pub-ac-anoncreds-registry-resources)), short URLs ([[VSA-PUB-INV]](#vsa-pub-inv-invitation-parameters)). `createPresentationRequest` and `createCredentialOffer` return the invitation object as `invitation` instead of a `url` built on an agent-configured base; the caller owns the link. Configuration gains `PUBLIC_API_PORT`, `ADMIN_API_PORT`, and the Logging group ([[VSA-VTI-CFG-ENV-LOG]](#vsa-vti-cfg-env-log-logging)); the DIDComm endpoint is derived from `PUBLIC_API_BASE_URL` with no override. Review fixes: every VPR read goes through the indexer ([[VSA-VPR-QRY]](#vsa-vpr-qry-indexer-queries)), the service-endpoint methods exclude and refuse the `AnonCredsRegistry` and `relativeRef` entries, `#whois` is stated as an addition to the required linked-VP entry, and `participantSessionId` is the on-chain identifier. The `AnonCredsRegistry` and `relativeRef` entries join the agent-managed service entries of [[VSA-VTI-DIDDOC]](#vsa-vti-diddoc-did-document-service-entries).
 - **v4-draft8** and earlier — see the git history of this file.
