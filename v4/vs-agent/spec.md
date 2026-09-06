@@ -1,6 +1,6 @@
 # VS Agent v4 Specification
 
-**Latest Draft:** spec v4-draft9
+**Latest Draft:** spec v4-draft10
 
 ## Abstract
 
@@ -517,6 +517,8 @@ Each response is a JSON object with `resource` — the object — and `resourceM
 [VSA-PUB-AC-3] **did:webvh layout.** When `AGENT_PUBLIC_DID_METHOD` is `webvh`, the agent MUST publish the implicit `#files` service entry of type `relativeRef` with `serviceEndpoint` `PUBLIC_API_BASE_URL`, and MUST serve each AnonCreds object that it created as an attested resource of the `did:webvh` AnonCreds method at `/resources/{resourceId}`, where `<DID>/resources/{resourceId}` is the identifier of the object, as [DID-WEBVH](https://identity.foundation/didwebvh/) defines attested resources. The agent MAY serve `GET /resources?resourceType={type}` — with an OPTIONAL `relatedJsonSchemaCredentialId` filter — as a listing of its attested resources of one type.
 
 [VSA-PUB-AC-4] **Tails files.** The agent MUST serve the tails file of each revocation registry definition it created at the `tailsLocation` that the definition declares. That URL MUST be under `PUBLIC_API_BASE_URL`; its path is the agent's choice. The agent MUST answer an unknown or malformed `tailsFileId` with HTTP `404`.
+
+[VSA-PUB-AC-5] **AnonCreds schema of a VTJSC.** One AnonCreds schema governs every AnonCreds credential of a VTJSC, and its publisher is the issuer of the VTJSC (usually,  the Ecosystem controller). An agent that issues a VTJSC MUST create and publish the AnonCreds schema of that VTJSC ([[VSA-VTI-VTJSC]](#vsa-vti-vtjsc-vtjsc-management)), with `attrNames` equal to the properties of `credentialSubject` in the JSON Schema of the `CredentialSchema` entry and `name` equal to its `title`, and MUST carry the `id` of the VTJSC as `relatedJsonSchemaCredentialId` in the resource metadata of the schema object — the metadata that the registry signs with the object. The agent MUST serve the listing of [[VSA-PUB-AC-3]](#vsa-pub-ac-anoncreds-registry-resources) for `resourceType=anonCredsSchema` filtered by `relatedJsonSchemaCredentialId`, so that an issuer or a verifier of another agent finds the schema of a VTJSC from the VTJSC alone; the `did:web` layout has no listing, and the identifier of the schema is then obtained out of band. An agent MUST NOT publish an AnonCreds schema for a VTJSC that another DID issued. Each credential definition that the agent publishes for a VTJSC MUST reference that schema, and MUST carry the same `relatedJsonSchemaCredentialId` in its resource metadata, per [[VT-CRED-ANON]](https://verana-labs.github.io/verifiable-trust-spec/versions/v4/#vt-cred-anon-anoncreds-verifiable-trust-credential-vtc). These two links are what [[VSA-VTI-FLOW-VERIFY-AC]](#vsa-vti-flow-verify-ac-anoncreds-trust-decision) walks from a credential definition, or from a `schema_id` restriction, back to the `CredentialSchema` and to its Ecosystem.
 
 ### [VSA-PUB-OID] OpenID4VC Public Protocol Endpoints
 
@@ -1156,8 +1158,8 @@ The two refusal states differ by cause: an exchange ends in `declined` when the 
 
 The agent takes each role of the protocol:
 
-- **Verifier** — [`createPresentationRequest`](#vsa-adm-dc-pr-create-createpresentationrequest) sends the request. When the peer presents, the agent verifies the presentation, stores the result in `verified`, and sets the state to `presentation-received`. The caller then completes the exchange with [`acceptPresentation`](#vsa-adm-dc-pr-accept-acceptpresentation), or refuses it with [`declinePresentationExchange`](#vsa-adm-dc-pr-decline-declinepresentationexchange).
-- **Prover** — when a peer sends the agent a presentation request, the agent stores a record in state `request-received`. The caller answers it with [`acceptPresentationRequest`](#vsa-adm-dc-pr-accept-req-acceptpresentationrequest) or [`declinePresentationExchange`](#vsa-adm-dc-pr-decline-declinepresentationexchange).
+- **Verifier** — [`createPresentationRequest`](#vsa-adm-dc-pr-create-createpresentationrequest) sends the request, once the agent holds the VERIFIER `Participant` that [[VSA-VTI-FLOW-VERIFY-AC-5]](#vsa-vti-flow-verify-ac-anoncreds-trust-decision) requires. When the peer presents, the agent verifies the proof, applies the trust decision of [[VSA-VTI-FLOW-VERIFY-AC-7]](#vsa-vti-flow-verify-ac-anoncreds-trust-decision) to the issuer of each presented credential, stores the result in `verified`, and sets the state to `presentation-received`. The caller then completes the exchange with [`acceptPresentation`](#vsa-adm-dc-pr-accept-acceptpresentation), or refuses it with [`declinePresentationExchange`](#vsa-adm-dc-pr-decline-declinepresentationexchange). A presentation that fails the trust decision never waits for the caller: the agent ends that exchange itself, in `abandoned`.
+- **Prover** — when a peer sends the agent a presentation request, the agent stores a record in state `request-received`. The caller answers it with [`acceptPresentationRequest`](#vsa-adm-dc-pr-accept-req-acceptpresentationrequest) — which presents only when the verifier holds the VERIFIER `Participant` that [[VSA-VTI-FLOW-VERIFY-AC-6]](#vsa-vti-flow-verify-ac-anoncreds-trust-decision) requires — or [`declinePresentationExchange`](#vsa-adm-dc-pr-decline-declinepresentationexchange).
 
 | Module | Method Name | HTTP Method | Relative REST API path | Requirements |
 | --- | --- | --- | --- | --- |
@@ -1175,10 +1177,10 @@ Creates a presentation request as verifier. The request defines the credentials 
 
 **Inputs** (request body):
 
-- `requestedCredentials` (REQUIRED) — array of requested credential descriptors. Each entry references a credential by `credentialDefinitionId` (AnonCreds) or by `jsonSchemaCredentialId` (JSON Schema Credential), and lists the requested `attributes`. When the entry omits `attributes`, the agent MUST request every attribute that the schema defines.
+- `requestedCredentials` (REQUIRED) — array of requested credential descriptors. Each entry references a credential by `credentialDefinitionId` (AnonCreds) or by `jsonSchemaCredentialId` (JSON Schema Credential), and lists the requested `attributes`. When the entry omits `attributes`, the agent MUST request every attribute that the schema defines. An entry that names a `jsonSchemaCredentialId` asks for a credential of that VTJSC from any of its accredited issuers: the agent restricts the group to the AnonCreds schema of the VTJSC ([[VSA-PUB-AC-5]](#vsa-pub-ac-anoncreds-registry-resources)), never to a credential definition, per [[VSA-VTI-FLOW-VERIFY-AC-5]](#vsa-vti-flow-verify-ac-anoncreds-trust-decision). An entry that names a `credentialDefinitionId` restricts the group to the credentials of that one issuer.
 - `connectionId` (OPTIONAL) — an established connection to send the request on. When the caller omits it, the agent creates an Out-of-Band invitation instead.
 - `requireNonRevocation` (OPTIONAL, default `false`) — when `true`, the holder MUST supply a non-revocation proof at verification time.
-- `autoAccept` (OPTIONAL, default `false`) — when `true`, the agent completes its verifier steps itself: after it verifies a received presentation, it acknowledges the presentation with no [`acceptPresentation`](#vsa-adm-dc-pr-accept-acceptpresentation) call.
+- `autoAccept` (OPTIONAL, default `false`) — when `true`, the agent completes its verifier steps itself: after the proof verification and the trust decision of [[VSA-VTI-FLOW-VERIFY-AC-7]](#vsa-vti-flow-verify-ac-anoncreds-trust-decision) both succeed for a received presentation, it acknowledges the presentation with no [`acceptPresentation`](#vsa-adm-dc-pr-accept-acceptpresentation) call.
 - `useLegacyDid` and `didcommVersion` (OPTIONAL) — see [Invitation Parameters](#vsa-pub-inv-invitation-parameters). The agent MUST ignore both when `connectionId` is present.
 
 **Output**:
@@ -1187,7 +1189,14 @@ Creates a presentation request as verifier. The request defines the credentials 
 - `invitation` — the Out-of-Band invitation, as a JSON object, in the envelope that `didcommVersion` selects. Absent when `connectionId` is present.
 - `shortUrl` — a URL under `PUBLIC_API_BASE_URL` that resolves to the same invitation, per [[VSA-PUB-INV-2]](#vsa-pub-inv-invitation-parameters), for a QR code that stays small. Present when the agent supports short URLs, absent when `connectionId` is present.
 
-**Errors**: `UNKNOWN_ID` (`404`) when `connectionId` resolves to no connection.
+**Requirements**: before it creates the request, the agent MUST apply [[VSA-VTI-FLOW-VERIFY-AC-5]](#vsa-vti-flow-verify-ac-anoncreds-trust-decision) to each entry: it derives the `CredentialSchema` of the entry, and holds an active VERIFIER `Participant` for it. The agent records the `CredentialSchema` of each entry with the exchange, for the check of [[VSA-VTI-FLOW-VERIFY-AC-7]](#vsa-vti-flow-verify-ac-anoncreds-trust-decision).
+
+**Errors**:
+
+- `UNKNOWN_ID` (`404`) — `connectionId` resolves to no connection.
+- `INVALID_INPUT` (`400`) — an entry names a VTJSC or a credential definition that binds to no `CredentialSchema` ([[VSA-VTI-FLOW-VERIFY-AC-1]](#vsa-vti-flow-verify-ac-anoncreds-trust-decision)).
+- `NOT_AUTHORIZED` (`409`) — the agent holds no active VERIFIER `Participant` for the `CredentialSchema` of an entry.
+- `RESOLVER_UNAVAILABLE` (`503`) — the agent cannot complete the check ([[VSA-VTI-FLOW-VERIFY-AC-8]](#vsa-vti-flow-verify-ac-anoncreds-trust-decision)).
 
 **Events**: [`didcomm.presentations.state-updated`](#vsa-evt-cat-event-catalog); [`didcomm.connections.state-updated`](#vsa-evt-cat-event-catalog) when the invitation produces a connection.
 
@@ -1201,18 +1210,22 @@ Accepts a presentation request that a peer sent to this agent, and presents the 
 
 **Inputs**: none. The agent selects the credentials that satisfy the request.
 
+**Requirements**: before it presents, the agent MUST apply [[VSA-VTI-FLOW-VERIFY-AC-6]](#vsa-vti-flow-verify-ac-anoncreds-trust-decision): the verifier holds an active VERIFIER `Participant` for the `CredentialSchema` of each requested credential. When the check fails, the exchange stays in `request-received`, and the caller refuses it with [`declinePresentationExchange`](#vsa-adm-dc-pr-decline-declinepresentationexchange).
+
 **Output**: the updated presentation record.
 
 **Errors**:
 
 - `INVALID_STATE` (`409`) — the exchange is not in state `request-received`.
 - `NO_COMPATIBLE_CREDENTIALS` (`409`) — the credential store holds no credential set that satisfies the request.
+- `PEER_NOT_AUTHORIZED` (`409`) — the verifier holds no active VERIFIER `Participant` for the `CredentialSchema` of a requested credential.
+- `RESOLVER_UNAVAILABLE` (`503`) — the agent cannot complete the check ([[VSA-VTI-FLOW-VERIFY-AC-8]](#vsa-vti-flow-verify-ac-anoncreds-trust-decision)).
 
 **Events**: [`didcomm.presentations.state-updated`](#vsa-evt-cat-event-catalog).
 
 ##### [VSA-ADM-DC-PR-ACCEPT] acceptPresentation
 
-Acknowledges a received presentation as verifier, and completes the exchange. This method does not change the verification result: the agent verified the presentation when it received it, and stored the result in `verified`.
+Acknowledges a received presentation as verifier, and completes the exchange. This method does not change the verification result: the agent verified the presentation when it received it, and stored the result in `verified`. The agent MUST NOT acknowledge a presentation that failed the trust decision of [[VSA-VTI-FLOW-VERIFY-AC-7]](#vsa-vti-flow-verify-ac-anoncreds-trust-decision): that exchange is already `abandoned`, so this method answers `INVALID_STATE`.
 
 **Path parameters**:
 
@@ -1265,7 +1278,7 @@ Retrieves one presentation record by `proofExchangeId`.
 
 - `proofExchangeId` (REQUIRED) — exchange identifier.
 
-**Output**: the presentation record. It contains at minimum `proofExchangeId`, `state`, `role`, `connectionId`, `threadId`, `requestedCredentials`, `claims`, `verified`, `errorMessage`, `createdAt`, and `updatedAt`.
+**Output**: the presentation record. It contains at minimum `proofExchangeId`, `state`, `role`, `connectionId`, `threadId`, `requestedCredentials`, `claims`, `verified`, `errorMessage`, `createdAt`, and `updatedAt`. `verified` is `true` only when the proof verification and the trust decision of [[VSA-VTI-FLOW-VERIFY-AC-7]](#vsa-vti-flow-verify-ac-anoncreds-trust-decision) both succeeded; when the trust decision ended the exchange, `errorMessage` carries its problem-report code.
 
 ##### [VSA-ADM-DC-PR-DELETE] deletePresentation
 
@@ -1289,8 +1302,8 @@ The two refusal states differ by cause: an exchange ends in `declined` when the 
 
 The agent takes each role of the protocol:
 
-- **Issuer** — [`createCredentialOffer`](#vsa-adm-dc-ce-offer-createcredentialoffer) sends the offer. When the peer requests the credential, the record reaches `request-received`, and the caller issues with [`acceptCredentialRequest`](#vsa-adm-dc-ce-accept-req-acceptcredentialrequest).
-- **Holder** — when a peer offers this agent a credential, the record reaches `offer-received`, and the caller requests with [`acceptCredentialOffer`](#vsa-adm-dc-ce-accept-offer-acceptcredentialoffer). When the credential arrives, the record reaches `credential-received`, and the caller stores it with [`acceptCredential`](#vsa-adm-dc-ce-accept-cred-acceptcredential).
+- **Issuer** — [`createCredentialOffer`](#vsa-adm-dc-ce-offer-createcredentialoffer) sends the offer, once the agent holds the ISSUER `Participant` that [[VSA-VTI-FLOW-VERIFY-AC-3]](#vsa-vti-flow-verify-ac-anoncreds-trust-decision) requires. When the peer requests the credential, the record reaches `request-received`, and the caller issues with [`acceptCredentialRequest`](#vsa-adm-dc-ce-accept-req-acceptcredentialrequest).
+- **Holder** — when a peer offers this agent a credential, the record reaches `offer-received`, and the caller requests with [`acceptCredentialOffer`](#vsa-adm-dc-ce-accept-offer-acceptcredentialoffer) — which requests only when the issuer holds the ISSUER `Participant` that [[VSA-VTI-FLOW-VERIFY-AC-4]](#vsa-vti-flow-verify-ac-anoncreds-trust-decision) requires. When the credential arrives, the record reaches `credential-received`, and the caller stores it with [`acceptCredential`](#vsa-adm-dc-ce-accept-cred-acceptcredential).
 
 | Module | Method Name | HTTP Method | Relative REST API path | Requirements |
 | --- | --- | --- | --- | --- |
@@ -1323,7 +1336,13 @@ Creates an AnonCreds credential offer as issuer, with a preview of the offered c
 - `invitation` — the Out-of-Band invitation, as a JSON object, in the envelope that `didcommVersion` selects. Absent when `connectionId` is present.
 - `shortUrl` — a URL under `PUBLIC_API_BASE_URL` that resolves to the same invitation, per [[VSA-PUB-INV-2]](#vsa-pub-inv-invitation-parameters), for a QR code that stays small. Present when the agent supports short URLs, absent when `connectionId` is present.
 
-**Errors**: `UNKNOWN_ID` (`404`) when `connectionId` resolves to no connection.
+**Requirements**: before it creates the offer, the agent MUST apply [[VSA-VTI-FLOW-VERIFY-AC-3]](#vsa-vti-flow-verify-ac-anoncreds-trust-decision): it holds an active ISSUER `Participant` for the `CredentialSchema` of the VTJSC that governs `credentialDefinitionId`.
+
+**Errors**:
+
+- `UNKNOWN_ID` (`404`) — `connectionId` resolves to no connection, or `credentialDefinitionId` resolves to no credential definition of this agent.
+- `NOT_AUTHORIZED` (`409`) — the agent holds no active ISSUER `Participant` for the `CredentialSchema` of the credential definition.
+- `RESOLVER_UNAVAILABLE` (`503`) — the agent cannot complete the check ([[VSA-VTI-FLOW-VERIFY-AC-8]](#vsa-vti-flow-verify-ac-anoncreds-trust-decision)).
 
 **Events**: [`didcomm.credential-exchanges.state-updated`](#vsa-evt-cat-event-catalog); [`didcomm.connections.state-updated`](#vsa-evt-cat-event-catalog) when the invitation produces a connection.
 
@@ -1337,9 +1356,15 @@ Accepts a credential offer that a peer sent to this agent, and requests the cred
 
 **Inputs**: none.
 
+**Requirements**: before it requests the credential, the agent MUST apply [[VSA-VTI-FLOW-VERIFY-AC-4]](#vsa-vti-flow-verify-ac-anoncreds-trust-decision) to the offered credential definition: its `issuerId` holds an active ISSUER `Participant` for the `CredentialSchema` of the credential definition. When the check fails, the exchange stays in `offer-received`, and the caller refuses it with [`declineCredentialExchange`](#vsa-adm-dc-ce-decline-declinecredentialexchange).
+
 **Output**: the updated credential exchange record.
 
-**Errors**: `INVALID_STATE` (`409`) — the exchange is not in state `offer-received`.
+**Errors**:
+
+- `INVALID_STATE` (`409`) — the exchange is not in state `offer-received`.
+- `PEER_NOT_AUTHORIZED` (`409`) — the issuer holds no active ISSUER `Participant` for the `CredentialSchema` of the offered credential.
+- `RESOLVER_UNAVAILABLE` (`503`) — the agent cannot complete the check ([[VSA-VTI-FLOW-VERIFY-AC-8]](#vsa-vti-flow-verify-ac-anoncreds-trust-decision)).
 
 **Events**: [`didcomm.credential-exchanges.state-updated`](#vsa-evt-cat-event-catalog).
 
@@ -1944,11 +1969,18 @@ Creates a new AnonCreds credential definition. A Verifiable Trust JSON Schema Cr
 - `relatedJsonSchemaCredentialId` (REQUIRED) — URL of the Verifiable Trust JSON Schema Credential that governs the credential definition. The agent MUST reject a request that omits it. A credential that no VTJSC governs binds to no `CredentialSchema` and to no Ecosystem, so trust resolution cannot accept it ([[TR-4]](https://verana-labs.github.io/verifiable-trust-spec/versions/v4/#tr-trust-resolution)).
 - `supportRevocation` (OPTIONAL, default `false`) — when `true`, the agent can revoke the credential.
 
+**Requirements**:
+
+- The agent MUST build the credential definition on the AnonCreds schema of the VTJSC ([[VSA-PUB-AC-5]](#vsa-pub-ac-anoncreds-registry-resources)): the schema that the agent itself published when it is the issuer of the VTJSC, otherwise the schema that the registry of the issuer of the VTJSC lists for `relatedJsonSchemaCredentialId`. The agent MUST NOT create a schema of its own for a VTJSC that another DID issued: a credential on such a schema does not satisfy a presentation request that names the VTJSC ([[VSA-ADM-DC-PR-CREATE]](#vsa-adm-dc-pr-create-createpresentationrequest)), so no verifier can accept it from this issuer.
+- The agent MUST carry `relatedJsonSchemaCredentialId` in the resource metadata of the credential definition object it publishes, per [[VSA-PUB-AC-5]](#vsa-pub-ac-anoncreds-registry-resources).
+- The agent MAY warn when it holds no active ISSUER `Participant` for the `CredentialSchema` of the VTJSC. The check that binds is the one of [[VSA-VTI-FLOW-VERIFY-AC-3]](#vsa-vti-flow-verify-ac-anoncreds-trust-decision), at offer time.
+
 **Output**: the resulting credential definition record. The record MUST include `relatedJsonSchemaCredentialId`.
 
 **Errors**:
 
 - `UNKNOWN_ID` (`404`) — the agent cannot resolve `relatedJsonSchemaCredentialId`.
+- `INVALID_STATE` (`409`) — the issuer of the VTJSC publishes no AnonCreds schema for it yet.
 
 ##### [VSA-ADM-AC-CD-DELETE] deleteCredentialDefinition
 
@@ -2545,6 +2577,8 @@ Besides the subscription of [[VSA-VTI-NOTIF]](#vsa-vti-notif-notifications), the
 | Before it accepts a credential | The `Participant` entry of the Validator; [`IDX-PP-QRY-6` Get Participant Session](../verana-indexer/spec.md#idx-pp-qry-6-get-participant-session); [`IDX-DI-QRY-1` Get Digest](../verana-indexer/spec.md#idx-di-qry-1-get-digest) | Verify the issuer, the session, and the anchored digest. | [[VSA-VTI-FLOW-VERIFY]](#vsa-vti-flow-verify-credential-verification) |
 | Before it starts a flow | The `CredentialSchema` and the `Ecosystem` of the flow | Check the schema modes and the [[WL-ECS]](https://verana-labs.github.io/verifiable-trust-spec/#wl-ecs-ecosystem-whitelists-and-vpr-scheme-resolution) whitelist. | [ECS Participants and Credentials](#vsa-vti-ecs-ecs-participants-and-credentials) |
 | Before it accepts an OpenID4VP presentation | [`IDX-VT-QRY-1` Resolve](../verana-indexer/spec.md#idx-vt-qry-1-resolve) for the issuer DID | Obtain the trust status of the issuer and its authorization for the `vtjscId`. | [[VSA-VTI-FLOW-VERIFY-OID]](#vsa-vti-flow-verify-oid-openid4vp-trust-decision) |
+| Before it offers an AnonCreds credential, and before it sends an AnonCreds presentation request | [`IDX-PP-QRY-2` List Participants](../verana-indexer/spec.md#idx-pp-qry-2-list-participants) for the DID of the agent, with `role`, `schema_id`, and `participant_state = ACTIVE`; [`IDX-CS-QRY-1` Get Credential Schema](../verana-indexer/spec.md#idx-cs-qry-1-get-credential-schema) and [`IDX-ES-QRY-1` Get Ecosystem](../verana-indexer/spec.md#idx-es-qry-1-get-ecosystem) for the `CredentialSchema` of the VTJSC | Verify the own ISSUER or VERIFIER `Participant` at the present time. | [[VSA-VTI-FLOW-VERIFY-AC-3]](#vsa-vti-flow-verify-ac-anoncreds-trust-decision), [[VSA-VTI-FLOW-VERIFY-AC-5]](#vsa-vti-flow-verify-ac-anoncreds-trust-decision) |
+| Before it accepts an AnonCreds offer, before it presents, and before it acknowledges an AnonCreds presentation | The same reads, for the `issuerId` of the credential definition or for the DID of the verifier | Verify the ISSUER `Participant` of the issuer, or the VERIFIER `Participant` of the verifier, at the present time. | [[VSA-VTI-FLOW-VERIFY-AC-4]](#vsa-vti-flow-verify-ac-anoncreds-trust-decision), [[VSA-VTI-FLOW-VERIFY-AC-6]](#vsa-vti-flow-verify-ac-anoncreds-trust-decision), [[VSA-VTI-FLOW-VERIFY-AC-7]](#vsa-vti-flow-verify-ac-anoncreds-trust-decision) |
 
 ## Agent Lifecycle
 
@@ -2973,7 +3007,7 @@ These steps close every flow in which the Validator issues a credential: the [Ne
 
 #### [VSA-VTI-FLOW-VERIFY] Credential Verification
 
-The agent verifies a credential before it accepts it, on each channel it receives credentials or presentations on. The verification always ends with a query of the VPR: the agent never trusts a peer for the authorization of an issuer.
+The agent verifies a credential before it accepts it, on each channel it receives credentials or presentations on. The verification always ends with a query of the VPR: the agent never trusts a peer for the authorization of an issuer. For the AnonCreds format the agent also verifies its own authorization before it offers or requests, and the authorization of its peer before it requests a credential or presents one ([[VSA-VTI-FLOW-VERIFY-AC]](#vsa-vti-flow-verify-ac-anoncreds-trust-decision)).
 
 ##### [VSA-VTI-FLOW-VERIFY-VT] Verifiable Trust Credential Received over DIDComm
 
@@ -2983,6 +3017,30 @@ At step 4 of [Credential Issuance and Acceptance](#vsa-vti-flow-issue-credential
 - Verify that the `ParticipantSession` created at step 2 exists on-chain and references the validator's ISSUER `Participant` entry (see [[IDX-PP-QRY-6]](../verana-indexer/spec.md#idx-pp-qry-6-get-participant-session)).
 - Recompute the credential's `digestJCS` as specified in [W3C VTCs: Determining Credential Issuance Time](https://verana-labs.github.io/verifiable-trust-spec/versions/v4/#w3c-vtcs-determining-credential-issuance-time) and locate the corresponding `Digest` entry via [`IDX-DI-QRY-1` Get Digest](../verana-indexer/spec.md#idx-di-qry-1-get-digest). The entry MUST exist — the digest is anchored in the `Digest` store by the transaction of step 2, not on the `ParticipantSession` entry — and its `created` timestamp is the credential's effective issuance time.
 - If any check fails, the applicant MUST reject the credential and log the error.
+
+##### [VSA-VTI-FLOW-VERIFY-AC] AnonCreds Trust Decision
+
+An AnonCreds credential binds to its `CredentialSchema` through two objects of the AnonCreds registry of its issuer ([[VSA-PUB-AC]](#vsa-pub-ac-anoncreds-registry-resources)): the credential definition, which names the issuer and the AnonCreds schema it builds on, and the AnonCreds schema, which the Ecosystem controller publishes for the VTJSC ([[VSA-PUB-AC-5]](#vsa-pub-ac-anoncreds-registry-resources)). Both carry `relatedJsonSchemaCredentialId` in their resource metadata. The rules of this section apply to every AnonCreds exchange over DIDComm, in both roles of each protocol, whichever Administration API method or message starts it. They implement [[CIB-3]](https://verana-labs.github.io/verifiable-trust-spec/versions/v4/#cib-credential-issuance-by), [[CIT-3]](https://verana-labs.github.io/verifiable-trust-spec/versions/v4/#cit-credential-issued-to), [[PRB-3]](https://verana-labs.github.io/verifiable-trust-spec/versions/v4/#prb-presentation-requested-by), and [[PRT-3]](https://verana-labs.github.io/verifiable-trust-spec/versions/v4/#prt-presentation-requested-to) of the Verifiable Trust specification for the AnonCreds format, and [[TR-5]](https://verana-labs.github.io/verifiable-trust-spec/versions/v4/#tr-trust-resolution) for the time of the check.
+
+[VSA-VTI-FLOW-VERIFY-AC-1] **CredentialSchema of an AnonCreds object.** To derive the `CredentialSchema` of a credential definition or of an AnonCreds schema, the agent MUST resolve the object through its AnonCreds registry, read `relatedJsonSchemaCredentialId` from the resource metadata of the resolved object, dereference that VTJSC, and take the `CredentialSchema` identifier from `credentialSubject.jsonSchema.$ref`. Per [[TR-3]](https://verana-labs.github.io/verifiable-trust-spec/versions/v4/#tr-trust-resolution), the agent MUST verify the proof of the VTJSC and MUST verify that its `issuer` is the `did` of the Ecosystem that owns that `CredentialSchema` on the VPR ([`IDX-CS-QRY-1` Get Credential Schema](../verana-indexer/spec.md#idx-cs-qry-1-get-credential-schema), [`IDX-ES-QRY-1` Get Ecosystem](../verana-indexer/spec.md#idx-es-qry-1-get-ecosystem)). An object with no `relatedJsonSchemaCredentialId`, or a VTJSC that binds to no `CredentialSchema`, derives no `CredentialSchema`: the check that needs it fails, since such a credential is not a Verifiable Trust Credential ([[CIB-2]](https://verana-labs.github.io/verifiable-trust-spec/versions/v4/#cib-credential-issuance-by), [[CIT-2]](https://verana-labs.github.io/verifiable-trust-spec/versions/v4/#cit-credential-issued-to)). The agent MUST NOT skip a check because the derivation found nothing.
+
+[VSA-VTI-FLOW-VERIFY-AC-2] **Authorization at the present time.** A DID is authorized for a role on a `CredentialSchema` when the VPR holds a `Participant` entry with that `did`, that `role`, that `schema_id`, and `participant_state = ACTIVE` ([`IDX-PP-QRY-2` List Participants](../verana-indexer/spec.md#idx-pp-qry-2-list-participants), [Participant State Semantics](../verana-indexer/spec.md#participant-state-semantics)). Every check of this section evaluates that entry at the present time — the latest indexed block — and never at an issuance time: an AnonCreds credential anchors no digest on the VPR ([[VT-CRED-ANON]](https://verana-labs.github.io/verifiable-trust-spec/versions/v4/#vt-cred-anon-anoncreds-verifiable-trust-credential-vtc)), so it has no effective issuance time, and the agent MUST NOT use `At-Block-Height` for these reads. The `did` comparison is exact: the `issuerId` of a credential definition, or the DID of the peer of a connection, MUST equal the `did` of the `Participant` entry.
+
+[VSA-VTI-FLOW-VERIFY-AC-3] **Issuer, before an offer.** Before it offers an AnonCreds credential — through [`createCredentialOffer`](#vsa-adm-dc-ce-offer-createcredentialoffer), or through any other path that produces an offer — the agent MUST hold an active ISSUER `Participant` for the `CredentialSchema` of the credential definition of the offer. When it does not, the agent MUST NOT send the offer ([[CIB-3]](https://verana-labs.github.io/verifiable-trust-spec/versions/v4/#cib-credential-issuance-by)).
+
+[VSA-VTI-FLOW-VERIFY-AC-4] **Holder, before a request.** Before it accepts an AnonCreds credential offer ([`acceptCredentialOffer`](#vsa-adm-dc-ce-accept-offer-acceptcredentialoffer), or an automatic acceptance), the agent MUST derive the `CredentialSchema` of the offered credential definition, and MUST verify that the `issuerId` of that credential definition holds an active ISSUER `Participant` for it ([[CIT-3]](https://verana-labs.github.io/verifiable-trust-spec/versions/v4/#cit-credential-issued-to)). When the check fails, the agent MUST NOT request the credential. For the AnonCreds format this check stands in for the session and digest checks of [[VSA-VTI-FLOW-VERIFY-VT]](#vsa-vti-flow-verify-vt-verifiable-trust-credential-received-over-didcomm), which apply to W3C credentials only.
+
+[VSA-VTI-FLOW-VERIFY-AC-5] **Verifier, before a request.** Before it sends a presentation request — through [`createPresentationRequest`](#vsa-adm-dc-pr-create-createpresentationrequest), or over an established connection — the agent MUST derive the `CredentialSchema` of each requested credential, from the VTJSC or from the credential definition that the caller names, and MUST hold an active VERIFIER `Participant` for it ([[PRB-3]](https://verana-labs.github.io/verifiable-trust-spec/versions/v4/#prb-presentation-requested-by)). When it does not, the agent MUST NOT send the request. A request for a credential of a VTJSC MUST restrict the requested attributes to the AnonCreds schema of the VTJSC (a `schema_id` restriction), so that the credential of any authorized issuer satisfies it. The agent MUST NOT enumerate the authorized issuers in the request: the set changes on the VPR, and a request that lists it grows with it. The prover and the verifier each check the other side against the VPR instead.
+
+[VSA-VTI-FLOW-VERIFY-AC-6] **Prover, before a presentation.** Before it presents ([`acceptPresentationRequest`](#vsa-adm-dc-pr-accept-req-acceptpresentationrequest)), the agent MUST derive the `CredentialSchema` of each requested credential from the restriction of the request — the AnonCreds schema of a `schema_id` restriction, the credential definition of a `cred_def_id` restriction — and MUST verify that the DID of the verifier holds an active VERIFIER `Participant` for it ([[PRT-3]](https://verana-labs.github.io/verifiable-trust-spec/versions/v4/#prt-presentation-requested-to)). The DID of the verifier is the DID with which it established the connection — its public DID, as [[VS-CONN-VS]](https://verana-labs.github.io/verifiable-trust-spec/versions/v4/#vs-conn-vs-requirements-for-a-vs-to-accept-a-connection-from-another-service) expects of a service; a verifier that connected with another DID cannot be checked. When the check fails, the agent MUST NOT present.
+
+[VSA-VTI-FLOW-VERIFY-AC-7] **Verifier, on a presentation.** When the agent receives a presentation, after it verifies the proof, it MUST — for each credential definition that the presentation identifies — derive the `CredentialSchema` of the credential definition, verify that it is the `CredentialSchema` of the corresponding requested credential, and verify that the `issuerId` of the credential definition holds an active ISSUER `Participant` for it ([[TR-5]](https://verana-labs.github.io/verifiable-trust-spec/versions/v4/#tr-trust-resolution)). The agent MUST NOT acknowledge the presentation before the proof verification and this check both succeed, whatever the `autoAccept` policy of the exchange. When the check fails, the agent MUST record `verified = false` and the cause in `errorMessage`, MUST send a `problem-report` with `description.code` `e.p.issuer-not-authorized`, and MUST end the exchange in `abandoned` through a state change that emits [`didcomm.presentations.state-updated`](#vsa-evt-cat-event-catalog).
+
+[VSA-VTI-FLOW-VERIFY-AC-8] **Fail closed.** When the agent cannot complete a check — the indexer is unreachable, or an object of the AnonCreds registry of the peer or a VTJSC cannot be resolved — the agent MUST treat the check as failed. An Administration API method then answers `RESOLVER_UNAVAILABLE` (`503`). A presentation in flight ends as in [[VSA-VTI-FLOW-VERIFY-AC-7]](#vsa-vti-flow-verify-ac-anoncreds-trust-decision), with the problem-report code `e.p.trust-resolution-unavailable`. The agent MUST NOT offer, request, present, or acknowledge on an unchecked exchange.
+
+The methods of this section share three error codes, beyond the vocabulary of [[VSA-ADM-CONV-ERR]](#vsa-adm-conv-err-errors): `NOT_AUTHORIZED` (`409`) when the agent itself holds no active `Participant` for the role and the `CredentialSchema` of the operation, `PEER_NOT_AUTHORIZED` (`409`) when its peer holds none, and `RESOLVER_UNAVAILABLE` (`503`) when the check cannot run.
+
+> Non-normative: one read of [`IDX-PP-QRY-2` List Participants](../verana-indexer/spec.md#idx-pp-qry-2-list-participants) with `did`, `role`, `schema_id`, and `participant_state=ACTIVE` answers each check with a bounded response, whatever the size of the schema; [`IDX-VT-QRY-1` Resolve](../verana-indexer/spec.md#idx-vt-qry-1-resolve) with `participations` answers it for every schema of a DID at once, and adds whether the DID is a Verifiable Service. Either read satisfies this section. The reference implementation records the `CredentialSchema` of a request in the metadata of the exchange record when it creates the request, and reads it back when the presentation arrives.
 
 ##### [VSA-VTI-FLOW-VERIFY-OID] OpenID4VP Trust Decision
 
@@ -3108,6 +3166,7 @@ sequenceDiagram
    - Generate a VTJSC conforming to [VT-JSON-SCHEMA-CRED-W3C], whose `credentialSubject.jsonSchema.$ref` points to the on-chain `CredentialSchema` entry and whose `credentialSubject.digestSRI` carries the SRI digest of the referenced JSON schema content. The VTJSC is signed with the Ecosystem's DID key.
    - Wrap the VTJSC in a Verifiable Presentation signed by the same Ecosystem DID.
    - Add a `LinkedVerifiablePresentation` service entry to the Ecosystem's DID Document, with a fragment that starts with `#vpr-schemas-` and ends with `-vtjsc-vp`, as required by [VT-ECOSYSTEM-DIDDOC].
+   - Create and publish the AnonCreds schema of the VTJSC, per [[VSA-PUB-AC-5]](#vsa-pub-ac-anoncreds-registry-resources), so that every issuer that the Ecosystem accredits builds its credential definition on the same schema, and a verifier can request the credential of any of them.
 
 4. The agent MUST serve the VP at its declared `serviceEndpoint` so that any wallet, issuer, or verifier resolving the Ecosystem DID can retrieve and verify the VTJSC.
 
@@ -3178,7 +3237,8 @@ Each record type of the agent has a state field, and the agent emits a `state-up
 - **DID resolution boundary.** Before it resolves an issuer DID, the agent checks the DID method, the host allowlist, and that the target is not a loopback, private, or link-local address. See [[VSA-VTI-FLOW-VERIFY-OID]](#vsa-vti-flow-verify-oid-openid4vp-trust-decision).
 - **Public origins over TLS.** `PUBLIC_API_BASE_URL` and `ADMIN_API_PUBLIC_URL` are `https://` origins, and `PUBLIC_API_BASE_URL` carries no credentials. See [[VSA-VTI-CFG-ENV-RT]](#vsa-vti-cfg-env-rt-agent-runtime), [[VSA-VTI-CFG-ENV-ADM]](#vsa-vti-cfg-env-adm-administration-api).
 - **Personal data in events.** Event data can carry personal data; the operator uses `https://` for a consumer outside the trusted network. See [[VSA-EVT-DEL-6]](#vsa-evt-del-delivery).
-- **Trust decisions from the VPR.** The agent establishes the authorization of an issuer, the purpose of an ECS connection, and the anchoring of a credential from the VPR, never from the claim of a peer. See [[VSA-DC-CONN]](#vsa-dc-conn-connection-acceptance-policy), [[VSA-VTI-FLOW-VERIFY]](#vsa-vti-flow-verify-credential-verification).
+- **Trust decisions from the VPR.** The agent establishes the authorization of an issuer, the purpose of an ECS connection, and the anchoring of a credential from the VPR, never from the claim of a peer. See [[VSA-DC-CONN]](#vsa-dc-conn-connection-acceptance-policy), [[VSA-VTI-FLOW-VERIFY]](#vsa-vti-flow-verify-credential-verification), [[VSA-VTI-FLOW-VERIFY-AC]](#vsa-vti-flow-verify-ac-anoncreds-trust-decision).
+- **AnonCreds authorization fails closed.** The agent checks the ISSUER or VERIFIER `Participant` of itself and of its peer at the present time before each step of an AnonCreds exchange, never skips a check whose inputs it cannot derive, and refuses the step when the indexer does not answer. See [[VSA-VTI-FLOW-VERIFY-AC]](#vsa-vti-flow-verify-ac-anoncreds-trust-decision).
 - **Development signing.** A self-signed OpenID4VC certificate is unsuitable for production. See [[VSA-VTI-CFG-ENV-OID]](#vsa-vti-cfg-env-oid-openid4vc).
 
 ## Observability
@@ -3197,6 +3257,7 @@ The agent reports its state through [`getLiveness`](#vsa-adm-ag-live-getliveness
 | The Ecosystem of an ECS flow is not in `TRUSTED_ECS_ECOSYSTEM_DIDS`, or a delegated-mode check fails | Error | The flow stops. | [[VSA-VTI-ECS]](#vsa-vti-ecs-ecs-participants-and-credentials) |
 | The composed claims of the own Service credential fail schema validation | Error, naming each missing or invalid claim | The issuance stops. | [[VSA-VTI-ECS]](#vsa-vti-ecs-ecs-participants-and-credentials) |
 | A received credential fails verification | Error | The credential is rejected. | [[VSA-VTI-FLOW-VERIFY]](#vsa-vti-flow-verify-credential-verification) |
+| An AnonCreds offer, request, or presentation fails the trust decision, or the check cannot run | Warning, naming the DID, the role, and the `CredentialSchema` | The step is refused, or the exchange ends in `abandoned`. | [[VSA-VTI-FLOW-VERIFY-AC]](#vsa-vti-flow-verify-ac-anoncreds-trust-decision) |
 | An event delivery fails | Error | The agent MAY retry. | [[VSA-EVT-DEL-3]](#vsa-evt-del-delivery) |
 
 The Level column names the minimum `AGENT_LOG_LEVEL` or `ADMIN_API_LOG_LEVEL` at which the entry appears ([[VSA-VTI-CFG-ENV-LOG]](#vsa-vti-cfg-env-log-logging)).
@@ -3335,6 +3396,7 @@ Every identifier of this document, in lexical order. A section identifier links 
 | `VSA-PUB-AC-2` | **did:web layout.** When `AGENT_PUBLIC_DID_METHOD` is `web`, the agent MUST publish a service entry of type `AnonCredsRegistry`, with `id… |  |
 | `VSA-PUB-AC-3` | **did:webvh layout.** When `AGENT_PUBLIC_DID_METHOD` is `webvh`, the agent MUST publish the implicit `#files` service entry of type `rela… |  |
 | `VSA-PUB-AC-4` | **Tails files.** The agent MUST serve the tails file of each revocation registry definition it created at the `tailsLocation` that the de… |  |
+| `VSA-PUB-AC-5` | **AnonCreds schema of a VTJSC.** One AnonCreds schema governs every AnonCreds credential of a VTJSC, and its publisher is the issuer of t… |  |
 | `VSA-PUB-DID` | [DID Document and DID Log](#vsa-pub-did-did-document-and-did-log) | Public Endpoints |
 | `VSA-PUB-DID-1` | The agent MUST serve its DID Document at the location that DID-WEB resolves from its DID location (see VSA-VTI-BOOT-DID): |  |
 | `VSA-PUB-DID-2` | The agent MUST serve each Verifiable Presentation that a `LinkedVerifiablePresentation` entry of its DID Document references at the `serv… |  |
@@ -3405,6 +3467,15 @@ Every identifier of this document, in lexical order. A section identifier links 
 | `VSA-VTI-FLOW-STATE` | [Flow State](#vsa-vti-flow-state-flow-state) | Participant and Credential Acquisition Flows |
 | `VSA-VTI-FLOW-UPD` | [Validator Updates](#vsa-vti-flow-upd-validator-updates) | Participant and Credential Acquisition Flows |
 | `VSA-VTI-FLOW-VERIFY` | [Credential Verification](#vsa-vti-flow-verify-credential-verification) | Participant and Credential Acquisition Flows |
+| `VSA-VTI-FLOW-VERIFY-AC` | [AnonCreds Trust Decision](#vsa-vti-flow-verify-ac-anoncreds-trust-decision) | Credential Verification |
+| `VSA-VTI-FLOW-VERIFY-AC-1` | **CredentialSchema of an AnonCreds object.** To derive the `CredentialSchema` of a credential definition or of an AnonCreds schema, the a… |  |
+| `VSA-VTI-FLOW-VERIFY-AC-2` | **Authorization at the present time.** A DID is authorized for a role on a `CredentialSchema` when the VPR holds a `Participant` entry wi… |  |
+| `VSA-VTI-FLOW-VERIFY-AC-3` | **Issuer, before an offer.** Before it offers an AnonCreds credential — through [`createCredentialOffer`](#vsa-adm-dc-ce-offer-createcred… |  |
+| `VSA-VTI-FLOW-VERIFY-AC-4` | **Holder, before a request.** Before it accepts an AnonCreds credential offer ([`acceptCredentialOffer`](#vsa-adm-dc-ce-accept-offer-acce… |  |
+| `VSA-VTI-FLOW-VERIFY-AC-5` | **Verifier, before a request.** Before it sends a presentation request — through [`createPresentationRequest`](#vsa-adm-dc-pr-create-crea… |  |
+| `VSA-VTI-FLOW-VERIFY-AC-6` | **Prover, before a presentation.** Before it presents ([`acceptPresentationRequest`](#vsa-adm-dc-pr-accept-req-acceptpresentationrequest)… |  |
+| `VSA-VTI-FLOW-VERIFY-AC-7` | **Verifier, on a presentation.** When the agent receives a presentation, after it verifies the proof, it MUST — for each credential defin… |  |
+| `VSA-VTI-FLOW-VERIFY-AC-8` | **Fail closed.** When the agent cannot complete a check — the indexer is unreachable, or an object of the AnonCreds registry of the peer … |  |
 | `VSA-VTI-FLOW-VERIFY-OID` | [OpenID4VP Trust Decision](#vsa-vti-flow-verify-oid-openid4vp-trust-decision) | Credential Verification |
 | `VSA-VTI-FLOW-VERIFY-VT` | [Verifiable Trust Credential Received over DIDComm](#vsa-vti-flow-verify-vt-verifiable-trust-credential-received-over-didcomm) | Credential Verification |
 | `VSA-VTI-NOTIF` | [Notifications](#vsa-vti-notif-notifications) | VPR and Indexer Interface |
@@ -3416,6 +3487,7 @@ Every identifier of this document, in lexical order. A section identifier links 
 
 ## Appendix B: Change Log
 
+- **v4-draft10** — AnonCreds trust decision ([[VSA-VTI-FLOW-VERIFY-AC]](#vsa-vti-flow-verify-ac-anoncreds-trust-decision)): the agent checks the ISSUER or VERIFIER `Participant` of itself and of its peer at the present time before it offers, accepts an offer, requests, presents, or acknowledges an AnonCreds credential; derives the `CredentialSchema` from the resource metadata of the credential definition or of the AnonCreds schema; fails closed; and ends a presentation from an unauthorized issuer in `abandoned` with a problem report. The AnonCreds schema of a VTJSC is published once, by the Ecosystem controller, with the VTJSC ([[VSA-PUB-AC-5]](#vsa-pub-ac-anoncreds-registry-resources), [[VSA-VTI-VTJSC]](#vsa-vti-vtjsc-vtjsc-management)); every issuer builds its credential definition on it ([[VSA-ADM-AC-CD-CREATE]](#vsa-adm-ac-cd-create-createcredentialdefinition)), and a presentation request that names a VTJSC restricts to that schema, so that the credential of any accredited issuer satisfies it ([[VSA-ADM-DC-PR-CREATE]](#vsa-adm-dc-pr-create-createpresentationrequest)). New error codes `NOT_AUTHORIZED`, `PEER_NOT_AUTHORIZED`, and `RESOLVER_UNAVAILABLE`; new problem-report codes `e.p.issuer-not-authorized` and `e.p.trust-resolution-unavailable`. Rows added to [[VSA-VPR-QRY]](#vsa-vpr-qry-indexer-queries), Security Considerations, and Observability.
 - **v4-draft9** — Restructured the document by interface: System Overview, Configuration, Public Endpoints, DIDComm Interface, Administration API, Events API, VPR and Indexer Interface, Agent Lifecycle, Verifiable Trust Behaviors, Data and State. Every existing requirement identifier is unchanged. New sections consolidate statements that were repeated: [[VSA-DC-CONN]](#vsa-dc-conn-connection-acceptance-policy), [[VSA-VTI-FLOW-ISSUE]](#vsa-vti-flow-issue-credential-issuance-and-acceptance), [[VSA-VTI-FLOW-VERIFY]](#vsa-vti-flow-verify-credential-verification), [[VSA-VT-LVP]](#vsa-vt-lvp-linked-vp-management), [[VSA-VPR-TX]](#vsa-vpr-tx-on-chain-transactions), [[VSA-VPR-QRY]](#vsa-vpr-qry-indexer-queries), [[VSA-PUB-LISTENER]](#vsa-pub-listener-public-listener), [[VSA-PUB-DID]](#vsa-pub-did-did-document-and-did-log), [[VSA-DATA]](#vsa-data-persistent-state). Normative sections that had no identifier received one. Added the conformance targets, the requirement-identifier conventions, the datetime encoding rule, the **Events** field of the state-changing methods, and this index.
 - **v4-draft9, second revision** — Public Endpoints now covers every public path family: DID Document and DID log for `did:web` and `did:webvh` ([[VSA-PUB-DID]](#vsa-pub-did-did-document-and-did-log)), DIDComm inbound endpoints ([[VSA-PUB-DIDCOMM]](#vsa-pub-didcomm-didcomm-inbound-endpoint)), linked presentations and VTJSC documents ([[VSA-PUB-VT]](#vsa-pub-vt-verifiable-trust-resources)), AnonCreds registry resources in both DID method layouts and tails files ([[VSA-PUB-AC]](#vsa-pub-ac-anoncreds-registry-resources)), short URLs ([[VSA-PUB-INV]](#vsa-pub-inv-invitation-parameters)). `createPresentationRequest` and `createCredentialOffer` return the invitation object as `invitation` instead of a `url` built on an agent-configured base; the caller owns the link. Configuration gains `PUBLIC_API_PORT`, `ADMIN_API_PORT`, and the Logging group ([[VSA-VTI-CFG-ENV-LOG]](#vsa-vti-cfg-env-log-logging)); the DIDComm endpoint is derived from `PUBLIC_API_BASE_URL` with no override. Review fixes: every VPR read goes through the indexer ([[VSA-VPR-QRY]](#vsa-vpr-qry-indexer-queries)), the service-endpoint methods exclude and refuse the `AnonCredsRegistry` and `relativeRef` entries, `#whois` is stated as an addition to the required linked-VP entry, and `participantSessionId` is the on-chain identifier. The `AnonCredsRegistry` and `relativeRef` entries join the agent-managed service entries of [[VSA-VTI-DIDDOC]](#vsa-vti-diddoc-did-document-service-entries).
 - **v4-draft8** and earlier — see the git history of this file.
