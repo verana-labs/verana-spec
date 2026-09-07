@@ -351,6 +351,8 @@ Trust-economics previews MUST be computed from live chain parameters — never h
 
 ## [VFE-OBS] Onboarding Cases
 
+*This section is non-normative until the [Ecosystem Onboarding Service v4 Specification](../onboarding-service/spec.md) is merged and a service is deployed. Its requirements become normative for the frontend at that point.*
+
 The client side of the [Ecosystem Onboarding Service v4 Specification](../onboarding-service/spec.md): the frontend discovers a validator's service, renders its offer and its cases, and performs every wallet transaction of the journey; the service holds the evidence, the decisions and the case history.
 
 - [VFE-OBS-1] **Discovery and verification.** A validator's service is found through the `EcosystemOnboardingService` entry (`#obs-{validator_participant_id}`) of the validator's DID Document; `serviceEndpoint` is the service's API base. Before presenting anything as the validator's, the frontend MUST fetch the descriptor (`GET /v1/config`, [OBS-DESC](../onboarding-service/spec.md#obs-desc-descriptor)) and verify that its `chainId` is the connected network and its `validatorParticipantId` is the entry that led to the service; on mismatch the service MUST be ignored. Descriptors are cached at most 60 seconds; resolve results per [VFE-DATA-RESOLVE-2].
