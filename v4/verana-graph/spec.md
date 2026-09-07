@@ -843,6 +843,8 @@ For the **`Did` surface**, the snippet MUST additionally carry the result-card f
 | `operatorLogoUri` | operative `OrganizationCredential.logoUri` or `PersonaCredential.avatarUri` | trust chain incomplete, or Persona without avatar |
 | `operatorLogoDigestSri` | paired `OrganizationCredential.logoDigestSri` or `PersonaCredential.avatarDigestSri` | same as `operatorLogoUri` |
 | `operatorCountryCode` | operative `OrganizationCredential.countryCode` or `PersonaCredential.controllerCountryCode` | trust chain incomplete |
+| `operatorRegistryId` | operative `OrganizationCredential.registryId` | trust chain incomplete, or the operator is a Persona |
+| `operatorAddress` | operative `OrganizationCredential.address` | trust chain incomplete, or the operator is a Persona |
 | `corporationId` | `Did.corporationId` (the owner Corporation per the VPR [DID ownership invariant](https://verana-labs.github.io/verifiable-trust-vpr-spec/versions/v4/#did-ownership-invariant)) | never |
 | `corporationDeposit` | owner `Corporation.deposit`, via `Did.corporationId` | owner `Corporation` record not yet materialised (bootstrap transient) |
 | `corporationSlashedEvents` | owner `Corporation.slashedEvents` (`0` when never slashed) | owner `Corporation` record not yet materialised (bootstrap transient) |
@@ -924,6 +926,8 @@ The normative JSON Schema for the faceted-search response is published alongside
         "operatorLogoUri":       "https://fabrice.agents.example/avatar.png",
         "operatorLogoDigestSri": "sha384-…",
         "operatorCountryCode":   "CO",
+        "operatorRegistryId":    null,
+        "operatorAddress":       null,
         "corporationId":         42,
         "corporationDeposit":    "40000000uvna",
         "corporationSlashedEvents": 0,
@@ -969,6 +973,8 @@ The normative JSON Schema for the faceted-search response is published alongside
         "operatorLogoUri":       null,
         "operatorLogoDigestSri": null,
         "operatorCountryCode":   "CO",
+        "operatorRegistryId":    null,
+        "operatorAddress":       null,
         "corporationId":         57,
         "corporationDeposit":    "12000000uvna",
         "corporationSlashedEvents": 1,
