@@ -25,6 +25,8 @@ v4/
     spec.md
   vt-flow-protocol/
     spec.md
+  onboarding-service/
+    spec.md
   ...
 ```
 
@@ -42,6 +44,7 @@ The `playground/` directory is unversioned: it specifies the [Verana Playground]
 | Verana Graph     | [`v4/verana-graph/spec.md`](./v4/verana-graph/spec.md)               | Draft  |
 | MCP Server       | [`v4/mcp-server/spec.md`](./v4/mcp-server/spec.md)                   | Draft  |
 | Verana Frontend  | [`v4/verana-frontend/spec.md`](./v4/verana-frontend/spec.md)         | Draft  |
+| Ecosystem Onboarding Service | [`v4/onboarding-service/spec.md`](./v4/onboarding-service/spec.md) | Draft  |
 
 ### Playground
 
