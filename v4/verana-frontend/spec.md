@@ -184,7 +184,7 @@ The user journey is: connect wallet → discover Corporations the account can ac
 
 Trust-economics previews MUST be computed from live chain parameters — never hardcoded:
 
-- [VFE-TX-COSTS-1] Rates and unit values from [`IDX-TD-QRY-2 Get Trust Deposit Params`](../verana-indexer/spec.md#idx-td-qry-2-get-trust-deposit-params) (`trust_deposit_rate`, `trust_deposit_share_value`, agent reward rates), module deposits from [`IDX-ES-QRY-3`](../verana-indexer/spec.md#idx-es-qry-3-get-ecosystem-params), [`IDX-CS-QRY-4`](../verana-indexer/spec.md#idx-cs-qry-4-get-credential-schema-params), and [`IDX-CO-QRY-3`](../verana-indexer/spec.md#idx-co-qry-3-get-corporation-params).
+- [VFE-TX-COSTS-1] Rates and unit values from [`IDX-TD-QRY-2 Get Trust Deposit Params`](../verana-indexer/spec.md#idx-td-qry-2-get-trust-deposit-params) (`trust_deposit_rate`, `trust_deposit_share_value`, agent reward rates), module deposits from [`IDX-ES-QRY-3`](../verana-indexer/spec.md#idx-es-qry-3-get-ecosystem-params) and [`IDX-CS-QRY-4`](../verana-indexer/spec.md#idx-cs-qry-4-get-credential-schema-params).
 - [VFE-TX-COSTS-2] **Supported pricing assets.** This revision of the frontend supports trust fee and trust deposit payments **only** for Credential Schemas priced in the chain's native Coin: `pricing_asset_type = COIN` with `pricing_asset` equal to the native denom (VNA, i.e. `uvna` base units). For schemas priced in **TU**, **FIAT**, or a non-native Coin, fee-bearing actions (start/renew an Onboarding Process, self-create with fees, set validated) MUST be disabled and the UI MUST show an explicit "pricing asset not yet supported" notice; such schemas remain fully browsable. TU and FIAT support — including [`IDX-XR-QRY-3 Get Price`](../verana-indexer/spec.md#idx-xr-qry-3-get-price) conversion — is deferred to a future revision of this specification.
 - [VFE-TX-COSTS-3] Starting or renewing an Onboarding Process MUST preview: the validator Participant's `validation_fees` (in native denom, per [VFE-TX-COSTS-2]) plus the applicant-side trust deposit (`validation fees × trust_deposit_rate`, also in native denom), per [`MOD-PP-MSG-1`](https://verana-labs.github.io/verifiable-trust-vpr-spec/versions/v4/#mod-pp-msg-1-start-participant-op) fee semantics.
 - [VFE-TX-COSTS-4] Where a fee distribution preview involves the Participant tree (issuance/verification pricing shown on Participant detail), the beneficiary set MUST be obtained from [`IDX-PP-QRY-4 Find Beneficiaries`](../verana-indexer/spec.md#idx-pp-qry-4-find-beneficiaries) with the issuer and/or verifier Participant id (at-least-one arity).
@@ -386,7 +386,7 @@ The client side of the [Ecosystem Onboarding Service v4 Specification](../onboar
 | Credential Schemas | `IDX-CS-QRY-1/2/3/4/5` |
 | Participants & Pending Tasks | `IDX-PP-QRY-1/2/3/5`, `IDX-PP-QRY-4` (fee previews), `IDX-VT-QRY-1` (`services`: validator portal discovery, [VFE-PAGE-PENDING-4]) |
 | Agents | `IDX-PP-QRY-2`, `IDX-DE-QRY-2`, `IDX-ES-QRY-2`, `IDX-VT-QRY-1` |
-| Fee & cost previews | `IDX-TD-QRY-2`, `IDX-ES-QRY-3`, `IDX-CS-QRY-4`, `IDX-CO-QRY-3`, `IDX-DE-QRY-5` (`IDX-XR-QRY-3` reserved for future TU/FIAT support per [VFE-TX-COSTS-2]) |
+| Fee & cost previews | `IDX-TD-QRY-2`, `IDX-ES-QRY-3`, `IDX-CS-QRY-4`, `IDX-DE-QRY-5` (`IDX-XR-QRY-3` reserved for future TU/FIAT support per [VFE-TX-COSTS-2]) |
 | Trust display | `IDX-VT-QRY-1`, `trust_data` enrichment |
 | Live updates & block-wait | `IDX-INDEXER-SUB-1`, `IDX-INDEXER-QRY-1/2/3/6` |
 
