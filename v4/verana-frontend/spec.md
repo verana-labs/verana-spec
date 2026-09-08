@@ -285,7 +285,7 @@ Trust-economics previews MUST be computed from live chain parameters — never h
 
 ### [VFE-PAGE-CORP] Corporation
 
-*Scope: the acting Corporation. Reference layout: an identity header (resolved name and country flag per [VFE-TRUST-CLAIMS], trust-state dot per [VFE-TRUST-STATE], id, `policy_address`, DID rotation) with the sections below as tabs: Overview (a stat digest of deposit, members, open proposals, operators), Members, Trust Deposit, Operators, Proposals.*
+*Scope: the acting Corporation. Reference layout: an identity header (resolved name and country flag per [VFE-TRUST-CLAIMS], trust-state dot per [VFE-TRUST-STATE], id, `policy_address`, DID rotation) with the sections below as tabs: Overview (a stat digest of deposit, members, open proposals, operators), Members, Trust Deposit, Operators, Governance, Proposals.*
 
 - [VFE-PAGE-CORP-1] **Profile**: Corporation id, DID, `policy_address`, language, created/modified; trust state of the DID per [VFE-TRUST]; DID rotation via `UpdateCorporation` (capability-gated, proposal fallback per [VFE-TX-FALLBACK]); activity timeline ([`IDX-CO-QRY-4`](../verana-indexer/spec.md#idx-co-qry-4-get-corporation-history)), each item showing the Msg name, timestamp, block height, acting account, and the changed fields per [VFE-DATA-IDX-4].
 - [VFE-PAGE-CORP-2] **Governance (CGF)**: versions and documents (via `gf_data`); add document and increase active version (`MOD-GF-MSG-1/2` with no `ecosystem_id`), computing `digest_sri` per [VFE-GEN-SRV-1]; only future versions are editable.
