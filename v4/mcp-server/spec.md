@@ -1,6 +1,6 @@
 # Verana MCP Server v4 Specification
 
-**Latest Draft:** spec v4-draft1
+**Latest Draft:** spec v4-draft2
 
 ## Abstract
 
@@ -526,14 +526,14 @@ Indexer tools issue HTTP GET requests against the configured `VERANA_INDEXER` en
 | `verana.idx.xr.listExchangeRates` | [`IDX-XR-QRY-2`](../verana-indexer/spec.md#idx-xr-qry-2-list-exchange-rates) | `GET /v4/exchange-rate/list`. |
 | `verana.idx.xr.getPrice` | [`IDX-XR-QRY-3`](../verana-indexer/spec.md#idx-xr-qry-3-get-price) | `GET /v4/exchange-rate/price` — derived oracle conversion. |
 
-#### [VMS-TOOLS-IDX-METRICS] Metrics and Statistics
+#### [VMS-TOOLS-IDX-STATS] Statistics
 
 | Tool | Upstream Query | Description |
 |---|---|---|
-| `verana.idx.metrics.getGlobalMetrics` | [`IDX-METRICS-QRY-1`](../verana-indexer/spec.md#idx-metrics-qry-1-get-global-metrics) | `GET /v4/metrics/all`. |
 | `verana.idx.stats.getStats` | [`IDX-STATS-QRY-1`](../verana-indexer/spec.md#idx-stats-qry-1-get-stats) | `GET /v4/stats/get`. |
 | `verana.idx.stats.getStatsRange` | [`IDX-STATS-QRY-2`](../verana-indexer/spec.md#idx-stats-qry-2-get-stats-range) | `GET /v4/stats/stats`. |
 | `verana.idx.stats.countParticipants` | [`IDX-STATS-QRY-3`](../verana-indexer/spec.md#idx-stats-qry-3-count-participants) | `GET /v4/stats/count-participants`. |
+| `verana.idx.stats.getStatsSnapshot` | [`IDX-STATS-QRY-4`](../verana-indexer/spec.md#idx-stats-qry-4-get-stats-snapshot) | `GET /v4/stats/snapshot` — every tracked metric for one entity at a block. |
 
 #### [VMS-TOOLS-IDX-INDEXER] Indexer Self-Inspection
 

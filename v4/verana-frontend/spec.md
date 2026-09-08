@@ -1,6 +1,6 @@
 # Verana Frontend v4 Specification
 
-**Latest Draft:** spec v4-draft1
+**Latest Draft:** spec v4-draft2
 
 ## Abstract
 
@@ -258,7 +258,7 @@ Trust-economics previews MUST be computed from live chain parameters — never h
 
 ### [VFE-PAGE-DASH] Dashboard
 
-- [VFE-PAGE-DASH-1] MUST show network-wide metrics from [`IDX-METRICS-QRY-1`](../verana-indexer/spec.md#idx-metrics-qry-1-get-global-metrics) (active ecosystems, active schemas, participants, locked trust value, issued/verified credentials) and the connected network's identity. Because common content-blocker filter lists drop URLs containing `/metrics/`, the frontend SHOULD retry the read through a same-origin path when the direct request fails at network level.
+- [VFE-PAGE-DASH-1] MUST show network-wide statistics from [`IDX-STATS-QRY-4`](../verana-indexer/spec.md#idx-stats-qry-4-get-stats-snapshot) with `entity_type = GLOBAL` (active ecosystems, active schemas, participants, locked trust value, issued/verified credentials) and the connected network's identity.
 - [VFE-PAGE-DASH-2] MUST show component health/versions: chain (via RPC status), indexer ([`IDX-INDEXER-QRY-1/2/3`](../verana-indexer/spec.md#idx-indexer-qry-1-get-block-height)), and the frontend's own `NEXT_PUBLIC_APP_VERSION`, including last indexed block height and an indexer-stalled indicator when `is_crawling` is false.
 
 ### [VFE-PAGE-ACCT] Account
