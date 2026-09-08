@@ -171,7 +171,7 @@ The user journey is: connect wallet → discover Corporations the account can ac
 
 - [VFE-TX-SIGN-1] For **delegable VPR Msgs**, the frontend MUST populate the Msg's `corporation` field with the acting Corporation's `policy_address` and its `operator` field with the connected account, and have the connected account sign. The frontend MUST NOT attempt to produce a signature for the `policy_address` itself.
 - [VFE-TX-SIGN-2] For **group Msgs** ([VFE-CORP-PROP-5]) the connected account is the only signer.
-- [VFE-TX-SIGN-3] Amino signing MUST be supported for broad wallet compatibility; SIGN_MODE_DIRECT SHOULD be used when `NEXT_PUBLIC_VERANA_SIGN_DIRECT_MODE` is enabled and the wallet supports it. Account-sequence-mismatch errors MUST be retried once with the expected sequence before failing to the user.
+- [VFE-TX-SIGN-3] Amino signing MUST be supported for broad wallet compatibility; SIGN_MODE_DIRECT SHOULD be used when `NEXT_PUBLIC_VERANA_SIGN_DIRECT_MODE` is enabled and the wallet supports it. Account-sequence-mismatch errors MUST be retried once with the expected sequence before failing to the user. Amino coverage MUST include the `cosmos.group.v1` Msgs of [VFE-CORP-PROP-5] (`MsgSubmitProposal` carrying group updates, `MsgVote`, `MsgExec`, `MsgWithdrawProposal`); this depends on `verana-types` shipping their amino converters.
 - [VFE-TX-SIGN-4] The `corporation` field of [VFE-TX-SIGN-1] MUST come from the acting Corporation selected per [VFE-CORP-SEL-2]; the frontend MUST NOT resolve or auto-pick a Corporation at broadcast time.
 
 ### [VFE-TX-FEEGRANT] Fee Payer Election
