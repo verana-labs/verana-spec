@@ -271,6 +271,8 @@ Trust-economics previews MUST be computed from live chain parameters — never h
 
 - [VFE-PAGE-DASH-1] MUST show network-wide statistics from [`IDX-STATS-QRY-4`](../verana-indexer/spec.md#idx-stats-qry-4-get-stats-snapshot) with `entity_type = GLOBAL` (active ecosystems, active schemas, participants, locked trust value, issued/verified credentials) and the connected network's identity.
 - [VFE-PAGE-DASH-2] MUST show component health/versions: chain (via RPC status), indexer ([`IDX-INDEXER-QRY-1/2/3`](../verana-indexer/spec.md#idx-indexer-qry-1-get-block-height)), and the frontend's own `NEXT_PUBLIC_APP_VERSION`, including last indexed block height and an indexer-stalled indicator when `is_crawling` is false.
+- [VFE-PAGE-DASH-3] The displayed block height MUST be seeded on load from [`IDX-INDEXER-QRY-1 Get Block Height`](../verana-indexer/spec.md#idx-indexer-qry-1-get-block-height) (`/v4/indexer/block-height`) and then kept current from the indexer socket of [VFE-DATA-WS-2]: the `ready` message on connect, then every `block` message. While the height is unknown the UI MUST NOT render a placeholder zero; it shows an unknown state until the first value arrives.
+- [VFE-PAGE-DASH-4] The layout footer MUST show, on every page, the three component versions of [VFE-GEN-DEPLOY-6] (frontend, node, indexer); a version not yet loaded renders as unknown, never as a placeholder value.
 
 ### [VFE-PAGE-ACCT] Account
 
