@@ -65,8 +65,7 @@ A conforming VS Agent implements every requirement of this document that is not 
 |---|---|---|
 | External access to the Administration API | `ADMIN_API_AUTH_MODE` = `corporation` | [[VSA-ADM-AUTH-PROTO]](#vsa-adm-auth-proto-account-challengeresponse), [[VSA-ADM-AUTH]](#vsa-adm-auth-authentication) |
 | Events API | `EVENTS_WEBHOOK_URL` set | [Events API](#events-api) |
-| OpenID4VC issuer capability | `OID4VC_CONFIG_FILE` with `issuer` | [[VSA-PUB-OID]](#vsa-pub-oid-openid4vc-public-protocol-endpoints), [[VSA-ADM-OID-CE]](#vsa-adm-oid-ce-credential-exchanges), [[VSA-ADM-OID-CS]](#vsa-adm-oid-cs-signing-certificates) |
-| OpenID4VC verifier capability | `OID4VC_CONFIG_FILE` with `verifier` | [[VSA-PUB-OID]](#vsa-pub-oid-openid4vc-public-protocol-endpoints), [[VSA-ADM-OID-PR]](#vsa-adm-oid-pr-presentations), [[VSA-VTI-FLOW-VERIFY-OID]](#vsa-vti-flow-verify-oid-openid4vp-trust-decision), [[VSA-ADM-OID-CS]](#vsa-adm-oid-cs-signing-certificates) |
+| OpenID4VC | `OID4VC_CONFIG_FILE_LOCATION` set | [[VSA-PUB-OID]](#vsa-pub-oid-openid4vc-public-protocol-endpoints), [[VSA-ADM-OID-CE]](#vsa-adm-oid-ce-credential-exchanges), [[VSA-ADM-OID-PR]](#vsa-adm-oid-pr-presentations), [[VSA-ADM-OID-CS]](#vsa-adm-oid-cs-signing-certificates), [[VSA-VTI-FLOW-VERIFY-OID]](#vsa-vti-flow-verify-oid-openid4vp-trust-decision) |
 | Optional DIDComm modules | Deployment choice, reported by [`listProtocols`](#vsa-adm-dc-proto-list-listprotocols) | [[VSA-ADM-DC-RC]](#vsa-adm-dc-rc-receipts), [[VSA-ADM-DC-RA]](#vsa-adm-dc-ra-reactions), [[VSA-ADM-DC-UP]](#vsa-adm-dc-up-user-profile), [[VSA-ADM-DC-MS]](#vsa-adm-dc-ms-media-sharing), [[VSA-ADM-DC-CL]](#vsa-adm-dc-cl-calls), [[VSA-ADM-DC-AM]](#vsa-adm-dc-am-action-menu), [[VSA-ADM-DC-QA]](#vsa-adm-dc-qa-question-answer), [[VSA-ADM-DC-MRTD]](#vsa-adm-dc-mrtd-mrtd) |
 | Extension protocol modules | Deployment choice | [[VSA-ADM-DC-EXT]](#vsa-adm-dc-ext-extension-protocol-modules) |
 
@@ -77,7 +76,7 @@ Every other section applies to every conforming agent. [Protocol Modules](#vsa-d
 - **Applicant** — In a credential acquisition flow, the peer that requests a `Participant` entry or a credential, and that initiates the DIDComm connection to the Validator.
 - **AnonCreds** — Anonymous Credentials, a privacy-preserving verifiable credential format supporting selective disclosure and unlinkability.
 - **Backend** — The application that a VS Agent serves. It calls the [Administration API](#administration-api) and consumes the [Events API](#events-api).
-- **capability (OpenID4VC)** — One of the two OpenID4VC roles that the operator configures for the agent: issuer or verifier.
+- **capability (OpenID4VC)** — One of the two OpenID4VC roles that the agent runs: issuer or verifier.
 - **Corporation, Ecosystem, Credential Schema, Participant, Participant Session, Onboarding Process** — The VPR entities and processes, as the [Verifiable Trust VPR specification](https://github.com/verana-labs/verifiable-trust-vpr-spec) defines them. See [Corporation and Account Model](#corporation-and-account-model).
 - **decentralized identifier (DID, DIDs)** — A decentralized identifier, as specified in [DID-CORE](https://www.w3.org/TR/did-core/).
 - **DIDComm** — A peer-to-peer messaging protocol built on DIDs, as specified by the [DIDComm Messaging Specification](https://identity.foundation/didcomm-messaging/spec/).
@@ -190,7 +189,7 @@ The behavior of the agent depends on a small number of configuration choices. Ea
 | DID method | `AGENT_PUBLIC_DID_METHOD` | `webvh` (default), `web` | The method of the DID the agent creates on first startup. See [[VSA-VTI-BOOT-DID]](#vsa-vti-boot-did-did-creation). |
 | Indexer scope | `VERANA_INDEXER_SUBSCRIPTION_SCOPE` | `did` (default), `corporation` | Whether the agent observes its own DID only, or every resource of its Corporation. See [[VSA-VTI-NOTIF]](#vsa-vti-notif-notifications). |
 | Events API | `EVENTS_WEBHOOK_URL` | unset (default), URL | Whether the agent delivers events. See [Events API](#events-api). |
-| OpenID4VC | `OID4VC_CONFIG_FILE` | unset (default), path | Whether the agent serves the OpenID4VC capabilities. See [[VSA-VTI-CFG-ENV-OID]](#vsa-vti-cfg-env-oid-openid4vc). |
+| OpenID4VC | `OID4VC_CONFIG_FILE_LOCATION` | unset (default), local path or `https://` URL | Whether the agent serves the OpenID4VC capabilities. See [[VSA-VTI-CFG-ENV-OID]](#vsa-vti-cfg-env-oid-openid4vc). |
 | Optional DIDComm modules | none; deployment choice | — | Which optional protocol modules the deployment serves. See [Protocol Modules](#vsa-dc-mod-protocol-modules). |
 
 ## [VSA-VTI-CFG] Configuration
@@ -247,7 +246,7 @@ The table lists every environment variable of the VS Agent container. The subsec
 | [`ADMIN_API_CORPORATION_ALLOWED_ACCOUNTS`](#vsa-vti-cfg-env-adm-administration-api) | CONDITIONAL | Administration API |
 | [`EVENTS_WEBHOOK_URL`](#vsa-vti-cfg-env-evt-events-api) | OPTIONAL | Events API |
 | [`EVENTS_WEBHOOK_API_KEY`](#vsa-vti-cfg-env-evt-events-api) | OPTIONAL | Events API |
-| [`OID4VC_CONFIG_FILE`](#vsa-vti-cfg-env-oid-openid4vc) | OPTIONAL | OpenID4VC |
+| [`OID4VC_CONFIG_FILE_LOCATION`](#vsa-vti-cfg-env-oid-openid4vc) | OPTIONAL | OpenID4VC |
 | [`AGENT_LOG_LEVEL`](#vsa-vti-cfg-env-log-logging) | OPTIONAL | Logging |
 | [`ADMIN_API_LOG_LEVEL`](#vsa-vti-cfg-env-log-logging) | OPTIONAL | Logging |
 
@@ -336,7 +335,7 @@ The agent derives the remaining claims of each schema, and reads no variable for
 | `PUBLIC_API_BASE_URL` | REQUIRED | Public `https://` base URL at which a peer reaches the public endpoints of the agent. The agent derives its DID from this value and composes each protocol URL from it verbatim. A base path is allowed. The agent MUST reject a URL that carries a username or a password. See [[VSA-VTI-BOOT-DID] DID Creation](#vsa-vti-boot-did-did-creation). |
 | `PUBLIC_API_PORT` | OPTIONAL | TCP port on which the container serves the [public endpoints](#public-endpoints), the DIDComm inbound endpoint included. Default: `3001`. The deployment maps `PUBLIC_API_BASE_URL` to this port; the agent never derives a URL from it. |
 | `AGENT_PUBLIC_DID_METHOD` | OPTIONAL | DID method the agent uses when it creates its DID on first startup: `webvh` (default) or `web`. The agent MUST reject any other value. See [[VSA-VTI-BOOT-DID] DID Creation](#vsa-vti-boot-did-did-creation). |
-| `MRTD_MASTER_LIST_CSCA_LOCATION` | OPTIONAL | Location of the CSCA master list against which the [MRTD module](#vsa-adm-dc-mrtd-mrtd) verifies the Document Security Object of received eMRTD data. Has no effect when the deployment does not serve that module. |
+| `MRTD_MASTER_LIST_CSCA_LOCATION` | OPTIONAL | Local filesystem path, or `https://` URL, of the CSCA master list against which the [MRTD module](#vsa-adm-dc-mrtd-mrtd) verifies the Document Security Object of received eMRTD data. Has no effect when the deployment does not serve that module. |
 
 #### [VSA-VTI-CFG-ENV-ADM] Administration API
 
@@ -361,29 +360,26 @@ These variables configure the listener and the access model of the [Administrati
 
 #### [VSA-VTI-CFG-ENV-OID] OpenID4VC
 
-`OID4VC_CONFIG_FILE` is the switch for OpenID4VC. The agent serves the [OpenID4VC Scope](#openid4vc-scope) and the OpenID4VC public endpoints when, and only when, the operator sets it.
+`OID4VC_CONFIG_FILE_LOCATION` is the switch for OpenID4VC. The agent serves the [OpenID4VC Scope](#openid4vc-scope) and the OpenID4VC public endpoints when, and only when, the operator sets it. When the operator sets it, the agent runs both OpenID4VC capabilities, issuer and verifier.
 
 | Variable | Required | Description |
 |---|---|---|
-| `OID4VC_CONFIG_FILE` | OPTIONAL | Path to the OpenID4VC configuration file, a JSON document with the structure below. When the operator sets it, the agent enables OpenID4VC; when the operator leaves it unset, the agent serves no OpenID4VC path. The operator SHOULD mount the file read-only, and SHOULD manage it as a secret: it can hold a private key. |
+| `OID4VC_CONFIG_FILE_LOCATION` | OPTIONAL | Location of the OpenID4VC configuration file, a JSON document with the structure below: a local filesystem path, or an `https://` URL that the agent reads once at startup, as for `MRTD_MASTER_LIST_CSCA_LOCATION`. When the operator sets it, the agent enables OpenID4VC; when the operator leaves it unset, the agent serves no OpenID4VC path. The file can hold a private key, so the operator SHOULD manage it as a secret: a read-only mount, or a URL that only the agent reaches. |
 
-The agent MUST validate the configuration file at startup, and MUST refuse to start when validation fails. The field names of this file are camelCase, like the field names of the Administration API (see [API Conventions](#vsa-adm-conv-api-conventions)).
+The agent MUST read the file at startup, MUST validate it, and MUST refuse to start when it cannot read the location or when validation fails, including on a key that the table does not define. When the location is a URL, the agent MUST refuse any scheme other than `https`, MUST follow no redirect, and MUST NOT read the location again while it runs. Field names are camelCase (see [API Conventions](#vsa-adm-conv-api-conventions)).
+
+Every key is OPTIONAL, and `{}` is a valid file. The file holds only what the agent cannot derive by itself, and nothing else: no credential type, because the agent takes its types from the `CredentialSchema` entries that the VPR authorizes it to issue (see the [OpenID4VC Scope](#openid4vc-scope)); no trust anchor and no host allowlist, because the agent decides trust through the same Verifiable Trust resolution that it uses for DIDComm (see [[VSA-VTI-FLOW-VERIFY-OID] OpenID4VP Trust Decision](#vsa-vti-flow-verify-oid-openid4vp-trust-decision)); and nothing about revocation, because v4 specifies no revocation for the credential format of this scope (see [[VSA-ADM-OID-CE] Credential Exchanges](#vsa-adm-oid-ce-credential-exchanges)).
 
 | Key | Requirement |
 |---|---|
-| `issuer` | CONDITIONAL. Defines the issuer capability: `id`, `displayName`, and exactly one signing mode. REQUIRED when `verifier` is absent. |
-| `issuer.requireWalletAttestation` | OPTIONAL. When `true`, `issuer.walletAttestationCertificates` MUST hold the configured X.509 roots. |
-| `verifier` | CONDITIONAL. Defines the verifier capability: `id`, `displayName`, and exactly one signing mode. REQUIRED when `issuer` is absent. |
-| `trust` | CONDITIONAL. Defines `resolverUrl` (an `https://` Verana resolver), `timeoutMs` (1 to 30000), `allowedDidWebHosts` (the exact issuer DID hosts the agent resolves), `credentialIssuerCertificates` (valid self-issued CA roots that carry `keyCertSign`, with no duplicate), and OPTIONAL `developmentCertificateFingerprints`. REQUIRED when `verifier` is present. |
-| `credentialConfigurations` | REQUIRED. Array. Each entry declares a unique `id`, the `format` `dc+sd-jwt`, an `https://` `vct`, an `https://` `vtjscId`, `name`, `claims`, a `disclosureFrame` that is a subset of `claims`, and a `ttlSeconds` between 60 and 31536000. |
-| `verifierPolicies` | REQUIRED. Array. Each entry maps a unique `id` to one `credentialConfigurationId` and to a subset of the claims of that configuration. |
-| `publicApiBaseUrl` | MUST NOT be present. The agent injects the trusted value from `PUBLIC_API_BASE_URL`. |
+| `issuer` | OPTIONAL. Holds, each OPTIONAL: `signing` (see below), `walletAttestationCertificates` (X.509 roots; when non-empty, the agent requires a wallet attestation), `keyAttestationCertificates` (X.509 roots; when absent, the agent neither advertises nor accepts the `attestation` proof type). |
+| `verifier` | OPTIONAL. Holds an OPTIONAL `signing` (see below). |
 
-A `claims` entry MUST NOT name `vct`, `iat`, `exp`, `iss`, or `cnf`. These names belong to the credential envelope.
+The identifier segment of the issuer capability is `issuer`, and the identifier segment of the verifier capability is `verifier`, so the public paths of the two capabilities read `/oid4vci/issuer/...` and `/oid4vp/verifier/...`. The agent derives the display name and the logo that it publishes — `display` in its credential issuer metadata, `client_name` and `logo_uri` in its verifier client metadata — from the ECS Service credential that it holds about its own DID (`name` and `logoUri`, see [[VSA-VTI-ECS] ECS Participants and Credentials](#vsa-vti-ecs-ecs-participants-and-credentials)). In standalone mode those values are the `ECS_CLAIMS_SERVICE_NAME` and `ECS_CLAIMS_SERVICE_LOGO_URI` claims of [[VSA-VTI-CFG-ENV-ECS] ECS Credential Claims](#vsa-vti-cfg-env-ecs-ecs-credential-claims); in delegated mode the parent VS issues the credential. No key of the configuration file overrides them. The agent signs its credential issuer metadata with the certificate of the issuer capability (`x5c`).
 
-Each capability declares exactly one signing mode:
+The `signing` key of a capability is OPTIONAL, and selects one of two signing modes:
 
-- **Development signing** (`signing.development`) — the agent generates and persists a self-signed P-256 certificate for the capability, with a DNS SAN derived from `PUBLIC_API_BASE_URL` and a DID URI SAN that carries the DID of the agent. Before it completes startup, the agent MUST publish the resulting public key in its DID Document: under `assertionMethod` for the issuer capability, and under `authentication` for the verifier capability. The method identifier MUST be deterministic per capability, so that a restart is idempotent. When both capabilities share one DID, the agent MUST publish the two keys in sequence, so that it keeps both relationships. Development signing is unsuitable for production.
+- **Development signing** (`signing` absent) — the agent generates and persists a self-signed P-256 certificate for the capability, with a common name derived from the host of `PUBLIC_API_BASE_URL` and from the capability, a DNS SAN derived from `PUBLIC_API_BASE_URL`, and a DID URI SAN that carries the DID of the agent. Before it completes startup, the agent MUST publish the resulting public key in its DID Document: under `assertionMethod` for the issuer capability, and under `authentication` for the verifier capability. The method identifier MUST be deterministic per capability, so that a restart is idempotent. When both capabilities share one DID, the agent MUST publish the two keys in sequence, so that it keeps both relationships. Development signing is unsuitable for production.
 - **Configured signing** (`signing.configured`) — the operator supplies `certificateChain` (a non-self-signed leaf first, then any intermediate, then the root) and the `privateJwk` P-256 key of that leaf. Each leaf MUST carry the DID of the agent as a URI SAN. The agent MUST NOT publish a configured key itself; the operator publishes it under `assertionMethod` or `authentication` before startup.
 
 #### [VSA-VTI-CFG-ENV-LOG] Logging
@@ -408,11 +404,11 @@ The table lists every public path family. A path is relative to `PUBLIC_API_BASE
 | `/.well-known/did.json`, or `/did.json` under a base path | DID Document | Always | [[VSA-PUB-DID]](#vsa-pub-did-did-document-and-did-log) |
 | `/.well-known/did.jsonl`, or `/did.jsonl` under a base path | DID log | `AGENT_PUBLIC_DID_METHOD` = `webvh` | [[VSA-PUB-DID]](#vsa-pub-did-did-document-and-did-log) |
 | The `serviceEndpoint` of each `DIDCommMessaging` entry | Inbound DIDComm | Always | [[VSA-PUB-DIDCOMM]](#vsa-pub-didcomm-didcomm-inbound-endpoint) |
-| The `serviceEndpoint` of each `LinkedVerifiablePresentation` entry; the `id` of each VTJSC | Verifiable Trust resources | Always | [[VSA-PUB-VT]](#vsa-pub-vt-verifiable-trust-resources) |
+| The `serviceEndpoint` of each `LinkedVerifiablePresentation` entry; the `id` of each VTJSC; `/vt/vct/{credentialSchemaId}` | Verifiable Trust resources | Always | [[VSA-PUB-VT]](#vsa-pub-vt-verifiable-trust-resources) |
 | The `serviceEndpoint` of the `AnonCredsRegistry` entry and the paths below it; the `tailsLocation` of each revocation registry | AnonCreds objects, did:web layout | `AGENT_PUBLIC_DID_METHOD` = `web` | [[VSA-PUB-AC]](#vsa-pub-ac-anoncreds-registry-resources) |
 | `/resources/{resourceId}` | AnonCreds objects, did:webvh attested resources | `AGENT_PUBLIC_DID_METHOD` = `webvh` | [[VSA-PUB-AC]](#vsa-pub-ac-anoncreds-registry-resources) |
 | The short URL that a method returns as `shortUrl` | Invitation resolution | When the agent supports short URLs | [[VSA-PUB-INV]](#vsa-pub-inv-invitation-parameters) |
-| `/.well-known/openid-credential-issuer`, `/.well-known/oauth-authorization-server`, `/.well-known/jwt-vc-issuer`, `/oid4vci/…`, `/oid4vp/…`, `/oid4vc/vct/…` | OpenID4VC | `OID4VC_CONFIG_FILE` set | [[VSA-PUB-OID]](#vsa-pub-oid-openid4vc-public-protocol-endpoints) |
+| `/.well-known/openid-credential-issuer`, `/.well-known/oauth-authorization-server`, `/.well-known/jwt-vc-issuer`, `/oid4vci/…`, `/oid4vp/…` | OpenID4VC | `OID4VC_CONFIG_FILE_LOCATION` set | [[VSA-PUB-OID]](#vsa-pub-oid-openid4vc-public-protocol-endpoints) |
 
 ### [VSA-PUB-LISTENER] Public Listener
 
@@ -485,15 +481,17 @@ Example fragment of the resulting DID Document:
 
 ### [VSA-PUB-VT] Verifiable Trust Resources
 
-The agent publishes its Verifiable Trust credentials — the ECS credentials it holds, and the VTJSCs it issues as an Ecosystem controller — as documents that a resolver dereferences from the DID Document. Each document is served under `PUBLIC_API_BASE_URL`; the path is the agent's choice, and the DID Document and the credentials carry the resulting URLs.
+The agent publishes its Verifiable Trust credentials — the ECS credentials it holds, and the VTJSCs it issues as an Ecosystem controller — as documents that a resolver dereferences from the DID Document. Each linked presentation and each VTJSC is served under `PUBLIC_API_BASE_URL`; those paths are the agent's choice, and the DID Document and the credentials carry the resulting URLs. The Type Metadata path is the exception: [[VSA-PUB-VT-5]](#vsa-pub-vt-verifiable-trust-resources) fixes it, because an issuer and a verifier compose it from the DID of the Ecosystem rather than read it from a document.
 
 [VSA-PUB-VT-1] The agent MUST serve each linked Verifiable Presentation at the `serviceEndpoint` of its `LinkedVerifiablePresentation` entry, as a JSON document that holds the presentation and the credential it wraps, per [[VT-CRED-W3C-LINKED-VP]](https://verana-labs.github.io/verifiable-trust-spec/#vt-cred-w3c-linked-vp-w3c-vtc-linked-vp).
 
-[VSA-PUB-VT-2] The agent MUST serve each VTJSC that it issues at the URL that is the `id` of that credential, as a JSON document, so that a credential definition, an OpenID4VC credential configuration, or a verifier that names the VTJSC by `relatedJsonSchemaCredentialId` or by `credentialSchema.id` dereferences it. The URL MUST be under `PUBLIC_API_BASE_URL`, and MUST NOT change while the VTJSC is published.
+[VSA-PUB-VT-2] The agent MUST serve each VTJSC that it issues at the URL that is the `id` of that credential, as a JSON document, so that a credential definition that names the VTJSC by `relatedJsonSchemaCredentialId`, or a verifier that names it by `credentialSchema.id`, dereferences it. The URL MUST be under `PUBLIC_API_BASE_URL`, and MUST NOT change while the VTJSC is published.
 
 [VSA-PUB-VT-3] When `AGENT_PUBLIC_DID_METHOD` is `webvh` and the agent holds an ECS-Service credential, the agent SHOULD also expose that credential's presentation under the `#whois` `LinkedVerifiablePresentation` entry that [DID-WEBVH](https://identity.foundation/didwebvh/) defines as the implicit service of a DID, with the same `serviceEndpoint` as the entry of [[VSA-VT-LVP]](#vsa-vt-lvp-linked-vp-management). The `#whois` entry is an addition for `did:webvh` resolvers, never a replacement: its fragment does not satisfy [[VT-CRED-W3C-LINKED-VP]](https://verana-labs.github.io/verifiable-trust-spec/#vt-cred-w3c-linked-vp-w3c-vtc-linked-vp), which requires a fragment that starts with `#vpr-schemas-` and ends with `-vtc-vp`, so the agent MUST keep the entry of [[VSA-VT-LVP]](#vsa-vt-lvp-linked-vp-management) beside it. The Verana resolver discovers the credential through the required entry and deduplicates the two by `digestJCS`.
 
 [VSA-PUB-VT-4] The agent MAY serve placeholder resources for the `logoUri`, `termsAndConditionsUri`, and `privacyPolicyUri` claims of its ECS credentials, so that an operator with no resources of its own can point the [[VSA-VTI-CFG-ENV-ECS]](#vsa-vti-cfg-env-ecs-ecs-credential-claims) variables at them. An agent that serves them MUST serve them at `/vt/default/logo.svg`, `/vt/default/terms.html`, and `/vt/default/privacy.html`, and MUST keep their content stable while a credential that carries their digest is published.
+
+[VSA-PUB-VT-5] **SD-JWT VC Type Metadata.** For each VTJSC that it issues, the agent MUST serve the SD-JWT VC Type Metadata of the `CredentialSchema` of that VTJSC at `/vt/vct/{credentialSchemaId}`, where `{credentialSchemaId}` is the `id` of the `CredentialSchema` entry of that VTJSC and not its `jsonSchemaCredentialId`, as a JSON document, and MUST serve it whether or not it serves the [OpenID4VC Scope](#openid4vc-scope). The document is a type-level artifact of the Ecosystem, like the AnonCreds schema of [[VSA-PUB-AC-5]](#vsa-pub-ac-anoncreds-registry-resources): every issuer that the Ecosystem accredits for the schema names this one URL as the `vct` of the credentials it issues, so the path is fixed and the URL MUST NOT change while the schema exists. The document MUST carry `vct` equal to that URL, `name` set to the `title` of the JSON schema of the VTJSC, or to the `id` of the `CredentialSchema` when that schema carries no `title`, and `claims` derived from the properties of that schema, per [SD-JWT VC](https://datatracker.ietf.org/doc/html/draft-ietf-oauth-sd-jwt-vc). That format defines no property for a schema, so the agent MUST also carry the extension property `relatedJsonSchemaCredentialId`, set to the `id` of the VTJSC, through which a consumer reaches the JSON schema and the Ecosystem that governs it.
 
 > Non-normative: the reference implementation serves the presentations and the VTJSCs under `/vt/`, with names such as `schemas-<schema>-vtc-vp.json` for a linked presentation and `schemas-<schema>-jsc.json` for a VTJSC. A peer does not depend on these names.
 
@@ -522,18 +520,15 @@ Each response is a JSON object with `resource` — the object — and `resourceM
 
 ### [VSA-PUB-OID] OpenID4VC Public Protocol Endpoints
 
-The agent serves this section only when `OID4VC_CONFIG_FILE` is set (see [[VSA-VTI-CFG-ENV-OID]](#vsa-vti-cfg-env-oid-openid4vc)).
+The agent serves this section only when `OID4VC_CONFIG_FILE_LOCATION` is set (see [[VSA-VTI-CFG-ENV-OID]](#vsa-vti-cfg-env-oid-openid4vc)).
 
 The agent serves the wallet-facing OpenID4VC endpoints on its public listener:
 
 | Path | Purpose |
 |---|---|
 | `/.well-known/openid-credential-issuer`, `/.well-known/oauth-authorization-server`, `/.well-known/jwt-vc-issuer` | Issuer and authorization-server metadata. |
-| `/oid4vci/{issuerId}/...` | Wallet token traffic and credential traffic for the issuer capability. |
-| `/oid4vp/{verifierId}/...` | Authorization request traffic and authorization response traffic for the verifier capability. |
-| `/oid4vc/vct/{credentialConfigurationId}` | SD-JWT VC type metadata for one credential configuration. |
-
-The agent MUST extend the type metadata of each credential configuration with `relatedJsonSchemaCredentialId`, set to the `vtjscId` of that configuration, so that a wallet can verify the schema governance and the accreditation of the issuer through the Verana resolver.
+| `/oid4vci/issuer/...` | Wallet token traffic and credential traffic for the issuer capability. |
+| `/oid4vp/verifier/...` | Authorization request traffic and authorization response traffic for the verifier capability. |
 
 A wallet MUST follow the URLs that the Admin API and the metadata return. The agent derives each protocol path from its own route configuration and from record identifiers, so a caller MUST NOT construct such a path itself.
 
@@ -792,7 +787,7 @@ Each such method returns:
 
 These names and bounds match [[TG-QRY-6]](../verana-graph/spec.md#graph-traversal-queries) of the Verana Graph specification.
 
-A collection that this specification bounds to a fixed number of records is **not** paginated: it returns a bare array, and the agent MUST ignore `limit` and `cursor` on it. Two methods are of this kind: [`listSigningCertificates`](#vsa-adm-oid-cs-list-listsigningcertificates) returns one record per configured OpenID4VC capability, so at most two; [`listProtocols`](#vsa-adm-dc-proto-list-listprotocols) returns one record per protocol module, a set that the deployment fixes. Every other collection grows with use and MUST be paginated.
+A collection that this specification bounds to a fixed number of records is **not** paginated: it returns a bare array, and the agent MUST ignore `limit` and `cursor` on it. Two methods are of this kind: [`listSigningCertificates`](#vsa-adm-oid-cs-list-listsigningcertificates) returns one record per OpenID4VC capability, so exactly two; [`listProtocols`](#vsa-adm-dc-proto-list-listprotocols) returns one record per protocol module, a set that the deployment fixes. Every other collection grows with use and MUST be paginated.
 
 A caller MUST treat a cursor as opaque. The agent MUST NOT use offset pagination.
 
@@ -882,6 +877,7 @@ The table lists every method of the Administration API. It is a non-normative ov
 | OpenID4VC | `createCredentialOffer` | `POST` | `/v2/openid4vc/credential-offer` | [[VSA-ADM-OID-CE-OFFER]](#vsa-adm-oid-ce-offer-createcredentialoffer) |
 |  | `listCredentialExchanges` | `GET` | `/v2/openid4vc/credential-exchanges` | [[VSA-ADM-OID-CE-LIST]](#vsa-adm-oid-ce-list-listcredentialexchanges) |
 |  | `getCredentialExchange` | `GET` | `/v2/openid4vc/credential-exchanges/{credentialExchangeId}` | [[VSA-ADM-OID-CE-GET]](#vsa-adm-oid-ce-get-getcredentialexchange) |
+|  | `deleteCredentialExchange` | `DELETE` | `/v2/openid4vc/credential-exchanges/{credentialExchangeId}` | [[VSA-ADM-OID-CE-DELETE]](#vsa-adm-oid-ce-delete-deletecredentialexchange) |
 |  | `createPresentationRequest` | `POST` | `/v2/openid4vc/presentation-request` | [[VSA-ADM-OID-PR-CREATE]](#vsa-adm-oid-pr-create-createpresentationrequest) |
 |  | `listPresentations` | `GET` | `/v2/openid4vc/presentations` | [[VSA-ADM-OID-PR-LIST]](#vsa-adm-oid-pr-list-listpresentations) |
 |  | `getPresentation` | `GET` | `/v2/openid4vc/presentations/{proofExchangeId}` | [[VSA-ADM-OID-PR-GET]](#vsa-adm-oid-pr-get-getpresentation) |
@@ -1792,14 +1788,22 @@ The message and record definitions of an extension protocol module belong to the
 
 ### OpenID4VC Scope
 
-The methods of this scope operate on the OpenID4VC state of the agent. The agent serves this scope only when the operator sets `OID4VC_CONFIG_FILE` (see [[VSA-VTI-CFG-ENV-OID] OpenID4VC](#vsa-vti-cfg-env-oid-openid4vc)). When that variable is unset, the agent MUST respond to every path of this scope with HTTP `404`.
+The methods of this scope operate on the OpenID4VC state of the agent. The agent serves this scope only when the operator sets `OID4VC_CONFIG_FILE_LOCATION` (see [[VSA-VTI-CFG-ENV-OID] OpenID4VC](#vsa-vti-cfg-env-oid-openid4vc)). When that variable is unset, the agent MUST respond to every path of this scope with HTTP `404`.
 
 The scope mirrors the [DIDComm Scope](#didcomm-scope): a credential offer and a presentation request produce a URL that the caller renders as a QR code or sends as a link, and each one starts an exchange that the caller then reads by identifier. Two differences follow from the protocol:
 
 - OpenID4VC has no persistent connection, so this scope has no Connections module and no Basic Messages module. Each exchange is independent.
-- The agent has two OpenID4VC capabilities, and an operator configures one or both: the **issuer** capability serves [Credential Exchanges](#vsa-adm-oid-ce-credential-exchanges), and the **verifier** capability serves [Presentations](#vsa-adm-oid-pr-presentations). When the configuration does not define a capability, the agent MUST refuse each method of that capability with `CAPABILITY_NOT_CONFIGURED` (`409`).
+- The agent has two OpenID4VC capabilities, and it runs both: the **issuer** capability serves [Credential Exchanges](#vsa-adm-oid-ce-credential-exchanges), and the **verifier** capability serves [Presentations](#vsa-adm-oid-pr-presentations).
 
-The agent MUST issue and MUST verify only the credential formats that [[VSA-VTI-CFG-ENV-OID] OpenID4VC](#vsa-vti-cfg-env-oid-openid4vc) declares. At present that is the SD-JWT VC format `dc+sd-jwt`.
+The agent derives its OpenID4VC credential types from the VPR, through the indexer subscription that already tracks every `Participant` entry of its DID (see [[VSA-VTI-NOTIF] Notifications](#vsa-vti-notif-notifications)). For each `CredentialSchema` for which the agent holds an active `Participant` entry with the role `ISSUER`, the agent advertises one credential configuration in its credential issuer metadata. The identifier of that configuration is the `jsonSchemaCredentialId` of the schema: the identifier of the VTJSC that the Ecosystem publishes for it (see [[VSA-VTI-VTJSC] VTJSC Management](#vsa-vti-vtjsc-vtjsc-management)). The agent MUST keep the set of configurations in step with the VPR: a new or a revoked `ISSUER` participation changes the metadata without a restart.
+
+The agent MUST issue and MUST verify one credential format, the SD-JWT VC format `dc+sd-jwt`. The `vct` claim of every credential is the SD-JWT VC Type Metadata URL of its type, the document that the Ecosystem controller of the schema publishes under [[VSA-PUB-VT-5]](#vsa-pub-vt-verifiable-trust-resources). That value is one per `CredentialSchema` and the same for every issuer that the Ecosystem accredits, so a verifier asks for a type without naming its issuers, and a wallet that dereferences `vct` reads a Type Metadata document, as SD-JWT VC requires of it. The agent composes that URL as `{base}/vt/vct/{credentialSchemaId}`, where `{credentialSchemaId}` is the `id` of the `CredentialSchema` entry — the `schema_id` of its `Participant`, not the `jsonSchemaCredentialId` — and `{base}` is the `https` base URL that DID resolution derives from the DID of the Ecosystem of that schema, which is the [DID location](#did-location) mapping read in the other direction: the host segment, its percent-encoded colon read as a port, then one path segment per further segment, after the SCID segment for a `did:webvh`. The identifier of the credential configuration stays the `jsonSchemaCredentialId`, and so does the input of every method of this scope; each configuration object of the credential issuer metadata MUST carry the `format` `dc+sd-jwt` and the `vct` of its type, which is that URL and never the configuration identifier.
+
+The `iss` of every credential that the agent issues is its Credential Issuer Identifier, `PUBLIC_API_BASE_URL`, from which a consumer resolves the credential issuer metadata through `/.well-known/openid-credential-issuer` (see [[VSA-PUB-OID]](#vsa-pub-oid-openid4vc-public-protocol-endpoints)). The DID of the issuer is the URI SAN of the certificate that signs the credential, never `iss`: the trust decision resolves no key through `/.well-known/jwt-vc-issuer`.
+
+The claims of a configuration are the properties of the JSON schema that the VTJSC references. The display `name` of the configuration is the `title` of that schema, or the identifier of the schema when the schema carries no title. Every claim is selectively disclosable.
+
+`NOT_AUTHORIZED` (`409`) and `RESOLVER_UNAVAILABLE` (`503`) carry, in this scope, the meaning that [[VSA-VTI-FLOW-VERIFY-AC]](#vsa-vti-flow-verify-ac-anoncreds-trust-decision) gives them for AnonCreds: the agent holds no active `Participant` for the role and the `CredentialSchema` of the operation, and the check cannot run.
 
 > A credential offer URL and an authorization request URL are bearer capabilities. The agent MUST NOT write either value to a log, and MUST NOT serve either value on a public endpoint.
 
@@ -1807,29 +1811,33 @@ The wallet-facing endpoints of both capabilities are public endpoints, specified
 
 #### [VSA-ADM-OID-CE] Credential Exchanges
 
-Methods that offer a credential over OpenID4VCI, and that inspect the issuance pipeline. The agent serves them only when the configuration defines the issuer capability.
+Methods that offer a credential over OpenID4VCI, and that inspect or delete an issuance session.
+
+A credential that this scope issues has no revocation mechanism in v4: the agent publishes no status list, and the credential carries no `status` claim. The credential is valid until it expires, so a caller SHOULD set the `ttlSeconds` of the offer to the shortest lifetime that its use case allows. Revocation for this format is planned for a later revision of this document, over the [Token Status List](https://datatracker.ietf.org/doc/html/draft-ietf-oauth-status-list) specification.
 
 | Module | Method Name | HTTP Method | Relative REST API path | Requirements |
 | --- | --- | --- | --- | --- |
 | Credential Exchanges | `createCredentialOffer` | `POST` | `/v2/openid4vc/credential-offer` | [see](#vsa-adm-oid-ce-offer-createcredentialoffer) |
 | Credential Exchanges | `listCredentialExchanges` | `GET` | `/v2/openid4vc/credential-exchanges` | [see](#vsa-adm-oid-ce-list-listcredentialexchanges) |
 | Credential Exchanges | `getCredentialExchange` | `GET` | `/v2/openid4vc/credential-exchanges/{credentialExchangeId}` | [see](#vsa-adm-oid-ce-get-getcredentialexchange) |
+| Credential Exchanges | `deleteCredentialExchange` | `DELETE` | `/v2/openid4vc/credential-exchanges/{credentialExchangeId}` | [see](#vsa-adm-oid-ce-delete-deletecredentialexchange) |
 
 ##### [VSA-ADM-OID-CE-OFFER] createCredentialOffer
 
-Creates a pre-authorized OpenID4VCI credential offer for one credential configuration.
+Creates a pre-authorized OpenID4VCI credential offer for one credential type.
 
 **Inputs** (request body):
 
-- `credentialConfigurationId` (REQUIRED) — identifier of a credential configuration that the OpenID4VC configuration file declares.
-- `claims` (REQUIRED) — object that holds the claim values of the offered credential.
+- `jsonSchemaCredentialId` (REQUIRED) — the credential type of the offer, per the [OpenID4VC Scope](#openid4vc-scope).
+- `claims` (REQUIRED) — object that holds the claim names and the claim values of the offered credential.
+- `ttlSeconds` (REQUIRED) — lifetime of the credential in seconds, between `60` and `7776000` (90 days). v4 has no revocation, so this value is the only bound on the credential: the agent asks the caller for it rather than choosing a default, and the ceiling holds the exposure of an unrevocable credential to a quarter. A later revision raises the ceiling when it specifies revocation.
 
 **Requirements**:
 
-- The agent MUST reject a `claims` object that holds a name that the credential configuration does not list.
-- The agent MUST reject a `claims` object that omits a claim that the credential configuration lists, or that holds an empty value for one.
-- The agent MUST NOT accept a value for `vct`, `iat`, `exp`, `iss`, or `cnf`. These names belong to the credential envelope.
-- The offer MUST expire after the `ttlSeconds` value of the credential configuration.
+- Every name of `claims` MUST be a property of the JSON schema of the type, and every value MUST validate against that schema.
+- A `claims` object MAY omit a property that the schema does not require; the agent then omits that claim from the credential.
+- The agent MUST NOT accept a value for `vct`, `iat`, `exp`, `nbf`, `iss`, `cnf`, or `status`. These names belong to the credential envelope.
+- The credential MUST expire after `ttlSeconds` (its `exp` claim). The offer itself MUST expire too, after a lifetime that the agent chooses and reports as `expiresAt`, independent of `ttlSeconds`.
 
 **Output**:
 
@@ -1838,8 +1846,10 @@ Creates a pre-authorized OpenID4VCI credential offer for one credential configur
 
 **Errors**:
 
-- `UNKNOWN_CONFIGURATION` (`400`) — no credential configuration has the supplied identifier.
-- `CAPABILITY_NOT_CONFIGURED` (`409`) — the configuration does not define the issuer capability.
+- `INVALID_INPUT` (`400`) — `claims` names a property that the JSON schema of the type does not define, holds a value that the schema rejects, or names a claim of the credential envelope; or `ttlSeconds` is absent or out of range.
+- `UNKNOWN_ID` (`404`) — the agent cannot resolve `jsonSchemaCredentialId`.
+- `NOT_AUTHORIZED` (`409`) — the agent holds no active `ISSUER` `Participant` entry for that schema.
+- `RESOLVER_UNAVAILABLE` (`503`) — the agent cannot complete the check.
 
 **Events**: [`openid4vc.credential-exchanges.state-updated`](#vsa-evt-cat-event-catalog).
 
@@ -1849,7 +1859,7 @@ Returns the OpenID4VCI issuance sessions that the agent tracks.
 
 **Inputs** (OPTIONAL query filters, in addition to the [pagination](#vsa-adm-conv-page-pagination) parameters):
 
-- `credentialConfigurationId` — filter by credential configuration.
+- `jsonSchemaCredentialId` — filter by credential type.
 - `state` — filter by issuance session state.
 
 **Output**: a page of credential exchange records, with the same shape as in `getCredentialExchange`.
@@ -1865,18 +1875,34 @@ Retrieves one issuance session by identifier.
 **Output**:
 
 - `credentialExchangeId` — identifier of the issuance session.
-- `credentialConfigurationId` — the credential configuration of the offer.
+- `jsonSchemaCredentialId` — the credential type of the offer.
 - `state` — state of the issuance session.
 - `createdAt` — ISO 8601 UTC datetime at which the agent created the offer.
-- `expiresAt` — ISO 8601 UTC datetime after which the offer is no longer valid. The agent omits this field when the offer does not expire.
+- `expiresAt` — ISO 8601 UTC datetime after which the offer is no longer valid.
+- `updatedAt` — ISO 8601 UTC datetime at which the session last changed.
+- `errorMessage` — OPTIONAL. The error that stopped the session.
+
+The `state` is one of `OfferCreated`, `OfferUriRetrieved`, `AuthorizationInitiated`, `AuthorizationGranted`, `AccessTokenRequested`, `AccessTokenCreated`, `CredentialRequestReceived`, `CredentialsPartiallyIssued`, `Completed`, or `Error`.
 
 **Requirements**:
 
 - The output MUST NOT include the claim values of the credential, the offer URL, or the pre-authorized code. A caller that reads an issuance session learns its state, not its content.
 
+##### [VSA-ADM-OID-CE-DELETE] deleteCredentialExchange
+
+Deletes an issuance session record. It does not delete a credential that a wallet holds.
+
+**Path parameters**:
+
+- `credentialExchangeId` (REQUIRED) — identifier of the issuance session.
+
+**Output**: empty body (HTTP `204`).
+
+**Events**: none. A deletion is a caller action, per [[VSA-EVT-CAT]](#vsa-evt-cat-event-catalog).
+
 #### [VSA-ADM-OID-PR] Presentations
 
-Methods that request a presentation over OpenID4VP, and that inspect or delete a verification session. The agent serves them only when the configuration defines the verifier capability.
+Methods that request a presentation over OpenID4VP, and that inspect or delete a verification session.
 
 | Module | Method Name | HTTP Method | Relative REST API path | Requirements |
 | --- | --- | --- | --- | --- |
@@ -1887,16 +1913,21 @@ Methods that request a presentation over OpenID4VP, and that inspect or delete a
 
 ##### [VSA-ADM-OID-PR-CREATE] createPresentationRequest
 
-Creates an OpenID4VP authorization request for one verifier policy. The policy names the credential configuration and the subset of its claims that the agent requests.
+Creates an OpenID4VP authorization request for one credential type, and for the claims of that type that the caller asks the wallet to disclose.
 
 **Inputs** (request body):
 
-- `policyId` (REQUIRED) — identifier of a verifier policy that the OpenID4VC configuration file declares.
+- `jsonSchemaCredentialId` (REQUIRED) — the credential type that the request asks for, per the [OpenID4VC Scope](#openid4vc-scope).
+- `requestedClaims` (OPTIONAL) — the claim names that the request asks for, without a duplicate, each a property of the JSON schema of that type. When the caller omits it, the agent MUST request every property of the schema, as in [[VSA-ADM-DC-PR-CREATE]](#vsa-adm-dc-pr-create-createpresentationrequest).
 - `queryLanguage` (OPTIONAL, default `dcql`) — `dcql` or `presentation_exchange`. A caller selects `presentation_exchange` for a wallet that never implemented DCQL.
-- `requestSigner` (OPTIONAL) — `x5c` or `did`. It overrides the configured signer of the verifier for this request only. `x5c` produces an `x509_hash` client identifier, for a wallet that cannot resolve a DID. When the caller omits this field, the agent uses the signer of its configuration.
+- `requestSigner` (OPTIONAL, default `x5c`) — `x5c` or `did`. `x5c` produces an `x509_hash` client identifier, for a wallet that cannot resolve a DID. `did` names the DID of the agent as the client identifier of the authorization request, and the signing key MUST be published under `authentication`.
 
 **Requirements**:
 
+- The agent MUST reject a `requestedClaims` that holds a duplicate, or that names a claim that the JSON schema of the type does not define.
+- The agent MUST store `jsonSchemaCredentialId` and `requestedClaims` on the verification session, and MUST NOT infer either value from the response of the wallet.
+- Before it creates the request, the agent MUST hold an active VERIFIER `Participant` for the `CredentialSchema` of the type, per [[PRB-3]](https://verana-labs.github.io/verifiable-trust-spec/versions/v4/#prb-presentation-requested-by), as [[VSA-VTI-FLOW-VERIFY-AC-5]](#vsa-vti-flow-verify-ac-anoncreds-trust-decision) requires of an AnonCreds request. The rule is the format-independent one: an agent asks for a credential of a schema only where the Ecosystem accredits it as a verifier.
+- The agent MUST express the requested type in the query itself, as the Type Metadata URL of that type and never as the `jsonSchemaCredentialId`: `meta.vct_values` of the credential query for `dcql`, a field constraint on the `vct` claim of the input descriptor for `presentation_exchange`. A request MUST NOT enumerate the authorized issuers of the type; the set lives on the VPR, and step 6 of the [trust decision](#vsa-vti-flow-verify-oid-openid4vp-trust-decision) applies it.
 - The agent MUST use the response mode `direct_post.jwt` for a `dcql` request.
 - The agent MUST use the response mode `direct_post` for a `presentation_exchange` request, because a wallet that predates DCQL cannot construct the encrypted response.
 
@@ -1907,8 +1938,11 @@ Creates an OpenID4VP authorization request for one verifier policy. The policy n
 
 **Errors**:
 
-- `UNKNOWN_POLICY` (`400`) — no verifier policy has the supplied identifier.
-- `CAPABILITY_NOT_CONFIGURED` (`409`) — the configuration does not define the verifier capability.
+- `INVALID_INPUT` (`400`) — `requestedClaims` holds a duplicate, or a name that the JSON schema of the type does not define.
+- `UNKNOWN_ID` (`404`) — the agent cannot resolve `jsonSchemaCredentialId`.
+- `NOT_AUTHORIZED` (`409`) — the agent holds no active VERIFIER `Participant` for the `CredentialSchema` of the type.
+- `RESOLVER_UNAVAILABLE` (`503`) — the agent cannot complete the check.
+- `INVALID_STATE` (`409`) — the request selects the `did` signer and the DID of the agent does not publish the signing key under `authentication`.
 
 **Events**: [`openid4vc.presentations.state-updated`](#vsa-evt-cat-event-catalog).
 
@@ -1918,7 +1952,7 @@ Returns the OpenID4VP verification sessions that the agent created.
 
 **Inputs** (OPTIONAL query filters, in addition to the [pagination](#vsa-adm-conv-page-pagination) parameters):
 
-- `policyId` — filter by verifier policy.
+- `jsonSchemaCredentialId` — filter by credential type.
 - `state` — filter by verification session state.
 
 **Output**: a page of verification session records, with the same shape as in `getPresentation`.
@@ -1934,14 +1968,20 @@ Retrieves one verification session by identifier, with its trust result.
 **Output**:
 
 - `proofExchangeId` — identifier of the verification session.
-- `policyId` — the verifier policy of the request.
+- `jsonSchemaCredentialId` — the credential type of the request.
+- `requestedClaims` — the claim names that the request asked for.
 - `state` — state of the verification session.
-- `cryptographicVerified` — `true` when the agent verified the OpenID4VP response, the nonce, the audience, the holder binding, the SD-JWT disclosure, the signature, and the X.509 chain.
+- `createdAt` — ISO 8601 UTC datetime at which the agent created the request.
+- `updatedAt` — ISO 8601 UTC datetime at which the session last changed.
+- `errorMessage` — OPTIONAL. The error that stopped the session.
+- `cryptographicVerified` — `true` when the agent verified the OpenID4VP response, the nonce, the audience, the holder binding, the SD-JWT disclosures, the signature of the credential, and its validity period.
 - `accepted` — `true` only when the trust decision returns the verdict `TRUSTED_AUTHORIZED`. See [Trust decision](#vsa-vti-flow-verify-oid-openid4vp-trust-decision).
 - `trust` — the trust verdict. The agent omits this field until it verifies the response. It contains:
   - `verdict` — one of `TRUSTED_AUTHORIZED`, `TRUSTED_NOT_AUTHORIZED`, `UNTRUSTED`, or `RESOLVER_UNAVAILABLE`.
-  - `evidence` — the basis of the verdict: `did` of the issuer, `trustStatus` from the resolver, `vtjscId` of the credential configuration, `authorized`, the `queries` that the agent ran, and an OPTIONAL `note`.
+  - `evidence` — the basis of the verdict: `did` of the issuer, `trustStatus` from the resolver, `jsonSchemaCredentialId` of the request, `authorized`, the `queries` that the agent ran, and an OPTIONAL `note`.
 - `credential` — the presented credential. The agent omits this field until it verifies the response. It contains `vct` and `disclosedClaims`.
+
+The `state` is one of `RequestCreated`, `RequestUriRetrieved`, `ResponseVerified`, or `Error`. The agent MAY compute the trust verdict once, when it first reads a verified session, and store it with the session; it MUST NOT store a `RESOLVER_UNAVAILABLE` verdict, so that the next read retries the resolver. `listPresentations` MUST NOT trigger the trust decision: it reports the stored verdict, and for a verified session that the agent has not decided yet it reports `cryptographicVerified` `true`, `accepted` `false`, and omits `trust` and `credential`.
 
 **Requirements**:
 
@@ -1968,7 +2008,7 @@ Deletes a verification session record.
 
 ##### [VSA-ADM-OID-CS-LIST] listSigningCertificates
 
-Returns the public signing certificate of each configured capability, so that an operator can supply a fingerprint pin to a peer verifier.
+Returns the public signing certificate of each capability, so that an operator can inspect it or register it with the trust list of a wallet.
 
 **Inputs**: none.
 
@@ -1976,7 +2016,7 @@ Returns the public signing certificate of each configured capability, so that an
 
 - `role` — `issuer` or `verifier`.
 - `development` — `true` when the agent generated the certificate itself, per [Development signing](#vsa-vti-cfg-env-oid-openid4vc).
-- `fingerprint` — the SHA-256 fingerprint of the leaf certificate, in the form `SHA256:<64 lowercase hexadecimal characters>`. This is the pin format of `trust.developmentCertificateFingerprints`.
+- `fingerprint` — the SHA-256 fingerprint of the leaf certificate, in the form `SHA256:<64 lowercase hexadecimal characters>`.
 - `certificateChain` — the certificate chain, base64-encoded DER, leaf first.
 
 **Requirements**:
@@ -2622,7 +2662,7 @@ Besides the subscription of [[VSA-VTI-NOTIF]](#vsa-vti-notif-notifications), the
 | Before it accepts a connection | Resolution of the peer per [[VS-CONN-VS]](https://verana-labs.github.io/verifiable-trust-spec/#vs-conn-vs-requirements-for-a-vs-to-accept-a-connection-from-another-service); the `Participant` entry of the peer | Verify the peer, or establish the ECS issuance purpose. | [[VSA-DC-CONN]](#vsa-dc-conn-connection-acceptance-policy) |
 | Before it accepts a credential | The `Participant` entry of the Validator; [`IDX-PP-QRY-6` Get Participant Session](../verana-indexer/spec.md#idx-pp-qry-6-get-participant-session); [`IDX-DI-QRY-1` Get Digest](../verana-indexer/spec.md#idx-di-qry-1-get-digest) | Verify the issuer, the session, and the anchored digest. | [[VSA-VTI-FLOW-VERIFY]](#vsa-vti-flow-verify-credential-verification) |
 | Before it starts a flow | The `CredentialSchema` and the `Ecosystem` of the flow | Check the schema modes and the [[WL-ECS]](https://verana-labs.github.io/verifiable-trust-spec/#wl-ecs-ecosystem-whitelists-and-vpr-scheme-resolution) whitelist. | [ECS Participants and Credentials](#vsa-vti-ecs-ecs-participants-and-credentials) |
-| Before it accepts an OpenID4VP presentation | [`IDX-VT-QRY-1` Resolve](../verana-indexer/spec.md#idx-vt-qry-1-resolve) for the issuer DID | Obtain the trust status of the issuer and its authorization for the `vtjscId`. | [[VSA-VTI-FLOW-VERIFY-OID]](#vsa-vti-flow-verify-oid-openid4vp-trust-decision) |
+| Before it accepts an OpenID4VP presentation | [`IDX-VT-QRY-1` Resolve](../verana-indexer/spec.md#idx-vt-qry-1-resolve) for the issuer DID | Obtain the trust status of the issuer and its authorization for the `jsonSchemaCredentialId`. | [[VSA-VTI-FLOW-VERIFY-OID]](#vsa-vti-flow-verify-oid-openid4vp-trust-decision) |
 | Before it offers an AnonCreds credential, and before it sends an AnonCreds presentation request | [`IDX-PP-QRY-2` List Participants](../verana-indexer/spec.md#idx-pp-qry-2-list-participants) for the DID of the agent, with `role`, `schema_id`, and `participant_state = ACTIVE`; [`IDX-CS-QRY-1` Get Credential Schema](../verana-indexer/spec.md#idx-cs-qry-1-get-credential-schema) and [`IDX-ES-QRY-1` Get Ecosystem](../verana-indexer/spec.md#idx-es-qry-1-get-ecosystem) for the `CredentialSchema` of the VTJSC | Verify the own ISSUER or VERIFIER `Participant` at the present time. | [[VSA-VTI-FLOW-VERIFY-AC-3]](#vsa-vti-flow-verify-ac-anoncreds-trust-decision), [[VSA-VTI-FLOW-VERIFY-AC-5]](#vsa-vti-flow-verify-ac-anoncreds-trust-decision) |
 | Before it accepts an AnonCreds offer, before it presents, and before it acknowledges an AnonCreds presentation | The same reads, for the `issuerId` of the credential definition or for the DID of the verifier | Verify the ISSUER `Participant` of the issuer, or the VERIFIER `Participant` of the verifier, at the present time. | [[VSA-VTI-FLOW-VERIFY-AC-4]](#vsa-vti-flow-verify-ac-anoncreds-trust-decision), [[VSA-VTI-FLOW-VERIFY-AC-6]](#vsa-vti-flow-verify-ac-anoncreds-trust-decision), [[VSA-VTI-FLOW-VERIFY-AC-7]](#vsa-vti-flow-verify-ac-anoncreds-trust-decision) |
 
@@ -3092,14 +3132,15 @@ The methods of this section share three error codes, beyond the vocabulary of [[
 
 The agent MUST accept a presentation only after each of the following steps succeeds, in this order. The agent MUST fail closed: any step that does not succeed produces a verdict other than `TRUSTED_AUTHORIZED`.
 
-1. The agent verifies the OpenID4VP response, the nonce, the audience, the holder binding, the SD-JWT disclosure, the signature, and the X.509 chain, against the configured trust anchors or against an exact development leaf fingerprint.
-2. The agent reads the issuer DID only from a URI SAN of the certificate, and only after step 1 succeeds.
-3. Before it resolves the DID on the network, the agent MUST check that the DID is a well-formed `did:web` or `did:webvh`, that its host is on `trust.allowedDidWebHosts`, and that its target is not a loopback, a private, or a link-local address. The identifier of the resolved DID Document MUST equal the requested DID.
-4. The public key of the certificate MUST match a verification method that the DID Document authorizes under `assertionMethod`.
-5. The Verana resolver MUST return `TRUSTED` for the issuer DID, and MUST authorize that issuer for the `vtjscId` of the credential configuration.
-6. The agent accepts the presentation only for the verdict `TRUSTED_AUTHORIZED`.
+1. The agent verifies the OpenID4VP response: the nonce, the audience, the holder binding, the SD-JWT disclosures, the signature of the credential with the public key of the certificate that the credential presents, and the validity period of the credential — `exp` MUST be present and later than the verification time, and `nbf`, when present, MUST be earlier than it. A credential with no `exp` fails the decision.
+2. The agent reads the issuer DID only from a URI SAN of that certificate, and only after step 1 succeeds. A certificate without a DID URI SAN fails the decision.
+3. The DID MUST be a well-formed `did:web` or `did:webvh`. The agent resolves it with its DID resolver, which MUST follow no redirect, MUST NOT reach a loopback, a private, or a link-local address, and MUST return after 5 seconds at the latest. The identifier of the resolved DID Document MUST equal the requested DID.
+4. The public key of the certificate MUST match a verification method that the DID Document authorizes under `assertionMethod`. This binding, not a certificate chain, is what makes the key the issuer's: the agent needs no certificate authority and no operator-supplied anchor.
+5. When the verified payload carries a `status` claim, the agent MUST check it here, after step 4, so that it contacts a URI only for a credential whose key the issuer DID authorizes. The claim MUST be a [Token Status List](https://datatracker.ietf.org/doc/html/draft-ietf-oauth-status-list) reference, a `status_list` object with a `uri` and an `idx`. The agent MUST fetch the Status List Token at that `uri` under the network boundary of step 3: `https` only, no redirect, never a loopback, a private, or a link-local address, and a return after 5 seconds at the latest. The token MUST carry the JOSE header `typ` `statuslist+jwt`, its `sub` MUST equal the `uri` of the claim, and its signature MUST verify with a verification method that the DID Document of step 4 authorizes under `assertionMethod`: this profile does not accept a Status Issuer other than the issuer itself, although [Token Status List] allows one. The token MUST carry `iat`, and when it carries `exp` that value MUST be later than the verification time. The index MUST lie within the list, and the status type at that index MUST be `0x00`, `VALID`; the list can carry 1, 2, 4, or 8 bits per status, so the agent reads a status type, not a bit. Any failure of this step — a `status` claim the agent cannot parse, a URI it refuses to contact, a fetch, decode, signature, `sub`, or range failure, or any status type other than `0x00` — fails the decision with the verdict `UNTRUSTED` and an `evidence.note` that names the failure. The agent MUST NOT report `RESOLVER_UNAVAILABLE` for this step: that verdict exists for its own indexer and is retried on every read, and a peer-supplied URI MUST NOT be fetched again on every read.
+6. The Verifiable Trust resolution of the agent (the same resolution it uses for DIDComm, through [`IDX-VT-QRY-1` Resolve](../verana-indexer/spec.md#idx-vt-qry-1-resolve) of its VPR indexer) MUST return `TRUSTED` for the issuer DID, and MUST authorize that issuer for the `jsonSchemaCredentialId` of the request.
+7. The agent accepts the presentation only for the verdict `TRUSTED_AUTHORIZED`.
 
-The agent MUST NOT read `trust.allowedDidWebHosts` from a peer request or from a certificate. It is an operator-managed network trust boundary. The agent MUST return from DID resolution after `trust.timeoutMs` at the latest.
+The agent issues no `status` claim itself in v4 (see [[VSA-ADM-OID-CE]](#vsa-adm-oid-ce-credential-exchanges)); step 5 governs a credential of another issuer. The agent MUST also check that the `vct` of the presented credential equals the Type Metadata URL of the `jsonSchemaCredentialId` that its request stored, and MUST fail the decision when it does not.
 
 #### [VSA-VTI-FLOW-UPD] Validator Updates
 
@@ -3212,6 +3253,7 @@ sequenceDiagram
    - Generate a VTJSC conforming to [VT-JSON-SCHEMA-CRED-W3C], whose `credentialSubject.jsonSchema.$ref` points to the on-chain `CredentialSchema` entry and whose `credentialSubject.digestSRI` carries the SRI digest of the referenced JSON schema content. The VTJSC is signed with the Ecosystem's DID key.
    - Wrap the VTJSC in a Verifiable Presentation signed by the same Ecosystem DID.
    - Add a `LinkedVerifiablePresentation` service entry to the Ecosystem's DID Document, with a fragment that starts with `#vpr-schemas-` and ends with `-vtjsc-vp`, as required by [VT-ECOSYSTEM-DIDDOC].
+   - Create and publish the SD-JWT VC Type Metadata of the schema, per [[VSA-PUB-VT-5]](#vsa-pub-vt-verifiable-trust-resources), so that every issuer the Ecosystem accredits carries the same `vct`.
    - Create and publish the AnonCreds schema of the VTJSC, per [[VSA-PUB-AC-5]](#vsa-pub-ac-anoncreds-registry-resources), so that every issuer that the Ecosystem accredits builds its credential definition on the same schema, and a verifier can request the credential of any of them.
 
 4. The agent MUST serve the VP at its declared `serviceEndpoint` so that any wallet, issuer, or verifier resolving the Ecosystem DID can retrieve and verify the VTJSC.
@@ -3270,18 +3312,20 @@ Each record type of the agent has a state field, and the agent emits a `state-up
 | Presentation | `request-sent`, `request-received`, `presentation-sent`, `presentation-received`, `declined`, `abandoned`, `done` | [[VSA-ADM-DC-PR]](#vsa-adm-dc-pr-presentations) |
 | Credential exchange | `offer-sent`, `offer-received`, `request-sent`, `request-received`, `credential-issued`, `credential-received`, `declined`, `abandoned`, `done` | [[VSA-ADM-DC-CE]](#vsa-adm-dc-ce-credential-exchanges) |
 | Flow: Connection State and Flow State | `NOT_CONNECTED`, `ESTABLISHED`, `TERMINATED`; the Flow States of [[VSA-VTI-FLOW-STATE]](#vsa-vti-flow-state-flow-state) | [vt-flow States](../vt-flow-protocol/spec.md#states) |
-| OpenID4VC issuance session, verification session | Implementation-defined; exposed as `state` | [[VSA-ADM-OID-CE-GET]](#vsa-adm-oid-ce-get-getcredentialexchange), [[VSA-ADM-OID-PR-GET]](#vsa-adm-oid-pr-get-getpresentation) |
+| OpenID4VC issuance session | `OfferCreated`, `OfferUriRetrieved`, `AuthorizationInitiated`, `AuthorizationGranted`, `AccessTokenRequested`, `AccessTokenCreated`, `CredentialRequestReceived`, `CredentialsPartiallyIssued`, `Completed`, `Error` | [[VSA-ADM-OID-CE-GET]](#vsa-adm-oid-ce-get-getcredentialexchange) |
+| OpenID4VC verification session | `RequestCreated`, `RequestUriRetrieved`, `ResponseVerified`, `Error` | [[VSA-ADM-OID-PR-GET]](#vsa-adm-oid-pr-get-getpresentation) |
 
 ## Security Considerations
 
 *This section is an index. Each entry points to the section that states the requirement; it adds no requirement of its own.*
 
-- **Secrets in configuration.** `VERANA_ACCOUNT_MNEMONIC`, `EVENTS_WEBHOOK_API_KEY`, and the OpenID4VC configuration file — which can hold a private key — are secrets; the operator manages them as such and mounts the file read-only. See [[VSA-VTI-CFG-ENV-ID]](#vsa-vti-cfg-env-id-identity-and-corporation), [[VSA-VTI-CFG-ENV-EVT]](#vsa-vti-cfg-env-evt-events-api), [[VSA-VTI-CFG-ENV-OID]](#vsa-vti-cfg-env-oid-openid4vc).
+- **Secrets in configuration.** `VERANA_ACCOUNT_MNEMONIC`, `EVENTS_WEBHOOK_API_KEY`, and the OpenID4VC configuration file — which can hold a private key — are secrets; the operator manages them as such, and keeps the OpenID4VC configuration file on a read-only mount or behind a URL that only the agent reaches. See [[VSA-VTI-CFG-ENV-ID]](#vsa-vti-cfg-env-id-identity-and-corporation), [[VSA-VTI-CFG-ENV-EVT]](#vsa-vti-cfg-env-evt-events-api), [[VSA-VTI-CFG-ENV-OID]](#vsa-vti-cfg-env-oid-openid4vc).
 - **Trusted-network classification.** The agent classifies a request on the peer address of the TCP connection, never on a forwarded header, and the operator keeps every public proxy outside `ADMIN_API_TRUSTED_NETWORKS`. See [Trusted networks](#vsa-adm-access-net-trusted-networks).
 - **Bearer tokens.** Tokens expire, are sent only over TLS, and are never logged. Nonces are single-use. See [[VSA-ADM-AUTH-PROTO]](#vsa-adm-auth-proto-account-challengeresponse).
 - **Probe bodies.** The health methods carry no secret, token, account address, DID, or peer identifier. See [Unauthenticated methods](#vsa-adm-access-open-unauthenticated-methods).
 - **Bearer URLs.** A credential offer URL and an authorization request URL are capabilities: never logged, never served on a public endpoint. See [OpenID4VC Scope](#openid4vc-scope).
-- **DID resolution boundary.** Before it resolves an issuer DID, the agent checks the DID method, the host allowlist, and that the target is not a loopback, private, or link-local address. See [[VSA-VTI-FLOW-VERIFY-OID]](#vsa-vti-flow-verify-oid-openid4vp-trust-decision).
+- **No revocation in v4 for OpenID4VC credentials.** An issued `dc+sd-jwt` credential stays acceptable until its `exp`; the `ttlSeconds` of the offer is the only bound on it. The agent still checks the `status` claim of a credential that another issuer made, over a URI it fetches under the network boundary of the DID resolver. See [[VSA-ADM-OID-CE]](#vsa-adm-oid-ce-credential-exchanges), [[VSA-VTI-FLOW-VERIFY-OID]](#vsa-vti-flow-verify-oid-openid4vp-trust-decision).
+- **Issuer key binding over OpenID4VP.** The agent accepts the signing key of a presented credential only when the DID Document of the issuer authorizes it under `assertionMethod`, never on a certificate chain or an operator-supplied anchor. See [[VSA-VTI-FLOW-VERIFY-OID]](#vsa-vti-flow-verify-oid-openid4vp-trust-decision).
 - **Public origins over TLS.** `PUBLIC_API_BASE_URL` and `ADMIN_API_PUBLIC_URL` are `https://` origins, and `PUBLIC_API_BASE_URL` carries no credentials. See [[VSA-VTI-CFG-ENV-RT]](#vsa-vti-cfg-env-rt-agent-runtime), [[VSA-VTI-CFG-ENV-ADM]](#vsa-vti-cfg-env-adm-administration-api).
 - **Personal data in events.** Event data can carry personal data; the operator uses `https://` for a consumer outside the trusted network. See [[VSA-EVT-DEL-6]](#vsa-evt-del-delivery).
 - **Trust decisions from the VPR.** The agent establishes the authorization of an issuer, the purpose of an ECS connection, and the anchoring of a credential from the VPR, never from the claim of a peer. See [[VSA-DC-CONN]](#vsa-dc-conn-connection-acceptance-policy), [[VSA-VTI-FLOW-VERIFY]](#vsa-vti-flow-verify-credential-verification), [[VSA-VTI-FLOW-VERIFY-AC]](#vsa-vti-flow-verify-ac-anoncreds-trust-decision).
@@ -3296,7 +3340,7 @@ The agent reports its state through [`getLiveness`](#vsa-adm-ag-live-getliveness
 
 | Condition | Level | Effect | Section |
 |---|---|---|---|
-| A REQUIRED variable is missing or invalid, or the OpenID4VC configuration file fails validation | Error | The agent fails to start. | [[VSA-VTI-BOOT]](#vsa-vti-boot-bootstrap-sequence), [[VSA-VTI-CFG-ENV-OID]](#vsa-vti-cfg-env-oid-openid4vc) |
+| A REQUIRED variable is missing or invalid, or the agent cannot read `OID4VC_CONFIG_FILE_LOCATION`, or the OpenID4VC configuration file fails validation | Error | The agent fails to start. | [[VSA-VTI-BOOT]](#vsa-vti-boot-bootstrap-sequence), [[VSA-VTI-CFG-ENV-OID]](#vsa-vti-cfg-env-oid-openid4vc) |
 | The location derived from `PUBLIC_API_BASE_URL` differs from the location of the persisted DID | Error, naming both values | The agent fails to start. | [[VSA-VTI-BOOT-DID]](#vsa-vti-boot-did-did-creation) |
 | No `VSOperatorAuthorization` is granted and the `vs_operator` balance is zero | Warning | None. | [[VSA-VTI-BOOT]](#vsa-vti-boot-bootstrap-sequence) |
 | `Corporation.did` rotates away from the DID of the agent, under the per-DID subscription scope | Warning | The agent stops processing events on the previous DID. | [[VSA-VTI-NOTIF-CO]](#vsa-vti-notif-co-corporation-notifications) |
@@ -3402,6 +3446,7 @@ Every identifier of this document, in lexical order. A section identifier links 
 | `VSA-ADM-DC-UP-REQUEST` | [requestProfile](#vsa-adm-dc-up-request-requestprofile) | User Profile |
 | `VSA-ADM-DC-UP-SEND` | [sendProfile](#vsa-adm-dc-up-send-sendprofile) | User Profile |
 | `VSA-ADM-OID-CE` | [Credential Exchanges](#vsa-adm-oid-ce-credential-exchanges) | OpenID4VC Scope |
+| `VSA-ADM-OID-CE-DELETE` | [deleteCredentialExchange](#vsa-adm-oid-ce-delete-deletecredentialexchange) | Credential Exchanges |
 | `VSA-ADM-OID-CE-GET` | [getCredentialExchange](#vsa-adm-oid-ce-get-getcredentialexchange) | Credential Exchanges |
 | `VSA-ADM-OID-CE-LIST` | [listCredentialExchanges](#vsa-adm-oid-ce-list-listcredentialexchanges) | Credential Exchanges |
 | `VSA-ADM-OID-CE-OFFER` | [createCredentialOffer](#vsa-adm-oid-ce-offer-createcredentialoffer) | Credential Exchanges |
@@ -3469,6 +3514,7 @@ Every identifier of this document, in lexical order. A section identifier links 
 | `VSA-PUB-VT-2` | The agent MUST serve each VTJSC that it issues at the URL that is the `id` of that credential, as a JSON document, so that a credential d… |  |
 | `VSA-PUB-VT-3` | When `AGENT_PUBLIC_DID_METHOD` is `webvh` and the agent holds an ECS-Service credential, the agent SHOULD also expose that credential's p… |  |
 | `VSA-PUB-VT-4` | The agent MAY serve placeholder resources for the `logoUri`, `termsAndConditionsUri`, and `privacyPolicyUri` claims of its ECS credential… |  |
+| `VSA-PUB-VT-5` | **SD-JWT VC Type Metadata.** For each VTJSC that it issues, the agent MUST serve the SD-JWT VC Type Metadata of the `CredentialSchema` of that VTJSC at `/vt/vct/{credentialSchemaId}`… |  |
 | `VSA-VPR-QRY` | [Indexer Queries](#vsa-vpr-qry-indexer-queries) | VPR and Indexer Interface |
 | `VSA-VPR-TX` | [On-chain Transactions](#vsa-vpr-tx-on-chain-transactions) | VPR and Indexer Interface |
 | `VSA-VPR-TX-1` | The agent MUST sign each of these messages with its `vs_operator` account, and MUST simulate the gas of each transaction and apply `VERAN… |  |
@@ -3537,6 +3583,7 @@ Every identifier of this document, in lexical order. A section identifier links 
 ## Appendix B: Change Log
 
 - **v4-draft10** — AnonCreds trust decision ([[VSA-VTI-FLOW-VERIFY-AC]](#vsa-vti-flow-verify-ac-anoncreds-trust-decision)): the agent checks the ISSUER or VERIFIER `Participant` of itself and of its peer at the present time before it offers, accepts an offer, requests, presents, or acknowledges an AnonCreds credential; derives the `CredentialSchema` from the resource metadata of the credential definition or of the AnonCreds schema; fails closed; and ends a presentation from an unauthorized issuer in `abandoned` with a problem report. The AnonCreds schema of a VTJSC is published once, by the Ecosystem controller, with the VTJSC ([[VSA-PUB-AC-5]](#vsa-pub-ac-anoncreds-registry-resources), [[VSA-VTI-VTJSC]](#vsa-vti-vtjsc-vtjsc-management)); every issuer builds its credential definition on it ([[VSA-ADM-AC-CD-CREATE]](#vsa-adm-ac-cd-create-createcredentialdefinition)), and a presentation request that names a VTJSC restricts to that schema, so that the credential of any accredited issuer satisfies it ([[VSA-ADM-DC-PR-CREATE]](#vsa-adm-dc-pr-create-createpresentationrequest)). New error codes `NOT_AUTHORIZED`, `PEER_NOT_AUTHORIZED`, and `RESOLVER_UNAVAILABLE`; new problem-report codes `e.p.issuer-not-authorized` and `e.p.trust-resolution-unavailable`. Rows added to [[VSA-VPR-QRY]](#vsa-vpr-qry-indexer-queries), Security Considerations, and Observability.
+- **v4-draft10, second revision (2026-09-09)** — Completed the OpenID4VC scope. `OID4VC_CONFIG_FILE_LOCATION` now enables both capabilities at once, takes a local path or an `https://` URL, and the configuration file holds only what the agent cannot derive: the signing mode of each capability and the X.509 roots of the wallet and key attestations ([[VSA-VTI-CFG-ENV-OID]](#vsa-vti-cfg-env-oid-openid4vc)). The agent derives its credential types from the `ISSUER` `Participant` entries of its DID, uses the `jsonSchemaCredentialId` of the schema as the configuration identifier, takes the claims from the JSON schema, and sets the `vct` to the SD-JWT VC Type Metadata URL that the Ecosystem controller publishes for the schema ([[VSA-PUB-VT-5]](#vsa-pub-vt-verifiable-trust-resources)), one value per type rather than one per issuer, so the configuration file declares no credential type and no verifier policy ([OpenID4VC Scope](#openid4vc-scope)). Added [[VSA-ADM-OID-CE-DELETE]](#vsa-adm-oid-ce-delete-deletecredentialexchange), the state enumeration of both session records, and `updatedAt` and `errorMessage` on each. A credential that this scope issues has no revocation mechanism in v4 ([[VSA-ADM-OID-CE]](#vsa-adm-oid-ce-credential-exchanges)). The OpenID4VP trust decision binds the issuer key through the DID Document instead of an operator-supplied certificate anchor and a host allowlist, and checks the validity period of the credential ([[VSA-VTI-FLOW-VERIFY-OID]](#vsa-vti-flow-verify-oid-openid4vp-trust-decision)). The trust decision also checks a `status` claim that another issuer put on a credential, under the network boundary of the DID resolver, and `createPresentationRequest` requires the VERIFIER `Participant` that [[PRB-3]](https://verana-labs.github.io/verifiable-trust-spec/versions/v4/#prb-presentation-requested-by) asks for and that AnonCreds already requires. `ttlSeconds` is REQUIRED and capped at 90 days while nothing can revoke a credential, the accreditation checks of both methods answer with the `NOT_AUTHORIZED` and `RESOLVER_UNAVAILABLE` codes of the AnonCreds trust decision, `iss` is the Credential Issuer Identifier, `nbf` joins the reserved envelope names, and `MRTD_MASTER_LIST_CSCA_LOCATION` states the two location forms it already accepts.
 - **v4-draft9** — Restructured the document by interface: System Overview, Configuration, Public Endpoints, DIDComm Interface, Administration API, Events API, VPR and Indexer Interface, Agent Lifecycle, Verifiable Trust Behaviors, Data and State. Every existing requirement identifier is unchanged. New sections consolidate statements that were repeated: [[VSA-DC-CONN]](#vsa-dc-conn-connection-acceptance-policy), [[VSA-VTI-FLOW-ISSUE]](#vsa-vti-flow-issue-credential-issuance-and-acceptance), [[VSA-VTI-FLOW-VERIFY]](#vsa-vti-flow-verify-credential-verification), [[VSA-VT-LVP]](#vsa-vt-lvp-linked-vp-management), [[VSA-VPR-TX]](#vsa-vpr-tx-on-chain-transactions), [[VSA-VPR-QRY]](#vsa-vpr-qry-indexer-queries), [[VSA-PUB-LISTENER]](#vsa-pub-listener-public-listener), [[VSA-PUB-DID]](#vsa-pub-did-did-document-and-did-log), [[VSA-DATA]](#vsa-data-persistent-state). Normative sections that had no identifier received one. Added the conformance targets, the requirement-identifier conventions, the datetime encoding rule, the **Events** field of the state-changing methods, and this index.
 - **v4-draft9, second revision** — Public Endpoints now covers every public path family: DID Document and DID log for `did:web` and `did:webvh` ([[VSA-PUB-DID]](#vsa-pub-did-did-document-and-did-log)), DIDComm inbound endpoints ([[VSA-PUB-DIDCOMM]](#vsa-pub-didcomm-didcomm-inbound-endpoint)), linked presentations and VTJSC documents ([[VSA-PUB-VT]](#vsa-pub-vt-verifiable-trust-resources)), AnonCreds registry resources in both DID method layouts and tails files ([[VSA-PUB-AC]](#vsa-pub-ac-anoncreds-registry-resources)), short URLs ([[VSA-PUB-INV]](#vsa-pub-inv-invitation-parameters)). `createPresentationRequest` and `createCredentialOffer` return the invitation object as `invitation` instead of a `url` built on an agent-configured base; the caller owns the link. Configuration gains `PUBLIC_API_PORT`, `ADMIN_API_PORT`, and the Logging group ([[VSA-VTI-CFG-ENV-LOG]](#vsa-vti-cfg-env-log-logging)); the DIDComm endpoint is derived from `PUBLIC_API_BASE_URL` with no override. Review fixes: every VPR read goes through the indexer ([[VSA-VPR-QRY]](#vsa-vpr-qry-indexer-queries)), the service-endpoint methods exclude and refuse the `AnonCredsRegistry` and `relativeRef` entries, `#whois` is stated as an addition to the required linked-VP entry, and `participantSessionId` is the on-chain identifier. The `AnonCredsRegistry` and `relativeRef` entries join the agent-managed service entries of [[VSA-VTI-DIDDOC]](#vsa-vti-diddoc-did-document-service-entries).
 - **v4-draft9, third revision** — Recovered the `invitation` message of the v1 API as the [[VSA-ADM-DC-INV]](#vsa-adm-dc-inv-invitations) Invitations module: `sendInvitation` sends an Out-of-Band invitation on an established connection, for a sub-connection to the agent or a referral to another service. Connection records gain `parentConnectionId`.
