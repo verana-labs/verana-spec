@@ -1,6 +1,6 @@
 # Indexer v4 Specification
 
-**Latest Draft:** spec v4-draft12
+**Latest Draft:** spec v4-draft13
 
 ## Abstract
 
@@ -23,6 +23,16 @@ Every datetime value defined or surfaced by this specification — including but
 ```
 
 The JSON Schemas published alongside this document expose this constraint as the reusable `#/$defs/Iso8601DateTime` definition; every datetime property in those schemas references it.
+
+### Duration encoding
+
+Every duration value surfaced by this specification MUST be encoded as the [protobuf JSON mapping of `google.protobuf.Duration`](https://protobuf.dev/programming-guides/json/): a decimal number of seconds followed by the suffix `s`, for example `"315360000s"` or `"1.5s"`. Fractional seconds are OPTIONAL and carry at most nine digits. A duration MUST be strictly positive: the ledger never stores a zero or negative duration, and the indexer MUST omit the field (or serialise `null` when the field is declared nullable) rather than emit `"0s"`. The normative regular expression is:
+
+```regex
+^[0-9]+(\.[0-9]{1,9})?s$
+```
+
+A duration on an authorization, record or grant means that the entry **auto-renews**: per VPR [[AUTHZ-CHECK-1]](https://verana-labs.github.io/verifiable-trust-vpr-spec/versions/v4/#authz-check-1-operator-authorization-checks), [[AUTHZ-CHECK-2]](https://verana-labs.github.io/verifiable-trust-vpr-spec/versions/v4/#authz-check-2-fee-grant-checks) and [[AUTHZ-CHECK-3]](https://verana-labs.github.io/verifiable-trust-vpr-spec/versions/v4/#authz-check-3-vs-operator-authorization-checks), when `period` is set and `now() >= expiration`, the ledger resets the spend balances and advances `expiration` by `period` at the next authorization check, instead of treating the entry as expired. Consumers evaluating activity client-side, and the `only_active` filters of the Delegation methods, MUST therefore treat an entry as active when `expiration` is unset, when `expiration > now`, or when `period` is set — whatever the stored `expiration` value.
 
 ## Terminology
 
@@ -897,7 +907,7 @@ Retrieve a paginated, filtered list of `OperatorAuthorization` entries. Each ent
 | `corporation_id` | query | uint64 | no | Filter by the granting Corporation id |
 | `operator` | query | string | no | Filter by the grantee operator account |
 | `msg_type` | query | string | no | Filter to authorizations whose `msg_types[]` includes this message type |
-| `only_active` | query | boolean | no | If true, only return non-expired authorizations (`expiration > now` or null) |
+| `only_active` | query | boolean | no | If true, only return non-expired authorizations (`expiration > now` or null; for periodic authorizations, the auto-renewing cycle boundary never makes the authorization inactive, see [Duration encoding](#duration-encoding)) |
 | `modified_after` | query | datetime | no | Only return authorizations modified strictly after this datetime |
 
 Supports pagination through attributes `max_id`, `min_id`, `limit` and `sort`, as explained in [Pagination](#pagination).
@@ -917,7 +927,7 @@ Retrieve a paginated, filtered list of `VSOperatorAuthorization` entries. Each e
 | `corporation_id` | query | uint64 | no | Filter by the granting Corporation id |
 | `vs_operator` | query | string | no | Filter by the grantee VS-operator account |
 | `participant_id` | query | uint64 | no | Filter to entries whose `records[]` contains a record for this `Participant.id` |
-| `only_active` | query | boolean | no | If true, only return entries with at least one non-expired record |
+| `only_active` | query | boolean | no | If true, only return entries with at least one non-expired record (`expiration > now` or null; a record with a `period` is never inactive at its cycle boundary, see [Duration encoding](#duration-encoding)) |
 | `modified_after` | query | datetime | no | Only return entries modified strictly after this datetime |
 
 Supports pagination through attributes `max_id`, `min_id`, `limit` and `sort`, as explained in [Pagination](#pagination).
