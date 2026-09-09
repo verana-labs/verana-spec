@@ -1,6 +1,6 @@
 # VS Agent v4 Specification
 
-**Latest Draft:** spec v4-draft10
+**Latest Draft:** spec v4-draft11
 
 ## Abstract
 
@@ -65,7 +65,7 @@ A conforming VS Agent implements every requirement of this document that is not 
 |---|---|---|
 | External access to the Administration API | `ADMIN_API_AUTH_MODE` = `corporation` | [[VSA-ADM-AUTH-PROTO]](#vsa-adm-auth-proto-account-challengeresponse), [[VSA-ADM-AUTH]](#vsa-adm-auth-authentication) |
 | Events API | `EVENTS_WEBHOOK_URL` set | [Events API](#events-api) |
-| OpenID4VC | `OID4VC_CONFIG_FILE_LOCATION` set | [[VSA-PUB-OID]](#vsa-pub-oid-openid4vc-public-protocol-endpoints), [[VSA-ADM-OID-CE]](#vsa-adm-oid-ce-credential-exchanges), [[VSA-ADM-OID-PR]](#vsa-adm-oid-pr-presentations), [[VSA-ADM-OID-CS]](#vsa-adm-oid-cs-signing-certificates), [[VSA-VTI-FLOW-VERIFY-OID]](#vsa-vti-flow-verify-oid-openid4vp-trust-decision) |
+| OpenID4VC | `OID4VC_CONFIG_FILE_LOCATION` set | [[VSA-PUB-OID]](#vsa-pub-oid-openid4vc-public-protocol-endpoints), [[VSA-ADM-OID-CE]](#vsa-adm-oid-ce-credential-exchanges), [[VSA-ADM-OID-PR]](#vsa-adm-oid-pr-presentations), [[VSA-ADM-OID-CS]](#vsa-adm-oid-cs-signing-certificates), [[VSA-ADM-OID-SL]](#vsa-adm-oid-sl-status-lists), [[VSA-ADM-OID-CR]](#vsa-adm-oid-cr-credential-revocation), [[VSA-VTI-FLOW-VERIFY-OID]](#vsa-vti-flow-verify-oid-openid4vp-trust-decision) |
 | Optional DIDComm modules | Deployment choice, reported by [`listProtocols`](#vsa-adm-dc-proto-list-listprotocols) | [[VSA-ADM-DC-RC]](#vsa-adm-dc-rc-receipts), [[VSA-ADM-DC-RA]](#vsa-adm-dc-ra-reactions), [[VSA-ADM-DC-UP]](#vsa-adm-dc-up-user-profile), [[VSA-ADM-DC-MS]](#vsa-adm-dc-ms-media-sharing), [[VSA-ADM-DC-CL]](#vsa-adm-dc-cl-calls), [[VSA-ADM-DC-AM]](#vsa-adm-dc-am-action-menu), [[VSA-ADM-DC-QA]](#vsa-adm-dc-qa-question-answer), [[VSA-ADM-DC-MRTD]](#vsa-adm-dc-mrtd-mrtd) |
 | Extension protocol modules | Deployment choice | [[VSA-ADM-DC-EXT]](#vsa-adm-dc-ext-extension-protocol-modules) |
 
@@ -368,7 +368,7 @@ These variables configure the listener and the access model of the [Administrati
 
 The agent MUST read the file at startup, MUST validate it, and MUST refuse to start when it cannot read the location or when validation fails, including on a key that the table does not define. When the location is a URL, the agent MUST refuse any scheme other than `https`, MUST follow no redirect, and MUST NOT read the location again while it runs. Field names are camelCase (see [API Conventions](#vsa-adm-conv-api-conventions)).
 
-Every key is OPTIONAL, and `{}` is a valid file. The file holds only what the agent cannot derive by itself, and nothing else: no credential type, because the agent takes its types from the `CredentialSchema` entries that the VPR authorizes it to issue (see the [OpenID4VC Scope](#openid4vc-scope)); no trust anchor and no host allowlist, because the agent decides trust through the same Verifiable Trust resolution that it uses for DIDComm (see [[VSA-VTI-FLOW-VERIFY-OID] OpenID4VP Trust Decision](#vsa-vti-flow-verify-oid-openid4vp-trust-decision)); and nothing about revocation, because v4 specifies no revocation for the credential format of this scope (see [[VSA-ADM-OID-CE] Credential Exchanges](#vsa-adm-oid-ce-credential-exchanges)).
+Every key is OPTIONAL, and `{}` is a valid file: the file holds only the signing mode of each capability and the X.509 roots of the wallet and key attestations, the two things the agent cannot derive by itself.
 
 | Key | Requirement |
 |---|---|
@@ -408,7 +408,7 @@ The table lists every public path family. A path is relative to `PUBLIC_API_BASE
 | The `serviceEndpoint` of the `AnonCredsRegistry` entry and the paths below it; the `tailsLocation` of each revocation registry | AnonCreds objects, did:web layout | `AGENT_PUBLIC_DID_METHOD` = `web` | [[VSA-PUB-AC]](#vsa-pub-ac-anoncreds-registry-resources) |
 | `/resources/{resourceId}` | AnonCreds objects, did:webvh attested resources | `AGENT_PUBLIC_DID_METHOD` = `webvh` | [[VSA-PUB-AC]](#vsa-pub-ac-anoncreds-registry-resources) |
 | The short URL that a method returns as `shortUrl` | Invitation resolution | When the agent supports short URLs | [[VSA-PUB-INV]](#vsa-pub-inv-invitation-parameters) |
-| `/.well-known/openid-credential-issuer`, `/.well-known/oauth-authorization-server`, `/.well-known/jwt-vc-issuer`, `/oid4vci/…`, `/oid4vp/…` | OpenID4VC | `OID4VC_CONFIG_FILE_LOCATION` set | [[VSA-PUB-OID]](#vsa-pub-oid-openid4vc-public-protocol-endpoints) |
+| `/.well-known/openid-credential-issuer`, `/.well-known/oauth-authorization-server`, `/.well-known/jwt-vc-issuer`, `/oid4vci/…`, `/oid4vp/…`, `/oid4vc/status-list/…` | OpenID4VC | `OID4VC_CONFIG_FILE_LOCATION` set | [[VSA-PUB-OID]](#vsa-pub-oid-openid4vc-public-protocol-endpoints) |
 
 ### [VSA-PUB-LISTENER] Public Listener
 
@@ -491,7 +491,7 @@ The agent publishes its Verifiable Trust credentials — the ECS credentials it 
 
 [VSA-PUB-VT-4] The agent MAY serve placeholder resources for the `logoUri`, `termsAndConditionsUri`, and `privacyPolicyUri` claims of its ECS credentials, so that an operator with no resources of its own can point the [[VSA-VTI-CFG-ENV-ECS]](#vsa-vti-cfg-env-ecs-ecs-credential-claims) variables at them. An agent that serves them MUST serve them at `/vt/default/logo.svg`, `/vt/default/terms.html`, and `/vt/default/privacy.html`, and MUST keep their content stable while a credential that carries their digest is published.
 
-[VSA-PUB-VT-5] **SD-JWT VC Type Metadata.** For each VTJSC that it issues, the agent MUST serve the SD-JWT VC Type Metadata of the `CredentialSchema` of that VTJSC at `/vt/vct/{credentialSchemaId}`, where `{credentialSchemaId}` is the `id` of the `CredentialSchema` entry of that VTJSC and not its `jsonSchemaCredentialId`, as a JSON document, and MUST serve it whether or not it serves the [OpenID4VC Scope](#openid4vc-scope). The document is a type-level artifact of the Ecosystem, like the AnonCreds schema of [[VSA-PUB-AC-5]](#vsa-pub-ac-anoncreds-registry-resources): every issuer that the Ecosystem accredits for the schema names this one URL as the `vct` of the credentials it issues, so the path is fixed and the URL MUST NOT change while the schema exists. The document MUST carry `vct` equal to that URL, `name` set to the `title` of the JSON schema of the VTJSC, or to the `id` of the `CredentialSchema` when that schema carries no `title`, and `claims` derived from the properties of that schema, per [SD-JWT VC](https://datatracker.ietf.org/doc/html/draft-ietf-oauth-sd-jwt-vc). That format defines no property for a schema, so the agent MUST also carry the extension property `relatedJsonSchemaCredentialId`, set to the `id` of the VTJSC, through which a consumer reaches the JSON schema and the Ecosystem that governs it.
+[VSA-PUB-VT-5] **SD-JWT VC Type Metadata.** For each VTJSC that it issues, the agent MUST serve the SD-JWT VC Type Metadata of the `CredentialSchema` of that VTJSC at `/vt/vct/{credentialSchemaId}`, where `{credentialSchemaId}` is the `id` of the `CredentialSchema` entry of that VTJSC and not its `jsonSchemaCredentialId`, as a JSON document, and MUST serve it whether or not it serves the [OpenID4VC Scope](#openid4vc-scope). The document is a type-level artifact of the Ecosystem, like the AnonCreds schema of [[VSA-PUB-AC-5]](#vsa-pub-ac-anoncreds-registry-resources): every issuer that the Ecosystem accredits for the schema names this one URL as the `vct` of the credentials it issues, so the path is fixed and the URL MUST NOT change while the schema exists. The document MUST carry `vct` equal to that URL, `name` set to the `title` of the JSON schema of the VTJSC, or to the `id` of the `CredentialSchema` when that schema carries no `title`, and `claims` derived from the properties of that schema, per [SD-JWT VC](https://datatracker.ietf.org/doc/html/draft-ietf-oauth-sd-jwt-vc). The document MUST carry `schema_uri`, set to the URL that `credentialSubject.jsonSchema.$ref` of the VTJSC names, and `schema_uri#integrity`, set to the `credentialSubject.digestSRI` of the VTJSC, so that a wallet validates the claims through the schema properties that SD-JWT VC defines. That format defines no property for the governance of a type, so the agent MUST also carry the extension property `relatedJsonSchemaCredentialId`, set to the `id` of the VTJSC, through which a consumer reaches the Ecosystem that governs the schema.
 
 > Non-normative: the reference implementation serves the presentations and the VTJSCs under `/vt/`, with names such as `schemas-<schema>-vtc-vp.json` for a linked presentation and `schemas-<schema>-jsc.json` for a VTJSC. A peer does not depend on these names.
 
@@ -529,8 +529,11 @@ The agent serves the wallet-facing OpenID4VC endpoints on its public listener:
 | `/.well-known/openid-credential-issuer`, `/.well-known/oauth-authorization-server`, `/.well-known/jwt-vc-issuer` | Issuer and authorization-server metadata. |
 | `/oid4vci/issuer/...` | Wallet token traffic and credential traffic for the issuer capability. |
 | `/oid4vp/verifier/...` | Authorization request traffic and authorization response traffic for the verifier capability. |
+| `/oid4vc/status-list/{statusListId}` | One Token Status List of the issuer capability, per [[VSA-PUB-OID-1]](#vsa-pub-oid-openid4vc-public-protocol-endpoints). |
 
 A wallet MUST follow the URLs that the Admin API and the metadata return. The agent derives each protocol path from its own route configuration and from record identifiers, so a caller MUST NOT construct such a path itself.
+
+[VSA-PUB-OID-1] **Token Status Lists.** The agent MUST serve each status list that it created through [[VSA-ADM-OID-SL-CREATE] `createStatusList`](#vsa-adm-oid-sl-create-createstatuslist) at `/oid4vc/status-list/{statusListId}`, as a Status List Token per [Token Status List](https://datatracker.ietf.org/doc/html/draft-ietf-oauth-status-list), in the JWT form, with the content type `application/statuslist+jwt`. The URL is the `uri` of the list, the value that every credential registered on the list carries in `status.status_list.uri`, and it MUST NOT change while a credential can reference it. The token MUST carry the JOSE header `typ` `statuslist+jwt`, a `sub` equal to that URL, `iat`, and `exp`; it MAY carry `ttl`. The list uses one bit per status: `0x00` for `VALID`, `0x01` for `INVALID`. The agent MUST sign the token with the key and the certificate chain of its issuer capability, in an `x5c` header, so that the signer of a list is the signer of the credentials that reference it and passes step 5 of [[VSA-VTI-FLOW-VERIFY-OID]](#vsa-vti-flow-verify-oid-openid4vp-trust-decision) at every verifier. The agent MUST publish a re-signed token after each revocation before it answers the revocation request, before the `exp` of the current token, and after a change of the signing certificate. The agent MUST answer an unknown `statusListId` with HTTP `404`.
 
 ### [VSA-PUB-INV] Invitation Parameters
 
@@ -883,6 +886,10 @@ The table lists every method of the Administration API. It is a non-normative ov
 |  | `getPresentation` | `GET` | `/v2/openid4vc/presentations/{proofExchangeId}` | [[VSA-ADM-OID-PR-GET]](#vsa-adm-oid-pr-get-getpresentation) |
 |  | `deletePresentation` | `DELETE` | `/v2/openid4vc/presentations/{proofExchangeId}` | [[VSA-ADM-OID-PR-DELETE]](#vsa-adm-oid-pr-delete-deletepresentation) |
 |  | `listSigningCertificates` | `GET` | `/v2/openid4vc/signing-certificates` | [[VSA-ADM-OID-CS-LIST]](#vsa-adm-oid-cs-list-listsigningcertificates) |
+|  | `listStatusLists` | `GET` | `/v2/openid4vc/status-lists` | [[VSA-ADM-OID-SL-LIST]](#vsa-adm-oid-sl-list-liststatuslists) |
+|  | `createStatusList` | `POST` | `/v2/openid4vc/status-lists` | [[VSA-ADM-OID-SL-CREATE]](#vsa-adm-oid-sl-create-createstatuslist) |
+|  | `deleteStatusList` | `DELETE` | `/v2/openid4vc/status-lists/{statusListId}` | [[VSA-ADM-OID-SL-DELETE]](#vsa-adm-oid-sl-delete-deletestatuslist) |
+|  | `revokeCredential` | `POST` | `/v2/openid4vc/revoke-credential` | [[VSA-ADM-OID-CR-REVOKE]](#vsa-adm-oid-cr-revoke-revokecredential) |
 | AnonCreds | `listCredentialDefinitions` | `GET` | `/v2/anoncreds/credential-definitions` | [[VSA-ADM-AC-CD-LIST]](#vsa-adm-ac-cd-list-listcredentialdefinitions) |
 |  | `createCredentialDefinition` | `POST` | `/v2/anoncreds/credential-definitions` | [[VSA-ADM-AC-CD-CREATE]](#vsa-adm-ac-cd-create-createcredentialdefinition) |
 |  | `deleteCredentialDefinition` | `DELETE` | `/v2/anoncreds/credential-definitions/{credentialDefinitionId}` | [[VSA-ADM-AC-CD-DELETE]](#vsa-adm-ac-cd-delete-deletecredentialdefinition) |
@@ -1797,7 +1804,7 @@ The scope mirrors the [DIDComm Scope](#didcomm-scope): a credential offer and a 
 
 The agent derives its OpenID4VC credential types from the VPR, through the indexer subscription that already tracks every `Participant` entry of its DID (see [[VSA-VTI-NOTIF] Notifications](#vsa-vti-notif-notifications)). For each `CredentialSchema` for which the agent holds an active `Participant` entry with the role `ISSUER`, the agent advertises one credential configuration in its credential issuer metadata. The identifier of that configuration is the `jsonSchemaCredentialId` of the schema: the identifier of the VTJSC that the Ecosystem publishes for it (see [[VSA-VTI-VTJSC] VTJSC Management](#vsa-vti-vtjsc-vtjsc-management)). The agent MUST keep the set of configurations in step with the VPR: a new or a revoked `ISSUER` participation changes the metadata without a restart.
 
-The agent MUST issue and MUST verify one credential format, the SD-JWT VC format `dc+sd-jwt`. The `vct` claim of every credential is the SD-JWT VC Type Metadata URL of its type, the document that the Ecosystem controller of the schema publishes under [[VSA-PUB-VT-5]](#vsa-pub-vt-verifiable-trust-resources). That value is one per `CredentialSchema` and the same for every issuer that the Ecosystem accredits, so a verifier asks for a type without naming its issuers, and a wallet that dereferences `vct` reads a Type Metadata document, as SD-JWT VC requires of it. The agent composes that URL as `{base}/vt/vct/{credentialSchemaId}`, where `{credentialSchemaId}` is the `id` of the `CredentialSchema` entry — the `schema_id` of its `Participant`, not the `jsonSchemaCredentialId` — and `{base}` is the `https` base URL that DID resolution derives from the DID of the Ecosystem of that schema, which is the [DID location](#did-location) mapping read in the other direction: the host segment, its percent-encoded colon read as a port, then one path segment per further segment, after the SCID segment for a `did:webvh`. The identifier of the credential configuration stays the `jsonSchemaCredentialId`, and so does the input of every method of this scope; each configuration object of the credential issuer metadata MUST carry the `format` `dc+sd-jwt` and the `vct` of its type, which is that URL and never the configuration identifier.
+The agent MUST issue and MUST verify one credential format, the SD-JWT VC format `dc+sd-jwt`. The `vct` claim of every credential is the SD-JWT VC Type Metadata URL of its type, the document that the Ecosystem controller of the schema publishes under [[VSA-PUB-VT-5]](#vsa-pub-vt-verifiable-trust-resources). That value is one per `CredentialSchema` and the same for every issuer that the Ecosystem accredits, so a verifier asks for a type without naming its issuers, and a wallet that dereferences `vct` reads a Type Metadata document, as SD-JWT VC requires of it. The agent composes that URL as `{base}/vt/vct/{credentialSchemaId}`, where `{credentialSchemaId}` is the `id` of the `CredentialSchema` entry — the `schema_id` of its `Participant`, not the `jsonSchemaCredentialId` — and `{base}` is the `https` base URL that DID resolution derives from the DID of the Ecosystem of that schema, which is the [DID location](#did-location) mapping read in the other direction: the host segment, its percent-encoded colon read as a port, then one path segment per further segment, after the SCID segment for a `did:webvh`. The identifier of the credential configuration stays the `jsonSchemaCredentialId`, and so does the input of every method of this scope; each configuration object of the credential issuer metadata MUST carry the `format` `dc+sd-jwt` and the `vct` of its type, which is that URL and never the configuration identifier. This composition assumes that the Ecosystem controller of the schema runs an agent that follows this document, with a `PUBLIC_API_BASE_URL` that its DID location maps to; within Verana that holds, because the same agent publishes the VTJSC. The agent MUST create the offer whether or not the `vct` URL resolves: the credential stays verifiable, and a wallet that fetches no Type Metadata shows the claims without display metadata. The agent SHOULD log the failed fetch at `warn`.
 
 The `iss` of every credential that the agent issues is its Credential Issuer Identifier, `PUBLIC_API_BASE_URL`, from which a consumer resolves the credential issuer metadata through `/.well-known/openid-credential-issuer` (see [[VSA-PUB-OID]](#vsa-pub-oid-openid4vc-public-protocol-endpoints)). The DID of the issuer is the URI SAN of the certificate that signs the credential, never `iss`: the trust decision resolves no key through `/.well-known/jwt-vc-issuer`.
 
@@ -1813,7 +1820,7 @@ The wallet-facing endpoints of both capabilities are public endpoints, specified
 
 Methods that offer a credential over OpenID4VCI, and that inspect or delete an issuance session.
 
-A credential that this scope issues has no revocation mechanism in v4: the agent publishes no status list, and the credential carries no `status` claim. The credential is valid until it expires, so a caller SHOULD set the `ttlSeconds` of the offer to the shortest lifetime that its use case allows. Revocation for this format is planned for a later revision of this document, over the [Token Status List](https://datatracker.ietf.org/doc/html/draft-ietf-oauth-status-list) specification.
+A credential that this scope issues is revocable when the offer registers it on a Token Status List of the agent (see [[VSA-ADM-OID-SL] Status Lists](#vsa-adm-oid-sl-status-lists)): the credential then carries a `status` claim with the `uri` of the list and its `idx` on it, per [Token Status List](https://datatracker.ietf.org/doc/html/draft-ietf-oauth-status-list), and [[VSA-ADM-OID-CR-REVOKE] `revokeCredential`](#vsa-adm-oid-cr-revoke-revokecredential) revokes it by those two coordinates. A credential that the offer does not register carries no `status` claim and is valid until it expires, so a caller SHOULD set the `ttlSeconds` of such an offer to the shortest lifetime that its use case allows.
 
 | Module | Method Name | HTTP Method | Relative REST API path | Requirements |
 | --- | --- | --- | --- | --- |
@@ -1830,7 +1837,9 @@ Creates a pre-authorized OpenID4VCI credential offer for one credential type.
 
 - `jsonSchemaCredentialId` (REQUIRED) — the credential type of the offer, per the [OpenID4VC Scope](#openid4vc-scope).
 - `claims` (REQUIRED) — object that holds the claim names and the claim values of the offered credential.
-- `ttlSeconds` (REQUIRED) — lifetime of the credential in seconds, between `60` and `7776000` (90 days). v4 has no revocation, so this value is the only bound on the credential: the agent asks the caller for it rather than choosing a default, and the ceiling holds the exposure of an unrevocable credential to a quarter. A later revision raises the ceiling when it specifies revocation.
+- `ttlSeconds` (REQUIRED) — lifetime of the credential in seconds, from `60` up to `31536000` (one year) for a credential that the offer registers on a status list, and up to `7776000` (90 days) for one that it does not. The agent asks the caller for this value rather than choosing a default: for an unrevocable credential the lifetime is the only bound, and the ceiling holds its exposure to a quarter.
+- `statusListId` (OPTIONAL) — REQUIRED only for a revocable credential: the status list of the agent that the credential is registered on, from [`createStatusList`](#vsa-adm-oid-sl-create-createstatuslist).
+- `statusListIndex` (OPTIONAL) — REQUIRED only for a revocable credential: index of the credential on that list, from `0` to `size - 1`. The caller allocates the index.
 
 **Requirements**:
 
@@ -1838,6 +1847,8 @@ Creates a pre-authorized OpenID4VCI credential offer for one credential type.
 - A `claims` object MAY omit a property that the schema does not require; the agent then omits that claim from the credential.
 - The agent MUST NOT accept a value for `vct`, `iat`, `exp`, `nbf`, `iss`, `cnf`, or `status`. These names belong to the credential envelope.
 - The credential MUST expire after `ttlSeconds` (its `exp` claim). The offer itself MUST expire too, after a lifetime that the agent chooses and reports as `expiresAt`, independent of `ttlSeconds`.
+- `statusListId` and `statusListIndex` MUST be both present or both absent. When both are present, the agent MUST bind the index to the session when it creates the offer, MUST refuse any later offer that names the same index, and MUST set `status.status_list` of the credential to the `uri` of the list and to that `idx`. When the wallet requests the credential for several holder keys in one session, every copy MUST carry the same `status` entry: they are one credential, and one revocation ends all of them.
+- When both are absent, the credential MUST carry no `status` claim.
 
 **Output**:
 
@@ -1846,8 +1857,9 @@ Creates a pre-authorized OpenID4VCI credential offer for one credential type.
 
 **Errors**:
 
-- `INVALID_INPUT` (`400`) — `claims` names a property that the JSON schema of the type does not define, holds a value that the schema rejects, or names a claim of the credential envelope; or `ttlSeconds` is absent or out of range.
-- `UNKNOWN_ID` (`404`) — the agent cannot resolve `jsonSchemaCredentialId`.
+- `INVALID_INPUT` (`400`) — `claims` names a property that the JSON schema of the type does not define, holds a value that the schema rejects, or names a claim of the credential envelope; `ttlSeconds` is absent or out of range for the kind of offer; or only one of `statusListId` and `statusListIndex` is present, or `statusListIndex` is out of range for the list.
+- `UNKNOWN_ID` (`404`) — the agent cannot resolve `jsonSchemaCredentialId`, or `statusListId` names no status list of this agent.
+- `INVALID_STATE` (`409`) — an earlier offer already bound `statusListIndex` on that list.
 - `NOT_AUTHORIZED` (`409`) — the agent holds no active `ISSUER` `Participant` entry for that schema.
 - `RESOLVER_UNAVAILABLE` (`503`) — the agent cannot complete the check.
 
@@ -1861,6 +1873,7 @@ Returns the OpenID4VCI issuance sessions that the agent tracks.
 
 - `jsonSchemaCredentialId` — filter by credential type.
 - `state` — filter by issuance session state.
+- `statusListId` — filter by the status list that the offer named.
 
 **Output**: a page of credential exchange records, with the same shape as in `getCredentialExchange`.
 
@@ -1876,6 +1889,7 @@ Retrieves one issuance session by identifier.
 
 - `credentialExchangeId` — identifier of the issuance session.
 - `jsonSchemaCredentialId` — the credential type of the offer.
+- `statusListId`, `statusListIndex` — the status list coordinates of the credential. Present only when the offer set them. A caller that lost its own record of the coordinates reads them here while the session exists.
 - `state` — state of the issuance session.
 - `createdAt` — ISO 8601 UTC datetime at which the agent created the offer.
 - `expiresAt` — ISO 8601 UTC datetime after which the offer is no longer valid.
@@ -2022,6 +2036,104 @@ Returns the public signing certificate of each capability, so that an operator c
 **Requirements**:
 
 - The output MUST NOT include a private key.
+
+#### [VSA-ADM-OID-SL] Status Lists
+
+Methods that manage the Token Status Lists of the issuer capability. One list serves every credential type that the agent issues, and the agent hosts each list at the public path of [[VSA-PUB-OID-1]](#vsa-pub-oid-openid4vc-public-protocol-endpoints). A credential joins a list through the `statusListId` and `statusListIndex` of its offer ([[VSA-ADM-OID-CE-OFFER]](#vsa-adm-oid-ce-offer-createcredentialoffer)).
+
+| Module | Method Name | HTTP Method | Relative REST API path | Requirements |
+| --- | --- | --- | --- | --- |
+| Status Lists | `listStatusLists` | `GET` | `/v2/openid4vc/status-lists` | [see](#vsa-adm-oid-sl-list-liststatuslists) |
+| Status Lists | `createStatusList` | `POST` | `/v2/openid4vc/status-lists` | [see](#vsa-adm-oid-sl-create-createstatuslist) |
+| Status Lists | `deleteStatusList` | `DELETE` | `/v2/openid4vc/status-lists/{statusListId}` | [see](#vsa-adm-oid-sl-delete-deletestatuslist) |
+
+##### [VSA-ADM-OID-SL-LIST] listStatusLists
+
+Returns the status lists of this agent.
+
+**Inputs**: the [pagination](#vsa-adm-conv-page-pagination) parameters.
+
+**Output**: a page of status list records, with the same shape as the output of `createStatusList`.
+
+##### [VSA-ADM-OID-SL-CREATE] createStatusList
+
+Creates a new Token Status List, publishes it at its public URL, and returns its record.
+
+**Inputs** (request body):
+
+- `size` (OPTIONAL, default `131072`) — number of entries of the list, between `1024` and `16777216`. The default is large so that a list reveals little about the number of credentials that the issuer has issued.
+
+**Output** (HTTP `201`): the status list record:
+
+- `statusListId` — identifier of the list.
+- `uri` — the public URL of the list, per [[VSA-PUB-OID-1]](#vsa-pub-oid-openid4vc-public-protocol-endpoints).
+- `size` — number of entries.
+- `createdAt`, `updatedAt` — ISO 8601 UTC datetimes; `updatedAt` is the `iat` of the last token that the agent published for the list.
+
+**Requirements**:
+
+- The agent MUST publish the signed token of the new list before it answers, with every entry `VALID`.
+
+**Errors**:
+
+- `INVALID_INPUT` (`400`) — `size` is out of range.
+
+**Events**: none.
+
+##### [VSA-ADM-OID-SL-DELETE] deleteStatusList
+
+Deletes a status list. The agent stops serving its public URL.
+
+**Path parameters**:
+
+- `statusListId` (REQUIRED) — identifier of the list.
+
+**Requirements**:
+
+- The agent MUST refuse the deletion with `INVALID_STATE` (`409`) while an index of the list is bound to a credential that is not revoked and not expired. A caller that wants to retire a list revokes its remaining credentials first, or waits for them to expire.
+
+**Output**: empty body (HTTP `204`).
+
+**Errors**:
+
+- `UNKNOWN_ID` (`404`) — `statusListId` names no status list of this agent.
+- `INVALID_STATE` (`409`) — an index of the list is bound to a credential that is not revoked and not expired.
+
+**Events**: none.
+
+#### [VSA-ADM-OID-CR] Credential Revocation
+
+| Module | Method Name | HTTP Method | Relative REST API path | Requirements |
+| --- | --- | --- | --- | --- |
+| Credential Revocation | `revokeCredential` | `POST` | `/v2/openid4vc/revoke-credential` | [see](#vsa-adm-oid-cr-revoke-revokecredential) |
+
+##### [VSA-ADM-OID-CR-REVOKE] revokeCredential
+
+Revokes one OpenID4VC credential at list level, addressed by status list and index. A caller revokes a credential whose issuance session it has deleted.
+
+**Inputs** (request body):
+
+- `statusListId` (REQUIRED) — the status list that the credential is registered on.
+- `statusListIndex` (REQUIRED) — index of the credential on the list.
+
+**Requirements**:
+
+- The agent MUST set the status type at `statusListIndex` to `INVALID`, and MUST publish the re-signed token at the `uri` of the list before it answers.
+- A second call on a revoked index MUST succeed and change nothing.
+
+**Output** (HTTP `200`): a revocation record. The record MUST contain these fields:
+
+- `statusListId` — the same value as the input field.
+- `statusListIndex` — the same value as the input field.
+- `revokedAt` — the `iat` of the token that the agent published for this revocation, as an ISO 8601 UTC datetime. This time can be different from the time when the agent received the request.
+
+**Errors**:
+
+- `INVALID_INPUT` (`400`) — `statusListIndex` is out of range for the list.
+- `UNKNOWN_ID` (`404`) — `statusListId` names no status list of this agent.
+- `INVALID_STATE` (`409`) — no offer bound `statusListIndex` on that list.
+
+**Events**: none.
 
 ### AnonCreds Scope
 
@@ -3140,7 +3252,7 @@ The agent MUST accept a presentation only after each of the following steps succ
 6. The Verifiable Trust resolution of the agent (the same resolution it uses for DIDComm, through [`IDX-VT-QRY-1` Resolve](../verana-indexer/spec.md#idx-vt-qry-1-resolve) of its VPR indexer) MUST return `TRUSTED` for the issuer DID, and MUST authorize that issuer for the `jsonSchemaCredentialId` of the request.
 7. The agent accepts the presentation only for the verdict `TRUSTED_AUTHORIZED`.
 
-The agent issues no `status` claim itself in v4 (see [[VSA-ADM-OID-CE]](#vsa-adm-oid-ce-credential-exchanges)); step 5 governs a credential of another issuer. The agent MUST also check that the `vct` of the presented credential equals the Type Metadata URL of the `jsonSchemaCredentialId` that its request stored, and MUST fail the decision when it does not.
+Step 5 governs every credential, the agent's own included: the agent signs each of its lists with the certificate of its issuer capability ([[VSA-PUB-OID-1]](#vsa-pub-oid-openid4vc-public-protocol-endpoints)), whose key its DID Document authorizes under `assertionMethod`, so its lists pass the rule at every verifier that accepts its credentials. The agent MUST also check that the `vct` of the presented credential equals the Type Metadata URL of the `jsonSchemaCredentialId` that its request stored, and MUST fail the decision when it does not.
 
 #### [VSA-VTI-FLOW-UPD] Validator Updates
 
@@ -3295,6 +3407,7 @@ The table lists the state that the agent holds, and whether the agent MUST keep 
 | AnonCreds tails files and `did:webvh` attested resources | Persistent, for as long as a credential can reference them | [[VSA-PUB-AC]](#vsa-pub-ac-anoncreds-registry-resources) |
 | Short URL records | Persistent until the exchange ends | [[VSA-PUB-INV]](#vsa-pub-inv-invitation-parameters) |
 | OpenID4VC issuance sessions and verification sessions | Persistent until deleted or expired | [OpenID4VC Scope](#openid4vc-scope) |
+| OpenID4VC Token Status Lists, with the binding of each index | Persistent, for as long as a credential can reference them | [[VSA-ADM-OID-SL]](#vsa-adm-oid-sl-status-lists), [[VSA-PUB-OID-1]](#vsa-pub-oid-openid4vc-public-protocol-endpoints) |
 | OpenID4VC development signing certificates | Persistent | [[VSA-VTI-CFG-ENV-OID]](#vsa-vti-cfg-env-oid-openid4vc) |
 | Profile of the agent (User Profile module) | Persistent | [[VSA-ADM-DC-UP]](#vsa-adm-dc-up-user-profile) |
 | Cached `VSOperatorAuthorization` records | Cache, refreshed from the indexer on each `Participant` notification | [[VSA-VTI-NOTIF-AUTH]](#vsa-vti-notif-auth-authorization-notifications) |
@@ -3324,7 +3437,7 @@ Each record type of the agent has a state field, and the agent emits a `state-up
 - **Bearer tokens.** Tokens expire, are sent only over TLS, and are never logged. Nonces are single-use. See [[VSA-ADM-AUTH-PROTO]](#vsa-adm-auth-proto-account-challengeresponse).
 - **Probe bodies.** The health methods carry no secret, token, account address, DID, or peer identifier. See [Unauthenticated methods](#vsa-adm-access-open-unauthenticated-methods).
 - **Bearer URLs.** A credential offer URL and an authorization request URL are capabilities: never logged, never served on a public endpoint. See [OpenID4VC Scope](#openid4vc-scope).
-- **No revocation in v4 for OpenID4VC credentials.** An issued `dc+sd-jwt` credential stays acceptable until its `exp`; the `ttlSeconds` of the offer is the only bound on it. The agent still checks the `status` claim of a credential that another issuer made, over a URI it fetches under the network boundary of the DID resolver. See [[VSA-ADM-OID-CE]](#vsa-adm-oid-ce-credential-exchanges), [[VSA-VTI-FLOW-VERIFY-OID]](#vsa-vti-flow-verify-oid-openid4vp-trust-decision).
+- **Revocation of OpenID4VC credentials.** A credential that its offer registers on a Token Status List is revocable by list and index, and the agent keeps a list for as long as a credential on it is live; a credential that no list registers stays acceptable until its `exp`, capped at 90 days. The agent checks the `status` claim of every presented credential over a URI it fetches under the network boundary of the DID resolver. See [[VSA-ADM-OID-SL]](#vsa-adm-oid-sl-status-lists), [[VSA-ADM-OID-CR]](#vsa-adm-oid-cr-credential-revocation), [[VSA-VTI-FLOW-VERIFY-OID]](#vsa-vti-flow-verify-oid-openid4vp-trust-decision).
 - **Issuer key binding over OpenID4VP.** The agent accepts the signing key of a presented credential only when the DID Document of the issuer authorizes it under `assertionMethod`, never on a certificate chain or an operator-supplied anchor. See [[VSA-VTI-FLOW-VERIFY-OID]](#vsa-vti-flow-verify-oid-openid4vp-trust-decision).
 - **Public origins over TLS.** `PUBLIC_API_BASE_URL` and `ADMIN_API_PUBLIC_URL` are `https://` origins, and `PUBLIC_API_BASE_URL` carries no credentials. See [[VSA-VTI-CFG-ENV-RT]](#vsa-vti-cfg-env-rt-agent-runtime), [[VSA-VTI-CFG-ENV-ADM]](#vsa-vti-cfg-env-adm-administration-api).
 - **Personal data in events.** Event data can carry personal data; the operator uses `https://` for a consumer outside the trusted network. See [[VSA-EVT-DEL-6]](#vsa-evt-del-delivery).
@@ -3450,6 +3563,8 @@ Every identifier of this document, in lexical order. A section identifier links 
 | `VSA-ADM-OID-CE-GET` | [getCredentialExchange](#vsa-adm-oid-ce-get-getcredentialexchange) | Credential Exchanges |
 | `VSA-ADM-OID-CE-LIST` | [listCredentialExchanges](#vsa-adm-oid-ce-list-listcredentialexchanges) | Credential Exchanges |
 | `VSA-ADM-OID-CE-OFFER` | [createCredentialOffer](#vsa-adm-oid-ce-offer-createcredentialoffer) | Credential Exchanges |
+| `VSA-ADM-OID-CR` | [Credential Revocation](#vsa-adm-oid-cr-credential-revocation) | OpenID4VC Scope |
+| `VSA-ADM-OID-CR-REVOKE` | [revokeCredential](#vsa-adm-oid-cr-revoke-revokecredential) | Credential Revocation |
 | `VSA-ADM-OID-CS` | [Signing Certificates](#vsa-adm-oid-cs-signing-certificates) | OpenID4VC Scope |
 | `VSA-ADM-OID-CS-LIST` | [listSigningCertificates](#vsa-adm-oid-cs-list-listsigningcertificates) | Signing Certificates |
 | `VSA-ADM-OID-PR` | [Presentations](#vsa-adm-oid-pr-presentations) | OpenID4VC Scope |
@@ -3457,6 +3572,10 @@ Every identifier of this document, in lexical order. A section identifier links 
 | `VSA-ADM-OID-PR-DELETE` | [deletePresentation](#vsa-adm-oid-pr-delete-deletepresentation) | Presentations |
 | `VSA-ADM-OID-PR-GET` | [getPresentation](#vsa-adm-oid-pr-get-getpresentation) | Presentations |
 | `VSA-ADM-OID-PR-LIST` | [listPresentations](#vsa-adm-oid-pr-list-listpresentations) | Presentations |
+| `VSA-ADM-OID-SL` | [Status Lists](#vsa-adm-oid-sl-status-lists) | OpenID4VC Scope |
+| `VSA-ADM-OID-SL-CREATE` | [createStatusList](#vsa-adm-oid-sl-create-createstatuslist) | Status Lists |
+| `VSA-ADM-OID-SL-DELETE` | [deleteStatusList](#vsa-adm-oid-sl-delete-deletestatuslist) | Status Lists |
+| `VSA-ADM-OID-SL-LIST` | [listStatusLists](#vsa-adm-oid-sl-list-liststatuslists) | Status Lists |
 | `VSA-ADM-VT-FL` | [Flow Management](#vsa-adm-vt-fl-flow-management) | Verifiable Trust Scope |
 | `VSA-ADM-VT-FL-EDIT` | [editCredentialClaims](#vsa-adm-vt-fl-edit-editcredentialclaims) | Flow Management |
 | `VSA-ADM-VT-FL-GET` | [getFlow](#vsa-adm-vt-fl-get-getflow) | Flow Management |
@@ -3509,6 +3628,7 @@ Every identifier of this document, in lexical order. A section identifier links 
 | `VSA-PUB-LISTENER-2` | The agent MUST answer a public path that this section does not define, or that belongs to a feature the deployment does not enable, with… |  |
 | `VSA-PUB-LISTENER-3` | A peer discovers every public URL from a document the agent publishes — the DID Document, a credential, an invitation, OpenID4VC metadata… |  |
 | `VSA-PUB-OID` | [OpenID4VC Public Protocol Endpoints](#vsa-pub-oid-openid4vc-public-protocol-endpoints) | Public Endpoints |
+| `VSA-PUB-OID-1` | **Token Status Lists.** The agent MUST serve each status list that it created through `createStatusList` at `/oid4vc/status-list/{statusListId}`, as a Status List Token… |  |
 | `VSA-PUB-VT` | [Verifiable Trust Resources](#vsa-pub-vt-verifiable-trust-resources) | Public Endpoints |
 | `VSA-PUB-VT-1` | The agent MUST serve each linked Verifiable Presentation at the `serviceEndpoint` of its `LinkedVerifiablePresentation` entry, as a JSON… |  |
 | `VSA-PUB-VT-2` | The agent MUST serve each VTJSC that it issues at the URL that is the `id` of that credential, as a JSON document, so that a credential d… |  |
@@ -3581,7 +3701,7 @@ Every identifier of this document, in lexical order. A section identifier links 
 | `VSA-VTI-VTJSC` | [VTJSC Management](#vsa-vti-vtjsc-vtjsc-management) | Verifiable Trust Behaviors |
 
 ## Appendix B: Change Log
-
+- **v4-draft11 (2026-09-09)** — Revocation for the OpenID4VC scope over Token Status Lists: a [[VSA-ADM-OID-SL]](#vsa-adm-oid-sl-status-lists) Status Lists module that creates, lists, and deletes the lists that the agent hosts at [[VSA-PUB-OID-1]](#vsa-pub-oid-openid4vc-public-protocol-endpoints), `statusListId` and `statusListIndex` on the OpenID4VCI offer, the coordinates on the issuance session record, and [[VSA-ADM-OID-CR-REVOKE] `revokeCredential`](#vsa-adm-oid-cr-revoke-revokecredential) addressed by list and index. `ttlSeconds` allows one year for a registered credential and keeps the 90-day ceiling for an unregistered one. The Type Metadata document of [[VSA-PUB-VT-5]](#vsa-pub-vt-verifiable-trust-resources) carries `schema_uri` and its integrity value, and the [OpenID4VC Scope](#openid4vc-scope) states the assumption behind the `vct` URL and what the issuer does when that URL does not resolve.
 - **v4-draft10** — AnonCreds trust decision ([[VSA-VTI-FLOW-VERIFY-AC]](#vsa-vti-flow-verify-ac-anoncreds-trust-decision)): the agent checks the ISSUER or VERIFIER `Participant` of itself and of its peer at the present time before it offers, accepts an offer, requests, presents, or acknowledges an AnonCreds credential; derives the `CredentialSchema` from the resource metadata of the credential definition or of the AnonCreds schema; fails closed; and ends a presentation from an unauthorized issuer in `abandoned` with a problem report. The AnonCreds schema of a VTJSC is published once, by the Ecosystem controller, with the VTJSC ([[VSA-PUB-AC-5]](#vsa-pub-ac-anoncreds-registry-resources), [[VSA-VTI-VTJSC]](#vsa-vti-vtjsc-vtjsc-management)); every issuer builds its credential definition on it ([[VSA-ADM-AC-CD-CREATE]](#vsa-adm-ac-cd-create-createcredentialdefinition)), and a presentation request that names a VTJSC restricts to that schema, so that the credential of any accredited issuer satisfies it ([[VSA-ADM-DC-PR-CREATE]](#vsa-adm-dc-pr-create-createpresentationrequest)). New error codes `NOT_AUTHORIZED`, `PEER_NOT_AUTHORIZED`, and `RESOLVER_UNAVAILABLE`; new problem-report codes `e.p.issuer-not-authorized` and `e.p.trust-resolution-unavailable`. Rows added to [[VSA-VPR-QRY]](#vsa-vpr-qry-indexer-queries), Security Considerations, and Observability.
 - **v4-draft10, second revision (2026-09-09)** — Completed the OpenID4VC scope. `OID4VC_CONFIG_FILE_LOCATION` now enables both capabilities at once, takes a local path or an `https://` URL, and the configuration file holds only what the agent cannot derive: the signing mode of each capability and the X.509 roots of the wallet and key attestations ([[VSA-VTI-CFG-ENV-OID]](#vsa-vti-cfg-env-oid-openid4vc)). The agent derives its credential types from the `ISSUER` `Participant` entries of its DID, uses the `jsonSchemaCredentialId` of the schema as the configuration identifier, takes the claims from the JSON schema, and sets the `vct` to the SD-JWT VC Type Metadata URL that the Ecosystem controller publishes for the schema ([[VSA-PUB-VT-5]](#vsa-pub-vt-verifiable-trust-resources)), one value per type rather than one per issuer, so the configuration file declares no credential type and no verifier policy ([OpenID4VC Scope](#openid4vc-scope)). Added [[VSA-ADM-OID-CE-DELETE]](#vsa-adm-oid-ce-delete-deletecredentialexchange), the state enumeration of both session records, and `updatedAt` and `errorMessage` on each. A credential that this scope issues has no revocation mechanism in v4 ([[VSA-ADM-OID-CE]](#vsa-adm-oid-ce-credential-exchanges)). The OpenID4VP trust decision binds the issuer key through the DID Document instead of an operator-supplied certificate anchor and a host allowlist, and checks the validity period of the credential ([[VSA-VTI-FLOW-VERIFY-OID]](#vsa-vti-flow-verify-oid-openid4vp-trust-decision)). The trust decision also checks a `status` claim that another issuer put on a credential, under the network boundary of the DID resolver, and `createPresentationRequest` requires the VERIFIER `Participant` that [[PRB-3]](https://verana-labs.github.io/verifiable-trust-spec/versions/v4/#prb-presentation-requested-by) asks for and that AnonCreds already requires. `ttlSeconds` is REQUIRED and capped at 90 days while nothing can revoke a credential, the accreditation checks of both methods answer with the `NOT_AUTHORIZED` and `RESOLVER_UNAVAILABLE` codes of the AnonCreds trust decision, `iss` is the Credential Issuer Identifier, `nbf` joins the reserved envelope names, and `MRTD_MASTER_LIST_CSCA_LOCATION` states the two location forms it already accepts.
 - **v4-draft9** — Restructured the document by interface: System Overview, Configuration, Public Endpoints, DIDComm Interface, Administration API, Events API, VPR and Indexer Interface, Agent Lifecycle, Verifiable Trust Behaviors, Data and State. Every existing requirement identifier is unchanged. New sections consolidate statements that were repeated: [[VSA-DC-CONN]](#vsa-dc-conn-connection-acceptance-policy), [[VSA-VTI-FLOW-ISSUE]](#vsa-vti-flow-issue-credential-issuance-and-acceptance), [[VSA-VTI-FLOW-VERIFY]](#vsa-vti-flow-verify-credential-verification), [[VSA-VT-LVP]](#vsa-vt-lvp-linked-vp-management), [[VSA-VPR-TX]](#vsa-vpr-tx-on-chain-transactions), [[VSA-VPR-QRY]](#vsa-vpr-qry-indexer-queries), [[VSA-PUB-LISTENER]](#vsa-pub-listener-public-listener), [[VSA-PUB-DID]](#vsa-pub-did-did-document-and-did-log), [[VSA-DATA]](#vsa-data-persistent-state). Normative sections that had no identifier received one. Added the conformance targets, the requirement-identifier conventions, the datetime encoding rule, the **Events** field of the state-changing methods, and this index.
