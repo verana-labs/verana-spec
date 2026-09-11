@@ -63,7 +63,7 @@ The user journey is: connect wallet → discover Corporations the account can ac
 - [VFE-GEN-DEPLOY-1] The frontend MUST be delivered as a container image, versioned and published to a public registry (Docker Hub).
 - [VFE-GEN-DEPLOY-2] Documentation MUST be provided for running the container with Docker and for deploying it to Kubernetes; a Helm chart MUST be provided.
 - [VFE-GEN-DEPLOY-3] All configuration MUST be injectable at container start (runtime environment), so that one image serves any network (mainnet, testnet, devnet) without rebuild.
-- [VFE-GEN-DEPLOY-4] Every indexer route, REST and WebSocket, MUST derive from the single `NEXT_PUBLIC_VERANA_INDEXER_BASE_URL`: REST routes as `{base}/v4/...` and the event socket as `{base}/v4/indexer/subscribe` with the scheme switched to `ws(s)`. No per-module or per-route endpoint variable is honoured.
+- [VFE-GEN-DEPLOY-4] Every indexer route, REST and WebSocket, MUST derive from the single `NEXT_PUBLIC_VERANA_INDEXER_BASE_URL`: REST routes as `{base}/v4/...` and the event socket as `{base}/v4/indexer/subscribe` with the scheme switched to `ws(s)`. No per-module or per-route endpoint variable is honoured, and no variable outside the table of [VFE-GEN-ENV] is read.
 - [VFE-GEN-DEPLOY-5] The network values `NEXT_PUBLIC_BASE_URL`, `NEXT_PUBLIC_VERANA_CHAIN_ID`, `NEXT_PUBLIC_VERANA_CHAIN_NAME`, `NEXT_PUBLIC_VERANA_RPC_ENDPOINT`, `NEXT_PUBLIC_VERANA_REST_ENDPOINT`, `NEXT_PUBLIC_VERANA_INDEXER_BASE_URL`, `NEXT_PUBLIC_VERANA_EXPLORER_URL`, `NEXT_PUBLIC_VERANA_VISUALIZER_URL` and `NEXT_PUBLIC_VERANA_TOPUP_VS` MUST have no default in the chart or in the image. The chart MUST fail to render and the container MUST fail to start when one of them is missing; deployments pass a per-network values file (devnet, testnet).
 - [VFE-GEN-DEPLOY-6] The frontend version shown in the UI MUST be the package version injected at build time, never a runtime setting; the node version MUST come from the chain node itself (the application version returned by the RPC `abci_info` query, [VFE-DATA-SRC-2]); the indexer version MUST come from [`IDX-INDEXER-QRY-3 Get Version`](../verana-indexer/spec.md#idx-indexer-qry-3-get-version) (`/v4/indexer/version`).
 - [VFE-GEN-DEPLOY-7] A deployment MUST NOT mix networks: its chain id, RPC endpoint, REST endpoint and indexer base URL MUST all belong to the same network. A devnet deployment that inherited testnet indexer values showed testnet Ecosystems while signing on devnet.
@@ -87,6 +87,7 @@ The user journey is: connect wallet → discover Corporations the account can ac
 | `NEXT_PUBLIC_LOW_BALANCE_WARN_UVNA` | OPTIONAL | Balance threshold (uvna) under which a low-balance warning is shown. |
 | `NEXT_PUBLIC_SHOW_PARTICIPANT_EXPIRE_BEFORE_DAYS` | OPTIONAL | Days before `effective_until` at which a Participant is flagged "expires soon". Default 30. |
 | `NEXT_PUBLIC_VERANA_CHAIN_PROVIDER_*` | OPTIONAL | WalletConnect project id, relay URL, and dApp metadata. |
+| `NEXT_PUBLIC_OBS_API_URL` | OPTIONAL | Pins the deployment to one Ecosystem Onboarding Service ([VFE-OBS-11]). Non-normative until the onboarding-service specification merges. |
 | `NEXT_PUBLIC_APP_VERSION` | build-time | Package version injected by the build ([VFE-GEN-DEPLOY-6]); not a deployment setting. |
 
 ### [VFE-GEN-I18N] Internationalization
