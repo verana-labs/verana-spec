@@ -20,10 +20,8 @@ The Verana Playground is an interactive website for:
 | [`verana-explained/spec.md`](./verana-explained/spec.md) | *Verana Explained* — the narrative on-ramp: the **Vesta Appliances** story in six chapters — the business & its impostor problem (1) · why Verana (2) · choosing ecosystems (3) · joining in practice (4) · the Vesta Repair Network, Zenith ✓ / Umbra ✗ (5) · being found (6, pending). Story / watch / hands-on format. |
 | [`utopia/spec.md`](./utopia/spec.md) | The **Republica of Utopia** use case — the public-sector mirror of Vesta: a democracy issues an eIDAS-2-compatible **Citizen ID** (custom ecosystem, governed verification), **Business IDs** as ECS-Organization credentials (the National Business Registry as accredited issuer), and a **Proof of Legal Representation**; the Tax Buro and Meridian Bank authenticate citizens passwordless, and QuickCash Loans shows the Q3 refusal. |
 | [`guidelines/personal-wallet-integration.md`](./guidelines/personal-wallet-integration.md) | Integration guideline for **personal wallets** (mobile / web wallets operated by a person). Includes the normative **Proof-of-Trust presentation pattern** so every wallet shows trust the same way. |
-
-How those requirements are verified continuously, and what a listing actually proves: [wallet conformance testing](./guidelines/wallet-conformance-testing.md).
-
 | [`guidelines/business-wallet-integration.md`](./guidelines/business-wallet-integration.md) | Integration guideline for **business wallets** (organizational / enterprise wallets and agent frameworks hosting services). |
+| [`guidelines/wallet-conformance-testing.md`](./guidelines/wallet-conformance-testing.md) | How wallet compatibility is **verified continuously**: wallet profiles, contract checks, headless flows, device spot-checks, and what a listing actually proves. |
 | [`submission/README.md`](./submission/README.md) | Publication kit: FIDES use-case dossiers (Verana + 2060), catalog-entry checklist, collaborator roster, campaign calendar, UNFOLD. |
 
 ## The reference scenario
