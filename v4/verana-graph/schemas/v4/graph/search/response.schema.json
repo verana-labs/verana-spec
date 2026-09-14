@@ -145,13 +145,13 @@
       "type": "object",
       "additionalProperties": true,
       "required": ["id", "deposit", "slashedEvents", "lastSlashedAtTime", "slashedValue"],
-      "description": "[TG-FCT-6b] `corporation` group: the owner Corporation's identity and trust signals, through the `Did.corporationId` anchor (the owner Corporation per the VPR DID ownership invariant). Never `null` as a group: `id` is always known; the other fields are `null` only while the owner Corporation record is not yet materialised (bootstrap transient).",
+      "description": "[TG-FCT-6b] `corporation` group: a Corporation's identity and trust signals, anchored on the hit's corporation binding — `Did.corporationId` (the owner Corporation per the VPR DID ownership invariant) on the `Did` surface, `Ecosystem.corporationId` (the controlling Corporation) on the `Ecosystem` surface. Never `null` as a group: `id` is always known; the other fields are `null` only while the referenced Corporation record is not yet materialised (bootstrap transient).",
       "properties": {
-        "id": { "type": "integer", "minimum": 0, "description": "Stable `uint64` id of the DID's owner Corporation (`Did.corporationId`). Never null." },
-        "deposit": { "type": ["string", "null"], "description": "Owner `Corporation.deposit` (Coin string); `null` only while the owner Corporation record is not yet materialised (bootstrap transient)." },
-        "slashedEvents": { "type": ["integer", "null"], "minimum": 0, "description": "Owner `Corporation.slashedEvents` (`0` when never slashed); `null` only while the owner Corporation record is not yet materialised (bootstrap transient)." },
-        "lastSlashedAtTime": { "anyOf": [{ "$ref": "#/$defs/Iso8601DateTime" }, { "type": "null" }], "description": "Owner `Corporation.lastSlashedAtTime`; `null` when never slashed, or while the owner Corporation record is not yet materialised." },
-        "slashedValue": { "type": ["string", "null"], "description": "Owner `Corporation.slashedValue` (Coin string); `null` when never slashed, or while the owner Corporation record is not yet materialised." }
+        "id": { "type": "integer", "minimum": 0, "description": "Stable `uint64` id of the referenced Corporation (`Did.corporationId` / `Ecosystem.corporationId`). Never null." },
+        "deposit": { "type": ["string", "null"], "description": "Referenced `Corporation.deposit` (Coin string); `null` only while the Corporation record is not yet materialised (bootstrap transient)." },
+        "slashedEvents": { "type": ["integer", "null"], "minimum": 0, "description": "Referenced `Corporation.slashedEvents` (`0` when never slashed); `null` only while the Corporation record is not yet materialised (bootstrap transient)." },
+        "lastSlashedAtTime": { "anyOf": [{ "$ref": "#/$defs/Iso8601DateTime" }, { "type": "null" }], "description": "Referenced `Corporation.lastSlashedAtTime`; `null` when never slashed, or while the Corporation record is not yet materialised." },
+        "slashedValue": { "type": ["string", "null"], "description": "Referenced `Corporation.slashedValue` (Coin string); `null` when never slashed, or while the Corporation record is not yet materialised." }
       }
     },
     "DidSnippetEndpoint": {
@@ -280,7 +280,7 @@
       "required": ["version", "documents"],
       "description": "Inline governance-framework summary (`cgf` / `egf` per [TG-DEREF-2a] / [TG-DEREF-2b]): active version, activation time, and document metadata — never document bodies.",
       "properties": {
-        "version": { "type": ["integer", "string"] },
+        "version": { "type": "integer", "minimum": 1, "description": "Active GF version (integer, per the indexer's inline `cgf` / `egf` surfacing)." },
         "activeSince": { "anyOf": [{ "$ref": "#/$defs/Iso8601DateTime" }, { "type": "null" }] },
         "documents": {
           "type": "array",
