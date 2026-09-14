@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://verana.io/schemas/v4/graph/search/request.schema.json",
   "title": "SearchRequest",
-  "description": "Request payload for the verana-graph faceted-search endpoint `POST /v4/graph/search` (per [TG-FCT-1] through [TG-FCT-7]). Filter field names use the dotted form from [TG-FCT-3] / [TG-FCT-4]. Filter values are either bare scalars (interpreted as `eq`) or operator objects (`{ eq | in | range | prefix | contains | containsAny }`). Per [TG-FCT-7] pagination is cursor-based; offset-based pagination MUST NOT be used. See `### Search REST binding` in the verana-graph spec.",
+  "description": "Request payload for the verana-graph faceted-search endpoint `POST /v4/graph/search` (per [TG-FCT-1] through [TG-FCT-7]). Filter field names use the dotted form from [TG-FCT-3] / [TG-FCT-4]. Filter values are either bare scalars (interpreted as `eq`) or operator objects (`{ eq | in | range | prefix | contains | containsAny }`). The optional `snippet` selector projects the [TG-FCT-6b] field groups onto `Did`-surface hits per [TG-FCT-6c]. Per [TG-FCT-7] pagination is cursor-based; offset-based pagination MUST NOT be used. See `### Search REST binding` in the verana-graph spec.",
   "type": "object",
   "additionalProperties": false,
   "required": ["surface"],
@@ -19,6 +19,20 @@
     "freeText": {
       "type": "string",
       "description": "Free-form lexical query string. Scored against the fields enumerated in [TG-FCT-4], with the matching baseline of [TG-FCT-4a]: case-insensitive, whole-token (no implied substring matching; optional prefix matching on the final token), conjunctive across tokens (every token must match at least one scored field of the hit). Absent, empty, or whitespace-only means no lexical constraint (filters and gates only)."
+    },
+    "snippet": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Snippet projection per [TG-FCT-6c]. Only accepted when `surface = \"Did\"` (the only surface with field groups in this version); its presence on any other surface is INVALID_INPUT, as is any key that is not a [TG-FCT-6b] group name (`additionalProperties: false`). When omitted, the default group set is returned: `service`, `operator`, `corporation`, `endpoints`. When present, exactly the groups set `true` are returned (plus the always-present [TG-FCT-6a] core); groups not set `true` are omitted from the snippet entirely, and `{}` returns the core alone.",
+      "properties": {
+        "service": { "type": "boolean", "description": "VS-level identity from the ServiceCredential: pattern, name, type, description, logo." },
+        "operator": { "type": "boolean", "description": "Operative ORG-or-PERSONA identity the trust chain rests on: kind, name, logo, countryCode, registryId, address." },
+        "corporation": { "type": "boolean", "description": "Owner Corporation identity and trust signals: id, deposit, slash history." },
+        "endpoints": { "type": "boolean", "description": "The DID Document's declared service endpoints ({ id, type, serviceEndpoint })." },
+        "ecosystems": { "type": "boolean", "description": "Ecosystem entries controlled by this DID, each with per-role participant counts and its owned schemas ({ id, title, archived, participants })." },
+        "participations": { "type": "boolean", "description": "The DID's ACTIVE Participant entries: { total, ecosystemCount, byRole, entries[{ id, role, credentialSchemaId, schemaTitle, ecosystemId }] }." },
+        "credentials": { "type": "boolean", "description": "Non-ECS VTCs presented by the DID: { total, entries[{ id, credentialSchemaId, schemaTitle, ecosystemId, attributes }] }. ECS credentials never appear here (see the service / operator groups)." }
+      }
     },
     "limit": {
       "type": "integer",
