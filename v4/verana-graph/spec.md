@@ -453,17 +453,14 @@ This invariant does NOT extend to `EcsCredential` or `Vtc`. For both, the `crede
 
 [TG-IDX-1] For graph-traversal queries, the implementation MUST maintain bidirectional adjacency on every edge label listed in [Edges](#edges), so that a query rooted at any entity can walk one hop in either direction in O(1) per edge.
 
-[TG-IDX-2] For faceted-search queries, the implementation MUST maintain inverted indexes on the search-facing fields highlighted as such in the per-entity tables. At minimum, the index set MUST cover:
+[TG-IDX-2] For faceted-search queries, the implementation MUST maintain inverted indexes (or equivalent lookup structures) covering **every structured filter field declared in [Faceted-search Queries § TG-FCT-3](#faceted-search-queries)** with the operators stated there, and **every free-text field of [[TG-FCT-4]]**, including its denormalisation slots. Concretely, per surface:
 
-- `Did.serviceTypes`, `Did.trusted`
-- `Corporation.deposit` (numeric range), `Corporation.slashedEvents` (numeric range)
-- `Ecosystem.participants[<role>]` (numeric range), `Ecosystem.issuedCredentials` (numeric range), `Ecosystem.verifiedCredentials` (numeric range)
-- `CredentialSchema.ecosystemId`, `CredentialSchema.issuedCredentials` (numeric range), `CredentialSchema.verifiedCredentials` (numeric range)
-- `ServiceEndpoint.type`
-- `EcsCredential.OrganizationCredential.{name, countryCode, legalJurisdiction, organizationKind, lei, registryId}`
-- `EcsCredential.PersonaCredential.{name}`
-- `EcsCredential.ServiceCredential.{type, name}`
-- Free-text indexes on every textual `name`, `description`, `address` field across the catalogue, plus full-text indexes on `Corporation.cgf` and `Ecosystem.egf` document content.
+- `Did` surface: `Did.{trusted, pattern, serviceTypes, corporationId, isCorporation, isEcosystem, ecosystemIds, operatorKind, operatorName}`; `EcsCredential.ServiceCredential.{type, name}` and `EcsCredential.ServiceCredential.minimumAgeRequired` (numeric range); `EcsCredential.OrganizationCredential.{name, countryCode, legalJurisdiction, organizationKind, lei, registryId}`; `EcsCredential.PersonaCredential.{name, controllerCountryCode, controllerJurisdiction}`; `Participant.{ecosystemId, credentialSchemaId, role}` (joining only `ACTIVE` entries per [[TG-ACT-1]])
+- `Ecosystem` surface: `archived`, `corporationId`, `participants[<role>]` (numeric range), `issuedCredentials` (numeric range), `verifiedCredentials` (numeric range)
+- `Corporation` surface: `deposit` (numeric range), `slashedEvents` (numeric range), `lastSlashedAtTime` (temporal range)
+- `CredentialSchema` surface: `archived`, `ecosystemId`, `issuedCredentials` (numeric range), `verifiedCredentials` (numeric range)
+- `ServiceEndpoint` surface: `type`
+- Free-text indexes on every field of the [[TG-FCT-4]] table — the credential text fields, the schema-text and VTC-subject denormalisation slots on the `Did` document, the bound-DID identity-text slots on the `Ecosystem` / `Corporation` documents, and `CredentialSchema.{title, description}` — plus full-text indexes on `Corporation.cgf` and `Ecosystem.egf` document content when fetched per [[TG-DEREF-2a]] / [[TG-DEREF-2b]].
 
 ## Block-Progress Subscription
 
@@ -815,16 +812,16 @@ Worked example: a `Did`-surface query for *"plumber issuers"* (free-text *"plumb
     }
   ],
   "facets": {
-    "countryCode":      [ { "value": "FR", "count": 42 } ],
-    "organizationKind": [ "..." ],
-    "serviceTypes":     [ "..." ],
-    "ecosystemId":      [ "..." ]
+    "OrganizationCredential.countryCode":      [ { "value": "FR", "count": 42 } ],
+    "OrganizationCredential.organizationKind": [ "..." ],
+    "Did.serviceTypes":                        [ "..." ],
+    "Participant.ecosystemId":                 [ "..." ]
   },
   "cursor": "opaque-pagination-token-or-null"
 }
 ```
 
-The `facets` object MUST contain aggregations for at least every `eq` / `in` filter field declared on the queried surface in [[TG-FCT-3]]. The minimum content of each `hit.snippet` is fixed by [[TG-FCT-6a]]; each surface's snippet is additionally composed of the selectable field groups of its [[TG-FCT-6b]] catalogue, projected per the request's `snippet` selector ([[TG-FCT-6c]]).
+The `facets` object MUST contain an aggregation for every `eq` / `in` filter field of the queried surface ([[TG-FCT-3]]) that the request's `filters` references — a filtered result always carries the drill-down counts for its own filter dimensions — and SHOULD additionally carry an implementation-defined default set of aggregations useful to the surface (e.g. `Did.operatorKind`, `EcsCredential.ServiceCredential.type`, `OrganizationCredential.countryCode` on the `Did` surface). Aggregations over near-unique-value fields (`OrganizationCredential.lei`, `OrganizationCredential.registryId`, `Did.operatorName`) are never required beyond that referenced-filter rule. Facet keys use the dotted field-name form of [[TG-FCT-3]]; implementations MAY truncate each aggregation to a top-N of values. The minimum content of each `hit.snippet` is fixed by [[TG-FCT-6a]]; each surface's snippet is additionally composed of the selectable field groups of its [[TG-FCT-6b]] catalogue, projected per the request's `snippet` selector ([[TG-FCT-6c]]).
 
 [TG-FCT-6a] **Minimum snippet fields (core).** Every `hit.snippet` MUST carry the entity's primary key, `lastObservedAtTime`, and the visibility flags applicable to the surface (`isTrustExpired` for `Did`, `archived` for `Ecosystem` / `CredentialSchema`). In addition, **every surface whose entity is DID-bound MUST carry that DID** in the snippet: `did` on `Did`, `Corporation`, and `Ecosystem` hits; `didId` (the owning DID) on `ServiceEndpoint` hits.
 
@@ -1299,7 +1296,7 @@ The default set (`corporation`, `stats`, `didCard`) plus the opt-in `schemas` gr
 
 ### Search examples
 
-*This section is non normative.*
+*This section is non-normative.*
 
 The queries below illustrate how the contract of [[TG-FCT-1]] through [[TG-FCT-7]] composes against realistic discovery questions. They are illustrative; conformance is defined by the per-clause requirements above, not by these compositions. Field names use the dotted form from [[TG-FCT-3]] / [[TG-FCT-4]]; the wire format is implementation-defined.
 
@@ -1312,7 +1309,7 @@ The example payloads below show the **structured output** of either layer. Two d
 
 #### "iso 27001 certification" — schema discovery
 
-*This section is non normative.*
+*This section is non-normative.*
 
 The user wants the schemas (and owning Ecosystems) under which ISO 27001 attestations are issued. Surface: `CredentialSchema`.
 
@@ -1328,7 +1325,7 @@ Free-text matches `CredentialSchema.{title, description}` of loaded schema bodie
 
 #### "baby shoes in Bogotá" — VS with a domain credential
 
-*This section is non normative.*
+*This section is non-normative.*
 
 The user wants Verifiable Services selling baby shoes, in Bogotá. Surface: `Did`.
 
@@ -1347,7 +1344,7 @@ The user wants Verifiable Services selling baby shoes, in Bogotá. Surface: `Did
 
 #### "plumber credential issuers" — role-scoped within a credential class
 
-*This section is non normative.*
+*This section is non-normative.*
 
 The user wants the DIDs that issue plumber credentials. Two equivalent flows.
 
@@ -1377,7 +1374,7 @@ The free-text query lands on the schema-text denormalisation slot on the `Did` d
 
 #### "personal AI agent of @fabrice"
 
-*This section is non normative.*
+*This section is non-normative.*
 
 The user wants AI-agent VSs operated by a Persona named "@fabrice". Surface: `Did`.
 

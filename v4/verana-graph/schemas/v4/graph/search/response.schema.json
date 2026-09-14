@@ -24,7 +24,7 @@
     "facets": {
       "type": "object",
       "additionalProperties": { "$ref": "#/$defs/FacetAggregation" },
-      "description": "Aggregations keyed by filter field name. Per [TG-FCT-6] the `facets` object MUST contain aggregations for at least every `eq` / `in` filter field declared on the queried surface in [TG-FCT-3]."
+      "description": "Aggregations keyed by dotted filter field name ([TG-FCT-3] form). Per [TG-FCT-6]: MUST contain an aggregation for every `eq` / `in` filter field referenced in the request's `filters`; SHOULD additionally carry an implementation-defined default set useful to the surface; near-unique-value fields (`lei`, `registryId`, `operatorName`) are never required beyond the referenced-filter rule."
     },
     "cursor": {
       "type": ["string", "null"],
