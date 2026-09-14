@@ -12,7 +12,7 @@ A Verana MCP Server bundles, in a single deployable unit:
 - a **ledger client** that builds, signs, and broadcasts VPR transactions;
 - an **indexer client** that issues read queries against a conformant [Verana Indexer v4](../verana-indexer/spec.md);
 - a **graph client** that issues named queries against a conformant [Verana Graph](../verana-graph/spec.md) (REST traversal endpoint per [[TG-QRY-5]](../verana-graph/spec.md#traversal-rest-binding); GraphQL or query-language pass-through MAY be used when the implementation exposes them) and a block-progress WebSocket subscriber per [[TG-BPS-1]](../verana-graph/spec.md#block-progress-subscription);
-- a **VS-agent client** that authenticates with and drives the [Administration API](../vs-agent/spec.md#administration-api) of **every** [Verana VS Agent](../vs-agent/spec.md) operated by the bound Corporation. The set of reachable agents is enumerated dynamically from on-chain `VSOperatorAuthorization` entries owned by the bound Corporation, and each agent's Admin API origin is discovered from its DID Document per [[VSA-VTI-DIDDOC]](../vs-agent/spec.md#vsa-vti-diddoc-did-document-required-service-entries). One MCP server can drive any number of VS Agents simultaneously.
+- a **VS-agent client** that authenticates with and drives the [Administration API](../vs-agent/spec.md#administration-api) of **every** [Verana VS Agent](../vs-agent/spec.md) operated by the bound Corporation. The set of reachable agents is enumerated dynamically from on-chain `VSOperatorAuthorization` entries owned by the bound Corporation, and each agent's Admin API origin is discovered from its DID Document per [[VSA-VTI-DIDDOC]](../vs-agent/spec.md#vsa-vti-diddoc-did-document-service-entries). One MCP server can drive any number of VS Agents simultaneously.
 
 This specification defines the normative behavior of a Verana MCP Server implementation: its container configuration, its on-chain and off-chain authorization model, its transaction-confirmation contract, its transport layer, and the catalog of MCP **tools**, **resources** and **prompts** it exposes.
 
@@ -374,7 +374,7 @@ Note on naming: the `es` surface maps to the chain module `verana.ec.v1`, and `c
 
 ### [VMS-TOOLS-LEDGER] Ledger Tools (VPR Msgs)
 
-Ledger tools MUST follow the transaction-flow contract of [[VMS-TX]](#vms-tx-transaction-flow). The MCP server MUST expose only the **delegable** subset of VPR Msgs — those whose upstream `Signers` column is `corporation + operator` — plus `MOD-CO-MSG-1` (`createNewCorporation`) which is open to any account.
+Ledger tools MUST follow the transaction-flow contract of [[VMS-TX]](#vms-tx-transaction-flow). The MCP server MUST expose only the **delegable** subset of VPR Msgs — those whose upstream `Signers` column is `corporation + operator` — plus `MOD-CO-MSG-1` (`createCorporation`) which is open to any account.
 
 Msgs marked `governance proposal` in the upstream specification MUST NOT be exposed: they require a chain-level governance vote and are out of scope for an operator-driven MCP server.
 
@@ -384,14 +384,14 @@ Msgs marked `module call` (e.g. `MOD-DE-MSG-1` Grant Fee Allowance, `MOD-DE-MSG-
 
 | Tool | Upstream Msg | Description |
 |---|---|---|
-| `verana.ledger.co.createNewCorporation` | [`MOD-CO-MSG-1`](https://verana-labs.github.io/verifiable-trust-vpr-spec/#mod-co-msg-1-create-new-corporation) | Atomically create a Cosmos SDK group + group policy and a `Corporation` VPR entry bound to it. Open to any account; typically used during initial corporate bootstrap. The newly-created Corporation's `policy_address` becomes the on-chain account that subsequently signs as `corporation` for delegable Msgs. |
+| `verana.ledger.co.createCorporation` | [`MOD-CO-MSG-1`](https://verana-labs.github.io/verifiable-trust-vpr-spec/#mod-co-msg-1-create-corporation) | Atomically create a Cosmos SDK group + group policy and a `Corporation` VPR entry bound to it. Open to any account; typically used during initial corporate bootstrap. The newly-created Corporation's `policy_address` becomes the on-chain account that subsequently signs as `corporation` for delegable Msgs. |
 | `verana.ledger.co.updateCorporation` | [`MOD-CO-MSG-2`](https://verana-labs.github.io/verifiable-trust-vpr-spec/#mod-co-msg-2-update-corporation) | Rotate the bound Corporation's `did`. |
 
 #### [VMS-TOOLS-LEDGER-ES] Ecosystem Module
 
 | Tool | Upstream Msg | Description |
 |---|---|---|
-| `verana.ledger.es.createEcosystem` | [`MOD-ES-MSG-1`](https://verana-labs.github.io/verifiable-trust-vpr-spec/#mod-es-msg-1-create-new-ecosystem) | Create a new `Ecosystem` controlled by the bound Corporation. |
+| `verana.ledger.es.createEcosystem` | [`MOD-ES-MSG-1`](https://verana-labs.github.io/verifiable-trust-vpr-spec/#mod-es-msg-1-create-ecosystem) | Create a new `Ecosystem` controlled by the bound Corporation. |
 | `verana.ledger.es.updateEcosystem` | [`MOD-ES-MSG-2`](https://verana-labs.github.io/verifiable-trust-vpr-spec/#mod-es-msg-2-update-ecosystem) | Update an `Ecosystem` controlled by the bound Corporation. |
 | `verana.ledger.es.archiveEcosystem` | [`MOD-ES-MSG-3`](https://verana-labs.github.io/verifiable-trust-vpr-spec/#mod-es-msg-3-archive-ecosystem) | Archive an `Ecosystem` controlled by the bound Corporation. |
 
@@ -532,14 +532,14 @@ Indexer tools issue HTTP GET requests against the configured `VERANA_INDEXER` en
 | `verana.idx.xr.listExchangeRates` | [`IDX-XR-QRY-2`](../verana-indexer/spec.md#idx-xr-qry-2-list-exchange-rates) | `GET /v4/exchange-rate/list`. |
 | `verana.idx.xr.getPrice` | [`IDX-XR-QRY-3`](../verana-indexer/spec.md#idx-xr-qry-3-get-price) | `GET /v4/exchange-rate/price` — derived oracle conversion. |
 
-#### [VMS-TOOLS-IDX-METRICS] Metrics and Statistics
+#### [VMS-TOOLS-IDX-STATS] Statistics
 
 | Tool | Upstream Query | Description |
 |---|---|---|
-| `verana.idx.metrics.getGlobalMetrics` | [`IDX-METRICS-QRY-1`](../verana-indexer/spec.md#idx-metrics-qry-1-get-global-metrics) | `GET /v4/metrics/all`. |
 | `verana.idx.stats.getStats` | [`IDX-STATS-QRY-1`](../verana-indexer/spec.md#idx-stats-qry-1-get-stats) | `GET /v4/stats/get`. |
 | `verana.idx.stats.getStatsRange` | [`IDX-STATS-QRY-2`](../verana-indexer/spec.md#idx-stats-qry-2-get-stats-range) | `GET /v4/stats/stats`. |
 | `verana.idx.stats.countParticipants` | [`IDX-STATS-QRY-3`](../verana-indexer/spec.md#idx-stats-qry-3-count-participants) | `GET /v4/stats/count-participants`. |
+| `verana.idx.stats.getStatsSnapshot` | [`IDX-STATS-QRY-4`](../verana-indexer/spec.md#idx-stats-qry-4-get-stats-snapshot) | `GET /v4/stats/snapshot` — every tracked metric for one entity at a block. |
 
 #### [VMS-TOOLS-IDX-INDEXER] Indexer Self-Inspection
 
@@ -646,22 +646,22 @@ VS Agent tools authenticate to the target VS Agent's [Administration API](../vs-
 
 | Tool | Upstream Method | Description |
 |---|---|---|
-| `verana.vsa.flow.listFlows` | [`listFlows`](../vs-agent/spec.md#vsa-adm-fl-list-listflows) | Enumerate active and historical flows on the agent. |
-| `verana.vsa.flow.editCredentialClaims` | [`editCredentialClaims`](../vs-agent/spec.md#vsa-adm-fl-edit-editcredentialclaims) | Edit pending credential claims for a flow. |
-| `verana.vsa.flow.sendOobLink` | [`sendOobLink`](../vs-agent/spec.md#vsa-adm-fl-send-sendooblink) | Re-send an OOB invitation link for a flow. |
-| `verana.vsa.flow.validateFlow` | [`validateFlow`](../vs-agent/spec.md#vsa-adm-fl-validate-validateflow) | Mark a flow as validated, allowing the agent to call `MOD-PP-MSG-3` Set Participant OP To Validated on chain. |
-| `verana.vsa.flow.revokeCredential` | [`revokeCredential`](../vs-agent/spec.md#vsa-adm-fl-revoke-revokecredential) | Revoke an issued credential and the corresponding Participant. |
+| `verana.vsa.flow.listFlows` | [`listFlows`](../vs-agent/spec.md#vsa-adm-vt-fl-list-listflows) | Enumerate active and historical flows on the agent. |
+| `verana.vsa.flow.editCredentialClaims` | [`editCredentialClaims`](../vs-agent/spec.md#vsa-adm-vt-fl-edit-editcredentialclaims) | Edit pending credential claims for a flow. |
+| `verana.vsa.flow.sendOobLink` | [`sendOobLink`](../vs-agent/spec.md#vsa-adm-vt-fl-send-sendooblink) | Re-send an OOB invitation link for a flow. |
+| `verana.vsa.flow.validateFlow` | [`validateFlow`](../vs-agent/spec.md#vsa-adm-vt-fl-validate-validateflow) | Mark a flow as validated, allowing the agent to call `MOD-PP-MSG-3` Set Participant OP To Validated on chain. |
+| `verana.vsa.flow.revokeCredential` | [`revokeFlowCredential`](../vs-agent/spec.md#vsa-adm-vt-fl-revoke-revokeflowcredential) | Revoke the credential issued in a flow, notifying the applicant over DIDComm. Does not revoke the corresponding `Participant`. |
 
 #### [VMS-TOOLS-VSA-SE] Service Endpoint Management
 
 | Tool | Upstream Method | Description |
 |---|---|---|
-| `verana.vsa.se.listServiceEndpoints` | [`listServiceEndpoints`](../vs-agent/spec.md#vsa-adm-se-list-listserviceendpoints) | List `service[]` entries currently published in the agent's DID Document. |
-| `verana.vsa.se.addServiceEndpoint` | [`addServiceEndpoint`](../vs-agent/spec.md#vsa-adm-se-add-addserviceendpoint) | Append a new service entry to the agent's DID Document. |
-| `verana.vsa.se.updateServiceEndpoint` | [`updateServiceEndpoint`](../vs-agent/spec.md#vsa-adm-se-update-updateserviceendpoint) | Update an existing service entry. |
-| `verana.vsa.se.deleteServiceEndpoint` | [`deleteServiceEndpoint`](../vs-agent/spec.md#vsa-adm-se-delete-deleteserviceendpoint) | Remove a service entry. |
+| `verana.vsa.se.listServiceEndpoints` | [`listServiceEndpoints`](../vs-agent/spec.md#vsa-adm-vt-se-list-listserviceendpoints) | List `service[]` entries currently published in the agent's DID Document. |
+| `verana.vsa.se.addServiceEndpoint` | [`addServiceEndpoint`](../vs-agent/spec.md#vsa-adm-vt-se-add-addserviceendpoint) | Append a new service entry to the agent's DID Document. |
+| `verana.vsa.se.updateServiceEndpoint` | [`updateServiceEndpoint`](../vs-agent/spec.md#vsa-adm-vt-se-update-updateserviceendpoint) | Update an existing service entry. |
+| `verana.vsa.se.deleteServiceEndpoint` | [`deleteServiceEndpoint`](../vs-agent/spec.md#vsa-adm-vt-se-delete-deleteserviceendpoint) | Remove a service entry. |
 
-> The `VsAgentAdminAPI` and other VPR-mandated service entries (e.g. `#trqp`, `#tr-presentations`) MUST NOT be mutable through these tools per [[VSA-ADM-SE]](../vs-agent/spec.md#vsa-adm-se-service-endpoint-management); the upstream agent enforces this constraint.
+> The `VsAgentAdminAPI` and other VPR-mandated service entries (e.g. `#trqp`, `#tr-presentations`) MUST NOT be mutable through these tools per [[VSA-ADM-VT-SE]](../vs-agent/spec.md#vsa-adm-vt-se-service-endpoint-management); the upstream agent enforces this constraint.
 
 ### [VMS-TOOLS-COSMOS] Cosmos Read-Only Tools
 

@@ -18,7 +18,7 @@
     },
     "freeText": {
       "type": "string",
-      "description": "Free-form lexical query string. Scored against the fields enumerated in [TG-FCT-4]."
+      "description": "Free-form lexical query string. Scored against the fields enumerated in [TG-FCT-4], with the matching baseline of [TG-FCT-4a]: case-insensitive, whole-token (no implied substring matching; optional prefix matching on the final token), conjunctive across tokens (every token must match at least one scored field of the hit). Absent, empty, or whitespace-only means no lexical constraint (filters and gates only)."
     },
     "limit": {
       "type": "integer",

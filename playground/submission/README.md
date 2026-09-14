@@ -25,7 +25,7 @@ Likes (submission period) select finalists; votes (Aug 24 → Sept 2, one per si
 
 **Narrative (draft, ~150 words for the form):**
 
-> Independent wallet stacks — DIDComm-native (Hologram), OID4VC/DIIP (Paradym, Talao, …), MOSIP Inji, and open-source cloud wallets — issue, hold, and verify credentials against one open, neutral trust registry: the Verana testnet. A fictional ISO Certification Ecosystem accredits certification bodies that issue an ISO 9001-style credential (demo) to the organization operating an AI agent. When a person connects with **any** integrated wallet, the wallet trust-resolves the agent **before** the first message and renders the same Proof-of-Trust: the organization (ECS-Org), the service (ECS-Service), and its certification — verified recursively to the ecosystem root. Unauthorized issuers and verifiers are refused, with proof. Every integration follows one published open guideline, so any wallet can join the same way. Live on a public playground; every claim reproducible.
+> Independent wallet stacks — DIDComm-native (Hologram), OID4VC/DIIP (Paradym, Talao, …), MOSIP Inji, and open-source business wallets — issue, hold, and verify credentials against one open, neutral trust registry: the Verana testnet. A fictional ISO Certification Ecosystem accredits certification bodies that issue an ISO 9001-style credential (demo) to the organization operating an AI agent. When a person connects with **any** integrated wallet, the wallet trust-resolves the agent **before** the first message and renders the same Proof-of-Trust: the organization (ECS-Org), the service (ECS-Service), and its certification — verified recursively to the ecosystem root. Unauthorized issuers and verifiers are refused, with proof. Every integration follows one published open guideline, so any wallet can join the same way. Live on a public playground; every claim reproducible.
 
 **Criteria mapping (Collaboration Award):**
 
@@ -42,8 +42,8 @@ Likes (submission period) select finalists; votes (Aug 24 → Sept 2, one per si
 
 ## 3. 2060 use case (supporting lane)
 
-**Working title:** *Hologram Agentic AI — verifiable agents, chatbots and a DIDComm browser* · **Submitted by:** 2060 org · **Targets:** Innovation Award (FIDES CA); feeds the Agentic eCommerce track.
-Outline: Hologram AI Agent + VUA + Messaging; agents authenticate humans and other agents via credentials over DIDComm; every agent is a Verifiable Service on Verana (the trust layer the primary use case demonstrates). Cross-links the Verana use case; deliberately does not compete in Collaboration.
+**Title:** *Hologram: a browser for decentralized AI chatbot services, self-hosted and verified before the first message* · **Submitted by:** 2060 org · **Targets:** Innovation Award (FIDES CA); feeds the Agentic eCommerce track.
+**Full paste-ready dossier: [use-case-hologram.md](./use-case-hologram.md)** — built on the five production services of [hologram-verifiable-services](https://github.com/2060-io/hologram-verifiable-services) (Avatar, Passport, GitHub/Wise MCP agents, X Agent) and the shipped demo copy at hologram.zone/demos. Cross-links the Verana use cases; deliberately does not compete in Collaboration.
 **Plus catalog assets:** Hologram Messaging → *Personal Wallets*; **vs-agent / Hologram cloud → *Business Wallets* by Aug 20** (Best Business Wallet 2026 eligibility).
 
 ## 4. Catalog entries checklist
@@ -52,10 +52,11 @@ Outline: Hologram AI Agent + VUA + Messaging; agents authenticate humans and oth
 | --- | --- | --- | --- |
 | Organizations | Verana (Foundation, in formation) | Verana | ☐ |
 | Organizations | 2060 | 2060 | ✅ created |
-| Use cases | One trust layer, many wallets | Verana | ☐ |
-| Use cases | Hologram Agentic AI | 2060 | ☐ |
+| Use cases | Vesta Appliances: from impostors to Proof-of-Trust | Verana | ✅ [published](https://fides.community/ecosystem-explorer/use-cases/?usecase=vesta-appliances-from-impostors-to-proof-of-trust-ATYNCN) |
+| Use cases | Republic of Verandia ([dossier](./use-case-verandia.md)) | Verana | ☐ blocked on playground PR #192 deploy |
+| Use cases | Hologram: a browser for decentralized AI chatbot services ([dossier](./use-case-hologram.md)) | 2060 | ☐ ready to submit |
 | Personal wallets | Hologram Messaging | 2060 | ☐ |
-| Business wallets | vs-agent (Hologram cloud wallet) | 2060 | ☐ |
+| Business wallets | vs-agent (Hologram business wallet) | 2060 | ☐ |
 | Credential types | ECS-Service · ECS-Organization · ECS-Persona (+ ISO 9001 (demo)) | Verana | ☐ |
 | Issuers | CertBody demo issuers · ECS onboarding issuer | Verana | ☐ |
 | Relying parties | Vesta demo agent (verifier) · Inji Verify | Verana | ☐ |
@@ -65,7 +66,7 @@ Outline: Hologram AI Agent + VUA + Messaging; agents authenticate humans and oth
 
 Rule: **every organization with ≥1 open-source product integrated is named** — after a heads-up message and a yes. Each named org receives a kit: its playground tile URL, the "Runs on the Verana open trust layer" badge, two ready-to-post texts (submission day, voting day), and the like/vote links.
 
-Candidates (verify license + integration status at submission time): Animo (Paradym, credo-ts) · Talao · MOSIP (Inji) · 2060 (Hologram) · OWF (Bifold, ACA-Py, credo-ts) · walt.id · Sphereon · Impierce (UniMe) · DIF (Veramo) · LF Decentralized Trust (Identus) · Findy Agency · [extend as integrations land]. Constraint reminder: cloud stacks must support `did:web`/`did:webvh` for hosted issuers/verifiers ([CW-ID-1]).
+Candidates (verify license + integration status at submission time): Animo (Paradym, credo-ts) · Talao · MOSIP (Inji) · 2060 (Hologram) · OWF (Bifold, ACA-Py, credo-ts) · walt.id · Sphereon · Impierce (UniMe) · DIF (Veramo) · LF Decentralized Trust (Identus) · Findy Agency · [extend as integrations land]. Constraint reminder: cloud stacks must support `did:web`/`did:webvh` for hosted issuers/verifiers ([BW-ID-1]).
 
 ## 6. Campaign calendar (real-people engagement)
 

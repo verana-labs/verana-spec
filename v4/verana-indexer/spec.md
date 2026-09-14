@@ -1,6 +1,6 @@
 # Indexer v4 Specification
 
-**Latest Draft:** spec v4-draft7
+**Latest Draft:** spec v4-draft13
 
 ## Abstract
 
@@ -23,6 +23,16 @@ Every datetime value defined or surfaced by this specification — including but
 ```
 
 The JSON Schemas published alongside this document expose this constraint as the reusable `#/$defs/Iso8601DateTime` definition; every datetime property in those schemas references it.
+
+### Duration encoding
+
+Every duration value surfaced by this specification MUST be encoded as the [protobuf JSON mapping of `google.protobuf.Duration`](https://protobuf.dev/programming-guides/json/): a decimal number of seconds followed by the suffix `s`, for example `"315360000s"` or `"1.5s"`. Fractional seconds are OPTIONAL and carry at most nine digits. A duration MUST be strictly positive: the ledger never stores a zero or negative duration, and the indexer MUST omit the field (or serialise `null` when the field is declared nullable) rather than emit `"0s"`. The normative regular expression is:
+
+```regex
+^[0-9]+(\.[0-9]{1,9})?s$
+```
+
+A duration on an authorization, record or grant means that the entry **auto-renews**: per VPR [[AUTHZ-CHECK-1]](https://verana-labs.github.io/verifiable-trust-vpr-spec/versions/v4/#authz-check-1-operator-authorization-checks), [[AUTHZ-CHECK-2]](https://verana-labs.github.io/verifiable-trust-vpr-spec/versions/v4/#authz-check-2-fee-grant-checks) and [[AUTHZ-CHECK-3]](https://verana-labs.github.io/verifiable-trust-vpr-spec/versions/v4/#authz-check-3-vs-operator-authorization-checks), when `period` is set and `now() >= expiration`, the ledger resets the spend balances and advances `expiration` by `period` at the next authorization check, instead of treating the entry as expired. Consumers evaluating activity client-side, and the `only_active` filters of the Delegation methods, MUST therefore treat an entry as active when `expiration` is unset, when `expiration > now`, or when `period` is set — whatever the stored `expiration` value.
 
 ## Terminology
 
@@ -72,14 +82,20 @@ The JSON Schemas published alongside this document expose this constraint as the
 | Delegation | List VS Operator Authorizations | `/v4/delegation/vs-operator-authorizations` | Query | [`IDX-DE-QRY-2`](#idx-de-qry-2-list-vs-operator-authorizations) | PUBLIC |
 | Delegation | Get Operator Authorization | `/v4/delegation/operator-authorization/{id}` | Query | [`IDX-DE-QRY-3`](#idx-de-qry-3-get-operator-authorization) | PUBLIC |
 | Delegation | Get VS Operator Authorization | `/v4/delegation/vs-operator-authorization/{id}` | Query | [`IDX-DE-QRY-4`](#idx-de-qry-4-get-vs-operator-authorization) | PUBLIC |
+| Delegation | List Fee Grants | `/v4/delegation/fee-grants` | Query | [`IDX-DE-QRY-5`](#idx-de-qry-5-list-fee-grants) | PUBLIC |
 | Digest | Get Digest | `/v4/di/get/{digest}` | Query | [`IDX-DI-QRY-1`](#idx-di-qry-1-get-digest) | PUBLIC |
+| Group | Get Corporation Group | `/v4/group/get/{corporation_id}` | Query | [`IDX-GR-QRY-1`](#idx-gr-qry-1-get-corporation-group) | PUBLIC |
+| Group | List Corporations By Member | `/v4/group/corporations-by-member` | Query | [`IDX-GR-QRY-2`](#idx-gr-qry-2-list-corporations-by-member) | PUBLIC |
+| Group | List Proposals | `/v4/group/proposals` | Query | [`IDX-GR-QRY-3`](#idx-gr-qry-3-list-proposals) | PUBLIC |
+| Group | Get Proposal | `/v4/group/proposal/{id}` | Query | [`IDX-GR-QRY-4`](#idx-gr-qry-4-get-proposal) | PUBLIC |
+| Group | List Votes | `/v4/group/votes` | Query | [`IDX-GR-QRY-5`](#idx-gr-qry-5-list-votes) | PUBLIC |
 | Exchange Rate | Get Exchange Rate | `/v4/exchange-rate/get` | Query | [`IDX-XR-QRY-1`](#idx-xr-qry-1-get-exchange-rate) | PUBLIC |
 | Exchange Rate | List Exchange Rates | `/v4/exchange-rate/list` | Query | [`IDX-XR-QRY-2`](#idx-xr-qry-2-list-exchange-rates) | PUBLIC |
 | Exchange Rate | Get Price | `/v4/exchange-rate/price` | Query | [`IDX-XR-QRY-3`](#idx-xr-qry-3-get-price) | PUBLIC |
-| Metrics | Get Global Metrics | `/v4/metrics/all` | Query | [`IDX-METRICS-QRY-1`](#idx-metrics-qry-1-get-global-metrics) | PUBLIC |
 | Statistics | Get Stats | `/v4/stats/get` | Query | [`IDX-STATS-QRY-1`](#idx-stats-qry-1-get-stats) | PUBLIC |
 | Statistics | Get Stats Range | `/v4/stats/stats` | Query | [`IDX-STATS-QRY-2`](#idx-stats-qry-2-get-stats-range) | PUBLIC |
 | Statistics | Count Participants | `/v4/stats/count-participants` | Query | [`IDX-STATS-QRY-3`](#idx-stats-qry-3-count-participants) | PUBLIC |
+| Statistics | Get Stats Snapshot | `/v4/stats/snapshot` | Query | [`IDX-STATS-QRY-4`](#idx-stats-qry-4-get-stats-snapshot) | PUBLIC |
 | Indexer | Get Block Height | `/v4/indexer/block-height` | Query | [`IDX-INDEXER-QRY-1`](#idx-indexer-qry-1-get-block-height) | PUBLIC |
 | Indexer | Get Indexer Status | `/v4/indexer/status` | Query | [`IDX-INDEXER-QRY-2`](#idx-indexer-qry-2-get-indexer-status) | PUBLIC |
 | Indexer | Get Version | `/v4/indexer/version` | Query | [`IDX-INDEXER-QRY-3`](#idx-indexer-qry-3-get-version) | PUBLIC |
@@ -98,7 +114,7 @@ All methods are specified in [Method Specification](#method-specification) below
 
 ### Method Specification
 
-This section specifies the raw indexer methods that expose VPR ledger entities (Corporations, Ecosystems, Governance Framework versions, Credential Schemas, Participants, Trust Deposits, Operator Authorizations, Digests, Exchange Rates) and the aggregate / statistical / operational state derived from them. They are pure query views; none mutate state. Per-method request and response JSON Schemas are published alongside this document at [`schemas/v4/idx/`](./schemas/v4/idx/) *(schemas to be added in a follow-up commit)*.
+This section specifies the raw indexer methods that expose VPR ledger entities (Corporations, Ecosystems, Governance Framework versions, Credential Schemas, Participants, Trust Deposits, Operator Authorizations, Digests, Exchange Rates), the Cosmos SDK `x/group` state anchoring Corporations (groups, members, policies, proposals, votes), and the aggregate / statistical / operational state derived from them. They are pure query views; none mutate state. Per-method request and response JSON Schemas are published alongside this document at [`schemas/v4/idx/`](./schemas/v4/idx/) *(schemas to be added in a follow-up commit)*.
 
 #### Conventions
 
@@ -242,7 +258,7 @@ Both `*_available_actions[]` arrays are purely indexer-computed. They are not pa
 
 `Participant`-count aggregates surface on every queryable entity that has a related Participant tree:
 
-- **Global Current Metrics** ([`IDX-METRICS-QRY-1`](#idx-metrics-qry-1-get-global-metrics)) — network-wide totals.
+- **Network-wide** ([`IDX-STATS-QRY-4 Get Stats Snapshot`](#idx-stats-qry-4-get-stats-snapshot) with `entity_type = GLOBAL`) — totals across every Ecosystem.
 - **Ecosystem** ([`IDX-ES-QRY-1`](#idx-es-qry-1-get-ecosystem)) — totals for every `CredentialSchema` owned by the Ecosystem and the Participant tree under each.
 - **CredentialSchema** ([`IDX-CS-QRY-1`](#idx-cs-qry-1-get-credential-schema)) — totals for the schema's Participant tree.
 - **Participant** ([`IDX-PP-QRY-1`](#idx-pp-qry-1-get-participant)) — totals for the sub-tree of `Participant` entries having this `Participant.id` somewhere in their `validator_participant_id` ancestry.
@@ -257,7 +273,7 @@ On every such entity the indexer exposes the same seven-field breakdown, resolve
 - `participants_verifier` — `ACTIVE` and `role` = `VERIFIER`.
 - `participants_holder` — `ACTIVE` and `role` = `HOLDER`.
 
-The same counts are queryable historically by block-height via [`IDX-STATS-QRY-3 Count Participants`](#idx-stats-qry-3-count-participants).
+The same counts are queryable by block-height via [`IDX-STATS-QRY-3 Count Participants`](#idx-stats-qry-3-count-participants) (one role of one entity) and [`IDX-STATS-QRY-4 Get Stats Snapshot`](#idx-stats-qry-4-get-stats-snapshot) (the full breakdown of one entity, alongside every other tracked metric).
 
 ###### The recomputation problem
 
@@ -419,7 +435,7 @@ Within a single block `H`, multiple flips touching the same `(entity_kind, entit
 
 ###### Read query
 
-[`IDX-STATS-QRY-3 Count Participants`](#idx-stats-qry-3-count-participants) and the inline `participants*` fields on Ecosystem / CredentialSchema / Participant entries all resolve via the same one-row lookup:
+[`IDX-STATS-QRY-3 Count Participants`](#idx-stats-qry-3-count-participants), the `participants*` fields of [`IDX-STATS-QRY-4 Get Stats Snapshot`](#idx-stats-qry-4-get-stats-snapshot), and the inline `participants*` fields on Ecosystem / CredentialSchema / Participant entries all resolve via the same one-row lookup:
 
 ```sql
 SELECT value
@@ -472,12 +488,15 @@ Retrieve a paginated, filtered list of Corporations. *Aligned with VPR [[MOD-CO-
 | `gf_data` | query | enum | no | `none` \| `only_active` \| `all` — controls inclusion of CGF `versions[]`. Default: `only_active`. |
 | `preferred_language` | query | string | no | Preferred document language; affects CGF document ordering |
 | `did` | query | string | no | Filter by Corporation DID |
+| `policy_address` | query | string | no | Comma-separated list of `policy_address` accounts (min 1, max 64 entries). Returns only Corporations whose `policy_address` is in the list. Since `policy_address` is globally unique across Corporation entries (1:1, per VPR), each supplied address matches at most one Corporation; addresses matching no Corporation are simply not represented in the result. More than 64 entries MUST be rejected with HTTP 400. |
 | `modified_after` | query | datetime | no | Only return Corporations modified strictly after this ISO 8601 datetime |
 | `trust_data` | query | enum | no | `null` \| `summary` \| `full` — see [Conventions](#trust_data-query-parameter) |
 
 Supports pagination through attributes `max_id`, `min_id`, `limit` and `sort`, as explained in [Pagination](#pagination).
 
 **Response:** `{ corporations: Corporation[] }`. Each entry has the same shape as [`getCorporation`](#idx-co-qry-1-get-corporation).
+
+> **Use case for `policy_address`:** reverse-mapping Cosmos SDK `x/group` policy accounts to their Corporation entries. A client that wants to know which Corporations an account can act for as a **group member** walks `x/group` (`GroupsByMember` → `GroupPoliciesByGroup`) to obtain the candidate policy addresses, then resolves them to Corporation entries in a single call with `policy_address=<addr1>,<addr2>,…`. This is the group-membership counterpart of the operator-side discovery served by [`listOperatorAuthorizations`](#idx-de-qry-1-list-operator-authorizations) with `operator=<addr>`.
 
 ##### IDX-CO-QRY-3 Get Corporation Params
 
@@ -487,7 +506,7 @@ Retrieve the network-level Corporation module parameters. *Aligned with VPR [[MO
 
 (No method-specific parameters.)
 
-**Response:** `{ params: { ... } }` — the Corporation module parameter set as defined by VPR governance (e.g. minimum trust-deposit for Corporation creation, CGF document-size limits). Exact keys are determined by the on-chain parameter set.
+**Response:** `{ params: { ... } }` — the Corporation module parameter set as defined by VPR governance. VPR v4 [[GLO]](https://verana-labs.github.io/verifiable-trust-vpr-spec/versions/v4/#glo-global-variables) defines no Corporation-specific global variable, so the set MAY be empty; exact keys are determined by the on-chain parameter set.
 
 ##### IDX-CO-QRY-4 Get Corporation History
 
@@ -501,7 +520,7 @@ Retrieve the activity timeline for a Corporation, ordered by `id` descending (ne
 
 Supports pagination through attributes `max_id`, `min_id`, `limit` and `sort`, as explained in [Pagination](#pagination).
 
-**Response:** `ActivityTimelineResponse` with `entity_type: "Corporation"`. Each `ActivityItem`'s `msg` is one of `CreateCorporation`, `UpdateCorporation`, `AddCGFDocument`, `IncreaseCGFActiveVersion`, etc.
+**Response:** `ActivityTimelineResponse` with `entity_type: "Corporation"`. Each `ActivityItem`'s `msg` is one of `CreateCorporation`, `UpdateCorporation`, `AddGovernanceFrameworkDocument`, `IncreaseActiveGovernanceFrameworkVersion`, etc.
 
 #### Ecosystem methods
 
@@ -541,7 +560,7 @@ Retrieve a paginated, filtered list of Ecosystems. *Aligned with VPR [[MOD-ES-QR
 | `preferred_language` | query | string | no | Preferred document language; affects governance-framework document ordering |
 | `archived` | query | boolean | no | `true` → only archived Ecosystems; `false` → only not-archived Ecosystems; null/omitted → both. Default: null. |
 | `corporation_id` | query | uint64 | no | Filter by controlling-Corporation id |
-| `participant` | query | string | no | Account address; returns Ecosystems where this account is the Ecosystem corporation or holds an active `Participant` entry on a schema in the Ecosystem |
+| `participant_corporation_id` | query | uint64 | no | Id of a Corporation; returns Ecosystems where this Corporation is the controlling Corporation (`Ecosystem.corporation_id`) **or** owns a `Participant` entry with `participant_state = ACTIVE` (per [Participant State Semantics](#participant-state-semantics)) on any Credential Schema of the Ecosystem. Complements `corporation_id`, which matches on control only |
 | `modified_after` | query | datetime | no | Only return Ecosystems modified strictly after this ISO 8601 datetime |
 | `trust_data` | query | enum | no | `null` \| `summary` \| `full` — see [Conventions](#trust_data-query-parameter) |
 | `min_active_schemas` / `max_active_schemas` | query | integer | no | Active-schema count bounds |
@@ -559,7 +578,7 @@ Retrieve the network-level Ecosystem module parameters. *Aligned with VPR [[MOD-
 
 (No method-specific parameters.)
 
-**Response:** `{ params: { trust_unit_price: decimal, ecosystem_trust_deposit: decimal } }` — the price-per-trust-unit and the trust-deposit required to create an Ecosystem, as defined by the Ecosystem module parameters.
+**Response:** `{ params: { ... } }` — the Ecosystem module parameter set as defined by VPR governance. VPR v4 [[GLO]](https://verana-labs.github.io/verifiable-trust-vpr-spec/versions/v4/#glo-global-variables) defines no Ecosystem-specific global variable (the v3 `trust_unit_price` and `ecosystem_trust_deposit` parameters no longer exist), so the set MAY be empty; exact keys are determined by the on-chain parameter set.
 
 ##### IDX-ES-QRY-4 Get Ecosystem History
 
@@ -573,7 +592,7 @@ Retrieve the activity timeline for an Ecosystem, ordered by `id` descending (new
 
 Supports pagination through attributes `max_id`, `min_id`, `limit` and `sort`, as explained in [Pagination](#pagination).
 
-**Response:** `ActivityTimelineResponse` — `{ entity_type: "Ecosystem", entity_id, activity: ActivityItem[] }`. Each `ActivityItem` has `id` (uint64; indexer-assigned monotonic per-row surrogate key, used as the pagination cursor — distinct from `entity_id`), `timestamp`, `block_height`, `entity_type`, `entity_id`, `msg` (e.g. `CreateEcosystem`, `AddGovernanceFrameworkDocument`), `account` (signer), and `changes` (object of changed fields). The same `ActivityTimelineResponse` shape is reused by every `*History` and the indexer-level `listChanges` method.
+**Response:** `ActivityTimelineResponse` — `{ entity_type: "Ecosystem", entity_id, activity: ActivityItem[] }`. Each `ActivityItem` has `id` (uint64; indexer-assigned monotonic per-row surrogate key, used as the pagination cursor — distinct from `entity_id`), `timestamp`, `block_height`, `entity_type`, `entity_id`, `msg` (the VPR method that produced the change, in the same PascalCase action-name vocabulary as `IndexerTransactionEvent.event_type`, e.g. `CreateEcosystem`, `AddGovernanceFrameworkDocument`), `account` (signer), and `changes` (object of changed fields). The same `ActivityTimelineResponse` shape is reused by every `*History` and the indexer-level `listChanges` method.
 
 #### Governance Framework methods
 
@@ -642,7 +661,7 @@ Retrieve a paginated, filtered list of Credential Schemas. *Aligned with VPR [[M
 | `issuer_onboarding_mode` | query | enum | no | Filter by issuer onboarding mode: `OPEN` \| `GRANTOR_ONBOARDING_PROCESS` \| `ECOSYSTEM_ONBOARDING_PROCESS` |
 | `verifier_onboarding_mode` | query | enum | no | Filter by verifier onboarding mode: `OPEN` \| `GRANTOR_ONBOARDING_PROCESS` \| `ECOSYSTEM_ONBOARDING_PROCESS` |
 | `holder_onboarding_mode` | query | enum | no | Filter by holder onboarding mode: `ISSUER_ONBOARDING_PROCESS` \| `PERMISSIONLESS` |
-| `participant` | query | string | no | Account address; returns schemas where the account is the Ecosystem corporation or holds an active `Participant` entry |
+| `participant_corporation_id` | query | uint64 | no | Id of a Corporation; returns schemas where this Corporation controls the owning Ecosystem (`Ecosystem.corporation_id`) **or** owns a `Participant` entry with `participant_state = ACTIVE` (per [Participant State Semantics](#participant-state-semantics)) on the schema |
 | `modified_after` | query | datetime | no | Only return schemas modified strictly after this datetime |
 | *(standard list filters)* | query | — | no | See [Standard list filters](#standard-list-filters) |
 
@@ -670,7 +689,7 @@ Retrieve the network-level Credential Schema module parameters. *Aligned with VP
 
 (No method-specific parameters.)
 
-**Response:** `{ params: { credential_schema_trust_deposit: decimal } }` — the trust-deposit required to register a Credential Schema, as defined by the Credential Schema module parameters.
+**Response:** `{ params: { credential_schema_schema_max_size, credential_schema_issuer_grantor_validation_validity_period_max_days, credential_schema_verifier_grantor_validation_validity_period_max_days, credential_schema_issuer_validation_validity_period_max_days, credential_schema_verifier_validation_validity_period_max_days, credential_schema_holder_validation_validity_period_max_days } }` — the Credential Schema global variables of VPR v4 [[GLO]](https://verana-labs.github.io/verifiable-trust-vpr-spec/versions/v4/#glo-global-variables): the maximum `json_schema` size and the per-role maximum validation validity periods, in days. Exact keys are determined by the on-chain parameter set. (The v3 `credential_schema_trust_deposit` parameter no longer exists: creating a Credential Schema requires no trust deposit in v4.)
 
 ##### IDX-CS-QRY-5 Get Credential Schema History
 
@@ -703,6 +722,7 @@ Retrieve a specific Participant by its ID. A Participant is a single VPR partici
 
 - **On-chain (VPR `Participant`):** `id`, `schema_id`, `role` (one of `ISSUER`, `VERIFIER`, `ISSUER_GRANTOR`, `VERIFIER_GRANTOR`, `ECOSYSTEM`, `HOLDER`), `did`, `corporation_id` (uint64; FK to `Corporation.id`), `vs_operator` (account), lifecycle timestamps (`created`, `modified`, `adjusted`, `slashed`, `repaid`, `revoked`, `effective_from`, `effective_until`), fee fields (`validation_fees`, `issuance_fees`, `verification_fees`, `issuance_fee_discount`, `verification_fee_discount`), deposit fields (`deposit`, `slashed_deposit`, `repaid_deposit`), and the onboarding-process state (`op_state` enum: `PENDING` / `VALIDATED` / `TERMINATED`; plus `op_last_state_change`, `op_current_fees`, `op_current_deposit`, `op_summary_digest`, `op_exp`, `op_validator_deposit`, `validator_participant_id`).
 - **Indexer-derived (computed at evaluation block; not stored on-chain):**
+  - `ecosystem_id` — the Ecosystem owning the Participant's Credential Schema, denormalised from `CredentialSchema.ecosystem_id`. Per VPR, every schema is owned by exactly one Ecosystem, so the value is well-defined and immutable for the Participant's lifetime; it saves consumers a schema→ecosystem join per row and mirrors the `participations[].ecosystemId` field the [Verifiable Trust Resolver](#verifiable-trust-resolver-methods) already surfaces inline.
   - `participant_state` — lifecycle state derived from on-chain timestamps. One of `ACTIVE`, `FUTURE`, `INACTIVE`, `EXPIRED`, `REVOKED`, `SLASHED`, `REPAID`. See [Conventions → `participant_state` semantics](#participant-state-semantics).
   - `corporation_available_actions[]`, `validator_available_actions[]` — UI-affordance arrays listing the next allowable VPR messages for the owning Corporation / validator at the current state (e.g. `CancelParticipantOPLastRequest`, `SetParticipantOPtoValidated`, `RenewParticipantOP`). See [Conventions → Available Actions Semantics](#available-actions-semantics).
 - **Indexer-enriched aggregates** (computed): `weight`, `issued`, `verified`, `participants` (sub-participant count for grantor roles), and the same slash counters as on `CredentialSchema`.
@@ -727,6 +747,7 @@ Retrieve a paginated, filtered list of Participants. *Aligned with VPR [[MOD-PP-
 | `only_slashed` | query | boolean | no | Filter only slashed Participants |
 | `only_repaid` | query | boolean | no | Filter only repaid Participants |
 | `schema_id` | query | uint64 | no | Filter by Credential Schema ID |
+| `ecosystem_id` | query | uint64 | no | Filter by the Ecosystem owning the Participant's Credential Schema (the denormalised `ecosystem_id` response field) |
 | `validator_participant_id` | query | uint64 | no | Filter by validator Participant ID |
 | `when` | query | datetime | no | Effective-date filter; returns Participants whose effective range includes this datetime |
 | `modified_after` | query | datetime | no | Only return Participants modified strictly after this datetime |
@@ -755,24 +776,33 @@ Supports pagination through attributes `max_id`, `min_id`, `limit` and `sort`, a
 
 `GET /v4/participant/beneficiaries`
 
-Compute the chain of beneficiary Participants for a credential transaction. Given an issuer Participant and a verifier Participant, returns every ancestor Participant in either tree (issuer grantor, verifier grantor, ecosystem, network) that participates in the fee-distribution flow. *Aligned with VPR [[MOD-PP-QRY-4]](https://verana-labs.github.io/verifiable-trust-vpr-spec/#mod-pp-qry-4-find-beneficiaries).*
+Compute the set of beneficiary Participants for a credential transaction. Given an issuer Participant and/or a verifier Participant, returns every ancestor Participant in the involved tree branch(es) (issuer grantor, verifier grantor, ecosystem) that participates in the fee-distribution flow. *Aligned with VPR [[MOD-PP-QRY-4]](https://verana-labs.github.io/verifiable-trust-vpr-spec/#mod-pp-qry-4-find-beneficiaries).*
 
 | Name | In | Type | Required | Description |
 | --- | --- | --- | --- | --- |
-| `issuer_participant_id` | query | uint64 | yes | Issuer Participant ID |
-| `verifier_participant_id` | query | uint64 | yes | Verifier Participant ID |
+| `issuer_participant_id` | query | uint64 | conditional¹ | Issuer Participant ID. MUST reference an [active](#participant-state-semantics) `Participant`; HTTP 400 otherwise |
+| `verifier_participant_id` | query | uint64 | conditional¹ | Verifier Participant ID. MUST reference an [active](#participant-state-semantics) `Participant`; HTTP 400 otherwise |
 
-**Response:** `{ participants: Participant[] }` — the ordered set of beneficiary Participants.
+¹ At least one of `issuer_participant_id` and `verifier_participant_id` MUST be provided (either one alone, or both); providing neither is HTTP 400. Per VPR [[MOD-PP-QRY-4]](https://verana-labs.github.io/verifiable-trust-vpr-spec/#mod-pp-qry-4-find-beneficiaries), the membership of the result set depends on the combination:
+
+- **Issuance** (`issuer_participant_id` only — a credential offer): the ancestors of the issuer `Participant`, excluding the issuer itself.
+- **Verification** (`verifier_participant_id` set, with or without `issuer_participant_id`): the ancestors of the verifier `Participant` (excluding the verifier itself), plus — when `issuer_participant_id` is provided — the issuer `Participant` **itself** and its ancestors.
+
+In both cases, revoked and slashed ancestors are excluded from the set; expired-but-not-revoked/slashed ancestors are included.
+
+**Response:** `{ participants: Participant[] }` — the set of beneficiary Participants.
 
 ##### IDX-PP-QRY-5 Pending Flat
 
 `GET /v4/participant/pending/flat`
 
-Return the open task list for a given account — every Participant anywhere on the network where the account is the validator and the Participant is in a state that requires the validator's action (e.g. `op_state: PENDING`). Results are grouped by Ecosystem then by Credential Schema. *Indexer-specific (no VPR equivalent).*
+Return the open task list for a given Corporation — every Participant anywhere on the network whose **validator Participant** (the entry referenced by its `validator_participant_id`) is owned by that Corporation and whose state requires the validator's action (e.g. `op_state: PENDING`). Results are grouped by Ecosystem then by Credential Schema. *Indexer-specific (no VPR equivalent).*
+
+> Validator scoping is by Corporation, not by account: per VPR v4, `Participant` entries — including validator entries — are owned by Corporations (`Participant.corporation_id`), and individual accounts only act on them through delegated authorizations. A client acting for a Corporation (e.g. the Verana frontend after corporation selection) passes that Corporation's `corporation_id`; which of the Corporation's operators may actually execute the pending action (`SetParticipantOPtoValidated`, …) is determined separately by the caller against the Corporation's authorization grants (see [`listOperatorAuthorizations`](#idx-de-qry-1-list-operator-authorizations) / [`listVSOperatorAuthorizations`](#idx-de-qry-2-list-vs-operator-authorizations) and [Available Actions Semantics](#available-actions-semantics)).
 
 | Name | In | Type | Required | Description |
 | --- | --- | --- | --- | --- |
-| `account` | query | string | yes | Account address whose pending tasks are returned |
+| `corporation_id` | query | uint64 | yes | Id of the Corporation whose pending tasks are returned (the Corporation owning the validator `Participant` entries) |
 | `trust_data` | query | enum | no | `null` \| `summary` \| `full` |
 | `limit` | query | integer | no | 1..1024, default 64 (caps the number of Ecosystems returned) |
 
@@ -780,7 +810,7 @@ Return the open task list for a given account — every Participant anywhere on 
 
 - `id`, `did`, `pending_tasks` (count of pending validations), `participants` (active participant count).
 - `trust_data` (when requested; per [Conventions](#trust_data-query-parameter)).
-- `schemas[]: CredentialSchemaPending[]` — each `CredentialSchemaPending` carries `id`, `title` (indexer-derived from the JSON Schema `title`), `description` (indexer-derived from the JSON Schema `description`), `pending_tasks`, `participants` (active participant count), and `pending_participants[]: Participant[]` (full `Participant` shape; see [`getParticipant`](#idx-pp-qry-1-get-participant)). The `pending_participants[]` array is the list of `Participant` entries pending action from the validator account; it is intentionally distinct from the scalar `participants` count.
+- `schemas[]: CredentialSchemaPending[]` — each `CredentialSchemaPending` carries `id`, `title` (indexer-derived from the JSON Schema `title`), `description` (indexer-derived from the JSON Schema `description`), `pending_tasks`, `participants` (active participant count), and `pending_participants[]: Participant[]` (full `Participant` shape; see [`getParticipant`](#idx-pp-qry-1-get-participant)). The `pending_participants[]` array is the list of `Participant` entries pending action from the validator Corporation; it is intentionally distinct from the scalar `participants` count.
 
 ##### IDX-PP-QRY-6 Get Participant Session
 
@@ -819,7 +849,7 @@ Retrieve the network-level Participant module parameters. *Aligned with VPR [[MO
 
 (No method-specific parameters.)
 
-**Response:** `{ params: { ... } }` — the Participant module parameter set as defined by VPR governance (e.g. trust-deposit requirements per role, validation-fee floors). Exact keys are determined by the on-chain parameter set.
+**Response:** `{ params: { ... } }` — the Participant module parameter set as defined by VPR governance. VPR v4 [[GLO]](https://verana-labs.github.io/verifiable-trust-vpr-spec/versions/v4/#glo-global-variables) defines no Participant-specific global variable, so the set MAY be empty; exact keys are determined by the on-chain parameter set.
 
 #### Trust Deposit methods
 
@@ -846,7 +876,7 @@ Retrieve the network-level Trust Deposit module parameters. *Aligned with VPR [[
 
 (No method-specific parameters.)
 
-**Response:** `{ params: { trust_deposit_rate, user_agent_reward_rate, trust_deposit_share_value, wallet_user_agent_reward_rate, trust_deposit_reclaim_burn_rate } }` — all decimals; the network governance rates that drive yield, reward distribution, share-value translation, and the burn fraction applied on reclaim.
+**Response:** `{ params: { trust_deposit_share_value, trust_deposit_rate, trust_deposit_max_yield_rate, trust_deposit_block_reward_share, wallet_user_agent_reward_rate, user_agent_reward_rate } }` — all decimals; the Trust Deposit global variables of VPR v4 [[GLO]](https://verana-labs.github.io/verifiable-trust-vpr-spec/versions/v4/#glo-global-variables): share-value translation, the deposit fraction of trust fees, the yield cap and block-reward share, and the agent reward rates. (The v3 `trust_deposit_reclaim_burn_rate` parameter no longer exists: trust deposits are non-withdrawable in v4 and `MOD-TD-MSG-3` is void.)
 
 ##### IDX-TD-QRY-3 Get Trust Deposit History
 
@@ -860,11 +890,11 @@ Retrieve the activity timeline for a Trust Deposit row, ordered by `id` descendi
 
 Supports pagination through attributes `max_id`, `min_id`, `limit` and `sort`, as explained in [Pagination](#pagination).
 
-**Response:** `ActivityTimelineResponse` with `entity_type: "TrustDeposit"`. Each `ActivityItem`'s `msg` is one of `CREATE_TRUST_DEPOSIT`, `ADJUST_TRUST_DEPOSIT`, `SLASH_TRUST_DEPOSIT`, `SLASH_PARTICIPANT_TRUST_DEPOSIT`, `RECLAIM_YIELD`, `RECLAIM_DEPOSIT`, `REPAY_SLASHED`.
+**Response:** `ActivityTimelineResponse` with `entity_type: "TrustDeposit"`. Each `ActivityItem`'s `msg` is one of `AdjustTrustDeposit` (MOD-TD-MSG-1, including the adjustment that creates the row), `ReclaimTrustDepositYield` (MOD-TD-MSG-2), `SlashTrustDeposit` (MOD-TD-MSG-5), `RepaySlashedTrustDeposit` (MOD-TD-MSG-6), `BurnEcosystemSlashedTrustDeposit` (MOD-TD-MSG-7, the burn that a `SlashParticipantTrustDeposit` transaction delegates to): the same PascalCase action-name vocabulary as `IndexerTransactionEvent.event_type` and every other `*History` method. (There is no deposit reclaim in v4: trust deposits are non-withdrawable and `MOD-TD-MSG-3` is void.)
 
 #### Delegation methods
 
-The Delegation module surfaces the two on-chain authorization entities that replaced the old `Participant.vs_operator_authz_*` fields: `OperatorAuthorization` (corporation-to-operator grants over module message types) and `VSOperatorAuthorization` (corporation-to-VS-operator grant container holding one `ParticipantAuthorizationRecord` per controlled `Participant`).
+The Delegation module surfaces the two on-chain authorization entities that replaced the old `Participant.vs_operator_authz_*` fields: `OperatorAuthorization` (corporation-to-operator grants over module message types) and `VSOperatorAuthorization` (corporation-to-VS-operator grant container holding one `ParticipantAuthorizationRecord` per controlled `Participant`) — plus the `FeeGrant` entries through which a Corporation pays transaction fees on behalf of its grantees.
 
 ##### IDX-DE-QRY-1 List Operator Authorizations
 
@@ -877,12 +907,14 @@ Retrieve a paginated, filtered list of `OperatorAuthorization` entries. Each ent
 | `corporation_id` | query | uint64 | no | Filter by the granting Corporation id |
 | `operator` | query | string | no | Filter by the grantee operator account |
 | `msg_type` | query | string | no | Filter to authorizations whose `msg_types[]` includes this message type |
-| `only_active` | query | boolean | no | If true, only return non-expired authorizations (`expiration > now` or null) |
+| `only_active` | query | boolean | no | If true, only return non-expired authorizations (`expiration > now` or null; for periodic authorizations, the auto-renewing cycle boundary never makes the authorization inactive, see [Duration encoding](#duration-encoding)) |
 | `modified_after` | query | datetime | no | Only return authorizations modified strictly after this datetime |
 
 Supports pagination through attributes `max_id`, `min_id`, `limit` and `sort`, as explained in [Pagination](#pagination).
 
-**Response:** `{ authorizations: OperatorAuthorization[] }` — each entry carries `id` (auto-incremented uint64), `corporation_id`, `operator`, `msg_types[]`, `spend_limit[]` (optional `DenomAmount[]`), `remaining_spend[]` (when `spend_limit` is set), `fee_spend_limit[]` (optional), `remaining_fee_spend[]` (when `fee_spend_limit` is set), `expiration` (optional timestamp), and `period` (optional duration).
+**Response:** `{ authorizations: OperatorAuthorization[] }` — each entry carries `id` (auto-incremented uint64), `corporation_id`, `operator`, `msg_types[]`, `spend_limit[]` (optional `DenomAmount[]`), `remaining_spend[]` (when `spend_limit` is set), `expiration` (optional timestamp), and `period` (optional duration).
+
+> Fee-payment capability is **not** part of `OperatorAuthorization`: per the VPR data model it lives on the separate [FeeGrant](https://verana-labs.github.io/verifiable-trust-vpr-spec/versions/v4/#feegrant) entity, keyed `(grantor_corporation_id, grantee)`. Query it via [`listFeeGrants`](#idx-de-qry-5-list-fee-grants).
 
 ##### IDX-DE-QRY-2 List VS Operator Authorizations
 
@@ -895,7 +927,7 @@ Retrieve a paginated, filtered list of `VSOperatorAuthorization` entries. Each e
 | `corporation_id` | query | uint64 | no | Filter by the granting Corporation id |
 | `vs_operator` | query | string | no | Filter by the grantee VS-operator account |
 | `participant_id` | query | uint64 | no | Filter to entries whose `records[]` contains a record for this `Participant.id` |
-| `only_active` | query | boolean | no | If true, only return entries with at least one non-expired record |
+| `only_active` | query | boolean | no | If true, only return entries with at least one non-expired record (`expiration > now` or null; a record with a `period` is never inactive at its cycle boundary, see [Duration encoding](#duration-encoding)) |
 | `modified_after` | query | datetime | no | Only return entries modified strictly after this datetime |
 
 Supports pagination through attributes `max_id`, `min_id`, `limit` and `sort`, as explained in [Pagination](#pagination).
@@ -912,7 +944,7 @@ Retrieve a specific `OperatorAuthorization` entry by its id. *Aligned with VPR [
 | --- | --- | --- | --- | --- |
 | `id` | path | uint64 | yes | The OperatorAuthorization ID |
 
-**Response:** `{ authorization: OperatorAuthorization }` — same shape as an entry returned by [`listOperatorAuthorizations`](#idx-de-qry-1-list-operator-authorizations): `id`, `corporation_id`, `operator`, `msg_types[]`, `spend_limit[]` (optional `DenomAmount[]`), `remaining_spend[]` (when `spend_limit` is set), `fee_spend_limit[]` (optional), `remaining_fee_spend[]` (when `fee_spend_limit` is set), `expiration` (optional timestamp), and `period` (optional duration).
+**Response:** `{ authorization: OperatorAuthorization }` — same shape as an entry returned by [`listOperatorAuthorizations`](#idx-de-qry-1-list-operator-authorizations): `id`, `corporation_id`, `operator`, `msg_types[]`, `spend_limit[]` (optional `DenomAmount[]`), `remaining_spend[]` (when `spend_limit` is set), `expiration` (optional timestamp), and `period` (optional duration). For the associated fee-payment capability, see [`listFeeGrants`](#idx-de-qry-5-list-fee-grants).
 
 ##### IDX-DE-QRY-4 Get VS Operator Authorization
 
@@ -926,6 +958,26 @@ Retrieve a specific `VSOperatorAuthorization` entry by its id, including its nes
 
 **Response:** `{ authorization: VSOperatorAuthorization }` — same shape as an entry returned by [`listVSOperatorAuthorizations`](#idx-de-qry-2-list-vs-operator-authorizations): `id`, `corporation_id`, `vs_operator`, and `records[]: ParticipantAuthorizationRecord[]` (each record carries `participant_id`, `msg_types[]`, `spend_limit[]` and `remaining_spend[]`, `fee_spend_limit[]` and `remaining_fee_spend[]`, `with_feegrant`, `expiration`, `period`).
 
+##### IDX-DE-QRY-5 List Fee Grants
+
+`GET /v4/delegation/fee-grants`
+
+Retrieve a paginated, filtered list of `FeeGrant` entries — the grants through which a Corporation pays network transaction fees on behalf of a grantee account (an `operator` or a `vs_operator`). *Aligned with the VPR [FeeGrant](https://verana-labs.github.io/verifiable-trust-vpr-spec/versions/v4/#feegrant) entity and [Delegation Module](https://verana-labs.github.io/verifiable-trust-vpr-spec/versions/v4/#delegation-module) fee-grant model; no dedicated VPR query exists (grants are realized as `x/feegrant` allowances).*
+
+The primary consumer use case is a client deciding, before broadcasting a delegable Msg, whether the signing grantee can elect corporation-paid fees by setting the transaction's fee `granter` to the Corporation's `policy_address`: a single call with `grantor_corporation_id=<acting corporation>&grantee=<signing account>&msg_type=<Msg type>&only_active=true` answers it (the `(grantor_corporation_id, grantee)` pair is the FeeGrant's composite key, so at most one entry matches).
+
+| Name | In | Type | Required | Description |
+| --- | --- | --- | --- | --- |
+| `grantor_corporation_id` | query | uint64 | no | Filter by the granting Corporation id |
+| `grantee` | query | string | no | Filter by the grantee account |
+| `msg_type` | query | string | no | Filter to grants whose `msg_types[]` includes this message type |
+| `only_active` | query | boolean | no | If true, only return non-expired grants (`expiration > now` or null; for periodic grants, the auto-renewing cycle boundary never makes the grant inactive) |
+| `modified_after` | query | datetime | no | Only return grants modified strictly after this datetime. A grant is considered modified by its creation, update, or revocation, and by any change to `remaining_spend` (fee draw or cycle reset, detected via the SDK `use_feegrant` event — fee draws happen at fee-processing time and emit no Delegation-module event of their own) |
+
+Supports pagination through attributes `max_id`, `min_id`, `limit` and `sort`, as explained in [Pagination](#pagination). Since the VPR `FeeGrant` has a composite primary key `(grantor_corporation_id, grantee)` and no `id` of its own, the cursor key is an indexer-assigned per-row monotonic uint64 `id` surfaced on each entry (same mechanic as `ActivityItem.id`), distinct from any on-chain identifier.
+
+**Response:** `{ fee_grants: FeeGrant[] }` — each entry carries `id` (indexer-assigned per-row uint64, the pagination cursor), `grantor_corporation_id`, `grantee`, `msg_types[]`, `spend_limit[]` (optional `DenomAmount[]`), `remaining_spend[]` (when `spend_limit` is set — sourced from the underlying `x/feegrant` allowance's running balance, per the VPR Delegation module realization note), `expiration` (optional timestamp), and `period` (optional duration). For periodic grants, `expiration` reflects the underlying allowance's current `period_reset` (the end of the current auto-renewing cycle), per the VPR Delegation module mapping — not the value stored at grant time, which never advances on-chain.
+
 #### Digest methods
 
 ##### IDX-DI-QRY-1 Get Digest
@@ -936,9 +988,100 @@ Look up a previously stored `Digest` entry by its digest string. *Aligned with V
 
 | Name | In | Type | Required | Description |
 | --- | --- | --- | --- | --- |
-| `digest` | path | string | yes | The digest to look up (typically an SRI digest such as `sha384-…`) |
+| `digest` | path | string | yes | The digest to look up, byte-for-byte as anchored (for a credential, its `digestJCS`) |
 
 **Response:** `{ digest: Digest }` — `{ digest: string, created: timestamp }`. Returns HTTP 404 if no `Digest` entry exists for the supplied value.
+
+#### Group methods
+
+The Verana chain uses the Cosmos SDK `x/group` module for Corporation governance: every Corporation is anchored on a group policy account (its `policy_address`), and corporation-level decisions — operator grants, member changes, every non-delegable Msg — are taken through group proposals (see the VPR [Corporation Module](https://verana-labs.github.io/verifiable-trust-vpr-spec/versions/v4/#corporation-module) group-lifecycle note). The Group module surfaces this `x/group` state **scoped to Corporation-anchored groups** — the group whose policy is some Corporation's `policy_address` — so that clients can implement membership discovery, member lists, and the full proposal/vote lifecycle without querying a chain LCD node. Groups and group policies that anchor no Corporation are out of scope and MUST NOT be surfaced.
+
+Write operations remain out of scope: submitting, voting on, executing, and withdrawing proposals (`MsgSubmitProposal`, `MsgVote`, `MsgExec`, `MsgWithdrawProposal`) are ordinary transactions broadcast to the chain; this module provides the read view, and [`IDX-INDEXER-SUB-1`](#idx-indexer-sub-1-subscribe-indexer-events) delivers the corresponding events in real time (see its routing model).
+
+*All methods in this module are indexer-specific (no VPR equivalent; they mirror Cosmos SDK `x/group` queries, joined with Corporation entries).*
+
+##### IDX-GR-QRY-1 Get Corporation Group
+
+`GET /v4/group/get/{corporation_id}`
+
+Retrieve the `x/group` state backing a Corporation: the group, the group policy anchoring the Corporation, and the full member list.
+
+| Name | In | Type | Required | Description |
+| --- | --- | --- | --- | --- |
+| `corporation_id` | path | uint64 | yes | The Corporation ID |
+
+**Response:** `{ group: CorporationGroup }`. The `CorporationGroup` object carries:
+
+- `corporation_id` — echo of the path parameter.
+- **Group:** `group_id` (uint64), `version` (bumped on membership changes), `total_weight` (decimal string), `created_at`.
+- **Policy:** `policy: { address, version, decision_policy }` — `address` equals the Corporation's `policy_address`; `decision_policy` is the `x/group` decision policy surfaced verbatim (a `ThresholdDecisionPolicy` `{ threshold, windows: { voting_period, min_execution_period } }` or a `PercentageDecisionPolicy` `{ percentage, windows: { … } }`).
+- **Members:** `members[]` — each `{ address, weight (decimal string), metadata, added_at }`. The full list is returned inline, not paginated: corporation groups are small by construction.
+
+The group and policy admin is not surfaced separately: per [[MOD-CO-MSG-1]](https://verana-labs.github.io/verifiable-trust-vpr-spec/versions/v4/#mod-co-msg-1-create-corporation), `group_policy_as_admin` is always `true`, so the admin of both the group and the group policy is the `policy.address` itself.
+
+##### IDX-GR-QRY-2 List Corporations By Member
+
+`GET /v4/group/corporations-by-member`
+
+Retrieve the Corporations whose backing group has the supplied account as a current member. This is the single-call **group-membership discovery** method: it replaces the LCD walk `GroupsByMember` → `GroupPoliciesByGroup` → Corporation reverse-mapping, and is the group-member counterpart of the operator-side discovery served by [`listOperatorAuthorizations`](#idx-de-qry-1-list-operator-authorizations) with `operator=<addr>`.
+
+| Name | In | Type | Required | Description |
+| --- | --- | --- | --- | --- |
+| `account` | query | string | yes | Member account address |
+
+Supports pagination through attributes `max_id`, `min_id`, `limit` and `sort`, as explained in [Pagination](#pagination); the cursor key is `corporation_id`.
+
+**Response:** `{ memberships: CorporationMembership[] }` — each entry carries `corporation_id`, `weight` (the member's weight in that group, decimal string), `metadata`, and `added_at`.
+
+##### IDX-GR-QRY-3 List Proposals
+
+`GET /v4/group/proposals`
+
+Retrieve a paginated, filtered list of `x/group` proposals targeting Corporation-anchored group policies.
+
+| Name | In | Type | Required | Description |
+| --- | --- | --- | --- | --- |
+| `corporation_id` | query | uint64 | no | Filter by the Corporation whose group policy the proposal targets |
+| `status` | query | enum | no | `SUBMITTED` \| `ACCEPTED` \| `REJECTED` \| `ABORTED` \| `WITHDRAWN` — short forms of the `x/group` `PROPOSAL_STATUS_*` values |
+| `proposer` | query | string | no | Filter to proposals whose `proposers[]` includes this account |
+| `pending_voter` | query | string | no | Only proposals with `status = SUBMITTED` whose voting period has not ended, where this account is a current member of the backing group and has not yet cast a vote. This is the "proposals awaiting my vote" badge query |
+| `modified_after` | query | datetime | no | Only return proposals modified (submitted, voted on, tallied, executed, withdrawn) strictly after this datetime |
+
+Supports pagination through attributes `max_id`, `min_id`, `limit` and `sort`, as explained in [Pagination](#pagination); the cursor key is the proposal `id` (`x/group` proposal ids are globally unique and monotonic).
+
+**Response:** `{ proposals: Proposal[] }`. Each `Proposal` carries:
+
+- **On-chain (`x/group`):** `id` (uint64), `group_policy_address`, `metadata`, `proposers[]`, `submit_time`, `group_version`, `group_policy_version`, `status` (enum above), `voting_period_end`, `executor_result` (`NOT_RUN` \| `SUCCESS` \| `FAILURE` — short forms of `PROPOSAL_EXECUTOR_RESULT_*`), `messages[]` — the wrapped Msgs JSON-decoded with their `@type`, so clients can render what the proposal will execute without protobuf decoding — and `final_tally_result` (populated by `x/group` once the proposal closes).
+- **Indexer-derived:** `corporation_id` (the Corporation anchored on `group_policy_address`) and `tally` `{ yes_count, no_count, abstain_count, no_with_veto_count }` — the running tally computed over indexed votes at the evaluation block; equals `final_tally_result` once the proposal closes.
+
+##### IDX-GR-QRY-4 Get Proposal
+
+`GET /v4/group/proposal/{id}`
+
+Retrieve a single proposal by its `x/group` proposal id.
+
+| Name | In | Type | Required | Description |
+| --- | --- | --- | --- | --- |
+| `id` | path | uint64 | yes | The proposal ID |
+
+**Response:** `{ proposal: Proposal }` — same shape as an entry returned by [`listProposals`](#idx-gr-qry-3-list-proposals). Returns HTTP 404 for proposals that target no Corporation-anchored group policy.
+
+##### IDX-GR-QRY-5 List Votes
+
+`GET /v4/group/votes`
+
+Retrieve the votes cast on Corporation-anchored proposals.
+
+| Name | In | Type | Required | Description |
+| --- | --- | --- | --- | --- |
+| `proposal_id` | query | uint64 | conditional¹ | Filter by proposal |
+| `voter` | query | string | conditional¹ | Filter by voter account |
+
+¹ At least one of `proposal_id` and `voter` MUST be provided; providing neither is HTTP 400.
+
+Supports pagination through attributes `max_id`, `min_id`, `limit` and `sort`, as explained in [Pagination](#pagination). Since an `x/group` vote is keyed by the composite `(proposal_id, voter)`, the cursor key is an indexer-assigned per-row monotonic uint64 `id` surfaced on each entry (same mechanic as `ActivityItem.id`).
+
+**Response:** `{ votes: Vote[] }` — each entry carries `id` (indexer-assigned per-row uint64, the pagination cursor), `proposal_id`, `voter`, `option` (`YES` \| `NO` \| `ABSTAIN` \| `NO_WITH_VETO` — short forms of `VOTE_OPTION_*`), `metadata`, and `submit_time`.
 
 #### Exchange Rate methods
 
@@ -999,21 +1142,14 @@ Convert an amount of a base asset to its equivalent in a quote asset using the r
 
 **Response:** `{ price: string, base_asset_type, base_asset, quote_asset_type, quote_asset, rate, rate_scale, expires }` where `price` is a base-10 unsigned integer string in the quote asset's base units. When `(base_asset_type, base_asset) == (quote_asset_type, quote_asset)`, `price == amount` and rate fields are omitted. Otherwise `price = floor(amount * rate / 10^rate_scale)`, integer arithmetic, rounded down. If no matching `ExchangeRate` entry exists, is disabled, or is expired, the response is HTTP 404 / 410.
 
-#### Metrics methods
-
-##### IDX-METRICS-QRY-1 Get Global Metrics
-
-`GET /v4/metrics/all`
-
-Return network-wide aggregate metrics across all Ecosystems, Credential Schemas, and Participants at the current (or historical, via `At-Block-Height`) block. *Indexer-specific (no VPR equivalent).*
-
-(No method-specific parameters.)
-
-**Response:** `GlobalMetricsResponse` — totals per metric: `participants` (and the per-role breakdown `participants_ecosystem`, `participants_issuer_grantor`, `participants_issuer`, `participants_verifier_grantor`, `participants_verifier`, `participants_holder`), `active_ecosystems`, `archived_ecosystems`, `active_schemas`, `archived_schemas`, `weight` (int64), `issued`, `verified`, and the slash ledger (`ecosystem_slash_events`, `ecosystem_slashed_amount`, `ecosystem_slashed_amount_repaid`, `network_slash_events`, `network_slashed_amount`, `network_slashed_amount_repaid`).
-
 #### Statistics methods
 
-The indexer maintains a pre-aggregated **time-bucketed statistics** table refreshed at every block, and exposes it through three query endpoints. Buckets are partitioned by granularity, entity scope, and bucket timestamp.
+The Statistics module exposes one **metric vocabulary** (the [metric columns](#metric-columns) below) over one **entity scope** (`GLOBAL`, `ECOSYSTEM`, `CREDENTIAL_SCHEMA`, `PARTICIPANT`) through two access patterns:
+
+- **Block-keyed snapshots** — the value of every metric for one entity at a single evaluation block (latest, or `At-Block-Height`). Served by [`IDX-STATS-QRY-4 Get Stats Snapshot`](#idx-stats-qry-4-get-stats-snapshot) and, for a single participant-count value, by [`IDX-STATS-QRY-3 Count Participants`](#idx-stats-qry-3-count-participants).
+- **Timestamp-keyed series** — the same metrics pre-aggregated into a **time-bucketed statistics** table refreshed at every block, partitioned by granularity, entity scope, and bucket timestamp. Served by [`IDX-STATS-QRY-1 Get Stats`](#idx-stats-qry-1-get-stats) and [`IDX-STATS-QRY-2 Get Stats Range`](#idx-stats-qry-2-get-stats-range).
+
+Both patterns MUST agree on the metric definitions: for any entity and any block `H`, the snapshot value of a metric `m` at `H` equals `cumulative_m` of the latest `stats` row for that entity whose bucket closes at or before `H.block_time` (forward-filled across sparse buckets per [Persistence rule 3](#persistence-rules)), plus the in-bucket changes up to `H`. The persistence model below is shared by both.
 
 ##### Statistics Persistence Model
 
@@ -1043,6 +1179,8 @@ Every row carries two parallel families of integer columns — `cumulative_*` an
 | Metric | `cumulative_*` meaning | Notes |
 | --- | --- | --- |
 | `participants` | Active `Participant` count at the close of the bucket. | Sub-tree count if `entity_type = PARTICIPANT`; see [Active Participant Count Semantics](#active-participant-count-semantics). |
+| `active_ecosystems` | Non-archived `Ecosystem` count. | For `entity_type = ECOSYSTEM`: `1` if the ecosystem is currently active, else `0`. Always `0` for `CREDENTIAL_SCHEMA` and `PARTICIPANT` rows. |
+| `archived_ecosystems` | Archived `Ecosystem` count. | For `entity_type = ECOSYSTEM`: `1` if archived, else `0`. Always `0` for `CREDENTIAL_SCHEMA` and `PARTICIPANT` rows. |
 | `active_schemas` | Non-archived `CredentialSchema` count. | For `entity_type = CREDENTIAL_SCHEMA`: `1` if the schema is currently active, else `0`. |
 | `archived_schemas` | Archived `CredentialSchema` count. | For `entity_type = CREDENTIAL_SCHEMA`: `1` if archived, else `0`. |
 | `weight` | Sum of Participant trust-deposit weights (int64). | |
@@ -1071,7 +1209,7 @@ For each metric `m`:
 
 When [`IDX-STATS-QRY-2 Get Stats Range`](#idx-stats-qry-2-get-stats-range) returns a `total: StatsTotal`, the summed `delta_*` fields are computed by the database engine (`SUM(delta_*)`) in a single query — never accumulated by the application layer — to guarantee constant-time read performance on long ranges.
 
-> Note: [`IDX-STATS-QRY-3 Count Participants`](#idx-stats-qry-3-count-participants) is **not** served by the `stats` table. It reads from the `entity_participant_changes` block-keyed log described in [Active Participant Count Semantics](#active-participant-count-semantics), because it answers point-in-time block-height queries rather than time-bucketed range queries.
+> Note: the snapshot methods [`IDX-STATS-QRY-3 Count Participants`](#idx-stats-qry-3-count-participants) and [`IDX-STATS-QRY-4 Get Stats Snapshot`](#idx-stats-qry-4-get-stats-snapshot) are **not** served by the `stats` table. They answer point-in-time block-height queries rather than time-bucketed range queries: participant counts read from the `entity_participant_changes` block-keyed log described in [Active Participant Count Semantics](#active-participant-count-semantics), and the remaining metrics from the height-versioned entity tables.
 
 ##### IDX-STATS-QRY-1 Get Stats
 
@@ -1089,7 +1227,7 @@ Retrieve a single statistics row — either by its primary key `id`, or by the n
 
 ¹ Either `id` MUST be provided, **or** the composite key (`granularity`, `timestamp`, `entity_type`, `entity_id`) MUST be provided.
 
-**Response:** A `StatsEntry` — `id`, `granularity`, `timestamp`, `entity_type`, `entity_id`, the full set of `cumulative_*` running totals (`cumulative_participants`, `cumulative_active_schemas`, `cumulative_archived_schemas`, `cumulative_weight`, `cumulative_issued`, `cumulative_verified`, and the ecosystem/network slash counters and amounts), and the corresponding `delta_*` change-since-previous-measurement fields.
+**Response:** A `StatsEntry` — `id`, `granularity`, `timestamp`, `entity_type`, `entity_id`, the full set of `cumulative_*` running totals (`cumulative_participants`, `cumulative_active_ecosystems`, `cumulative_archived_ecosystems`, `cumulative_active_schemas`, `cumulative_archived_schemas`, `cumulative_weight`, `cumulative_issued`, `cumulative_verified`, and the ecosystem/network slash counters and amounts), and the corresponding `delta_*` change-since-previous-measurement fields.
 
 ##### IDX-STATS-QRY-2 Get Stats Range
 
@@ -1121,6 +1259,23 @@ Return the count of participants of a given role for a given entity at the block
 | `role_type` | query | integer | yes | `0`=ANY, `1`=ECOSYSTEM, `2`=ISSUER_GRANTOR, `3`=ISSUER, `4`=VERIFIER_GRANTOR, `5`=VERIFIER, `6`=HOLDER |
 
 **Response:** Inline object `{ entity_kind, entity_id, role_type, block_height, participants }` where `block_height` echoes the resolved evaluation block and `participants` is the integer count.
+
+This is the single-value form of [`IDX-STATS-QRY-4 Get Stats Snapshot`](#idx-stats-qry-4-get-stats-snapshot): for the same entity and evaluation block, `participants` here MUST equal the snapshot's `participants` (for `role_type = ANY`) or the matching `participants_<role>` field.
+
+##### IDX-STATS-QRY-4 Get Stats Snapshot
+
+`GET /v4/stats/snapshot`
+
+Return the current value of every tracked metric for one entity — the whole network, an Ecosystem, a Credential Schema, or a Participant sub-tree — at the block selected by the `At-Block-Height` header (or the latest indexed block when omitted). This is the point-in-time counterpart of [`IDX-STATS-QRY-2 Get Stats Range`](#idx-stats-qry-2-get-stats-range): the same [metric vocabulary](#metric-columns), evaluated at a block instead of aggregated into buckets. *Indexer-specific (no VPR equivalent).*
+
+| Name | In | Type | Required | Description |
+| --- | --- | --- | --- | --- |
+| `entity_type` | query | enum | no | `GLOBAL` \| `ECOSYSTEM` \| `CREDENTIAL_SCHEMA` \| `PARTICIPANT` (default `GLOBAL`) |
+| `entity_id` | query | uint64 | conditional | Required for non-`GLOBAL` entity types; MUST be omitted for `GLOBAL` |
+
+**Response:** `StatsSnapshot` — `entity_type`, `entity_id` (`null` for `GLOBAL`), `block_height` (the resolved evaluation block), `timestamp` (that block's time), and one field per tracked metric using the bare metric names: `participants` and the per-role breakdown (`participants_ecosystem`, `participants_issuer_grantor`, `participants_issuer`, `participants_verifier_grantor`, `participants_verifier`, `participants_holder`), `active_ecosystems`, `archived_ecosystems`, `active_schemas`, `archived_schemas`, `weight` (int64), `issued`, `verified`, and the slash ledger (`ecosystem_slash_events`, `ecosystem_slashed_amount`, `ecosystem_slashed_amount_repaid`, `network_slash_events`, `network_slashed_amount`, `network_slashed_amount_repaid`).
+
+Every non-`participants*` field is the value that `cumulative_<metric>` would hold for a `stats` bucket closing exactly at the evaluation block (see the agreement rule in [Statistics methods](#statistics-methods)). The `participants*` fields resolve through the [Active Participant Count Semantics](#active-participant-count-semantics) one-row lookup, one query per `role_type`; the per-role breakdown is snapshot-only and has no `cumulative_*` / `delta_*` column in the `stats` table. Unknown `entity_id` is HTTP 404.
 
 #### Indexer methods
 
@@ -1191,15 +1346,17 @@ Replay persisted indexer events scoped by the same membership filter as [`IDX-IN
 
 When **both** `dids` and `corporation_id` are present, only events matching **both** filters are returned (intersection). When **both** are absent, the response is unfiltered.
 
-**Response:** Inline `{ events: IndexerTransactionEvent[], count, after_block_height }`. Each `IndexerTransactionEvent` carries `type: "indexer-event"`, `event_type` (Cosmos action name, e.g. `StartParticipantOP`), `did`, `block_height`, `tx_hash`, `timestamp`, and `payload: { module, action, message_type, tx_index, message_index, sender, related_dids[], entity_type, entity_id }`.
+**Response:** Inline `{ events: IndexerTransactionEvent[], count, after_block_height }`. Each `IndexerTransactionEvent` carries `type: "indexer-event"`, `event_type` (the VPR method name in PascalCase, e.g. `StartParticipantOP`), `did`, `block_height`, `tx_hash`, `timestamp`, and `payload: { module, action, message_type, tx_index, message_index, sender, related_dids[], entity_type, entity_id }`.
 
 ##### IDX-INDEXER-SUB-1 Subscribe Indexer Events
 
 `WS /v4/indexer/subscribe`
 
-Real-time push of Corporation, Governance Framework, Ecosystem, Credential Schema, Participant, Trust Deposit, Delegation, and Digest events for one or more DIDs. The subscriber opens a WebSocket connection to `/v4/indexer/subscribe` and sends one or more JSON control messages; the first control message MUST be a `subscribe`. *Indexer-specific (no VPR equivalent).*
+Real-time push of Corporation, Governance Framework, Ecosystem, Credential Schema, Participant, Trust Deposit, Delegation, Digest, and Group events for one or more DIDs. The subscriber opens a WebSocket connection to `/v4/indexer/subscribe` and sends one or more JSON control messages; the first control message MUST be a `subscribe`. *Indexer-specific (no VPR equivalent).*
 
 > **Routing model.** Events are routed to scoped subscriptions by DID / Corporation affiliation (`Corporation.did`, `Ecosystem.did`, `Participant.did`, or ownership via `corporation_id` — see the `subscribe` filters below). Entities with neither affiliation — Exchange Rate entries, which are global market data — are therefore not part of any scoped subscription and define no dedicated notification event types; rates are pull-data, queried on demand via the [Exchange Rate methods](#exchange-rate-methods). A **wildcard** subscription (both filters absent) still receives every indexed transaction event, Exchange Rate messages included, since `event_type` is simply the Cosmos action name of the executed message.
+>
+> **`x/group` events** are in scope when they target a **Corporation-anchored group**: an `x/group` message whose group or group policy anchors a Corporation (via `policy_address`, per the [Group methods](#group-methods) scope) is routed as an event **of that Corporation** — delivered to `corporationId`-scoped subscriptions for that Corporation and to `dids[]`-scoped subscriptions containing the Corporation's `did`, with `event_type` the Cosmos action name (`SubmitProposal`, `Vote`, `Exec`, `WithdrawProposal`, `UpdateGroupMembers`, `UpdateGroupPolicyDecisionPolicy`, `UpdateGroupPolicyMetadata`, `UpdateGroupMetadata`, …) and `payload.module = "group"`. This gives corporation-scoped subscribers real-time proposal-lifecycle notifications (new proposal to vote on, vote cast, proposal executed, membership changed) without polling; the corresponding read state is served by the [Group methods](#group-methods). `x/group` events targeting groups that anchor no Corporation are not routed to any scoped subscription (wildcard subscriptions still receive them).
 
 ###### Connect / ready
 
@@ -1214,8 +1371,8 @@ Immediately after a successful WebSocket upgrade, before any `subscribe` is proc
 }
 ```
 
-- `block` — The height of the **next** block that the server will deliver via this WebSocket (i.e. `latestProcessedBlock + 1` at connect time). Clients use `block - 1` as the catch-up cursor when bootstrapping via [`listIndexerEvents`](#idx-indexer-qry-6-list-indexer-events).
-- `blockIntervalMs` — The expected block production interval in milliseconds. Clients SHOULD treat `2 × blockIntervalMs` as the liveness timeout: if no `block` message arrives within that window after sending a `subscribe`, the subscription was not established and the client SHOULD reconnect. The same timeout applies to ongoing heartbeat detection (see [Heartbeat (indexer events)](#heartbeat-indexer-events) below).
+- `block` — The height of the next block the indexer will process (`latestProcessedBlock + 1` at connect time), sent for information. The delivery guarantee for this connection starts at `subscribed.block` — see the `subscribed` acknowledgement below.
+- `blockIntervalMs` — The expected block production interval in milliseconds. Clients SHOULD treat `2 × blockIntervalMs` as the liveness timeout: if no `subscribed` acknowledgement arrives within that window after sending a `subscribe`, the subscription was not established and the client SHOULD reconnect. The same timeout applies to ongoing heartbeat detection (see [Heartbeat (indexer events)](#heartbeat-indexer-events) below).
 
 ###### Subscribe control message
 
@@ -1235,9 +1392,26 @@ Immediately after a successful WebSocket upgrade, before any `subscribe` is proc
 
 A subsequent `subscribe` message replaces the active subscription on the same connection. To stop receiving notifications entirely, send `{ "action": "unsubscribe" }` or close the socket.
 
+###### Subscribed acknowledgement (server → client)
+
+The server confirms every processed `subscribe` with a `subscribed` message, sent once the subscription filter is active:
+
+```json
+{
+   "type": "subscribed",
+   "block": 1500007,
+   "blockTime": "2026-05-11T13:00:12Z"
+}
+```
+
+- `block` — The height of the next block this subscription will deliver (`latestProcessedBlock + 1` at the moment the subscription became active).
+- `blockTime` — Commit time of `block - 1`, the last block processed when the subscription became active. A client snapshotting state at `block - 1` uses this as that snapshot's timestamp. Every block message with `block >= subscribed.block` is guaranteed to be delivered on this connection. Any block processed before the acknowledgement was already visible to the REST catch-up, so a client that drains after receiving `subscribed` observes every event exactly once after deduplication.
+
+An `unsubscribe` is not acknowledged. Clients MUST ignore server messages whose `type` they do not recognise, so this acknowledgement is backward compatible.
+
 ###### Block message (server → client)
 
-After the first `subscribe` is acknowledged, the server sends one **block message** per processed block, in strictly increasing order of `block`:
+After the first `subscribe` is acknowledged with a `subscribed` message, the server sends one **block message** per processed block, in strictly increasing order of `block`:
 
 ```json
 {
@@ -1272,7 +1446,7 @@ A subscriber detects a connection-level loss by observing a gap (`block > previo
 
 ###### Catch-up and resume (indexer events)
 
-This stream does not deliver historical events on connect. To bootstrap from a known point, the client SHOULD call [`listIndexerEvents`](#idx-indexer-qry-6-list-indexer-events) with `after_block_height` set to its `last_seen_block`, paginate to exhaustion, then connect the WebSocket and send its `subscribe`. After a temporary disconnection, the client SHOULD repeat the same pattern using the highest `block` from a previously received block message as its new `last_seen_block`.
+This stream does not deliver historical events on connect, and an event that lands between a REST catch-up and a later `subscribe` is never redelivered — draining history *before* connecting therefore leaves a permanent gap. To bootstrap from a known point, the client SHOULD instead: (1) connect the WebSocket, read the `ready` message, send its `subscribe`, and wait for the `subscribed` acknowledgement, buffering every incoming block message from connect without applying it (a block MAY be delivered before the acknowledgement arrives); (2) call [`listIndexerEvents`](#idx-indexer-qry-6-list-indexer-events) with `after_block_height` set to its `last_seen_block`, paginating to exhaustion; (3) apply the buffered — then live — block messages in order, discarding events already applied during catch-up (same `tx_hash` and `payload.message_index`). The WebSocket delivers every block from `subscribed.block` onwards while the catch-up covers everything up to the indexer's current block, so the union has no gap and the overlap is removed by deduplication. After a temporary disconnection, the client SHOULD repeat the same pattern using the highest `block` from a previously received block message as its new `last_seen_block`.
 
 ###### Backpressure (indexer events)
 
@@ -1295,7 +1469,7 @@ The Verifiable Trust Resolver answers two complementary questions about a DID at
 
    - **`corporation`** — The on-chain Corporation entry the DID **represents** (the Corporation whose `did` equals the resolved DID). A singular object — by VPR, a DID is the `did` of at most one Corporation; omitted when no such Corporation exists for this `did`. Carries the Corporation's stable `id` (uint64) and `policy_address` (the on-chain account that signs on its behalf), plus `deposit`, slash history, and active CGF.
    - **`participations`** — Credential Schemas the DID participates in, filterable by state (`ACTIVE`, `FUTURE`, `INACTIVE`, `EXPIRED`, `REVOKED`, `SLASHED`, `REPAID`); defaults to `ACTIVE` when no filter is given.
-   - **`ecsCredentials`** — The full ECS credentials extracted from the DID's linked-VPs, with their `credentialSubject` claims. Each entry carries the credential `id` (required — a VC-mandatory attribute), plus two informational fields the evaluation computes anyway per [[IDX-VT-EVAL-1]]: `digestJCS` (the recomputed, ledger-verified JCS digest) and `issuedAtTime` (the `created` timestamp of the credential's ledger `Digest` entry — its effective issuance time). Two entries with the same `id` in one response MUST NOT occur: the indexer MUST exclude such duplicates as invalid credentials.
+   - **`ecsCredentials`** — The full ECS credentials surfaced for the DID, with their `credentialSubject` claims: every ECS credential carried by its linked-VPs, plus, under [VS-REQ-4], the ECS-ORG or ECS-PERSONA credential presented by the DID Document of its Service Credential's issuer. The array is therefore not limited to the DID's own linked-VPs; an entry whose `credentialSubject.id` is not the resolved `did` is a claim about that issuer. Each entry carries the credential `id` (required — a VC-mandatory attribute), plus two informational fields the evaluation computes anyway per [[IDX-VT-EVAL-1]]: `digestJCS` (the recomputed, ledger-verified JCS digest) and `issuedAtTime` (the `created` timestamp of the credential's ledger `Digest` entry — its effective issuance time). Two entries with the same `digestJCS` in one response MUST NOT occur: the indexer MUST exclude such duplicates.
    - **`services`** — Non-`LinkedVerifiablePresentation` service entries from the DID Document (DIDComm, MCP, A2A, VsAgentAdminAPI, …), surfaced verbatim.
    - **`presentations`** — Per-VP credential summaries (`vtcCredentials[]`, each entry `{id, credentialSchemaId, ecosystemId}`); sub-flags additionally surface unresolvable and invalid credential IDs per VP.
    - **`ecosystems`** — Aggregate metrics for the Ecosystems (and their underlying Credential Schemas and active Ecosystem Governance Frameworks) **the DID is the controller of** (the Ecosystems whose `did` equals the resolved DID). Sub-flags control whether archived Ecosystems (and their archived embedded Credential Schemas) are included.
@@ -1318,13 +1492,15 @@ This subsection normatively defines **what** the trust evaluation depends on, **
 - the **ECS-ORG** or **ECS-PERSONA** credential of the **anchor service** — the DID itself when the Service Credential is self-issued (architecture pattern #1, [VS-REQ-3]), or the issuing parent service when it is issued by another DID (architecture pattern #2, [VS-REQ-4]) — and the `Participant` entry anchoring that credential;
 - a **point-in-time issuance check**: at the issuance instant of the ECS-ORG / ECS-PERSONA credential, its issuer held a valid `Participant` entry granting the right to issue it. This is verified once per evaluation against historical indexed state; it is *not* a future boundary — subsequent expiry of the issuer's `Participant` entry does not invalidate an already-issued credential (revocation and slashing do, and those are signalled on-chain).
 
-The **issuance instant is determined objectively from the credential's VPR-anchored digest** — never from issuer-asserted fields (`validFrom` proves nothing about when a credential was actually issued and can be backdated). Per [W3C VTCs: Determining Credential Issuance Time](https://verana-labs.github.io/verifiable-trust-spec/versions/v4/#w3c-vtcs-determining-credential-issuance-time), the evaluation MUST, for each ECS-ORG / ECS-PERSONA credential:
+The **issuance instant is determined objectively from the credential's VPR-anchored digest** — never from issuer-asserted fields (`validFrom` proves nothing about when a credential was actually issued and can be backdated).
 
-1. **Canonicalize** the credential with [JCS (RFC 8785)](https://www.rfc-editor.org/rfc/rfc8785) and **recompute** its `digestJCS` using the `digest_algorithm` of the referenced `CredentialSchema`;
-2. **Look up** that digest on the ledger via [Get Digest (MOD-DI-QRY-1)](https://verana-labs.github.io/verifiable-trust-vpr-spec/versions/v4/#mod-di-qry-1-get-digest) (anchored at issuance through `CreateOrUpdateParticipantSession` → `StoreDigest`); the returned `Digest` entry's `created` timestamp is the **effective issuance time**;
-3. **Verify** the issuer's authorization at *that* timestamp against historical indexed state.
+How a credential's `digestJCS` is computed, how its `digest_algorithm` is resolved, and how the effective issuance time is obtained from the VPR are normatively defined by [W3C VTCs: Determining Credential Issuance Time](https://verana-labs.github.io/verifiable-trust-spec/versions/v4/#w3c-vtcs-determining-credential-issuance-time). This document does not restate that procedure, and an implementation MUST NOT vary it.
 
-A credential whose recomputed digest has **no** ledger entry has no provable issuance time and MUST fail the check (the DID cannot be `trusted` through it). The recomputed digest and the effective issuance time are surfaced informationally on each `ecsCredentials[]` entry as `digestJCS` and `issuedAtTime`.
+For each ECS-ORG / ECS-PERSONA credential named above, the evaluation MUST obtain the effective issuance time per that section, then **verify the issuer's authorization at that instant**. The issuer's grant window is evaluated at the effective issuance time; the issuer's `participant_state` is evaluated at the evaluated block.
+
+The digest lookup is performed against ledger state at the evaluated block, per [Conventions → `At-Block-Height` header](#at-block-height-header), and its result yields the effective issuance time. A credential with no corresponding `Digest` entry at that block has no provable issuance time, and the DID MUST NOT be `trusted` through it.
+
+The recomputed digest and the effective issuance time are surfaced informationally on each `ecsCredentials[]` entry as `digestJCS` and `issuedAtTime`.
 
 Other presented credentials (non-ECS VTCs, ECS-UA, ECS-BADGE, additional VP contents) are contextual data surfaced by the opt-in response sections; they MUST NOT influence `trusted` or `expiresAtTime`.
 
@@ -1490,7 +1666,7 @@ expiresAtTime: derived per [[IDX-VT-EVAL-2]] — here the earliest boundary is t
          "ecosystemId":1,
          "participantId":601,
          "id":"urn:uuid:cc5c398f-bc64-45df-9482-9cb583cce197",
-         "digestJCS":"sha384-K7x9Qp2mVtR5nW8jL3cD6fH1yB4gS0aE9uZoI2rT7vNqM5xC8bJ4kF6hP1dG3wY",
+         "digestJCS":"NsQMTn9itZLmRkNs574oDPojGA2Z16QzAC74xXIDrnzpuEvGvF2ReGkXycm2NNRl",
          "issuedAtTime":"2026-02-10T09:15:00Z",
          "validFrom":"2010-01-01T19:23:24Z",
          "validUntil":"2030-01-01T19:23:24Z",
@@ -1516,7 +1692,7 @@ expiresAtTime: derived per [[IDX-VT-EVAL-2]] — here the earliest boundary is t
          "ecosystemId":1,
          "participantId":602,
          "id":"urn:uuid:8f2a1c04-77de-4b31-a5c9-0e6f4d2b9a11",
-         "digestJCS":"sha384-T2mB8vN5qX1rW4jK7cF9dH3yL6gA0uS8eZ4oI1pR5tVnQ7xC2bM9kJ3hD6fG8wY",
+         "digestJCS":"4gXBGI8rCgbPbB0t9KPgG4vvOxKiaWaR2ARbObScE9xU6uKCJl5nFttjw2s0Ro6Z",
          "issuedAtTime":"2026-01-22T14:40:00Z",
          "validFrom":"2010-01-01T19:23:24Z",
          "validUntil":"2030-01-01T19:23:24Z",
@@ -1692,8 +1868,8 @@ Immediately after a successful WebSocket upgrade, before any `subscribe` is proc
 }
 ```
 
-- `block` — The height of the **next** block that the server will deliver via this WebSocket (i.e. `latestProcessedBlock + 1` at connect time). Clients use `block - 1` as the bootstrap snapshot point — see [Bootstrap pattern](#bootstrap-pattern).
-- `blockIntervalMs` — The expected block production interval in milliseconds. Clients SHOULD treat `2 × blockIntervalMs` as the liveness timeout: if no `block` message arrives within that window after sending a `subscribe`, the subscription was not established and the client SHOULD reconnect. The same timeout applies to ongoing heartbeat detection (see [Heartbeat (resolver changes)](#heartbeat-resolver-changes)).
+- `block` — The height of the next block the indexer will process (`latestProcessedBlock + 1` at connect time), sent for information. The bootstrap snapshot point is `subscribed.block - 1` — see [Bootstrap pattern](#bootstrap-pattern).
+- `blockIntervalMs` — The expected block production interval in milliseconds. Clients SHOULD treat `2 × blockIntervalMs` as the liveness timeout: if no `subscribed` acknowledgement arrives within that window after sending a `subscribe`, the subscription was not established and the client SHOULD reconnect. The same timeout applies to ongoing heartbeat detection (see [Heartbeat (resolver changes)](#heartbeat-resolver-changes)).
 
 ###### Subscribe control message
 
@@ -1734,9 +1910,26 @@ Immediately after a successful WebSocket upgrade, before any `subscribe` is proc
 
 A subsequent `subscribe` message replaces the active subscription on the same connection. To stop receiving notifications entirely, send `{ "action": "unsubscribe" }` or close the socket.
 
+###### Subscribed acknowledgement (server → client)
+
+The server confirms every processed `subscribe` with a `subscribed` message, sent once the subscription filter is active:
+
+```json
+{
+   "type": "subscribed",
+   "block": 1500007,
+   "blockTime": "2026-05-11T13:00:12Z"
+}
+```
+
+- `block` — The height of the next block this subscription will deliver (`latestProcessedBlock + 1` at the moment the subscription became active).
+- `blockTime` — Commit time of `block - 1`, the last block processed when the subscription became active. A client snapshotting state at `block - 1` uses this as that snapshot's timestamp. Every block message with `block >= subscribed.block` is guaranteed to be delivered on this connection. Any block processed before the acknowledgement was already visible to `listChanges`, so a client that drains after receiving `subscribed` observes every event exactly once after deduplication.
+
+An `unsubscribe` is not acknowledged. Clients MUST ignore server messages whose `type` they do not recognise, so this acknowledgement is backward compatible.
+
 ###### Block message (server → client)
 
-After the first `subscribe` is acknowledged, the server sends one **block message** per processed block, in strictly increasing order of `block`:
+After the first `subscribe` is acknowledged with a `subscribed` message, the server sends one **block message** per processed block, in strictly increasing order of `block`:
 
 ```json
 {
@@ -1892,8 +2085,8 @@ Response:
 
 The recommended initial-sync sequence for a client with an empty mirror:
 
-1. **Connect** to `WS /v4/verifiable-trust/subscribe`. Read the `ready` message and capture `B = ready.block`.
-2. **Subscribe** with the desired `dids` / `channels`. Buffer all incoming block messages **without applying them** until step 5.
+1. **Connect** to `WS /v4/verifiable-trust/subscribe` and read the `ready` message.
+2. **Subscribe** with the desired `dids` / `channels`, buffering every incoming block message **without applying it** from connect (a block MAY be delivered before the acknowledgement arrives), then wait for the `subscribed` acknowledgement and capture `B = subscribed.block`. Keep buffering until step 5.
 3. **Enumerate** the DID universe at block `B - 1` by calling `GET /v4/verifiable-trust/dids` with header `At-Block-Height: B-1` and paginating through `nextCursor`.
 4. **Resolve** each enumerated DID by calling `POST /v4/verifiable-trust/resolve` with header `At-Block-Height: B-1` and the response selectors the client cares about. Persist the resulting state as the snapshot at block `B - 1`.
 5. **Apply** the buffered WebSocket block messages in order (starting at block `B`), then continue applying live block messages as they arrive.
