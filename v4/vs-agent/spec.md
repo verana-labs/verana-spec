@@ -1,6 +1,6 @@
 # VS Agent v4 Specification
 
-**Latest Draft:** spec v4-draft12
+**Latest Draft:** spec v4-draft13
 
 ## Abstract
 
@@ -283,14 +283,14 @@ See [comparison between VS-REQ-3 and VS-REQ-4](https://verana-labs.github.io/ver
 
 #### [VSA-VTI-CFG-ENV-ECS] ECS Credential Claims
 
-These variables carry the claims that the agent proposes for its own ECS credentials. The agent uses them in an onboarding process, and when it issues its own Service credential (see [ECS Participants and Credentials](#vsa-vti-ecs-ecs-participants-and-credentials)).
+These variables carry the claims that the agent proposes for its own ECS credentials. The agent uses them in an onboarding process, and when it issues its own ECS credential (see [ECS Participants and Credentials](#vsa-vti-ecs-ecs-participants-and-credentials) and [ECS Self-Issuance](#vsa-vti-ecs-self-ecs-self-issuance)).
 
 The agent derives the remaining claims of each schema, and reads no variable for them:
 
 - `id`: the DID of the agent.
 - `logoDigestSri`, `avatarDigestSri`, `termsAndConditionsDigestSri`, and `privacyPolicyDigestSri`: the agent fetches the resource at the paired URI claim and computes the digest of the response. The agent SHOULD retry a failed fetch, and SHOULD increase the delay between the attempts. When the fetch continues to fail, the agent MUST log a descriptive error that names the variable and the URI, and MUST stop the flow.
 
-**ECS-Organization** ([VT-ECS-ORG-CRED-W3C]). The agent reads these variables in [ECS Standalone Mode](#vsa-vti-ecs-standalone-ecs-standalone-mode) only.
+**ECS-Organization** ([VT-ECS-ORG-CRED-W3C]). The agent reads these variables in [ECS Standalone Mode](#vsa-vti-ecs-standalone-ecs-standalone-mode), and when it issues this credential to itself per [ECS Self-Issuance](#vsa-vti-ecs-self-ecs-self-issuance).
 
 | Variable | Required | Claim |
 |---|---|---|
@@ -304,7 +304,7 @@ The agent derives the remaining claims of each schema, and reads no variable for
 | `ECS_CLAIMS_ORG_ORGANIZATION_KIND` | OPTIONAL | `organizationKind` |
 | `ECS_CLAIMS_ORG_LEI` | OPTIONAL | `lei` |
 
-**ECS-Persona** ([VT-ECS-PERSONA-CRED-W3C]). The agent reads these variables in [ECS Standalone Mode](#vsa-vti-ecs-standalone-ecs-standalone-mode) only.
+**ECS-Persona** ([VT-ECS-PERSONA-CRED-W3C]). The agent reads these variables in [ECS Standalone Mode](#vsa-vti-ecs-standalone-ecs-standalone-mode), and when it issues this credential to itself per [ECS Self-Issuance](#vsa-vti-ecs-self-ecs-self-issuance).
 
 | Variable | Required | Claim |
 |---|---|---|
@@ -2752,7 +2752,7 @@ The agent signs a small, fixed set of VPR messages with its own `vs_operator` ac
 | Message | Sent by the agent when | Section |
 |---|---|---|
 | `SetParticipantOPtoValidated` [[MOD-PP-MSG-3]](https://verana-labs.github.io/verifiable-trust-vpr-spec/#mod-pp-msg-3-set-participant-op-to-validated) | As Validator, after it validates the Applicant of an Onboarding Process. | [[VSA-VTI-FLOW-OP-NEW]](#vsa-vti-flow-op-new-new-onboarding-process), [[VSA-VTI-FLOW-OP-RENEW]](#vsa-vti-flow-op-renew-renew-onboarding-process) |
-| `CreateOrUpdateParticipantSession` [[MOD-PP-MSG-10]](https://verana-labs.github.io/verifiable-trust-vpr-spec/#mod-pp-msg-10-create-or-update-participant-session) | As Validator, to anchor the `digestJCS` of a credential before it delivers it; as issuer of its own Service credential. | [[VSA-VTI-FLOW-ISSUE]](#vsa-vti-flow-issue-credential-issuance-and-acceptance), [ECS Standalone Mode](#vsa-vti-ecs-standalone-ecs-standalone-mode) |
+| `CreateOrUpdateParticipantSession` [[MOD-PP-MSG-10]](https://verana-labs.github.io/verifiable-trust-vpr-spec/#mod-pp-msg-10-create-or-update-participant-session) | As Validator, to anchor the `digestJCS` of a credential before it delivers it; as issuer of its own ECS credential. | [[VSA-VTI-FLOW-ISSUE]](#vsa-vti-flow-issue-credential-issuance-and-acceptance), [[VSA-VTI-ECS-SELF]](#vsa-vti-ecs-self-ecs-self-issuance) |
 | `TriggerResolver` [[MOD-PP-MSG-15]](https://verana-labs.github.io/verifiable-trust-vpr-spec/#mod-pp-msg-15-trigger-resolver) | After it adds or removes a `LinkedVerifiablePresentation` entry, after it becomes a Verifiable Service, or after a service endpoint mutation, when `VERANA_AUTO_TRIGGER_RESOLVER` is `true`. | [Linked VP Management](#vsa-vt-lvp-linked-vp-management), [[VSA-ADM-VT-SE]](#vsa-adm-vt-se-service-endpoint-management) |
 
 [VSA-VPR-TX-1] The agent MUST sign each of these messages with its `vs_operator` account, and MUST simulate the gas of each transaction and apply `VERANA_GAS_ADJUSTMENT` to the result, per [[VSA-VTI-CFG-ENV-NET]](#vsa-vti-cfg-env-net-network-configuration).
@@ -2870,21 +2870,35 @@ When the operator sets `TRUSTED_ECS_ECOSYSTEM_DIDS`, the agent MUST verify that 
 The agent composes the claims of each ECS credential from the [[VSA-VTI-CFG-ENV-ECS] ECS Credential Claims](#vsa-vti-cfg-env-ecs-ecs-credential-claims) variables of the schema of the flow:
 
 - In an onboarding process, the agent sends the composed claims as the `claims` field of the [`onboarding-request`](../vt-flow-protocol/spec.md#onboarding-request). The agent MUST omit that field when it composes no claim. The validator MAY override any claim that it receives.
-- When the agent issues its own Service credential, the agent MUST validate the composed claims against the `json_schema` of the `CredentialSchema` entry. When the validation fails, the agent MUST log a descriptive error that names each missing or invalid claim, and MUST stop the issuance.
+- When the agent issues its own ECS credential, the agent MUST validate the composed claims against the `json_schema` of the `CredentialSchema` entry. When the validation fails, the agent MUST log a descriptive error that names each missing or invalid claim, and MUST stop the issuance.
 
 The agent MUST complete its [Bootstrap Sequence](#vsa-vti-boot-bootstrap-sequence) and serve its Administration API before it holds any ECS credential.
 
-> [[VT-ECS-JSON-SCHEMA-VPR-CONFIG]](https://verana-labs.github.io/verifiable-trust-spec/#vt-ecs-json-schema-vpr-config-essential-schema-vpr-configuration) requires `holder_onboarding_mode` = `ISSUER_ONBOARDING_PROCESS` for the ECS-Organization, ECS-Persona, and ECS-Service credential schemas. The agent obtains an ECS credential through an onboarding process only.
+> [[VT-ECS-JSON-SCHEMA-VPR-CONFIG]](https://verana-labs.github.io/verifiable-trust-spec/#vt-ecs-json-schema-vpr-config-essential-schema-vpr-configuration) requires `holder_onboarding_mode` = `ISSUER_ONBOARDING_PROCESS` for the ECS-Organization, ECS-Persona, and ECS-Service credential schemas. The agent obtains each ECS credential through an onboarding process, except a credential that it issues to itself under [[VSA-VTI-ECS-SELF] ECS Self-Issuance](#vsa-vti-ecs-self-ecs-self-issuance). An issuer creates the HOLDER `Participant` entry of the holder under that onboarding mode, and the agent that issues to itself is that issuer.
 
 > A validator agent accepts the connection of a not-yet-verifiable applicant of an ECS credential under the conditions of [[VSA-DC-CONN-2]](#vsa-dc-conn-connection-acceptance-policy).
+
+##### [VSA-VTI-ECS-SELF] ECS Self-Issuance
+
+An ISSUER of an ECS schema cannot onboard against itself. The agent that holds the ISSUER `Participant` entry of a schema is the only party that can issue a credential of that schema. The chain of credentials of that schema therefore terminates at that agent. An agent that holds no credential of the schema presents no `serviceProvider`, and fails [[VS-CONN-VS]](https://verana-labs.github.io/verifiable-trust-spec/#vs-conn-vs-requirements-for-a-vs-to-accept-a-connection-from-another-service). Every applicant that must onboard against that agent then refuses to open the flow.
+
+These requirements apply in both [ECS Standalone Mode](#vsa-vti-ecs-standalone-ecs-standalone-mode) and [ECS Delegated Mode](#vsa-vti-ecs-delegated-ecs-delegated-mode). The `AGENT_MODE` variable does not change them.
+
+[VSA-VTI-ECS-SELF-1] The agent MUST issue its own credential of an ECS schema when it holds an active ISSUER `Participant` entry for that schema, and that entry names the account of the agent as its `vs_operator`. The requirement applies to every ECS schema, and not to the ECS-Service schema only.
+
+[VSA-VTI-ECS-SELF-2] The agent MUST NOT replace a credential that another issuer issued to it with a self-issued credential of the same schema. A credential from an onboarding process takes precedence.
+
+[VSA-VTI-ECS-SELF-3] To issue the credential, the agent MUST compose and validate the claims per [[VSA-VTI-ECS]](#vsa-vti-ecs-ecs-participants-and-credentials), sign the credential, compute its `digestJCS`, and anchor that digest on-chain with `CreateOrUpdateParticipantSession` ([[MOD-PP-MSG-10]](https://verana-labs.github.io/verifiable-trust-vpr-spec/#mod-pp-msg-10-create-or-update-participant-session)), as in step 2 of [Credential Issuance and Acceptance](#vsa-vti-flow-issue-credential-issuance-and-acceptance). The session names the ISSUER `Participant` entry, and names no counterparty `Participant` entry, because a self-issued credential has no counterparty. The agent MUST then publish the credential as a `LinkedVerifiablePresentation` entry, per [[VSA-VT-LVP-1]](#vsa-vt-lvp-linked-vp-management).
+
+[VSA-VTI-ECS-SELF-4] When the ISSUER `Participant` entry becomes revoked or slashed, the agent MUST delete each credential that it issued under that entry, and MUST remove the `LinkedVerifiablePresentation` entry of each one, per [[VSA-VT-LVP-3]](#vsa-vt-lvp-linked-vp-management).
 
 ##### [VSA-VTI-ECS-STANDALONE] ECS Standalone Mode
 
 The agent holds an ECS-Organization or an ECS-Persona credential, and issues its own Service credential ([[VS-REQ-3]](https://verana-labs.github.io/verifiable-trust-spec/#vs-req-verifiable-service-basic-requirements-and-linked-vps)). The agent:
 
-1. Obtains the **ECS-Organization** or **ECS-Persona** credential and its HOLDER `Participant`, as the applicant of a [New Onboarding Process](#vsa-vti-flow-op-new-new-onboarding-process) with an authorized ISSUER of that schema.
+1. Obtains the **ECS-Organization** or **ECS-Persona** credential and its HOLDER `Participant`, as the applicant of a [New Onboarding Process](#vsa-vti-flow-op-new-new-onboarding-process) with an authorized ISSUER of that schema. When the agent itself holds the ISSUER `Participant` of that schema, it issues that credential to itself per [[VSA-VTI-ECS-SELF]](#vsa-vti-ecs-self-ecs-self-issuance), and runs no onboarding process.
 2. Obtains an ISSUER `Participant` for the **ECS-Service** schema, as the applicant of a [New Onboarding Process](#vsa-vti-flow-op-new-new-onboarding-process).
-3. Issues its own **Service credential** under the ISSUER `Participant` of step 2: it signs the credential, computes its `digestJCS`, anchors that digest on-chain with `CreateOrUpdateParticipantSession` as in step 2 of [Credential Issuance and Acceptance](#vsa-vti-flow-issue-credential-issuance-and-acceptance), and publishes the credential as a `LinkedVerifiablePresentation` in its DID Document ([[VT-CRED-W3C-LINKED-VP]](https://verana-labs.github.io/verifiable-trust-spec/#vt-cred-w3c-linked-vp-w3c-vtc-linked-vp)).
+3. Issues its own **Service credential** under the ISSUER `Participant` of step 2, per [[VSA-VTI-ECS-SELF-3]](#vsa-vti-ecs-self-ecs-self-issuance), and publishes the credential as a `LinkedVerifiablePresentation` in its DID Document ([[VT-CRED-W3C-LINKED-VP]](https://verana-labs.github.io/verifiable-trust-spec/#vt-cred-w3c-linked-vp-w3c-vtc-linked-vp)).
 
 The agent runs step 3 when steps 1 and 2 are complete.
 
@@ -3384,7 +3398,7 @@ The agent publishes credentials in its DID Document as `LinkedVerifiablePresenta
 
 [VSA-VT-LVP-2] When the agent replaces a stored credential with an updated one — after a renewal, or after a [Validator Update](#vsa-vti-flow-upd-validator-updates) that delivers an updated credential — the agent MUST replace the `LinkedVerifiablePresentation` entry of the old credential, when one exists, with one for the new credential.
 
-[VSA-VT-LVP-3] When a credential is revoked, or when the HOLDER `Participant` under which the agent holds it is revoked or slashed, the agent MUST remove the `LinkedVerifiablePresentation` entry of that credential, when one exists, and MUST delete the credential from its credential store.
+[VSA-VT-LVP-3] When a credential is revoked, or when the HOLDER `Participant` under which the agent holds it is revoked or slashed, the agent MUST remove the `LinkedVerifiablePresentation` entry of that credential, when one exists, and MUST delete the credential from its credential store. For a self-issued credential, which has no HOLDER `Participant`, the ISSUER `Participant` that anchors it is the entry that this rule follows, per [[VSA-VTI-ECS-SELF-4]](#vsa-vti-ecs-self-ecs-self-issuance).
 
 [VSA-VT-LVP-4] The agent MUST publish its DID Document after each change of a `LinkedVerifiablePresentation` entry, per [[VSA-PUB-DID-3]](#vsa-pub-did-did-document-and-did-log).
 
@@ -3463,7 +3477,7 @@ The agent reports its state through [`getLiveness`](#vsa-adm-ag-live-getliveness
 | `Corporation.did` rotates away from the DID of the agent, under the per-DID subscription scope | Warning | The agent stops processing events on the previous DID. | [[VSA-VTI-NOTIF-CO]](#vsa-vti-notif-co-corporation-notifications) |
 | The resource at an ECS claim URI cannot be fetched after retries | Error, naming the variable and the URI | The flow stops. | [[VSA-VTI-CFG-ENV-ECS]](#vsa-vti-cfg-env-ecs-ecs-credential-claims) |
 | The Ecosystem of an ECS flow is not in `TRUSTED_ECS_ECOSYSTEM_DIDS`, or a delegated-mode check fails | Error | The flow stops. | [[VSA-VTI-ECS]](#vsa-vti-ecs-ecs-participants-and-credentials) |
-| The composed claims of the own Service credential fail schema validation | Error, naming each missing or invalid claim | The issuance stops. | [[VSA-VTI-ECS]](#vsa-vti-ecs-ecs-participants-and-credentials) |
+| The composed claims of a self-issued ECS credential fail schema validation | Error, naming each missing or invalid claim | The issuance stops. | [[VSA-VTI-ECS]](#vsa-vti-ecs-ecs-participants-and-credentials) |
 | A received credential fails verification | Error | The credential is rejected. | [[VSA-VTI-FLOW-VERIFY]](#vsa-vti-flow-verify-credential-verification) |
 | An AnonCreds offer, request, or presentation fails the trust decision, or the check cannot run | Warning, naming the DID, the role, and the `CredentialSchema` | The step is refused, or the exchange ends in `abandoned`. | [[VSA-VTI-FLOW-VERIFY-AC]](#vsa-vti-flow-verify-ac-anoncreds-trust-decision) |
 | An event delivery fails | Error | The agent MAY retry. | [[VSA-EVT-DEL-3]](#vsa-evt-del-delivery) |
@@ -3672,6 +3686,11 @@ Every identifier of this document, in lexical order. A section identifier links 
 | `VSA-VTI-DIDDOC-1` | A caller MUST NOT create, modify, or delete a `DIDCommMessaging`, a `LinkedVerifiablePresentation`, a `VsAgentAdminAPI`, an `AnonCredsReg… |  |
 | `VSA-VTI-ECS` | [ECS Participants and Credentials](#vsa-vti-ecs-ecs-participants-and-credentials) | Participant and Credential Acquisition Logic |
 | `VSA-VTI-ECS-DELEGATED` | [ECS Delegated Mode](#vsa-vti-ecs-delegated-ecs-delegated-mode) | ECS Participants and Credentials |
+| `VSA-VTI-ECS-SELF` | [ECS Self-Issuance](#vsa-vti-ecs-self-ecs-self-issuance) | ECS Participants and Credentials |
+| `VSA-VTI-ECS-SELF-1` | The agent MUST issue its own credential of an ECS schema when it holds an active ISSUER `Participant` entry for that schema, and that… |  |
+| `VSA-VTI-ECS-SELF-2` | The agent MUST NOT replace a credential that another issuer issued to it with a self-issued credential of the same schema. A credential… |  |
+| `VSA-VTI-ECS-SELF-3` | To issue the credential, the agent MUST compose and validate the claims per VSA-VTI-ECS, sign the credential, compute its `digestJCS`,… |  |
+| `VSA-VTI-ECS-SELF-4` | When the ISSUER `Participant` entry becomes revoked or slashed, the agent MUST delete each credential that it issued under that entry,… |  |
 | `VSA-VTI-ECS-STANDALONE` | [ECS Standalone Mode](#vsa-vti-ecs-standalone-ecs-standalone-mode) | ECS Participants and Credentials |
 | `VSA-VTI-FLOW-DI` | [Credential Direct Issuance](#vsa-vti-flow-di-credential-direct-issuance) | Participant and Credential Acquisition Flows |
 | `VSA-VTI-FLOW-DIDCOMM` | [DIDComm Protocol](#vsa-vti-flow-didcomm-didcomm-protocol) | DIDComm Interface |
