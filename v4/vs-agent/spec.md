@@ -1,6 +1,6 @@
 # VS Agent v4 Specification
 
-**Latest Draft:** spec v4-draft12
+**Latest Draft:** spec v4-draft13
 
 ## Abstract
 
