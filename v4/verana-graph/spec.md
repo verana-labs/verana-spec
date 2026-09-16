@@ -201,12 +201,12 @@ For each `presentations[]` entry the graph MUST:
 
 The indexer has already fetched the VP, verified its signature against the holder's DID Document, and classified every credential it contains, so the graph trusts the classification per [[TG-DEREF-1]] and is NOT required to re-fetch the VP body for its core entity-and-edge model.
 
-Implementations that wish to additionally index the *subject claims* of these VTCs (e.g. to support search facets such as “Verifiable Services presenting a Diploma credential whose `degreeType = MSc`”) MAY HTTP-GET the VP URL, re-verify the VP signature against the holder's DID Document, extract each credential whose `id` appears in `vtcCredentials[].id`, and persist its body alongside the corresponding `Vtc` record. This body fetch is OPTIONAL, is subject to the per-block dedup of [[TG-DEREF-4]], and SHOULD be skipped when the live envelope's `presentations` channel flag is `false` (the VP contents cannot have changed in that case).
+Implementations SHOULD additionally index the *subject claims* of these VTCs: HTTP-GET the VP URL, re-verify the VP signature against the holder's DID Document, extract each credential whose `id` appears in `vtcCredentials[].id`, and persist its body alongside the corresponding `Vtc` record. This body fetch is RECOMMENDED because two discovery surfaces degrade without it — the domain-credential free-text slot of [[TG-FCT-4]] (e.g. *“Verifiable Services presenting a Diploma credential whose `degreeType = MSc`”*) falls back to schema-level text only, and the `attributes` field of the `credentials` snippet group of [[TG-FCT-6b]] is `null`. It is subject to the per-block dedup of [[TG-DEREF-4]], and SHOULD be skipped when the live envelope's `presentations` channel flag is `false` (the VP contents cannot have changed in that case).
 
 [TG-DEREF-4] Out-of-band resource fetches fall into two tiers:
 
 - **Immutable resources — fetched at most once, ever.** Credential schemas ([[TG-DEREF-2]]) and CGF / EGF document bodies ([[TG-DEREF-2a]] / [[TG-DEREF-2b]]) are content-immutable: a given schema `id` and a given GF-document `digestSri` are permanently bound to one body. The graph MUST maintain a process-wide cache keyed by schema `id` for schemas and by `digestSri` for GF documents, and MUST return cached bytes on every subsequent surfacing — *regardless of which block, which channel, or which DID surfaces them*. Per-block dedup is therefore redundant for these channels and MUST NOT be imposed as the dedup boundary; the cache itself is the dedup primitive.
-- **Mutable resources — deduplicated per `(resource-id, current block)`.** Optional Linked Verifiable Presentation body fetches ([[TG-DEREF-3]]) target URLs whose payload can change over time (the holder re-signs the VP whenever its credential set changes). Multiple resolves at the same block referencing the same VP URL MUST trigger only one fetch; the dedup key is the VP URL itself, not the originating DID.
+- **Mutable resources — deduplicated per `(resource-id, current block)`.** The RECOMMENDED Linked Verifiable Presentation body fetches ([[TG-DEREF-3]]) target URLs whose payload can change over time (the holder re-signs the VP whenever its credential set changes). Multiple resolves at the same block referencing the same VP URL MUST trigger only one fetch; the dedup key is the VP URL itself, not the originating DID.
 
 Inline metadata in the resolve response (`corporation.cgf`, `ecosystems[].egf`, `presentations[].vtcCredentials[]` and friends) requires no fetch and no dedup.
 
@@ -453,17 +453,14 @@ This invariant does NOT extend to `EcsCredential` or `Vtc`. For both, the `crede
 
 [TG-IDX-1] For graph-traversal queries, the implementation MUST maintain bidirectional adjacency on every edge label listed in [Edges](#edges), so that a query rooted at any entity can walk one hop in either direction in O(1) per edge.
 
-[TG-IDX-2] For faceted-search queries, the implementation MUST maintain inverted indexes on the search-facing fields highlighted as such in the per-entity tables. At minimum, the index set MUST cover:
+[TG-IDX-2] For faceted-search queries, the implementation MUST maintain inverted indexes (or equivalent lookup structures) covering **every structured filter field declared in [Faceted-search Queries § TG-FCT-3](#faceted-search-queries)** with the operators stated there, and **every free-text field of [[TG-FCT-4]]**, including its denormalisation slots. Concretely, per surface:
 
-- `Did.serviceTypes`, `Did.trusted`
-- `Corporation.deposit` (numeric range), `Corporation.slashedEvents` (numeric range)
-- `Ecosystem.participants[<role>]` (numeric range), `Ecosystem.issuedCredentials` (numeric range), `Ecosystem.verifiedCredentials` (numeric range)
-- `CredentialSchema.ecosystemId`, `CredentialSchema.issuedCredentials` (numeric range), `CredentialSchema.verifiedCredentials` (numeric range)
-- `ServiceEndpoint.type`
-- `EcsCredential.OrganizationCredential.{name, countryCode, legalJurisdiction, organizationKind, lei, registryId}`
-- `EcsCredential.PersonaCredential.{name}`
-- `EcsCredential.ServiceCredential.{type, name}`
-- Free-text indexes on every textual `name`, `description`, `address` field across the catalogue, plus full-text indexes on `Corporation.cgf` and `Ecosystem.egf` document content.
+- `Did` surface: `Did.{trusted, pattern, serviceTypes, corporationId, isCorporation, isEcosystem, ecosystemIds, operatorKind, operatorName}`; `EcsCredential.ServiceCredential.{type, name}` and `EcsCredential.ServiceCredential.minimumAgeRequired` (numeric range); `EcsCredential.OrganizationCredential.{name, countryCode, legalJurisdiction, organizationKind, lei, registryId}`; `EcsCredential.PersonaCredential.{name, controllerCountryCode, controllerJurisdiction}`; `Participant.{ecosystemId, credentialSchemaId, role}` (joining only `ACTIVE` entries per [[TG-ACT-1]])
+- `Ecosystem` surface: `archived`, `corporationId`, `participants[<role>]` (numeric range), `issuedCredentials` (numeric range), `verifiedCredentials` (numeric range)
+- `Corporation` surface: `deposit` (numeric range), `slashedEvents` (numeric range), `lastSlashedAtTime` (temporal range)
+- `CredentialSchema` surface: `archived`, `ecosystemId`, `issuedCredentials` (numeric range), `verifiedCredentials` (numeric range)
+- `ServiceEndpoint` surface: `type`
+- Free-text indexes on every field of the [[TG-FCT-4]] table — the credential text fields, the schema-text and VTC-subject denormalisation slots on the `Did` document, the bound-DID identity-text slots on the `Ecosystem` / `Corporation` documents, and `CredentialSchema.{title, description}` — plus full-text indexes on `Corporation.cgf` and `Ecosystem.egf` document content when fetched per [[TG-DEREF-2a]] / [[TG-DEREF-2b]].
 
 ## Block-Progress Subscription
 
@@ -721,7 +718,7 @@ Worked example: a `Did`-surface query for *"plumber issuers"* (free-text *"plumb
 | `Did.isEcosystem`                                    | eq                     | the DID is the declared `did` of at least one `Ecosystem` entry ("show ecosystem controllers only")                                                                                                                            |
 | `Did.ecosystemIds`                                   | contains, containsAny  | the DID controls the given Ecosystem id(s)                                                                                                                                                                                     |
 | `Did.operatorKind`                                   | eq, in                 | derived facet ∈ `{ Organization, Persona }`, materialised at ingestion from the operative ORG-or-PERSONA credential the VS's trust chain rests on (Pattern A: self; Pattern B: issuer). Lets queries say "personal" / "corporate" structurally |
-| `Did.operatorName`                                   | eq, in, prefix         | derived facet, the same value as the `operatorName` of [[TG-FCT-6a]]: the operative `OrganizationCredential.name` or `PersonaCredential.name` (Pattern A: self; Pattern B: issuer). One field rather than one per credential type, so a client filtering by operator name does not have to branch on `operatorKind` first |
+| `Did.operatorName`                                   | eq, in, prefix         | derived facet, the same value as `operator.name` of [[TG-FCT-6b]]: the operative `OrganizationCredential.name` or `PersonaCredential.name` (Pattern A: self; Pattern B: issuer). One field rather than one per credential type, so a client filtering by operator name does not have to branch on `operatorKind` first |
 | `EcsCredential.ServiceCredential.type`               | eq, in                 | high-value facet — the VS-level service category                                                                                                                                                                              |
 | `EcsCredential.ServiceCredential.minimumAgeRequired` | range                  | "kids ≤ 8" → `<= 7`                                                                                                                                                                                                          |
 | `OrganizationCredential.countryCode`                 | eq, in                 | from operative Org cred (Pattern A: self; B: issuer)                                                                                                                                                                          |
@@ -779,7 +776,8 @@ Worked example: a `Did`-surface query for *"plumber issuers"* (free-text *"plumb
 | `Corporation.cgf.documents[].body` (when fetched per [[TG-DEREF-2b]])                | low        |                                                                                                                                                                                                                                                                                                    |
 | `CredentialSchema.{title, description}` from the loaded schema body                  | low        | enables "iso 27001 certification" type queries on the `CredentialSchema` surface                                                                                                                                                                                                                    |
 | `{title, description}` of any `CredentialSchema` the `Did` has a `Participant` for | low–medium | **denormalised onto the `Did` doc at index time.** Per-role weighting (e.g. higher weight for ISSUER Participants) is implementation-defined. Enables one-shot "*plumber issuers*" queries on the `Did` surface — no two-step search-the-schema-then-search-the-DIDs flow                          |
-| `{textual fields}` of `credentialSubject` of any non-ECS `Vtc` the `Did` holds       | medium     | **denormalised onto the `Did` doc at index time. MUST.** Domain-credential discovery — *"baby shoes in Bogotá"*, *"streaming video for kids"* — relies on free-text matching content authored on non-ECS VTCs. Requires VP body fetches per [[TG-DEREF-3]]; if a VP body is not fetched, only schema-level text contributes |
+| `{textual fields}` of `credentialSubject` of any non-ECS `Vtc` the `Did` holds       | medium     | **denormalised onto the `Did` doc at index time. MUST.** Domain-credential discovery — *"baby shoes in Bogotá"*, *"streaming video for kids"* — relies on free-text matching content authored on non-ECS VTCs. Requires the VP body fetches of [[TG-DEREF-3]] (RECOMMENDED); if a VP body is not fetched, only schema-level text contributes |
+| bound-DID identity text on the `Ecosystem` / `Corporation` surfaces: the bound DID's `ServiceCredential.{name, description}` and operative operator `name` | high       | **denormalised onto the `Ecosystem` / `Corporation` surface documents at index time. MUST.** These entities carry no name of their own — the bound DID's credentials are their only human-readable identity (the `didCard` rationale of [[TG-FCT-6b]]) — so name-based discovery (*"EU banking registry"*) depends on this slot. Refresh follows the `didCard` denormalisation rule of [[TG-FCT-6b]] |
 
 [TG-FCT-4a] **Matching semantics.** So that a given `freeText` payload admits the same result set on every conformant implementation regardless of the backing engine, the free-text matcher MUST apply the following baseline:
 
@@ -814,52 +812,163 @@ Worked example: a `Did`-surface query for *"plumber issuers"* (free-text *"plumb
     }
   ],
   "facets": {
-    "countryCode":      [ { "value": "FR", "count": 42 } ],
-    "organizationKind": [ "..." ],
-    "serviceTypes":     [ "..." ],
-    "ecosystemId":      [ "..." ]
+    "OrganizationCredential.countryCode":      [ { "value": "FR", "count": 42 } ],
+    "OrganizationCredential.organizationKind": [ "..." ],
+    "Did.serviceTypes":                        [ "..." ],
+    "Participant.ecosystemId":                 [ "..." ]
   },
   "cursor": "opaque-pagination-token-or-null"
 }
 ```
 
-The `facets` object MUST contain aggregations for at least every `eq` / `in` filter field declared on the queried surface in [[TG-FCT-3]]. The minimum content of each `hit.snippet` is fixed by [[TG-FCT-6a]].
+The `facets` object MUST contain an aggregation for every filter field that the request's `filters` references **with an `eq` or `in` operator** — bare-scalar and array values included, since they are sugar for `eq` / `in`; a field referenced only with another operator (e.g. `prefix`, `range`) requires no aggregation — so a filtered result always carries the drill-down counts for its own filter dimensions. It SHOULD additionally carry an implementation-defined default set of aggregations useful to the surface (e.g. `Did.operatorKind`, `EcsCredential.ServiceCredential.type`, `OrganizationCredential.countryCode` on the `Did` surface). Aggregations over near-unique-value fields (`OrganizationCredential.lei`, `OrganizationCredential.registryId`, `Did.operatorName`) are never required beyond that referenced-filter rule. Facet keys are the filter field names exactly as declared for the queried surface in [[TG-FCT-3]] — identical to the keys the client uses in `filters` (the dotted form on the `Did` surface, the bare form on the other surfaces); implementations MAY truncate each aggregation to a top-N of values. The minimum content of each `hit.snippet` is fixed by [[TG-FCT-6a]]; each surface's snippet is additionally composed of the selectable field groups of its [[TG-FCT-6b]] catalogue, projected per the request's `snippet` selector ([[TG-FCT-6c]]).
 
-[TG-FCT-6a] **Minimum snippet fields.** Every `hit.snippet` MUST carry the entity's primary key, `lastObservedAtTime`, and the visibility flags applicable to the surface (`isTrustExpired` for `Did`, `archived` for `Ecosystem` / `CredentialSchema`). In addition, **every surface whose entity is DID-bound MUST carry that DID** in the snippet: `did` on `Did`, `Corporation`, and `Ecosystem` hits; `didId` (the owning DID) on `ServiceEndpoint` hits.
+[TG-FCT-6a] **Minimum snippet fields (core).** Every `hit.snippet` MUST carry the entity's primary key, `lastObservedAtTime`, and the visibility flags applicable to the surface (`isTrustExpired` for `Did`, `archived` for `Ecosystem` / `CredentialSchema`). In addition, **every surface whose entity is DID-bound MUST carry that DID** in the snippet: `did` on `Did`, `Corporation`, and `Ecosystem` hits; `didId` (the owning DID) on `ServiceEndpoint` hits.
 
-For the **`Did` surface**, the snippet MUST additionally carry the result-card fields below, so that a search response alone can render a service list — name, both logos, operator identity, the owner Corporation's trust signals, and the declared service endpoints — without per-hit traversal or resolve calls. Every field is nullable under the stated condition; a field with no value MUST be present with the value `null`, not omitted.
+For the **`Did` surface**, the core additionally carries the flags below on every hit, regardless of the `snippet` projection of [[TG-FCT-6c]]:
 
 | Field | Source | Null when |
 | --- | --- | --- |
 | `trusted` | `Did.trusted` | never |
-| `pattern` | `Did.pattern` | no `ServiceCredential` |
-| `operatorKind` | derived facet (`Organization` \| `Persona`, per [[TG-FCT-3]]) | trust chain incomplete |
-| `serviceName` | `ServiceCredential.name` | no `ServiceCredential` |
-| `serviceType` | `ServiceCredential.type` | no `ServiceCredential` |
-| `serviceDescription` | `ServiceCredential.description` — implementations MAY truncate for card use; a truncation MUST end at a character boundary and be flagged with a trailing `…` | no `ServiceCredential` |
-| `serviceLogoUri` | `ServiceCredential.logoUri` | no `ServiceCredential` |
-| `serviceLogoDigestSri` | `ServiceCredential.logoDigestSri` | no `ServiceCredential` |
-| `operatorName` | operative `OrganizationCredential.name` or `PersonaCredential.name` (Pattern A: self; Pattern B: issuer) | trust chain incomplete |
-| `operatorLogoUri` | operative `OrganizationCredential.logoUri` or `PersonaCredential.avatarUri` | trust chain incomplete, or Persona without avatar |
-| `operatorLogoDigestSri` | paired `OrganizationCredential.logoDigestSri` or `PersonaCredential.avatarDigestSri` | same as `operatorLogoUri` |
-| `operatorCountryCode` | operative `OrganizationCredential.countryCode` or `PersonaCredential.controllerCountryCode` | trust chain incomplete |
-| `operatorRegistryId` | operative `OrganizationCredential.registryId` | trust chain incomplete, or the operator is a Persona |
-| `operatorAddress` | operative `OrganizationCredential.address` | trust chain incomplete, or the operator is a Persona |
-| `corporationId` | `Did.corporationId` (the owner Corporation per the VPR [DID ownership invariant](https://verana-labs.github.io/verifiable-trust-vpr-spec/versions/v4/#did-ownership-invariant)) | never |
-| `corporationDeposit` | owner `Corporation.deposit`, via `Did.corporationId` | owner `Corporation` record not yet materialised (bootstrap transient) |
-| `corporationSlashedEvents` | owner `Corporation.slashedEvents` (`0` when never slashed) | owner `Corporation` record not yet materialised (bootstrap transient) |
-| `corporationLastSlashedAtTime` | owner `Corporation.lastSlashedAtTime` | never slashed, or owner `Corporation` record not yet materialised |
-| `corporationSlashedValue` | owner `Corporation.slashedValue` | never slashed, or owner `Corporation` record not yet materialised |
-| `serviceEndpoints` | the DID's `ServiceEndpoint` records (the non-`LinkedVerifiablePresentation` `services[]` entries of the DID Document), each projected as `{ id, type, serviceEndpoint }` with `serviceEndpoint` preserved verbatim per [DID-CORE] | never — empty array (`[]`) when the DID Document declares no such entry |
 | `isCorporation` | `true` iff the DID is the current `did` of a `Corporation` entry | never |
-| `isEcosystem` | `true` iff the DID is the current `did` of at least one `Ecosystem` entry (equivalently: `ecosystemIds` is non-empty) | never |
-| `ecosystemIds` | ids of the `Ecosystem` entries whose current `did` is this DID | never — empty array (`[]`) when none |
+| `isEcosystem` | `true` iff the DID is the current `did` of at least one `Ecosystem` entry (equivalently: the `ecosystems` group of [[TG-FCT-6b]], when requested, is non-empty) | never |
 
-The `service*`, `operator*`, and `serviceEndpoints` values are denormalised onto the `Did` search document at ingestion time from data the graph already persists (the `EcsCredential` records, the pattern / operator derivation of [[TG-FCT-3]], and the DID's own `ServiceEndpoint` records); no additional fetch is introduced. The `corporation*` values are sourced from the owner `Corporation` record through the `Did.corporationId` anchor: implementations MAY denormalise them onto the `Did` search document or join them at serve time. A denormalising implementation MUST refresh the corporation-sourced fields of every `Did` document of a Corporation when that Corporation's change envelope reports a `corporation`-channel change (deposit tick — the graph subscribes with `includeDepositChanges: true` per [[TG-INGEST-1]] — or slash event) or a `trust`-channel `corporationId` rotation. The `isCorporation`, `isEcosystem`, and `ecosystemIds` entity bindings refresh on the DID's `corporation` and `ecosystems` channel envelopes (creation, archival, and `did` rotation in either direction). These bindings let a `Did`-surface result card badge the DID as a Corporation or Ecosystem controller without a second query. Implementations MAY add further snippet fields on any surface.
+For the **`ServiceEndpoint` surface**, the core additionally carries `type` and the verbatim `serviceEndpoint` value (per [DID-CORE]) — the endpoint itself is the payload of the surface, not group content.
+
+Everything else a hit carries is organised into the queried surface's named field groups of [[TG-FCT-6b]], returned according to the projection contract of [[TG-FCT-6c]].
+
+[TG-FCT-6b] **Snippet field groups.** Each surface's snippet payload beyond the [[TG-FCT-6a]] core is partitioned into named groups; each group is returned as one snippet field of the same name, according to the projection contract of [[TG-FCT-6c]]. Within a returned group, a field with no value MUST be present with the value `null`, not omitted. A group that is returned but empty is `null` (nullable object groups), `[]` (array groups), or a zero-`total` envelope (list-envelope groups), as stated per group. For every list-envelope group, implementations MAY truncate `entries` to an implementation-defined maximum against pathological cardinalities; the envelope's aggregate fields (`total`, and where present `ecosystemCount` / `byRole`) MUST always reflect the untruncated population. Groups never affect visibility: a group that embeds another entity's data carries that entity's own flags, and per the non-propagation rule of [[TG-FCT-2]] MUST NOT gate the hit it appears on.
+
+**Shared shape: `didCard`.** Every DID-bound surface other than `Did` itself defines a `didCard` group — the surface's bound DID rendered as a result card, so a single UI component can render any DID-bound hit. Shape: `{ did, trusted, isTrustExpired, service, operator }`, where `service` and `operator` follow exactly the `Did`-surface group shapes below and are nullable under the same conditions. The group itself is never `null` — the bound DID always exists as a `Did` record. Its `trusted` / `isTrustExpired` flags describe the bound DID without gating the hit; on surfaces whose hits are already hidden when the bound DID is trust-expired ([[TG-FCT-2]]), `isTrustExpired` is necessarily `false` on every visible hit and is kept for shape uniformity.
+
+**`Did` surface.** Core flags per [[TG-FCT-6a]]; seven groups. Default set: `service`, `operator`, `corporation`, `endpoints` — sized so that a search response alone can render a service list (name, both logos, operator identity, the owner Corporation's trust signals, and the declared service endpoints) without per-hit traversal or resolve calls. Opt-in: `ecosystems`, `participations`, `credentials`.
+
+**`service`** (object \| `null`) — the VS-level identity asserted by the `ServiceCredential`. `null` when the DID presents no `ServiceCredential` (in which case `Did.pattern` is also `null`, per its entity table).
+
+| Field | Source | Null when |
+| --- | --- | --- |
+| `pattern` | `Did.pattern` ([[def: architecture pattern]], `A` \| `B`) | never (the group is `null` when there is no `ServiceCredential`) |
+| `name` | `ServiceCredential.name` | never |
+| `type` | `ServiceCredential.type` | never |
+| `description` | `ServiceCredential.description` — implementations MAY truncate for card use; a truncation MUST end at a character boundary and be flagged with a trailing `…` | never |
+| `logoUri` | `ServiceCredential.logoUri` | never |
+| `logoDigestSri` | `ServiceCredential.logoDigestSri` | never |
+
+**`operator`** (object \| `null`) — the operative ORG-or-PERSONA identity the VS's trust chain rests on (Pattern A: self; Pattern B: issuer), per the derivation of [[TG-FCT-3]]. `null` when the trust chain is incomplete.
+
+| Field | Source | Null when |
+| --- | --- | --- |
+| `kind` | derived facet (`Organization` \| `Persona`, per [[TG-FCT-3]]) | never |
+| `name` | operative `OrganizationCredential.name` or `PersonaCredential.name` | never |
+| `logoUri` | operative `OrganizationCredential.logoUri` or `PersonaCredential.avatarUri` | Persona without avatar |
+| `logoDigestSri` | paired `OrganizationCredential.logoDigestSri` or `PersonaCredential.avatarDigestSri` | same as `logoUri` |
+| `countryCode` | operative `OrganizationCredential.countryCode` or `PersonaCredential.controllerCountryCode` | never |
+| `registryId` | operative `OrganizationCredential.registryId` | the operator is a Persona |
+| `address` | operative `OrganizationCredential.address` | the operator is a Persona |
+
+**`corporation`** (object, never `null`) — the owner Corporation per the VPR [DID ownership invariant](https://verana-labs.github.io/verifiable-trust-vpr-spec/versions/v4/#did-ownership-invariant), through the `Did.corporationId` anchor.
+
+| Field | Source | Null when |
+| --- | --- | --- |
+| `id` | `Did.corporationId` | never |
+| `deposit` | owner `Corporation.deposit` | owner `Corporation` record not yet materialised (bootstrap transient) |
+| `slashedEvents` | owner `Corporation.slashedEvents` (`0` when never slashed) | owner `Corporation` record not yet materialised (bootstrap transient) |
+| `lastSlashedAtTime` | owner `Corporation.lastSlashedAtTime` | never slashed, or owner `Corporation` record not yet materialised |
+| `slashedValue` | owner `Corporation.slashedValue` | never slashed, or owner `Corporation` record not yet materialised |
+
+**`endpoints`** (array) — the DID's `ServiceEndpoint` records (the non-`LinkedVerifiablePresentation` `services[]` entries of the DID Document), each projected as `{ id, type, serviceEndpoint }` with `serviceEndpoint` preserved verbatim per [DID-CORE]. `[]` when the DID Document declares no such entry.
+
+**`ecosystems`** (array) — the `Ecosystem` entries whose current `did` is this DID (the DID is an ecosystem controller). `[]` when none; non-empty iff the core `isEcosystem` flag is `true`. Archived entries appear with their `archived` flag — these are references from the hit, not direct `Ecosystem`-surface hits, so the [[TG-FCT-2]] gates do not apply to them. Each entry:
+
+| Field | Source | Null when |
+| --- | --- | --- |
+| `id` | `Ecosystem.id` | never |
+| `archived` | `Ecosystem.archived` | never |
+| `participants` | `Ecosystem.participants` — per-role aggregate counts (map role → uint) | never |
+| `schemas` | one entry per member of `Ecosystem.credentialSchemaIds[]`, each `{ id, title, archived, participants }`: `id` and `archived` from the `CredentialSchema` record, `title` from the loaded `CredentialSchema.body` (`null` when the body declares no title), `participants` the per-role counts of `CredentialSchema.participants` | never — `[]` when the Ecosystem owns no schema |
+
+**`participations`** (object) — the DID's **`ACTIVE`** `Participant` entries. Non-`ACTIVE` entries never reach the search surface, per [[TG-ACT-1]]; the full lifecycle view is the [`A7`](#a-did-rooted) traversal. Shape: `{ total, ecosystemCount, byRole, entries }`.
+
+| Field | Source | Null when |
+| --- | --- | --- |
+| `total` | count of the DID's `ACTIVE` `Participant` entries | never |
+| `ecosystemCount` | count of distinct `Participant.ecosystemId` values among them | never |
+| `byRole` | map role → count over the same entries | never — `{}` when `total = 0` |
+| `entries` | one entry per `ACTIVE` `Participant`, each `{ id, role, credentialSchemaId, schemaTitle, ecosystemId }`: `id` the stable VPR `Participant.id` (the [`G1`](#g-participant-rooted) traversal anchor), `role` per the [`Participant`](#participant) entity table, `schemaTitle` from the loaded `CredentialSchema.body` (`null` when the body declares no title) | never — `[]` when `total = 0` |
+
+**`credentials`** (object) — the **non-ECS** Verifiable Trust Credentials presented by the DID: the `Vtc` records reachable via `Did —REFERENCES_VP→ LinkedVerifiablePresentation —CONTAINS_VTC→ Vtc`. ECS credentials (`ServiceCredential`, `OrganizationCredential`, `PersonaCredential`) MUST NOT appear in this group — they are already projected by the `service` and `operator` groups. A presented VTC is by definition held by the DID, so entries carry no role field. Shape: `{ total, entries }`.
+
+| Field | Source | Null when |
+| --- | --- | --- |
+| `total` | count of distinct `Vtc` records presented by the DID | never |
+| `entries` | one entry per such `Vtc`, each `{ id, credentialSchemaId, schemaTitle, ecosystemId, attributes }`: `id` the credential id (`Vtc.id`, the [`B1`](#b-credential-rooted) / `B2` traversal anchor), `schemaTitle` from the loaded `CredentialSchema.body` (`null` when the body declares no title), `ecosystemId` the issuing ecosystem (`Vtc.ecosystemId`), `attributes` the credential's `credentialSubject` claims verbatim, minus the subject `id` (which is the hit's own DID) | never — `[]` when `total = 0`; per entry, `attributes` is `null` when the implementation has not fetched the VP body per [[TG-DEREF-3]] (the fetch is RECOMMENDED) |
+
+The `service`, `operator`, and `endpoints` groups are denormalised onto the `Did` search document at ingestion time from data the graph already persists (the `EcsCredential` records, the pattern / operator derivation of [[TG-FCT-3]], and the DID's own `ServiceEndpoint` records); no additional fetch is introduced. The `corporation` group is sourced from the owner `Corporation` record through the `Did.corporationId` anchor: implementations MAY denormalise it onto the `Did` search document or join it at serve time; a denormalising implementation MUST refresh the corporation-sourced fields of every `Did` document of a Corporation when that Corporation's change envelope reports a `corporation`-channel change (deposit tick — the graph subscribes with `includeDepositChanges: true` per [[TG-INGEST-1]] — or slash event) or a `trust`-channel `corporationId` rotation. The `ecosystems` group and the core `isCorporation` / `isEcosystem` bindings refresh on the DID's `corporation` and `ecosystems` channel envelopes (creation, archival, `did` rotation in either direction, and participant-count ticks — the graph subscribes with `includeParticipantCounts: true`); these bindings let a result card badge the DID as a Corporation or Ecosystem controller without a second query. The `participations` group refreshes on the DID's `participations` channel envelopes, and its `schemaTitle` values materialise with the referenced `CredentialSchema` records per [[TG-DEREF-2]]. The `credentials` group refreshes on the DID's `presentations` channel envelopes and, for `attributes`, on the VP body fetches of [[TG-DEREF-3]].
+
+**`Ecosystem` surface.** Core: `id`, `did`, `archived`, `lastObservedAtTime` (per [[TG-FCT-6a]]). Default set: `corporation`, `stats`, `didCard`; opt-in: `governance`, `schemas`. `didCard` is part of the default set for a structural reason: the `Ecosystem` entity carries no name or description of its own — the controller DID's `ServiceCredential` / operator credentials are the only human-readable identity in the graph, so an Ecosystem result card is unrenderable without them.
+
+| Group | Shape | Content | Empty value |
+| --- | --- | --- | --- |
+| `corporation` | object | the controlling Corporation's identity and trust signals via `Ecosystem.corporationId` — identical field set to the `Did`-surface `corporation` group (`id`, `deposit`, `slashedEvents`, `lastSlashedAtTime`, `slashedValue`) | never `null` (`id` is always known; the other fields are `null` under the `Did`-surface group's conditions) |
+| `stats` | object | `participants` (per-role map), `issuedCredentials`, `verifiedCredentials` — the [`Ecosystem`](#ecosystem) entity-table counters | never `null` |
+| `governance` | object \| `null` | the inline `egf` summary `{ version, activeSince, documents[{language, url, digestSri}] }` per [[TG-DEREF-2a]] — metadata only, never document bodies | `null` when the Ecosystem has not yet published any GF |
+| `schemas` | array | one entry per member of `Ecosystem.credentialSchemaIds[]`, each `{ id, title, archived, participants }` — the same item shape as inside the `Did`-surface `ecosystems` group | `[]` when the Ecosystem owns no schema |
+| `didCard` | object | the controller DID (`Ecosystem.did`) as a card, per the shared shape above | never `null` |
+
+**`Corporation` surface.** Core: `id`, `did`, `lastObservedAtTime`. Default set: `trust`, `didCard`; opt-in: `governance`, `ecosystems`, `dids`. The same `didCard`-by-default rationale applies: the Corporation's human-readable identity (name, logo) lives on its DID's credentials.
+
+| Group | Shape | Content | Empty value |
+| --- | --- | --- | --- |
+| `trust` | object | `{ policyAddress, deposit, slashedEvents, lastSlashedAtTime, slashedValue }` from the [`Corporation`](#corporation) record | never `null`; `lastSlashedAtTime` / `slashedValue` are `null` when never slashed |
+| `governance` | object \| `null` | the inline `cgf` summary per [[TG-DEREF-2b]] — same shape as the `Ecosystem` `governance` group | `null` when the Corporation has not yet published any GF |
+| `ecosystems` | object | the Ecosystems this Corporation controls: `{ total, entries[{ id, archived }] }` | zero-`total` envelope |
+| `dids` | object | the DIDs this Corporation owns per the VPR [DID ownership invariant](https://verana-labs.github.io/verifiable-trust-vpr-spec/versions/v4/#did-ownership-invariant): `{ total, entries[{ did, trusted, isTrustExpired }] }` — unbounded, so the list-envelope truncation escape applies | zero-`total` envelope |
+| `didCard` | object | the Corporation's own DID (`Corporation.did`) as a card | never `null` |
+
+**`CredentialSchema` surface.** Core: `id`, `archived`, `lastObservedAtTime`. Default set: `schema`, `ecosystem`; opt-in: `stats`, `body`. Not DID-bound: no `didCard`.
+
+| Group | Shape | Content | Empty value |
+| --- | --- | --- | --- |
+| `schema` | object | `{ type, digestSri, title, description }` — `type` / `digestSri` from the [`CredentialSchema`](#credentialschema) record, `title` / `description` from the loaded body | never `null`; `title` / `description` are `null` when the body declares none |
+| `ecosystem` | object | `{ id, archived }` of the owning Ecosystem — exactly one, per [[TG-EDGE-3]] | never `null` |
+| `stats` | object | `participants` (per-role map), `issuedCredentials`, `verifiedCredentials` — the entity-table counters | never `null` |
+| `body` | object | the full loaded JSON Schema body, verbatim | never `null` ([[TG-DEREF-2]] loads and digest-validates the body before the record exists). Opt-in purely for wire weight |
+
+**`ServiceEndpoint` surface.** Core: `id`, `didId`, `type`, `serviceEndpoint`, `lastObservedAtTime` (per [[TG-FCT-6a]] — the endpoint value is core, not group content). One group, in the default set:
+
+| Group | Shape | Content | Empty value |
+| --- | --- | --- | --- |
+| `didCard` | object | the owning DID (`didId`) as a card — without it, an endpoint-surface hit ("show me MCP endpoints") cannot be attributed in a UI without a per-hit second call | never `null` |
+
+The `didCard` groups are sourced from the bound DID's records (`Ecosystem.did`, `Corporation.did`, `ServiceEndpoint.didId`): implementations MAY denormalise the card onto the hit's search document or join it at serve time; a denormalising implementation MUST refresh the card fields of every affected document when the bound DID's change envelope reports a `trust` or `ecsCredentials` channel change — the inverse of the corporation-fields refresh rule above, on the same machinery. The `stats` groups refresh on the count-tick sub-flags the graph already subscribes to per [[TG-INGEST-1]] (`includeParticipantCounts`, `includeIssuedCredentials`, `includeVerifiedCredentials`); the `governance` groups on the `corporation` / `ecosystems` channel envelopes that rotate the inline `cgf` / `egf`; the `schema`, `ecosystem`, `schemas`, and `body` groups on the owning Ecosystem's `ecosystems` channel envelopes and the schema loads of [[TG-DEREF-2]]. Implementations MAY add further fields to any group, and further snippet fields on any surface.
+
+[TG-FCT-6c] **Snippet projection.** The search request carries an OPTIONAL `snippet` selector: an object whose keys are group names of the **queried surface's** [[TG-FCT-6b]] catalogue and whose values are booleans.
+
+```json
+{
+  "surface":  "Did",
+  "freeText": "fabrice",
+  "snippet":  { "service": true, "operator": true, "participations": true, "credentials": true }
+}
+```
+
+- When `snippet` is **omitted**, the response MUST return the queried surface's **default set** per the table below, and MUST NOT return that surface's opt-in groups.
+- When `snippet` is **present**, the response MUST return exactly the groups whose value is `true` and MUST omit every other group entirely — the group key absent from the snippet, not `null`. An empty object (`{}`) returns the [[TG-FCT-6a]] core alone.
+- The [[TG-FCT-6a]] core is returned on every hit regardless of the projection.
+- A `snippet` key that is not a group name of the **queried** surface's [[TG-FCT-6b]] catalogue — including a group name defined only on another surface — MUST be rejected with the `INVALID_INPUT` error of [[TG-ERR-1]](#error-responses).
+- The projection shapes the **response payload only**: filters, visibility gates, free-text matching, ranking, `facets`, `totalCount`, and `highlights` are computed identically whatever the projection.
+
+| Surface | Default set | Opt-in groups |
+| --- | --- | --- |
+| `Did` | `service`, `operator`, `corporation`, `endpoints` | `ecosystems`, `participations`, `credentials` |
+| `Ecosystem` | `corporation`, `stats`, `didCard` | `governance`, `schemas` |
+| `Corporation` | `trust`, `didCard` | `governance`, `ecosystems`, `dids` |
+| `CredentialSchema` | `schema`, `ecosystem` | `stats`, `body` |
+| `ServiceEndpoint` | `didCard` | — |
 
 [TG-FCT-7] **Pagination.** Implementations MUST use **cursor-based** pagination — the `cursor` returned in one response is opaque to the client and is the only way to fetch subsequent pages. Offset-based pagination (`?offset=...&limit=...`) MUST NOT be used because it is unstable under the live ingestion stream: records appear and disappear from the result set as upstream block events flow in, and offset-based pagination silently skips or duplicates rows under concurrent writes. A cursor MAY become invalid (e.g. its anchor record left the result set); responses to invalid cursors MUST return the `INVALID_CURSOR` error of [[TG-ERR-1]](#error-responses) rather than silently re-anchoring.
 
-[TG-FCT-8] **Composition with traversal.** Faceted-search returns ranked hits with the minimum data needed for a result card; deep enrichment (full governance chain, all held credentials, etc.) is the job of [Graph-traversal Queries](#graph-traversal-queries) from the hit's id. Implementations MAY expose composite façades that fold both layers into a single request (e.g. "search returning top-N hits plus A1 + A2 inlined per hit"), but the contract — [[TG-FCT-1]] through [[TG-FCT-7]] plus the [[TG-QRY-3]] traversal contracts — remains the unit of conformance.
+[TG-FCT-8] **Composition with traversal.** Faceted-search returns ranked hits carrying the data selected by the [[TG-FCT-6c]] projection — at minimum the [[TG-FCT-6a]] core, at most every group of [[TG-FCT-6b]]; deep enrichment beyond the groups (full governance chain, per-credential issuer recovery, validator chains, lifecycle states of non-`ACTIVE` Participants, etc.) is the job of [Graph-traversal Queries](#graph-traversal-queries) from the hit's id. Implementations MAY expose composite façades that fold both layers into a single request (e.g. "search returning top-N hits plus A1 + A2 inlined per hit"), but the contract — [[TG-FCT-1]] through [[TG-FCT-7]] plus the [[TG-QRY-3]] traversal contracts — remains the unit of conformance.
 
 ### Search REST binding
 
@@ -871,11 +980,11 @@ The `service*`, `operator*`, and `serviceEndpoints` values are denormalised onto
 
 #### Search request schema
 
-The normative JSON Schema for the faceted-search request is published alongside this document at [`schemas/v4/graph/search/request.schema.json`](./schemas/v4/graph/search/request.schema.json). It defines the `surface` selector (per [[TG-FCT-1]]), the `filters` object (per [[TG-FCT-3]], using the dotted field-name form), the `freeText` string (per [[TG-FCT-4]], matching semantics per [[TG-FCT-4a]]), the `limit` integer, the opaque `cursor` (per [[TG-FCT-7]]), and the visibility-gate overrides `includeUntrusted` and `includeArchived` (per [[TG-FCT-2]]).
+The normative JSON Schema for the faceted-search request is published alongside this document at [`schemas/v4/graph/search/request.schema.json`](./schemas/v4/graph/search/request.schema.json). It defines the `surface` selector (per [[TG-FCT-1]]), the `filters` object (per [[TG-FCT-3]], using the dotted field-name form), the `freeText` string (per [[TG-FCT-4]], matching semantics per [[TG-FCT-4a]]), the `snippet` group selector (per [[TG-FCT-6c]], validated against the queried surface's [[TG-FCT-6b]] catalogue), the `limit` integer, the opaque `cursor` (per [[TG-FCT-7]]), and the visibility-gate overrides `includeUntrusted` and `includeArchived` (per [[TG-FCT-2]]).
 
 #### Search response schema
 
-The normative JSON Schema for the faceted-search response is published alongside this document at [`schemas/v4/graph/search/response.schema.json`](./schemas/v4/graph/search/response.schema.json). It defines the result envelope fixed by [[TG-FCT-6]] (`query`, `totalCount`, `hits[]`, `facets`, `cursor`); each `hit.snippet` MUST carry the per-surface minimum of [[TG-FCT-6a]] — primary key, `lastObservedAtTime`, visibility flags, the DID binding on DID-bound surfaces, and, on the `Did` surface, the result-card fields (service name, type, description, both logos, operator identity, the owner Corporation's trust signals — deposit and slash history — and the declared service endpoints).
+The normative JSON Schema for the faceted-search response is published alongside this document at [`schemas/v4/graph/search/response.schema.json`](./schemas/v4/graph/search/response.schema.json). It defines the result envelope fixed by [[TG-FCT-6]] (`query`, `totalCount`, `hits[]`, `facets`, `cursor`); each `hit.snippet` MUST carry the per-surface core of [[TG-FCT-6a]] — primary key, `lastObservedAtTime`, visibility flags, the DID binding on DID-bound surfaces, `trusted` / `isCorporation` / `isEcosystem` on the `Did` surface, `type` / `serviceEndpoint` on the `ServiceEndpoint` surface — plus the field groups of the queried surface's [[TG-FCT-6b]] catalogue selected by the request's `snippet` projection ([[TG-FCT-6c]]; per-surface default sets).
 
 #### Example search request
 
@@ -887,6 +996,14 @@ The normative JSON Schema for the faceted-search response is published alongside
     "Did.operatorKind":                     "Persona"
   },
   "freeText": "fabrice",
+  "snippet": {
+    "service":        true,
+    "operator":       true,
+    "corporation":    true,
+    "endpoints":      true,
+    "participations": true,
+    "credentials":    true
+  },
   "limit":    20
 }
 ```
@@ -902,6 +1019,14 @@ The normative JSON Schema for the faceted-search response is published alongside
       "Did.operatorKind":                     "Persona"
     },
     "freeText": "fabrice",
+    "snippet": {
+      "service":        true,
+      "operator":       true,
+      "corporation":    true,
+      "endpoints":      true,
+      "participations": true,
+      "credentials":    true
+    },
     "limit":    20
   },
   "totalCount": 2,
@@ -911,29 +1036,37 @@ The normative JSON Schema for the faceted-search response is published alongside
       "id":    "did:webvh:Qm...:fabrice.agents.example",
       "score": 18.42,
       "snippet": {
-        "did":                   "did:webvh:Qm...:fabrice.agents.example",
-        "lastObservedAtTime":    "2026-05-17T20:51:07.000Z",
-        "isTrustExpired":        false,
-        "trusted":               true,
-        "pattern":               "B",
-        "operatorKind":          "Persona",
-        "serviceName":           "Fabrice Agent",
-        "serviceType":           "AIAgent",
-        "serviceDescription":    "Personal AI agent of @fabrice.",
-        "serviceLogoUri":        "https://fabrice.agents.example/logo.png",
-        "serviceLogoDigestSri":  "sha384-…",
-        "operatorName":          "@fabrice",
-        "operatorLogoUri":       "https://fabrice.agents.example/avatar.png",
-        "operatorLogoDigestSri": "sha384-…",
-        "operatorCountryCode":   "CO",
-        "operatorRegistryId":    null,
-        "operatorAddress":       null,
-        "corporationId":         42,
-        "corporationDeposit":    "40000000uvna",
-        "corporationSlashedEvents": 0,
-        "corporationLastSlashedAtTime": null,
-        "corporationSlashedValue": null,
-        "serviceEndpoints": [
+        "did":                "did:webvh:Qm...:fabrice.agents.example",
+        "lastObservedAtTime": "2026-05-17T20:51:07.000Z",
+        "isTrustExpired":     false,
+        "trusted":            true,
+        "isCorporation":      false,
+        "isEcosystem":        false,
+        "service": {
+          "pattern":       "B",
+          "name":          "Fabrice Agent",
+          "type":          "AIAgent",
+          "description":   "Personal AI agent of @fabrice.",
+          "logoUri":       "https://fabrice.agents.example/logo.png",
+          "logoDigestSri": "sha384-…"
+        },
+        "operator": {
+          "kind":          "Persona",
+          "name":          "@fabrice",
+          "logoUri":       "https://fabrice.agents.example/avatar.png",
+          "logoDigestSri": "sha384-…",
+          "countryCode":   "CO",
+          "registryId":    null,
+          "address":       null
+        },
+        "corporation": {
+          "id":                42,
+          "deposit":           "40000000uvna",
+          "slashedEvents":     0,
+          "lastSlashedAtTime": null,
+          "slashedValue":      null
+        },
+        "endpoints": [
           {
             "id":              "did:webvh:Qm...:fabrice.agents.example#did-communication",
             "type":            "did-communication",
@@ -945,9 +1078,42 @@ The normative JSON Schema for the faceted-search response is published alongside
             "serviceEndpoint": "https://fabrice.agents.example/mcp"
           }
         ],
-        "isCorporation":    false,
-        "isEcosystem":      false,
-        "ecosystemIds":     []
+        "participations": {
+          "total":          2,
+          "ecosystemCount": 2,
+          "byRole":         { "HOLDER": 2 },
+          "entries": [
+            {
+              "id":                 812,
+              "role":               "HOLDER",
+              "credentialSchemaId": 1,
+              "schemaTitle":        "Service Credential",
+              "ecosystemId":        1
+            },
+            {
+              "id":                 977,
+              "role":               "HOLDER",
+              "credentialSchemaId": 9,
+              "schemaTitle":        "AI Agent Certification",
+              "ecosystemId":        7
+            }
+          ]
+        },
+        "credentials": {
+          "total": 1,
+          "entries": [
+            {
+              "id":                 "urn:uuid:0e6f2a34-9d1c-4c6e-8f4b-2b7d1a0c5e21",
+              "credentialSchemaId": 9,
+              "schemaTitle":        "AI Agent Certification",
+              "ecosystemId":        7,
+              "attributes": {
+                "certificationLevel": "L2",
+                "capabilities":       ["chat", "task-automation"]
+              }
+            }
+          ]
+        }
       },
       "highlights": [
         "PersonaCredential.name: <em>fabrice</em>"
@@ -958,38 +1124,61 @@ The normative JSON Schema for the faceted-search response is published alongside
       "id":    "did:webvh:Qm...:fabrice-bot.agents.example",
       "score": 11.07,
       "snippet": {
-        "did":                   "did:webvh:Qm...:fabrice-bot.agents.example",
-        "lastObservedAtTime":    "2026-05-17T20:42:13.000Z",
-        "isTrustExpired":        false,
-        "trusted":               true,
-        "pattern":               "B",
-        "operatorKind":          "Persona",
-        "serviceName":           "Fabrice Bot",
-        "serviceType":           "AIAgent",
-        "serviceDescription":    "Task automation agent of @fabrice-bot.",
-        "serviceLogoUri":        "https://fabrice-bot.agents.example/logo.png",
-        "serviceLogoDigestSri":  "sha384-…",
-        "operatorName":          "@fabrice-bot",
-        "operatorLogoUri":       null,
-        "operatorLogoDigestSri": null,
-        "operatorCountryCode":   "CO",
-        "operatorRegistryId":    null,
-        "operatorAddress":       null,
-        "corporationId":         57,
-        "corporationDeposit":    "12000000uvna",
-        "corporationSlashedEvents": 1,
-        "corporationLastSlashedAtTime": "2026-01-01T03:00:00.000Z",
-        "corporationSlashedValue": "1000000uvna",
-        "serviceEndpoints": [
+        "did":                "did:webvh:Qm...:fabrice-bot.agents.example",
+        "lastObservedAtTime": "2026-05-17T20:42:13.000Z",
+        "isTrustExpired":     false,
+        "trusted":            true,
+        "isCorporation":      false,
+        "isEcosystem":        false,
+        "service": {
+          "pattern":       "B",
+          "name":          "Fabrice Bot",
+          "type":          "AIAgent",
+          "description":   "Task automation agent of @fabrice-bot.",
+          "logoUri":       "https://fabrice-bot.agents.example/logo.png",
+          "logoDigestSri": "sha384-…"
+        },
+        "operator": {
+          "kind":          "Persona",
+          "name":          "@fabrice-bot",
+          "logoUri":       null,
+          "logoDigestSri": null,
+          "countryCode":   "CO",
+          "registryId":    null,
+          "address":       null
+        },
+        "corporation": {
+          "id":                57,
+          "deposit":           "12000000uvna",
+          "slashedEvents":     1,
+          "lastSlashedAtTime": "2026-01-01T03:00:00.000Z",
+          "slashedValue":      "1000000uvna"
+        },
+        "endpoints": [
           {
             "id":              "did:webvh:Qm...:fabrice-bot.agents.example#did-communication",
             "type":            "did-communication",
             "serviceEndpoint": "wss://fabrice-bot.agents.example/didcomm"
           }
         ],
-        "isCorporation":    false,
-        "isEcosystem":      false,
-        "ecosystemIds":     []
+        "participations": {
+          "total":          1,
+          "ecosystemCount": 1,
+          "byRole":         { "HOLDER": 1 },
+          "entries": [
+            {
+              "id":                 813,
+              "role":               "HOLDER",
+              "credentialSchemaId": 1,
+              "schemaTitle":        "Service Credential",
+              "ecosystemId":        1
+            }
+          ]
+        },
+        "credentials": {
+          "total":   0,
+          "entries": []
+        }
       },
       "highlights": [
         "PersonaCredential.name: <em>fabrice</em>-bot"
@@ -1005,9 +1194,109 @@ The normative JSON Schema for the faceted-search response is published alongside
 }
 ```
 
+#### Example search request (Ecosystem surface)
+
+The default set (`corporation`, `stats`, `didCard`) plus the opt-in `schemas` group:
+
+```json
+{
+  "surface":  "Ecosystem",
+  "freeText": "banking",
+  "snippet": {
+    "corporation": true,
+    "stats":       true,
+    "didCard":     true,
+    "schemas":     true
+  },
+  "limit": 10
+}
+```
+
+#### Example search response (Ecosystem surface)
+
+```json
+{
+  "query": {
+    "surface":  "Ecosystem",
+    "freeText": "banking",
+    "snippet": {
+      "corporation": true,
+      "stats":       true,
+      "didCard":     true,
+      "schemas":     true
+    },
+    "limit": 10
+  },
+  "totalCount": 1,
+  "hits": [
+    {
+      "type":  "Ecosystem",
+      "id":    7,
+      "score": 9.31,
+      "snippet": {
+        "id":                 7,
+        "did":                "did:webvh:Qm...:registry.eubanking.example",
+        "archived":           false,
+        "lastObservedAtTime": "2026-05-17T20:58:41.000Z",
+        "corporation": {
+          "id":                42,
+          "deposit":           "40000000uvna",
+          "slashedEvents":     0,
+          "lastSlashedAtTime": null,
+          "slashedValue":      null
+        },
+        "stats": {
+          "participants":        { "ECOSYSTEM": 1, "ISSUER": 12, "VERIFIER": 9, "HOLDER": 340 },
+          "issuedCredentials":   1284,
+          "verifiedCredentials": 20411
+        },
+        "schemas": [
+          {
+            "id":           42,
+            "title":        "PSD2 License",
+            "archived":     false,
+            "participants": { "ISSUER": 3, "HOLDER": 120 }
+          }
+        ],
+        "didCard": {
+          "did":            "did:webvh:Qm...:registry.eubanking.example",
+          "trusted":        true,
+          "isTrustExpired": false,
+          "service": {
+            "pattern":       "B",
+            "name":          "EU Banking Trust Registry",
+            "type":          "TrustRegistry",
+            "description":   "Trust registry for regulated EU banking services.",
+            "logoUri":       "https://registry.eubanking.example/logo.png",
+            "logoDigestSri": "sha384-…"
+          },
+          "operator": {
+            "kind":          "Organization",
+            "name":          "EU Banking Registry AISBL",
+            "logoUri":       "https://registry.eubanking.example/org.png",
+            "logoDigestSri": "sha384-…",
+            "countryCode":   "BE",
+            "registryId":    "0999.999.999",
+            "address":       "Rue de la Loi 1, 1000 Bruxelles"
+          }
+        }
+      },
+      "highlights": [
+        "ServiceCredential.name: EU <em>Banking</em> Trust Registry"
+      ]
+    }
+  ],
+  "facets": {
+    "archived":      [ { "value": false, "count": 1 } ],
+    "corporationId": [ { "value": 42,    "count": 1 } ]
+  },
+  "cursor": null
+}
+```
+
 ### Search examples
 
-*This section is non normative.*
+*This section is non-normative.*
 
 The queries below illustrate how the contract of [[TG-FCT-1]] through [[TG-FCT-7]] composes against realistic discovery questions. They are illustrative; conformance is defined by the per-clause requirements above, not by these compositions. Field names use the dotted form from [[TG-FCT-3]] / [[TG-FCT-4]]; the wire format is implementation-defined.
 
@@ -1020,7 +1309,7 @@ The example payloads below show the **structured output** of either layer. Two d
 
 #### "iso 27001 certification" — schema discovery
 
-*This section is non normative.*
+*This section is non-normative.*
 
 The user wants the schemas (and owning Ecosystems) under which ISO 27001 attestations are issued. Surface: `CredentialSchema`.
 
@@ -1032,11 +1321,11 @@ The user wants the schemas (and owning Ecosystems) under which ISO 27001 attesta
 }
 ```
 
-Free-text matches `CredentialSchema.{title, description}` of loaded schema bodies (per [[TG-FCT-4]]). Each hit carries `ecosystemId` (1:1 schema → ecosystem per [[TG-EDGE-3]]); the result card surfaces both the schema and its owning Ecosystem from a single search call.
+Free-text matches `CredentialSchema.{title, description}` of loaded schema bodies (per [[TG-FCT-4]]). Each hit's default `schema` and `ecosystem` groups ([[TG-FCT-6b]]) carry the schema's title / description and the owning Ecosystem's id (1:1 schema → ecosystem per [[TG-EDGE-3]]); the result card surfaces both the schema and its owning Ecosystem from a single search call.
 
 #### "baby shoes in Bogotá" — VS with a domain credential
 
-*This section is non normative.*
+*This section is non-normative.*
 
 The user wants Verifiable Services selling baby shoes, in Bogotá. Surface: `Did`.
 
@@ -1055,7 +1344,7 @@ The user wants Verifiable Services selling baby shoes, in Bogotá. Surface: `Did
 
 #### "plumber credential issuers" — role-scoped within a credential class
 
-*This section is non normative.*
+*This section is non-normative.*
 
 The user wants the DIDs that issue plumber credentials. Two equivalent flows.
 
@@ -1085,7 +1374,7 @@ The free-text query lands on the schema-text denormalisation slot on the `Did` d
 
 #### "personal AI agent of @fabrice"
 
-*This section is non normative.*
+*This section is non-normative.*
 
 The user wants AI-agent VSs operated by a Persona named "@fabrice". Surface: `Did`.
 
