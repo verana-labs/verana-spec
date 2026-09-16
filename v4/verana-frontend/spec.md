@@ -1,6 +1,6 @@
 # Verana Frontend v4 Specification
 
-**Latest Draft:** spec v4-draft2
+**Latest Draft:** spec v4-draft3
 
 ## Abstract
 
@@ -75,7 +75,7 @@ The user journey is: connect wallet → discover Corporations the account can ac
 | `NEXT_PUBLIC_VERANA_WEBSOCKET` | OPTIONAL | Explicit WebSocket URL override for `/v4/indexer/subscribe`. |
 | `NEXT_PUBLIC_VERANA_EXPLORER_URL` | REQUIRED | Block explorer base URL, used for transaction and account links. |
 | `NEXT_PUBLIC_VERANA_VISUALIZER_URL` | OPTIONAL | Read-only explorer/visualizer base URL, used for entity deep links. |
-| `NEXT_PUBLIC_VERANA_TOPUP_VS` | OPTIONAL | DID of the Verifiable Service used by the Get VNA flow ([VFE-PAGE-ACCT]). |
+| `NEXT_PUBLIC_VERANA_FAUCET_URL` | OPTIONAL | Public origin of the Verana Faucet Service (e.g. `https://faucet.testnet.verana.network`) used by the Get VNA flow ([VFE-PAGE-ACCT-3]); see the [Faucet Service Specification](../verana-faucet/spec.md). Unset on networks without a faucet. |
 | `NEXT_PUBLIC_VERANA_SIGN_DIRECT_MODE` | OPTIONAL | `true` to prefer SIGN_MODE_DIRECT when the wallet supports it; defaults to Amino for wallet compatibility. |
 | `NEXT_PUBLIC_SESSION_LIFETIME_SECONDS` | OPTIONAL | Session persistence lifetime. Default 86400. |
 | `NEXT_PUBLIC_LOW_BALANCE_WARN_UVNA` | OPTIONAL | Balance threshold (uvna) under which a low-balance warning is shown. |
@@ -267,7 +267,11 @@ Trust-economics previews MUST be computed from live chain parameters — never h
 
 - [VFE-PAGE-ACCT-1] MUST show the account address (copy, QR, explorer link) and its bank balance via RPC; the low-balance warning follows [VFE-WALLET-5].
 - [VFE-PAGE-ACCT-2] MUST list the account's memberships (from [VFE-CORP-DISC]) with membership-kind badges, linking each to the Corporation page after switching context. Corporation creation is NOT offered here: it lives on the Corporation page and in the selector ([VFE-CORP-CREATE-1]), keeping Account strictly account-scoped; a short notice SHOULD point users to the Corporation page for creation and management.
-- [VFE-PAGE-ACCT-3] **Get VNA**: when `NEXT_PUBLIC_VERANA_TOPUP_VS` is set, MUST present the top-up Verifiable Service — trust-resolved per [VFE-DATA-RESOLVE] and displayed per [VFE-TRUST] — with a QR encoding the service DID and the account address for completion in the user's mobile wallet.
+- [VFE-PAGE-ACCT-3] **Get VNA**: when `NEXT_PUBLIC_VERANA_FAUCET_URL` is set, MUST offer an in-page faucet flow against the [Faucet Service Specification](../verana-faucet/spec.md) for the connected account; when it is unset, the action MUST NOT be shown.
+- [VFE-PAGE-ACCT-4] On opening the flow the frontend MUST read `GET /v1/info` and show the network, the default amount, the per-hour and per-day limits, and an unavailable state when `available` is false. It MUST offer one primary action, *Request VNA*, and MAY offer an amount field bounded by `maxAmountPerHour`.
+- [VFE-PAGE-ACCT-5] The action MUST run the faucet's challenge and token exchange ([VFA-AUTH-1]): request a challenge for the connected address, sign `challengePrefix + nonce` with the wallet's `signArbitrary` (chain id `NEXT_PUBLIC_VERANA_CHAIN_ID`), exchange the returned public key and signature for a token, then call `POST /v1/faucet`. The token MUST be kept in memory only (never in `localStorage` or cookies), MAY be reused until `expiresAt`, and a `401` MUST trigger a new exchange.
+- [VFE-PAGE-ACCT-6] After a `200` the frontend MUST show the amount received and the transaction hash linked per [VFE-TX-UX-1], and MUST refresh the balance of [VFE-PAGE-ACCT-1]; after a `202` it MUST show a pending state with the hash.
+- [VFE-PAGE-ACCT-7] Faucet errors MUST be rendered as user-facing messages: `QUOTA_EXCEEDED` shows the binding window and its `resetsAt`; `FAUCET_UNAVAILABLE` shows a temporary-unavailability notice; a wallet that does not expose `signArbitrary` shows a message asking for a browser wallet that supports message signing.
 
 ### [VFE-PAGE-CORP] Corporation
 
