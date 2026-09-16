@@ -24,7 +24,7 @@
     "facets": {
       "type": "object",
       "additionalProperties": { "$ref": "#/$defs/FacetAggregation" },
-      "description": "Aggregations keyed by dotted filter field name ([TG-FCT-3] form). Per [TG-FCT-6]: MUST contain an aggregation for every `eq` / `in` filter field referenced in the request's `filters`; SHOULD additionally carry an implementation-defined default set useful to the surface; near-unique-value fields (`lei`, `registryId`, `operatorName`) are never required beyond the referenced-filter rule."
+      "description": "Aggregations keyed by the queried surface's filter field names exactly as declared in [TG-FCT-3] (dotted on the `Did` surface, bare on the others) — identical to the keys the client uses in `filters`. Per [TG-FCT-6]: MUST contain an aggregation for every filter field referenced in the request's `filters` with an `eq` or `in` operator (bare scalars and arrays included — sugar for eq/in; prefix/range uses require none); SHOULD additionally carry an implementation-defined default set useful to the surface; near-unique-value fields (`lei`, `registryId`, `operatorName`) are never required beyond that rule."
     },
     "cursor": {
       "type": ["string", "null"],
@@ -277,8 +277,8 @@
     "GovernanceFrameworkSummary": {
       "type": "object",
       "additionalProperties": true,
-      "required": ["version", "documents"],
-      "description": "Inline governance-framework summary (`cgf` / `egf` per [TG-DEREF-2a] / [TG-DEREF-2b]): active version, activation time, and document metadata — never document bodies.",
+      "required": ["version", "activeSince", "documents"],
+      "description": "Inline governance-framework summary (`cgf` / `egf` per [TG-DEREF-2a] / [TG-DEREF-2b]): active version, activation time, and document metadata — never document bodies. `activeSince` is required-present per the [TG-FCT-6b] null-not-omitted rule (`null` when the upstream inline object omits it), even though the persisted entity-table shape writes it as optional.",
       "properties": {
         "version": { "type": "integer", "minimum": 1, "description": "Active GF version (integer, per the indexer's inline `cgf` / `egf` surfacing)." },
         "activeSince": { "anyOf": [{ "$ref": "#/$defs/Iso8601DateTime" }, { "type": "null" }] },
