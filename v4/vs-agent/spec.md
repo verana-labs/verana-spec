@@ -2726,7 +2726,7 @@ These notifications are emitted when a `Participant` entry whose `did` equals th
 | `SetParticipantOPtoValidated` [[MOD-PP-MSG-3]](https://verana-labs.github.io/verifiable-trust-vpr-spec/#mod-pp-msg-3-set-participant-op-to-validated) | Validator has set the agent's `Participant.op_state` to `VALIDATED`. | For Validator: Progress the credential acquisition flow (see [new onboarding process](#vsa-vti-flow-op-new-new-onboarding-process)). For Applicant: refresh cached authorization state (see [Authorization Notifications](#vsa-vti-notif-auth-authorization-notifications)). |
 | `CreateRootParticipant` [[MOD-PP-MSG-7]](https://verana-labs.github.io/verifiable-trust-vpr-spec/#mod-pp-msg-7-create-root-participant) | A root `Participant` (no validator parent) has been created with the agent's DID. | N/A. |
 | `SetParticipantEffectiveUntil` [[MOD-PP-MSG-8]](https://verana-labs.github.io/verifiable-trust-vpr-spec/#mod-pp-msg-8-set-participant-effective-until) | Validator or ancestor has set or adjusted the agent's `Participant.effective_until`. | Refresh cached authorization state (see [Authorization Notifications](#vsa-vti-notif-auth-authorization-notifications)). |
-| `RevokeParticipant` [[MOD-PP-MSG-9]](https://verana-labs.github.io/verifiable-trust-vpr-spec/#mod-pp-msg-9-revoke-participant) | Validator, ancestor, or Ecosystem controller has revoked the agent's `Participant` entry. | Remove the corresponding linked VP from the DID Document (if any) and delete the credential from the credential store (HOLDER `Participant` only). For non-HOLDER `Participant`, terminate every in-flight downstream flow it serves as Validator for (see [Revoke Participant / Slash Participant Trust Deposit](#vsa-vti-flow-op-revoke-revoke-participant--slash-participant-trust-deposit)). |
+| `RevokeParticipant` [[MOD-PP-MSG-9]](https://verana-labs.github.io/verifiable-trust-vpr-spec/#mod-pp-msg-9-revoke-participant) | Validator, ancestor, or Ecosystem controller has revoked the agent's `Participant` entry. | For a HOLDER `Participant`: remove the corresponding linked VP from the DID Document (if any) and delete the credential from the credential store. For an ISSUER `Participant`: do the same for each credential the agent issued to itself under it ([[VSA-VTI-ECS-SELF-3]](#vsa-vti-ecs-self-ecs-self-issuance)). For every non-HOLDER `Participant`, terminate every in-flight downstream flow it serves as Validator for (see [Revoke Participant / Slash Participant Trust Deposit](#vsa-vti-flow-op-revoke-revoke-participant--slash-participant-trust-deposit)). |
 | `SlashParticipantTrustDeposit` [[MOD-PP-MSG-12]](https://verana-labs.github.io/verifiable-trust-vpr-spec/#mod-pp-msg-12-slash-participant-trust-deposit) | Validator, ancestor, or Ecosystem controller has slashed the agent's `Participant.deposit`. | Same as `RevokeParticipant`: clean up linked VP / credential / downstream flow state. |
 | `RepayParticipantSlashedTrustDeposit` [[MOD-PP-MSG-13]](https://verana-labs.github.io/verifiable-trust-vpr-spec/#mod-pp-msg-13-repay-participant-slashed-trust-deposit) | The agent's slashed trust deposit has been repaid (confirmation of own tx). | N/A. |
 | `CancelParticipantOPLastRequest` [[MOD-PP-MSG-6]](https://verana-labs.github.io/verifiable-trust-vpr-spec/#mod-pp-msg-6-cancel-participant-op-last-request) | An applicant has cancelled a pending Onboarding Process. | Clean up the associated flow state (see [Cancel OP Last Request](#vsa-vti-flow-op-cancel-cancel-op-last-request)). |
@@ -2874,23 +2874,21 @@ The agent composes the claims of each ECS credential from the [[VSA-VTI-CFG-ENV-
 
 The agent MUST complete its [Bootstrap Sequence](#vsa-vti-boot-bootstrap-sequence) and serve its Administration API before it holds any ECS credential.
 
-> [[VT-ECS-JSON-SCHEMA-VPR-CONFIG]](https://verana-labs.github.io/verifiable-trust-spec/#vt-ecs-json-schema-vpr-config-essential-schema-vpr-configuration) requires `holder_onboarding_mode` = `ISSUER_ONBOARDING_PROCESS` for the ECS-Organization, ECS-Persona, and ECS-Service credential schemas. The agent obtains each ECS credential through an onboarding process, except a credential that it issues to itself under [[VSA-VTI-ECS-SELF] ECS Self-Issuance](#vsa-vti-ecs-self-ecs-self-issuance). An issuer creates the HOLDER `Participant` entry of the holder under that onboarding mode, and the agent that issues to itself is that issuer.
+> [[VT-ECS-JSON-SCHEMA-VPR-CONFIG]](https://verana-labs.github.io/verifiable-trust-spec/#vt-ecs-json-schema-vpr-config-essential-schema-vpr-configuration) requires `holder_onboarding_mode` = `ISSUER_ONBOARDING_PROCESS` for the ECS-Organization, ECS-Persona, and ECS-Service credential schemas. The agent obtains each ECS credential through an onboarding process, except a credential that it issues to itself under [[VSA-VTI-ECS-SELF] ECS Self-Issuance](#vsa-vti-ecs-self-ecs-self-issuance). A self-issued credential has no HOLDER `Participant` entry: the ISSUER `Participant` entry of the agent anchors it.
 
 > A validator agent accepts the connection of a not-yet-verifiable applicant of an ECS credential under the conditions of [[VSA-DC-CONN-2]](#vsa-dc-conn-connection-acceptance-policy).
 
 ##### [VSA-VTI-ECS-SELF] ECS Self-Issuance
 
-An ISSUER of an ECS schema cannot onboard against itself. The agent that holds the ISSUER `Participant` entry of a schema is the only party that can issue a credential of that schema. The chain of credentials of that schema therefore terminates at that agent. An agent that holds no credential of the schema presents no `serviceProvider`, and fails [[VS-CONN-VS]](https://verana-labs.github.io/verifiable-trust-spec/#vs-conn-vs-requirements-for-a-vs-to-accept-a-connection-from-another-service). Every applicant that must onboard against that agent then refuses to open the flow.
+The chain of credentials of an ECS schema terminates at an ISSUER that obtains its own credential from no other party. Without that credential the agent does not comply with [[VS-REQ]](https://verana-labs.github.io/verifiable-trust-spec/#vs-req-verifiable-service-basic-requirements-and-linked-vps), and no applicant can onboard against it ([[VS-CONN-VS]](https://verana-labs.github.io/verifiable-trust-spec/#vs-conn-vs-requirements-for-a-vs-to-accept-a-connection-from-another-service)). That agent issues the credential to itself.
 
-These requirements apply in both [ECS Standalone Mode](#vsa-vti-ecs-standalone-ecs-standalone-mode) and [ECS Delegated Mode](#vsa-vti-ecs-delegated-ecs-delegated-mode). The `AGENT_MODE` variable does not change them.
+These requirements apply in both [ECS Standalone Mode](#vsa-vti-ecs-standalone-ecs-standalone-mode) and [ECS Delegated Mode](#vsa-vti-ecs-delegated-ecs-delegated-mode), with one exception. In Delegated Mode the parent VS issues the Service credential of the agent ([[VSA-VTI-ECS-DELEGATED]](#vsa-vti-ecs-delegated-ecs-delegated-mode)), so the agent MUST NOT issue its own Service credential in that mode.
 
-[VSA-VTI-ECS-SELF-1] The agent MUST issue its own credential of an ECS schema when it holds an active ISSUER `Participant` entry for that schema, and that entry names the account of the agent as its `vs_operator`. The requirement applies to every ECS schema, and not to the ECS-Service schema only.
+[VSA-VTI-ECS-SELF-1] The agent MUST issue its own credential of an ECS schema when it holds an active ISSUER `Participant` entry for that schema, that entry names the account of the agent as its `vs_operator`, and the agent holds no credential of that schema that another issuer issued to it. A credential that another issuer issues takes precedence over a self-issued one.
 
-[VSA-VTI-ECS-SELF-2] The agent MUST NOT replace a credential that another issuer issued to it with a self-issued credential of the same schema. A credential from an onboarding process takes precedence.
+[VSA-VTI-ECS-SELF-2] To issue the credential, the agent MUST compose and validate the claims per [[VSA-VTI-ECS]](#vsa-vti-ecs-ecs-participants-and-credentials), sign the credential, compute its `digestJCS`, and anchor that digest on-chain with `CreateOrUpdateParticipantSession` ([[MOD-PP-MSG-10]](https://verana-labs.github.io/verifiable-trust-vpr-spec/#mod-pp-msg-10-create-or-update-participant-session)), as in step 2 of [Credential Issuance and Acceptance](#vsa-vti-flow-issue-credential-issuance-and-acceptance). The session names the ISSUER `Participant` entry, and names no counterparty `Participant` entry, because a self-issued credential has no counterparty. The agent MUST then publish the credential as a `LinkedVerifiablePresentation` entry, per [[VSA-VT-LVP-1]](#vsa-vt-lvp-linked-vp-management).
 
-[VSA-VTI-ECS-SELF-3] To issue the credential, the agent MUST compose and validate the claims per [[VSA-VTI-ECS]](#vsa-vti-ecs-ecs-participants-and-credentials), sign the credential, compute its `digestJCS`, and anchor that digest on-chain with `CreateOrUpdateParticipantSession` ([[MOD-PP-MSG-10]](https://verana-labs.github.io/verifiable-trust-vpr-spec/#mod-pp-msg-10-create-or-update-participant-session)), as in step 2 of [Credential Issuance and Acceptance](#vsa-vti-flow-issue-credential-issuance-and-acceptance). The session names the ISSUER `Participant` entry, and names no counterparty `Participant` entry, because a self-issued credential has no counterparty. The agent MUST then publish the credential as a `LinkedVerifiablePresentation` entry, per [[VSA-VT-LVP-1]](#vsa-vt-lvp-linked-vp-management).
-
-[VSA-VTI-ECS-SELF-4] When the ISSUER `Participant` entry becomes revoked or slashed, the agent MUST delete each credential that it issued under that entry, and MUST remove the `LinkedVerifiablePresentation` entry of each one, per [[VSA-VT-LVP-3]](#vsa-vt-lvp-linked-vp-management).
+[VSA-VTI-ECS-SELF-3] When the ISSUER `Participant` entry becomes revoked or slashed, the agent MUST delete each credential that it issued to itself under that entry, and MUST remove the `LinkedVerifiablePresentation` entry of each one, per [[VSA-VT-LVP-3]](#vsa-vt-lvp-linked-vp-management) and [[VSA-VTI-FLOW-OP-REVOKE]](#vsa-vti-flow-op-revoke-revoke-participant--slash-participant-trust-deposit).
 
 ##### [VSA-VTI-ECS-STANDALONE] ECS Standalone Mode
 
@@ -2898,7 +2896,7 @@ The agent holds an ECS-Organization or an ECS-Persona credential, and issues its
 
 1. Obtains the **ECS-Organization** or **ECS-Persona** credential and its HOLDER `Participant`, as the applicant of a [New Onboarding Process](#vsa-vti-flow-op-new-new-onboarding-process) with an authorized ISSUER of that schema. When the agent itself holds the ISSUER `Participant` of that schema, it issues that credential to itself per [[VSA-VTI-ECS-SELF]](#vsa-vti-ecs-self-ecs-self-issuance), and runs no onboarding process.
 2. Obtains an ISSUER `Participant` for the **ECS-Service** schema, as the applicant of a [New Onboarding Process](#vsa-vti-flow-op-new-new-onboarding-process).
-3. Issues its own **Service credential** under the ISSUER `Participant` of step 2, per [[VSA-VTI-ECS-SELF-3]](#vsa-vti-ecs-self-ecs-self-issuance), and publishes the credential as a `LinkedVerifiablePresentation` in its DID Document ([[VT-CRED-W3C-LINKED-VP]](https://verana-labs.github.io/verifiable-trust-spec/#vt-cred-w3c-linked-vp-w3c-vtc-linked-vp)).
+3. Issues its own **Service credential** under the ISSUER `Participant` of step 2, per [[VSA-VTI-ECS-SELF-2]](#vsa-vti-ecs-self-ecs-self-issuance), and publishes the credential as a `LinkedVerifiablePresentation` in its DID Document ([[VT-CRED-W3C-LINKED-VP]](https://verana-labs.github.io/verifiable-trust-spec/#vt-cred-w3c-linked-vp-w3c-vtc-linked-vp)).
 
 The agent runs step 3 when steps 1 and 2 are complete.
 
@@ -3125,6 +3123,7 @@ sequenceDiagram
         Validator-->>Applicant: 3. CRED_STATE_CHANGE over DIDComm
         Note over Applicant: Remove credential's linked-vp (if any) and delete credential from store
     else p1 is NOT a HOLDER Participant
+        Note over Applicant: If p1 is an ISSUER Participant: remove the linked-vp of each self-issued credential anchored by p1 and delete it from store
         Note over Applicant: For each in-flight flow where Applicant of p1 acts as Validator (validator_participant_id == p1):
         Applicant-->>Downstream: 3. ERROR over DIDComm (validator Participant revoked)
         Note over Applicant: Terminate flow: Connection State = TERMINATED Flow State = PARTICIPANT_REVOKED / PARTICIPANT_SLASHED
@@ -3140,11 +3139,14 @@ sequenceDiagram
     - delete the credential from its credential store.
 
 - **If `p1` is NOT a HOLDER `Participant`** (i.e., `p1.role` is `ISSUER`, `VERIFIER`, `ISSUER_GRANTOR`, `VERIFIER_GRANTOR`, or `ECOSYSTEM`):
+  - If `p1` is an ISSUER `Participant`, the **Applicant of `p1`** MUST, for each credential that it issued to itself under `p1` ([[VSA-VTI-ECS-SELF-3]](#vsa-vti-ecs-self-ecs-self-issuance)):
+    - remove the corresponding `LinkedVerifiablePresentation` entry from its DID Document;
+    - delete the credential from its credential store.
   - The **Applicant of `p1`** MUST terminate every in-flight flow in which it acts as Validator under `p1` — i.e., every flow whose `validator_participant_id == p1` and whose Flow State is not `COMPLETED`. For each such flow, the Applicant of `p1` MUST:
     - send an `ERROR` DIDComm message to the downstream Applicant indicating that the validator `Participant` has been revoked and the flow cannot continue;
     - set Connection State to `TERMINATED` and Flow State to `PARTICIPANT_REVOKED` (after `RevokeParticipant`) or `PARTICIPANT_SLASHED` (after `SlashParticipantTrustDeposit`);
     - discard any pending out-of-band resources for the flow (`OOB_LINK` URLs, draft credentials, etc.).
-  - The Applicant of `p1` MUST NOT cascade-revoke any `Participant` entries or credentials it had previously issued under `p1`. Credentials delivered before the revocation remain valid; their lifecycle is governed independently.
+  - The Applicant of `p1` MUST NOT cascade-revoke any `Participant` entries or credentials it had previously issued to other parties under `p1`. Credentials delivered before the revocation remain valid; their lifecycle is governed independently. Only the credentials that the Applicant of `p1` issued to itself under `p1` are deleted, per the previous point.
 
 > Revocation and slashing are irreversible from the agent's perspective: a revoked or slashed `Participant` cannot be revived. To resume operating, the corporation MUST obtain a new `Participant` entry via a new onboarding process — and, for slashed Participants, MUST first repay the slashed trust deposit ([[MOD-PP-MSG-13]](https://verana-labs.github.io/verifiable-trust-vpr-spec/#mod-pp-msg-13-repay-participant-slashed-trust-deposit)).
 
@@ -3398,7 +3400,7 @@ The agent publishes credentials in its DID Document as `LinkedVerifiablePresenta
 
 [VSA-VT-LVP-2] When the agent replaces a stored credential with an updated one — after a renewal, or after a [Validator Update](#vsa-vti-flow-upd-validator-updates) that delivers an updated credential — the agent MUST replace the `LinkedVerifiablePresentation` entry of the old credential, when one exists, with one for the new credential.
 
-[VSA-VT-LVP-3] When a credential is revoked, or when the HOLDER `Participant` under which the agent holds it is revoked or slashed, the agent MUST remove the `LinkedVerifiablePresentation` entry of that credential, when one exists, and MUST delete the credential from its credential store. For a self-issued credential, which has no HOLDER `Participant`, the ISSUER `Participant` that anchors it is the entry that this rule follows, per [[VSA-VTI-ECS-SELF-4]](#vsa-vti-ecs-self-ecs-self-issuance).
+[VSA-VT-LVP-3] When a credential is revoked, or when the HOLDER `Participant` under which the agent holds it is revoked or slashed, the agent MUST remove the `LinkedVerifiablePresentation` entry of that credential, when one exists, and MUST delete the credential from its credential store. For a self-issued credential, which has no HOLDER `Participant`, the ISSUER `Participant` that anchors it is the entry that this rule follows, per [[VSA-VTI-ECS-SELF-3]](#vsa-vti-ecs-self-ecs-self-issuance).
 
 [VSA-VT-LVP-4] The agent MUST publish its DID Document after each change of a `LinkedVerifiablePresentation` entry, per [[VSA-PUB-DID-3]](#vsa-pub-did-did-document-and-did-log).
 
@@ -3687,10 +3689,9 @@ Every identifier of this document, in lexical order. A section identifier links 
 | `VSA-VTI-ECS` | [ECS Participants and Credentials](#vsa-vti-ecs-ecs-participants-and-credentials) | Participant and Credential Acquisition Logic |
 | `VSA-VTI-ECS-DELEGATED` | [ECS Delegated Mode](#vsa-vti-ecs-delegated-ecs-delegated-mode) | ECS Participants and Credentials |
 | `VSA-VTI-ECS-SELF` | [ECS Self-Issuance](#vsa-vti-ecs-self-ecs-self-issuance) | ECS Participants and Credentials |
-| `VSA-VTI-ECS-SELF-1` | The agent MUST issue its own credential of an ECS schema when it holds an active ISSUER `Participant` entry for that schema, and that… |  |
-| `VSA-VTI-ECS-SELF-2` | The agent MUST NOT replace a credential that another issuer issued to it with a self-issued credential of the same schema. A credential… |  |
-| `VSA-VTI-ECS-SELF-3` | To issue the credential, the agent MUST compose and validate the claims per VSA-VTI-ECS, sign the credential, compute its `digestJCS`,… |  |
-| `VSA-VTI-ECS-SELF-4` | When the ISSUER `Participant` entry becomes revoked or slashed, the agent MUST delete each credential that it issued under that entry,… |  |
+| `VSA-VTI-ECS-SELF-1` | The agent MUST issue its own credential of an ECS schema when it holds an active ISSUER `Participant` entry for that schema, that entry… |  |
+| `VSA-VTI-ECS-SELF-2` | To issue the credential, the agent MUST compose and validate the claims per VSA-VTI-ECS, sign the credential, compute its `digestJCS`,… |  |
+| `VSA-VTI-ECS-SELF-3` | When the ISSUER `Participant` entry becomes revoked or slashed, the agent MUST delete each credential that it issued to itself under… |  |
 | `VSA-VTI-ECS-STANDALONE` | [ECS Standalone Mode](#vsa-vti-ecs-standalone-ecs-standalone-mode) | ECS Participants and Credentials |
 | `VSA-VTI-FLOW-DI` | [Credential Direct Issuance](#vsa-vti-flow-di-credential-direct-issuance) | Participant and Credential Acquisition Flows |
 | `VSA-VTI-FLOW-DIDCOMM` | [DIDComm Protocol](#vsa-vti-flow-didcomm-didcomm-protocol) | DIDComm Interface |
