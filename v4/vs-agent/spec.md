@@ -1,6 +1,6 @@
 # VS Agent v4 Specification
 
-**Latest Draft:** spec v4-draft12
+**Latest Draft:** spec v4-draft13
 
 ## Abstract
 
@@ -577,7 +577,7 @@ The agent implements each DIDComm protocol as one **protocol module**. A module 
 | Module | Protocol | Requirement | Section |
 |---|---|---|---|
 | Connections | Connection establishment of the envelope in use ([[VSA-VTI-DIDCOMM]](#vsa-vti-didcomm-didcomm-support)) | REQUIRED | [[VSA-ADM-DC-CN]](#vsa-adm-dc-cn-connections) |
-| Invitations | Out-of-Band invitation of the envelope in use ([[VSA-VTI-DIDCOMM]](#vsa-vti-didcomm-didcomm-support)) | REQUIRED | [[VSA-ADM-DC-INV]](#vsa-adm-dc-inv-invitations) |
+| Invitations | Out-of-Band invitation of the envelope in use ([[VSA-VTI-DIDCOMM]](#vsa-vti-didcomm-didcomm-support)); on a DIDComm v2 connection, a `share-media` message of `https://didcomm.org/media-sharing/1.0` carries it | REQUIRED | [[VSA-ADM-DC-INV]](#vsa-adm-dc-inv-invitations) |
 | Basic Messages | `https://didcomm.org/basicmessage/1.0`, `https://didcomm.org/basicmessage/2.0` | REQUIRED | [[VSA-ADM-DC-BM]](#vsa-adm-dc-bm-basic-messages) |
 | Presentations | `https://didcomm.org/present-proof/2.0` | REQUIRED | [[VSA-ADM-DC-PR]](#vsa-adm-dc-pr-presentations) |
 | Credential Exchanges | `https://didcomm.org/issue-credential/2.0` | REQUIRED | [[VSA-ADM-DC-CE]](#vsa-adm-dc-ce-credential-exchanges) |
@@ -1098,7 +1098,7 @@ Deletes a connection record. The agent MAY also close the related DIDComm sessio
 
 #### [VSA-ADM-DC-INV] Invitations
 
-Methods that send an Out-of-Band invitation on an established connection, per the Out-of-Band protocol (`https://didcomm.org/out-of-band/1.1` for DIDComm v1, `https://didcomm.org/out-of-band/2.0` for DIDComm v2). The invitation asks the peer to open a second connection: a **sub-connection** to this agent, related to the connection that carried the invitation, or a connection to another service that publishes a DID — a **referral**.
+Methods that send an Out-of-Band invitation on an established connection, per the Out-of-Band protocol (`https://didcomm.org/out-of-band/1.1` for DIDComm v1, `https://didcomm.org/out-of-band/2.0` for DIDComm v2). On a DIDComm v1 connection, the invitation is the message. On a DIDComm v2 connection, a `share-media` message of the Media Sharing protocol (`https://didcomm.org/media-sharing/1.0`) carries the invitation as an attachment. The invitation asks the peer to open a second connection: a **sub-connection** to this agent, related to the connection that carried the invitation, or a connection to another service that publishes a DID — a **referral**.
 
 The agent takes the inviter role only. The module stores no record that the API exposes: the connection that a sub-connection invitation produces is a connection record, per [[VSA-ADM-DC-CN]](#vsa-adm-dc-cn-connections), and carries `parentConnectionId` and `outOfBandId` so that the caller correlates it.
 
@@ -1122,19 +1122,65 @@ Sends an Out-of-Band invitation on an established connection.
 
 **Output**:
 
-- `id` — identifier of the sent message.
+- `id` — identifier of the sent message: the invitation on a DIDComm v1 connection, the `share-media` message on a DIDComm v2 connection.
 - `outOfBandId` — identifier of the Out-of-Band record that the agent created for a sub-connection invitation. Absent for a referral. The connection that the invitation produces carries this value as `outOfBandId`.
 
 **Requirements**:
 
-- The agent MUST send the invitation in the envelope of the connection: an Out-of-Band 1.1 invitation on a DIDComm v1 connection, an Out-of-Band 2.0 invitation on a DIDComm v2 connection. A sub-connection uses the envelope of the invitation. The `didcommVersion` and `useLegacyDid` parameters of [Invitation Parameters](#vsa-pub-inv-invitation-parameters) do not apply.
-- `label` and `imageUrl` are fields of an Out-of-Band 1.1 invitation only. The agent MUST omit them from an Out-of-Band 2.0 invitation.
+- The agent MUST create the invitation in the envelope of the connection: an Out-of-Band 1.1 invitation on a DIDComm v1 connection, an Out-of-Band 2.0 invitation on a DIDComm v2 connection. A sub-connection uses the envelope of the invitation. The `didcommVersion` and `useLegacyDid` parameters of [Invitation Parameters](#vsa-pub-inv-invitation-parameters) do not apply.
+- On a DIDComm v1 connection, the agent MUST send the Out-of-Band 1.1 invitation as a message of the connection. `label` and `imageUrl` are the `label` and `imageUrl` fields of the invitation.
+- On a DIDComm v2 connection, the agent MUST send a `share-media` message that has one item. The attachment of the item MUST have the `media_type` `application/didcomm-plain+json`, and MUST hold the Out-of-Band 2.0 invitation in `data.json`. The agent MUST NOT send the invitation as a message of the connection.
+- An Out-of-Band 2.0 invitation has no `label` field and no `imageUrl` field. On a DIDComm v2 connection, the agent MUST set `label` as the `description` of the `share-media` message and as the `metadata.title` of the item, and MUST set `imageUrl` as the `metadata.icon` of the item. The agent MUST omit each field that has no value.
+- The agent MUST be able to send this `share-media` message when it does not serve the [Media Sharing](#vsa-adm-dc-ms-media-sharing) module.
 - For a sub-connection, the agent MUST create a single-use invitation whose service is specific to the invitation — not the DID of the agent — so that the peer establishes a new connection instead of reusing the one it holds with the DID of the agent. The agent MUST accept at most one connection from the invitation. The connection record MUST carry `outOfBandId` equal to the returned `outOfBandId`, and `parentConnectionId` equal to `connectionId`.
 - For a referral, the agent MUST set `did` as the only service of the invitation (`services` in Out-of-Band 1.1, `from` in Out-of-Band 2.0), and MUST create no record. The agent does not verify that `did` resolves: the peer resolves it when it connects.
 
 **Errors**: `UNKNOWN_ID` (`404`) when no connection has the supplied identifier.
 
 **Events**: [`didcomm.connections.state-updated`](#vsa-evt-cat-event-catalog) when a sub-connection invitation produces a connection. A referral produces no event: the connection it produces belongs to the other service.
+
+> Non-normative: the `share-media` message of a sub-connection invitation on a DIDComm v2 connection:
+
+```json
+{
+  "id": "5f1d0c1e-7a0b-4c55-9d0e-6a3c2b1f8e21",
+  "type": "https://didcomm.org/media-sharing/1.0/share-media",
+  "from": "did:peer:4zQmConnectionDidOfTheAgent",
+  "to": ["did:peer:4zQmConnectionDidOfThePeer"],
+  "body": {
+    "description": "Example Service - Support",
+    "items": [
+      {
+        "@id": "b1c7a0de-2f6e-4f0a-8d53-0c9e4a7f6b12",
+        "attachment_id": "0",
+        "metadata": {
+          "title": "Example Service - Support",
+          "icon": "https://service.example/support.png"
+        }
+      }
+    ]
+  },
+  "attachments": [
+    {
+      "id": "0",
+      "media_type": "application/didcomm-plain+json",
+      "data": {
+        "json": {
+          "type": "https://didcomm.org/out-of-band/2.0/invitation",
+          "id": "0a2c6f3e-94d1-4f1b-b0a5-3e8d7c6b5a49",
+          "from": "did:peer:4zQmInvitationSpecificDid",
+          "body": {
+            "goal_code": "support",
+            "accept": ["didcomm/v2"]
+          }
+        }
+      }
+    }
+  ]
+}
+```
+
+> Non-normative: a peer in the invitee role accepts the attachment only when the `type` of the message in `data.json` is an Out-of-Band 2.0 invitation. The `from` of that invitation is not authenticated: only the connection peer vouches for it. The peer thus handles the attachment as an invitation that the connection peer presents, and does not process it as a message that `from` sent.
 
 #### [VSA-ADM-DC-BM] Basic Messages
 
@@ -1579,7 +1625,7 @@ Asks the peer of a connection for its profile.
 
 #### [VSA-ADM-DC-MS] Media Sharing
 
-Methods that share and request media files, per the Media Sharing protocol (`https://didcomm.org/media-sharing/1.0`). The module shares media descriptors; the media itself travels out of band, through the `uri` of each item.
+Methods that share and request media files, per the Media Sharing protocol (`https://didcomm.org/media-sharing/1.0`). The module shares media descriptors. The media itself travels out of band, through the `uri` of an item, or inline, in the `json` of an item.
 
 The module stores no record that the API exposes. The agent delivers each inbound `share-media` message as a [`didcomm.media-sharing.share-media-received`](#vsa-evt-cat-event-catalog) event, and each inbound `request-media` message as a [`didcomm.media-sharing.request-media-received`](#vsa-evt-cat-event-catalog) event. The agent MUST NOT answer a `request-media` message itself: the caller observes the event and answers with [`shareMedia`](#vsa-adm-dc-ms-share-sharemedia), on the thread of the request.
 
@@ -1596,13 +1642,20 @@ Shares media items on an established connection.
 - `connectionId` (REQUIRED) — connection to share the items on.
 - `description` (OPTIONAL) — text that describes the share.
 - `threadId` (OPTIONAL) — thread of the `request-media` message that this share answers.
-- `items` (REQUIRED) — array of items. Each entry carries `id` (OPTIONAL) — item identifier, generated by the agent when absent; a peer refers to the item by it — `uri` (REQUIRED), `mimeType` (REQUIRED), `fileName` (OPTIONAL), `description` (OPTIONAL), `byteCount` (OPTIONAL), `ciphering` (OPTIONAL) — algorithm and parameters when the media at `uri` is encrypted — and `metadata` (OPTIONAL).
+- `items` (REQUIRED) — array of items. Each entry carries `id` (OPTIONAL) — item identifier, generated by the agent when absent; a peer refers to the item by it — `uri` (OPTIONAL) — location of the media — `json` (OPTIONAL) — the media itself, as a JSON value — `mimeType` (REQUIRED), `fileName` (OPTIONAL), `description` (OPTIONAL), `byteCount` (OPTIONAL), `ciphering` (OPTIONAL) — algorithm and parameters when the media at `uri` is encrypted — and `metadata` (OPTIONAL).
 
 **Output**:
 
 - `id` — identifier of the sent message.
 
-**Errors**: `UNKNOWN_ID` (`404`) when no connection has the supplied identifier.
+**Requirements**:
+
+- Each item MUST carry exactly one of `uri` and `json`. The agent sends `uri` as the `data.links` of the attachment of the item, and `json` as its `data.json`.
+- An item that carries `json` MUST NOT carry `ciphering`: the connection already encrypts the media.
+- The agent MUST deliver an inbound item in the same shape: with `uri` when the attachment holds `data.links`, with `json` when it holds `data.json`. The agent MUST ignore an item whose attachment holds neither.
+- The agent does not interpret the `json` of an inbound item. An item whose `mimeType` is `application/didcomm-plain+json` holds a DIDComm message, for example the Out-of-Band 2.0 invitation that [`sendInvitation`](#vsa-adm-dc-inv-send-sendinvitation) sends. The agent MUST NOT process that message: it takes the inviter role only, per [[VSA-ADM-DC-INV]](#vsa-adm-dc-inv-invitations).
+
+**Errors**: `UNKNOWN_ID` (`404`) when no connection has the supplied identifier. `INVALID_INPUT` (`400`) when an item carries both `uri` and `json`, or neither.
 
 #### [VSA-ADM-DC-CL] Calls
 
@@ -3705,6 +3758,7 @@ Every identifier of this document, in lexical order. A section identifier links 
 | `VSA-VTI-VTJSC` | [VTJSC Management](#vsa-vti-vtjsc-vtjsc-management) | Verifiable Trust Behaviors |
 
 ## Appendix B: Change Log
+- **v4-draft13 (2026-09-21)** — [`sendInvitation`](#vsa-adm-dc-inv-send-sendinvitation) on a DIDComm v2 connection sends the Out-of-Band 2.0 invitation as an `application/didcomm-plain+json` attachment of a Media Sharing `share-media` message. DIDComm v2 binds the `from` of a message to the sender key, so the invitation cannot be a message of the connection. `label` and `imageUrl` apply to a DIDComm v2 connection again, as the `description` of the message and the `metadata.title` and `metadata.icon` of the item. The behaviour on a DIDComm v1 connection does not change. A [Media Sharing](#vsa-adm-dc-ms-media-sharing) item carries its media by `uri` or inline as `json`, in [`shareMedia`](#vsa-adm-dc-ms-share-sharemedia) and in the `share-media-received` event.
 - **v4-draft12 (2026-09-13)** — Revocation for the OpenID4VC scope over Token Status Lists: a [[VSA-ADM-OID-SL]](#vsa-adm-oid-sl-status-lists) Status Lists module that creates, lists, and deletes the lists that the agent hosts at [[VSA-PUB-OID-1]](#vsa-pub-oid-openid4vc-public-protocol-endpoints), `statusListId` and `statusListIndex` on the OpenID4VCI offer, the coordinates on the issuance session record, and [[VSA-ADM-OID-CR-REVOKE] `revokeCredential`](#vsa-adm-oid-cr-revoke-revokecredential) addressed by list and index. `ttlSeconds` allows one year for a registered credential and keeps the 90-day ceiling for an unregistered one. The [OpenID4VC Scope](#openid4vc-scope) states the assumption behind the `vct` URL. The scope aligns with [[VT-CRED-SDJWT]](https://verana-labs.github.io/verifiable-trust-spec/versions/v4/#vt-cred-sdjwt-sd-jwt-verifiable-trust-credential-vtc): every credential carries `vct#integrity`, the issuer DID follows [[VT-CRED-SDJWT-6]](https://verana-labs.github.io/verifiable-trust-spec/versions/v4/#vt-cred-sdjwt-sd-jwt-verifiable-trust-credential-vtc), and the trust decision verifies the Type Metadata and its link to the VTJSC before it evaluates the `status` claim that [[VT-CRED-SDJWT-7]](https://verana-labs.github.io/verifiable-trust-spec/versions/v4/#vt-cred-sdjwt-sd-jwt-verifiable-trust-credential-vtc) permits.
 - **v4-draft11 (2026-09-10)** — `createCredentialOffer` answers `INVALID_INPUT` (`400`) when the credential definition gives no `CredentialSchema`. [[VSA-ADM-DC-PR-CREATE]](#vsa-adm-dc-pr-create-createpresentationrequest) already answers this code for an entry of a request. `createPresentationRequest` records the `CredentialSchema` of each requested-attribute group. [[VSA-VTI-FLOW-VERIFY-AC-7]](#vsa-vti-flow-verify-ac-anoncreds-trust-decision) states how the agent finds the credential that answers a group. A group that no sub-proof answers, or that `self_attested_attrs` answers, fails the check.
 - **v4-draft10** — AnonCreds trust decision ([[VSA-VTI-FLOW-VERIFY-AC]](#vsa-vti-flow-verify-ac-anoncreds-trust-decision)): the agent checks the ISSUER or VERIFIER `Participant` of itself and of its peer at the present time before it offers, accepts an offer, requests, presents, or acknowledges an AnonCreds credential; derives the `CredentialSchema` from the resource metadata of the credential definition or of the AnonCreds schema; fails closed; and ends a presentation from an unauthorized issuer in `abandoned` with a problem report. The AnonCreds schema of a VTJSC is published once, by the Ecosystem controller, with the VTJSC ([[VSA-PUB-AC-5]](#vsa-pub-ac-anoncreds-registry-resources), [[VSA-VTI-VTJSC]](#vsa-vti-vtjsc-vtjsc-management)); every issuer builds its credential definition on it ([[VSA-ADM-AC-CD-CREATE]](#vsa-adm-ac-cd-create-createcredentialdefinition)), and a presentation request that names a VTJSC restricts to that schema, so that the credential of any accredited issuer satisfies it ([[VSA-ADM-DC-PR-CREATE]](#vsa-adm-dc-pr-create-createpresentationrequest)). New error codes `NOT_AUTHORIZED`, `PEER_NOT_AUTHORIZED`, and `RESOLVER_UNAVAILABLE`; new problem-report codes `e.p.issuer-not-authorized` and `e.p.trust-resolution-unavailable`. Rows added to [[VSA-VPR-QRY]](#vsa-vpr-qry-indexer-queries), Security Considerations, and Observability.
