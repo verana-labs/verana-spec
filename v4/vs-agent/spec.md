@@ -592,9 +592,7 @@ In all flows below, actors represented as Applicant and Validator can be: an age
 
 > Applicant is always the peer that initiates a connection to a Validator.
 
-> **Credential format and presentation.** In this version, the flows issue W3C Verifiable Trust Credentials only ([VT-CRED-W3C](https://verana-labs.github.io/verifiable-trust-spec/versions/v4/#vt-cred-w3c-w3c-verifiable-trust-credential-vtc)): the credential format of every flow is `JSON_LD`. Whether the applicant publishes the credential it receives as a `LinkedVerifiablePresentation` entry of its DID Document ([[VT-CRED-W3C-LINKED-VP]](https://verana-labs.github.io/verifiable-trust-spec/#vt-cred-w3c-linked-vp-w3c-vtc-linked-vp)) is a **presentation term** of the flow: the validator records it with [`validateFlow`](#vsa-adm-vt-fl-validate-validateflow) (`presentAsLinkedVp`), conveys it to the applicant with the vt-flow [`credential-terms`](../vt-flow-protocol/spec.md#credential-terms) message before the offer, and the applicant agent applies it when it accepts the credential, and remembers it for the credential's later update, renewal and revocation. The validator MAY also set the credential's `validFrom` and `validUntil` ([VC Data Model 2.0 validity period](https://www.w3.org/TR/vc-data-model-2.0/#validity-period)) with the same call; no relation to the applicant entry's `effective_until` is enforced, since the resolver stops trusting a credential whose `Participant` entry is no longer active. The policy source is, in this version, the configuration of the backend behind the validator agent, passed to `validateFlow`; the rules of the Verifiable Trust specification always apply on both sides: ECS Service, Organization and Persona credentials MUST be presented ([[VS-REQ-2]](https://verana-labs.github.io/verifiable-trust-spec/#vs-req-verifiable-service-basic-requirements-and-linked-vps)), and ECS Badge and UserAgent credentials, which MUST NOT be declared in a DID Document, are not issued through a flow in this version. A `CredentialSchema` field is planned as the authoritative policy source ([vpr-spec #171](https://github.com/verana-labs/verifiable-trust-vpr-spec/issues/171)). Other credential formats and further presentation policies will be defined in future versions.
->
-> An applicant agent that receives terms it cannot honour, or that conflict with the rules above, MUST refuse them with the `problem-report` code `vt-flow.unsupported-terms` and MUST NOT accept the credential; an applicant agent that receives an offer without terms applies the defaults (`JSON_LD`, presented as a linked VP).
+> **Credential format and presentation.** In this version, the flows issue W3C Verifiable Trust Credentials only ([VT-CRED-W3C](https://verana-labs.github.io/verifiable-trust-spec/versions/v4/#vt-cred-w3c-w3c-verifiable-trust-credential-vtc)), and the applicant publishes every credential it receives through a flow as a `LinkedVerifiablePresentation` entry of its DID Document ([[VT-CRED-W3C-LINKED-VP]](https://verana-labs.github.io/verifiable-trust-spec/#vt-cred-w3c-linked-vp-w3c-vtc-linked-vp)). The credential's `validFrom` is its issuance time, and its `validUntil` is the `effective_until` of the applicant `Participant` entry when that field is set ([VC Data Model 2.0 validity period](https://www.w3.org/TR/vc-data-model-2.0/#validity-period)). ECS Badge and UserAgent credentials, which MUST NOT be declared in a DID Document, are not issued through a flow in this version. Flows for other credential formats, and presentation policies other than the linked VP, will be defined in future versions.
 
 #### [VSA-VTI-FLOW-OP] Onboarding Processes
 
@@ -671,13 +669,13 @@ sequenceDiagram
 
 > Note: this onboarding request must be executed when a new onboarding process is started or if an existing onboarding process is renewed.
 
-4. If the validator requires additional information to generate the credential (e.g., missing claims or proofs), the validator MAY send a link to the applicant for an out-of-DIDComm flow (such as a web form or portal) to collect the missing data. This is the normal path when the request carries no `claims`. The validator operator MAY also set the claims of the flow directly with [`editCredentialClaims`](#vsa-adm-vt-fl-edit-editcredentialclaims) (accepted states in [[VSA-ADM-VT-FL-EDIT]](#vsa-adm-vt-fl-edit-editcredentialclaims)).
+4. If the validator requires additional information to generate the credential (e.g., missing claims or proofs), the validator MAY send a link to the applicant for an out-of-DIDComm flow (such as a web form or portal) to collect the missing data ([`sendOobLink`](#vsa-adm-vt-fl-send-sendooblink), Flow State `OOB_PENDING`). This is the normal path when the request carries no `claims`. When the applicant has completed the step, the validator reports it with [`sendValidating`](#vsa-adm-vt-fl-validating-sendvalidating) (Flow State `VALIDATING`), and MAY send a further link when the applicant must correct or add something; the two steps repeat until the validator decides. The validator operator MAY also set the claims of the flow directly with [`editCredentialClaims`](#vsa-adm-vt-fl-edit-editcredentialclaims) (accepted states in [[VSA-ADM-VT-FL-EDIT]](#vsa-adm-vt-fl-edit-editcredentialclaims)).
 
 5. After validation, the validator records its decision and the agreed fees with [`validateFlow`](#vsa-adm-vt-fl-validate-validateflow), which validates the claim set of a `HOLDER` flow. `SetParticipantOPtoValidated` ([[MOD-PP-MSG-3]](https://verana-labs.github.io/verifiable-trust-vpr-spec/#mod-pp-msg-3-set-participant-op-to-validated)) is then submitted on-chain either by the agent itself, when it holds a `VSOperatorAuthorization` record that covers the message for its validator entry, or by an operator of the validator Corporation ([[VSA-ADM-VT-FL-VALIDATE]](#vsa-adm-vt-fl-validate-validateflow)). The transaction changes `op_state` to `VALIDATED`; both agents are notified.
 
 Steps 6 to 13 are executed only when a credential is issued, which the agent decides from the validated `Participant` entry as specified in [[VSA-VTI-FLOW-OP-ISSUE] Issuance After Validation](#vsa-vti-flow-op-issue-issuance-after-validation).
 
-6. The validator sends the [`credential-terms`](../vt-flow-protocol/spec.md#credential-terms) message of the flow (`credentialFormat` and `presentAsLinkedVp` as recorded by [`validateFlow`](#vsa-adm-vt-fl-validate-validateflow), see [Credential format and presentation](#participant-and-credential-acquisition-flows)), then offers the credential to the applicant via the Issue Credential V2 subprotocol. Upon receiving the applicant's credential request, the validator generates and signs the credential, with the `validFrom` and `validUntil` of the terms of the flow when set, and computes its `digestJCS` as specified in [W3C VTCs: Determining Credential Issuance Time](https://verana-labs.github.io/verifiable-trust-spec/versions/v4/#w3c-vtcs-determining-credential-issuance-time).
+6. The validator offers the credential to the applicant via the Issue Credential V2 subprotocol. Upon receiving the applicant's credential request, the validator generates and signs the credential, with the validity period of [Credential format and presentation](#participant-and-credential-acquisition-flows), and computes its `digestJCS` as specified in [W3C VTCs: Determining Credential Issuance Time](https://verana-labs.github.io/verifiable-trust-spec/versions/v4/#w3c-vtcs-determining-credential-issuance-time).
 
 7. The **validator** calls `CreateOrUpdateParticipantSession` ([[MOD-PP-MSG-10]](https://verana-labs.github.io/verifiable-trust-vpr-spec/#mod-pp-msg-10-create-or-update-participant-session)) on-chain, passing the computed `digestJCS` as the `digest` parameter (see [Agent Account Authorizations](#agent-account-authorizations)). The VPR anchors the digest in its `Digest` store via [Store Digest](https://verana-labs.github.io/verifiable-trust-vpr-spec/versions/v4/#mod-di-msg-1-store-digest); the `created` block timestamp of that `Digest` entry is the credential's effective issuance time. The credential MUST NOT be delivered until this transaction succeeds.
 
@@ -693,9 +691,9 @@ Steps 6 to 13 are executed only when a credential is issued, which the agent dec
 
 11.  The applicant stores the credential in its credential store.
 
-12.  When the terms of the flow say `presentAsLinkedVp` = `true`, the applicant publishes the credential as a `LinkedVerifiablePresentation` entry of its DID Document per [[VT-CRED-W3C-LINKED-VP]](https://verana-labs.github.io/verifiable-trust-spec/#vt-cred-w3c-linked-vp-w3c-vtc-linked-vp); otherwise it MUST NOT publish it (see [Credential format and presentation](#participant-and-credential-acquisition-flows)).
+12.  The applicant publishes the credential as a `LinkedVerifiablePresentation` entry of its DID Document per [[VT-CRED-W3C-LINKED-VP]](https://verana-labs.github.io/verifiable-trust-spec/#vt-cred-w3c-linked-vp-w3c-vtc-linked-vp) (see [Credential format and presentation](#participant-and-credential-acquisition-flows)).
 
-13.  The applicant calls `TriggerResolver` ([[MOD-PP-MSG-15]](https://verana-labs.github.io/verifiable-trust-vpr-spec/#mod-pp-msg-15-trigger-resolver)) on-chain to refresh its Verifiable Service resolution state. The applicant SHOULD call `TriggerResolver` after a change of step 12, and in particular when:
+13.  The applicant calls `TriggerResolver` ([[MOD-PP-MSG-15]](https://verana-labs.github.io/verifiable-trust-vpr-spec/#mod-pp-msg-15-trigger-resolver)) on-chain to refresh its Verifiable Service resolution state. The applicant SHOULD call `TriggerResolver` after step 12, and in particular when:
     - it has just become a Verifiable Service by newly complying with [[VS-REQ]](https://verana-labs.github.io/verifiable-trust-spec/#vs-req-verifiable-service-basic-requirements-and-linked-vps); or
     - it has added or removed a `LinkedVerifiablePresentation` entry in its DID Document.
 
@@ -740,7 +738,7 @@ sequenceDiagram
 
 Steps 6–13 are identical to those of [New Onboarding Process](#vsa-vti-flow-op-new-new-onboarding-process) and are executed when a credential is issued per [[VSA-VTI-FLOW-OP-ISSUE] Issuance After Validation](#vsa-vti-flow-op-issue-issuance-after-validation): for a `HOLDER` entry the Validator issues an updated credential with the claims the flow holds. If a credential is delivered:
 
-- The Applicant MUST replace the previously stored credential with the updated one in its credential store, and MUST apply the terms of the renewal flow to its DID Document: replace the `LinkedVerifiablePresentation` entry of the old credential with one that presents the updated credential, add one, or remove it ([[VT-CRED-W3C-LINKED-VP]](https://verana-labs.github.io/verifiable-trust-spec/#vt-cred-w3c-linked-vp-w3c-vtc-linked-vp)).
+- The Applicant MUST replace the previously stored credential with the updated one in its credential store, and MUST replace the `LinkedVerifiablePresentation` entry of the old credential with one that presents the updated credential ([[VT-CRED-W3C-LINKED-VP]](https://verana-labs.github.io/verifiable-trust-spec/#vt-cred-w3c-linked-vp-w3c-vtc-linked-vp)).
 - The Applicant calls `TriggerResolver` on-chain to refresh its Verifiable Service resolution state. The Applicant SHOULD call `TriggerResolver` after the update, and in particular when:
   - it has just become a Verifiable Service by newly complying with [[VS-REQ]](https://verana-labs.github.io/verifiable-trust-spec/#vs-req-verifiable-service-basic-requirements-and-linked-vps); or
   - it has added or removed a `LinkedVerifiablePresentation` entry in its DID Document.
@@ -751,7 +749,7 @@ When the validator agent receives the `SetParticipantOPtoValidated` notification
 
 - [VSA-VTI-FLOW-OP-ISSUE-1] If `p.role` is `HOLDER`, the agent MUST issue a credential of `p.schema_id` to the applicant: a `HOLDER` entry exists to hold a credential of its schema, and by [[MOD-PP-MSG-1-2-2]](https://verana-labs.github.io/verifiable-trust-vpr-spec/versions/v4/#mod-pp-msg-1-2-2-start-participant-op-permission-checks) its validator is an `ISSUER` entry of the same schema. The agent runs steps 6 to 13 of the [New Onboarding Process](#vsa-vti-flow-op-new-new-onboarding-process), or of the [Renew Onboarding Process](#vsa-vti-flow-op-renew-renew-onboarding-process) for a renewal.
 - [VSA-VTI-FLOW-OP-ISSUE-2] For any other `p.role` (`ISSUER_GRANTOR`, `VERIFIER_GRANTOR`, `ISSUER`, `VERIFIER`) no credential is issued: the `Participant` entry is the accreditation. The flow reaches `VALIDATED`, its terminal state ([vt-flow States](../vt-flow-protocol/spec.md#states)).
-- [VSA-VTI-FLOW-OP-ISSUE-3] The credential is a W3C Verifiable Trust Credential ([VT-CRED-W3C](https://verana-labs.github.io/verifiable-trust-spec/versions/v4/#vt-cred-w3c-w3c-verifiable-trust-credential-vtc)) signed with the agent's DID key, whose `credentialSchema.id` is the VTJSC of `p.schema_id`; no other container is issued through a flow in this version. The applicant publishes it as a linked VP if, and only if, the terms of the flow say so (see [Credential format and presentation](#participant-and-credential-acquisition-flows)).
+- [VSA-VTI-FLOW-OP-ISSUE-3] The credential is a W3C Verifiable Trust Credential ([VT-CRED-W3C](https://verana-labs.github.io/verifiable-trust-spec/versions/v4/#vt-cred-w3c-w3c-verifiable-trust-credential-vtc)) signed with the agent's DID key, whose `credentialSchema.id` is the VTJSC of `p.schema_id`; no other container is issued through a flow in this version. Its `validFrom` is the issuance time; its `validUntil` is `p.effective_until` when set, and absent otherwise. The applicant publishes it as a linked VP (see [Credential format and presentation](#participant-and-credential-acquisition-flows)).
 - [VSA-VTI-FLOW-OP-ISSUE-4] The claims of the credential are the claims the flow holds when the notification is processed: those of the `onboarding-request` (see [[VSA-VTI-FLOW-OP-OR] Onboarding Request Composition](#vsa-vti-flow-op-or-onboarding-request-composition)), as created or replaced through [`editCredentialClaims`](#vsa-adm-vt-fl-edit-editcredentialclaims). [`validateFlow`](#vsa-adm-vt-fl-validate-validateflow) validated them before the transaction; the agent MUST validate them again against the `json_schema` of the `CredentialSchema` entry before issuing, since they may have been edited since. When the flow holds no claims or invalid claims, the agent MUST NOT issue, MUST log a descriptive error that names each missing or invalid claim, and MUST move the flow to `VALIDATED_PENDING_CLAIMS`; the operator corrects the claims with `editCredentialClaims` and calls `validateFlow` again, which validates them and starts the issuance.
 - [VSA-VTI-FLOW-OP-ISSUE-5] A validator that collects claims out of band (for example through the portal reached by an `oob-link`) therefore writes them into the flow before it calls `validateFlow`.
 - [VSA-VTI-FLOW-OP-ISSUE-6] When the default handler of the `SetParticipantOPtoValidated` notification is disabled (`VERANA_INDEXER_DEFAULT_HANDLERS_OVERRIDE`, [[VSA-VTI-CFG-ENV-NET]](#vsa-vti-cfg-env-net-network-configuration)), the backend behind the agent triggers issuance with [`validateFlow`](#vsa-adm-vt-fl-validate-validateflow) once the entry is `VALIDATED` on chain ([VSA-ADM-VT-FL-VALIDATE-11]); the rules above apply unchanged.
@@ -907,7 +905,7 @@ sequenceDiagram
 
 3. If the validator requires additional information to generate the credential (e.g., missing claims or proofs), the validator MAY send a link to the applicant for an out-of-DIDComm flow (such as a web form or portal) to collect the missing data.
 
-4. The validator sends the [`credential-terms`](../vt-flow-protocol/spec.md#credential-terms) message of the flow (`credentialFormat` and `presentAsLinkedVp` as recorded by [`validateFlow`](#vsa-adm-vt-fl-validate-validateflow), see [Credential format and presentation](#participant-and-credential-acquisition-flows)), then offers the credential to the applicant via the Issue Credential V2 subprotocol. Upon receiving the applicant's credential request, the validator generates and signs the credential, with the `validFrom` and `validUntil` of the terms of the flow when set, and computes its `digestJCS` as specified in [W3C VTCs: Determining Credential Issuance Time](https://verana-labs.github.io/verifiable-trust-spec/versions/v4/#w3c-vtcs-determining-credential-issuance-time).
+4. The validator offers the credential to the applicant via the Issue Credential V2 subprotocol. Upon receiving the applicant's credential request, the validator generates and signs the credential, with `validFrom` set to the issuance time, and computes its `digestJCS` as specified in [W3C VTCs: Determining Credential Issuance Time](https://verana-labs.github.io/verifiable-trust-spec/versions/v4/#w3c-vtcs-determining-credential-issuance-time).
 
 5. The **validator** calls `CreateOrUpdateParticipantSession` ([[MOD-PP-MSG-10]](https://verana-labs.github.io/verifiable-trust-vpr-spec/#mod-pp-msg-10-create-or-update-participant-session)) on-chain, passing the computed `digestJCS` as the `digest` parameter (see [Agent Account Authorizations](#agent-account-authorizations)). The VPR anchors the digest in its `Digest` store via [Store Digest](https://verana-labs.github.io/verifiable-trust-vpr-spec/versions/v4/#mod-di-msg-1-store-digest); the `created` block timestamp of that `Digest` entry is the credential's effective issuance time. The credential MUST NOT be delivered until this transaction succeeds.
 
@@ -923,9 +921,9 @@ sequenceDiagram
 
 9. The applicant stores the credential in its credential store.
 
-10. When the terms of the flow say `presentAsLinkedVp` = `true`, the applicant publishes the credential as a `LinkedVerifiablePresentation` entry of its DID Document per [[VT-CRED-W3C-LINKED-VP]](https://verana-labs.github.io/verifiable-trust-spec/#vt-cred-w3c-linked-vp-w3c-vtc-linked-vp); otherwise it MUST NOT publish it (see [Credential format and presentation](#participant-and-credential-acquisition-flows)).
+10. The applicant publishes the credential as a `LinkedVerifiablePresentation` entry of its DID Document per [[VT-CRED-W3C-LINKED-VP]](https://verana-labs.github.io/verifiable-trust-spec/#vt-cred-w3c-linked-vp-w3c-vtc-linked-vp) (see [Credential format and presentation](#participant-and-credential-acquisition-flows)).
 
-11. The applicant calls `TriggerResolver` on-chain to refresh its Verifiable Service resolution state. The applicant SHOULD call `TriggerResolver` after a change of step 10, and in particular when:
+11. The applicant calls `TriggerResolver` on-chain to refresh its Verifiable Service resolution state. The applicant SHOULD call `TriggerResolver` after step 10, and in particular when:
     - it has just become a Verifiable Service by newly complying with [[VS-REQ]](https://verana-labs.github.io/verifiable-trust-spec/#vs-req-verifiable-service-basic-requirements-and-linked-vps); or
     - it has added or removed a `LinkedVerifiablePresentation` entry in its DID Document.
 
@@ -994,15 +992,15 @@ The following table maps the agent-level message names used in this specificatio
 | --- | --- | --- | --- |
 | OR (Onboarding Request) | [`onboarding-request`](../vt-flow-protocol/spec.md#onboarding-request) | Applicant | After `StartParticipantOP` / `RenewParticipantOP` succeeds on-chain, for any schema. `claims` per [Onboarding Request Composition](#vsa-vti-flow-op-or-onboarding-request-composition). |
 | IR (Issuance Request) | [`issuance-request`](../vt-flow-protocol/spec.md#issuance-request) | Applicant | When initiating a [Credential Direct Issuance](#vsa-vti-flow-di-credential-direct-issuance). |
-| OOB_LINK | [`oob-link`](../vt-flow-protocol/spec.md#oob-link) | Validator | When additional out-of-DIDComm information is needed. |
-| VALIDATING | [`validating`](../vt-flow-protocol/spec.md#validating) | Validator | When off-chain validation begins. |
+| OOB_LINK | [`oob-link`](../vt-flow-protocol/spec.md#oob-link) | Validator | When additional out-of-DIDComm information is needed, on [`sendOobLink`](#vsa-adm-vt-fl-send-sendooblink). |
+| VALIDATING | [`validating`](../vt-flow-protocol/spec.md#validating) | Validator | When the validator accepts the request, and when the applicant completes an out-of-DIDComm step, on [`sendValidating`](#vsa-adm-vt-fl-validating-sendvalidating). |
 | Credential offer / accept | [Issue Credential V2 subprotocol](../vt-flow-protocol/spec.md#subprotocols) | Both | Validator issues `offer-credential`; Applicant verifies and sends `ack`. |
 | CRED_STATE_CHANGE | [`credential-state-change`](../vt-flow-protocol/spec.md#credential-state-change) | Validator | Credential status change (e.g., `REVOKED`). See [Validator Updates](#vsa-vti-flow-upd-validator-updates) and [Revoke Participant / Slash Participant Trust Deposit](#vsa-vti-flow-op-revoke-revoke-participant--slash-participant-trust-deposit). |
 | ERROR | [`problem-report` (adopted)](../vt-flow-protocol/spec.md#problem-report-adopted) | Either | Protocol error or explicit termination. Error codes are listed in the [protocol spec Error Codes registry](../vt-flow-protocol/spec.md#error-codes). |
 
 #### [VSA-VTI-FLOW-MISC] Additional Considerations
 
-- **Credential update**: At any time, the validator MAY issue an updated credential via a new Issue Credential V2 subprotocol run through the existing DIDComm session. Upon receiving an updated credential, the applicant MUST delete the old credential from the credential store, replace it with the new one, and apply the terms of the new offer to its DID Document (update, add or remove the corresponding `LinkedVerifiablePresentation` entry).
+- **Credential update**: At any time, the validator MAY issue an updated credential via a new Issue Credential V2 subprotocol run through the existing DIDComm session. Upon receiving an updated credential, the applicant MUST delete the old credential from the credential store, replace it with the new one, and update the corresponding `LinkedVerifiablePresentation` entry of its DID Document.
 - **Out-of-band requests**: At any time, the validator MAY send an `oob-link` message — for example, to revalidate applicant information, to extend a `Participant`'s lifetime, or to collect additional data before issuing an updated credential.
 - **Reconnection**: Per the [vt-flow Reconnection](../vt-flow-protocol/spec.md#reconnection) rules, if the applicant reconnects to the validator after a connection has been closed, it MUST resend an `onboarding-request` or `issuance-request` with the same `participant_session_id`. The validator MUST identify that the message is related to an existing flow and reassign the flow to the new connection.
 - **Onboarding renewal**: When an onboarding process must be renewed, the applicant MUST first execute the required VPR on-chain transaction (`RenewParticipantOP`) and then resend an `onboarding-request` to the validator to re-trigger validation.
@@ -1023,8 +1021,8 @@ The following table summarises how Flow States relate to agent-level flows:
 | `AWAITING_OR` | Validator | [New Onboarding Process](#vsa-vti-flow-op-new-new-onboarding-process) | `onboarding-request` expected; last request rejected or not yet received. |
 | `IR_SENT` | Applicant | [Credential Direct Issuance](#vsa-vti-flow-di-credential-direct-issuance) | `issuance-request` sent to validator. |
 | `AWAITING_IR` | Validator | [Credential Direct Issuance](#vsa-vti-flow-di-credential-direct-issuance) | `issuance-request` expected; last request rejected or not yet received. |
-| `OOB_PENDING` | Both | Both | Validator sent `oob-link`; awaiting applicant completion. |
-| `VALIDATING` | Both | Both | Off-chain validation (Onboarding Process) or processing an accepted issuance request (Direct Issuance) in progress. |
+| `OOB_PENDING` | Both | Both | Validator sent `oob-link` ([`sendOobLink`](#vsa-adm-vt-fl-send-sendooblink)); the applicant completes the out-of-band step. Left on `validating` ([`sendValidating`](#vsa-adm-vt-fl-validating-sendvalidating)). |
+| `VALIDATING` | Both | Both | Off-chain validation (Onboarding Process) or processing an accepted issuance request (Direct Issuance) in progress. Entered on acceptance of the request and on `validating`; a further `oob-link` returns the flow to `OOB_PENDING`. |
 | `AWAITING_VALIDATION_TX` | Validator | [New Onboarding Process](#vsa-vti-flow-op-new-new-onboarding-process) | `validateFlow` accepted; an operator of the validator Corporation must submit `SetParticipantOPtoValidated` (the agent holds no `VSOperatorAuthorization` record covering the message). |
 | `VALIDATION_TX_SUBMITTED` | Validator | [New Onboarding Process](#vsa-vti-flow-op-new-new-onboarding-process) | The agent broadcast `SetParticipantOPtoValidated`; waiting for its inclusion and for the notification. |
 | `VALIDATION_TX_FAILED` | Validator | [New Onboarding Process](#vsa-vti-flow-op-new-new-onboarding-process) | The agent could not broadcast `SetParticipantOPtoValidated`, or the transaction failed; `validation.tx.reason` set. Retry with `validateFlow`, or an operator submits the transaction. |
@@ -1315,6 +1313,7 @@ The table lists every method of the Administration API. It is a non-normative ov
 | Verifiable Trust | `listFlows` | `GET` | `/v2/vt/flows` | [[VSA-ADM-VT-FL-LIST]](#vsa-adm-vt-fl-list-listflows) |
 |  | `editCredentialClaims` | `PUT` | `/v2/vt/flows/{participantSessionId}/claims` | [[VSA-ADM-VT-FL-EDIT]](#vsa-adm-vt-fl-edit-editcredentialclaims) |
 |  | `sendOobLink` | `POST` | `/v2/vt/flows/{participantSessionId}/oob-link` | [[VSA-ADM-VT-FL-SEND]](#vsa-adm-vt-fl-send-sendooblink) |
+|  | `sendValidating` | `POST` | `/v2/vt/flows/{participantSessionId}/validating` | [[VSA-ADM-VT-FL-VALIDATING]](#vsa-adm-vt-fl-validating-sendvalidating) |
 |  | `validateFlow` | `POST` | `/v2/vt/flows/{participantSessionId}/validate` | [[VSA-ADM-VT-FL-VALIDATE]](#vsa-adm-vt-fl-validate-validateflow) |
 |  | `rejectFlow` | `POST` | `/v2/vt/flows/{participantSessionId}/reject` | [[VSA-ADM-VT-FL-REJECT]](#vsa-adm-vt-fl-reject-rejectflow) |
 |  | `revokeFlowCredential` | `POST` | `/v2/vt/flows/{participantSessionId}/revoke-credential` | [[VSA-ADM-VT-FL-REVOKE]](#vsa-adm-vt-fl-revoke-revokeflowcredential) |
@@ -1979,6 +1978,7 @@ The following methods list and progress the credential acquisition flows that th
 | Flow Management | `listFlows` | `GET` | `/v2/vt/flows` | [see](#vsa-adm-vt-fl-list-listflows) |
 | Flow Management | `editCredentialClaims` | `PUT` | `/v2/vt/flows/{participantSessionId}/claims` | [see](#vsa-adm-vt-fl-edit-editcredentialclaims) |
 | Flow Management | `sendOobLink` | `POST` | `/v2/vt/flows/{participantSessionId}/oob-link` | [see](#vsa-adm-vt-fl-send-sendooblink) |
+| Flow Management | `sendValidating` | `POST` | `/v2/vt/flows/{participantSessionId}/validating` | [see](#vsa-adm-vt-fl-validating-sendvalidating) |
 | Flow Management | `validateFlow` | `POST` | `/v2/vt/flows/{participantSessionId}/validate` | [see](#vsa-adm-vt-fl-validate-validateflow) |
 | Flow Management | `rejectFlow` | `POST` | `/v2/vt/flows/{participantSessionId}/reject` | [see](#vsa-adm-vt-fl-reject-rejectflow) |
 | Flow Management | `revokeFlowCredential` | `POST` | `/v2/vt/flows/{participantSessionId}/revoke-credential` | [see](#vsa-adm-vt-fl-revoke-revokeflowcredential) |
@@ -1995,21 +1995,41 @@ Lists and inspects the credential acquisition flows that the agent handles.
 - `connectionState` — one of the Connection State values that [Flow State](#vsa-vti-flow-state-flow-state) defines.
 - `flowState` — one of the Flow State values that [Flow State](#vsa-vti-flow-state-flow-state) defines.
 - `peerDid` — DID of the remote peer.
-- `participantId` — applicant or validator `Participant` identifier. When `role` is `applicant`, `participantId` is the validator `Participant`. When `role` is `validator`, `participantId` is the applicant `Participant`.
+- `applicantParticipantId` — the applicant `Participant` identifier of an Onboarding Process flow.
+- `validatorParticipantId` — the validator `Participant` identifier of an Onboarding Process flow.
 - `schemaId` — credential schema identifier.
 - `participantSessionId` — DIDComm session identifier.
 
 **Output**: a page of flow records. Each record MUST include at minimum:
 
+- `role` — the role of the agent in the flow: `applicant` or `validator`;
 - `peerDid`;
-- the applicable `participantId` values;
+- `applicantParticipantId` and `validatorParticipantId`, for an Onboarding Process flow;
 - `schemaId`;
 - `participantSessionId`;
+- `flowState` — the current Flow State, per [Flow State](#vsa-vti-flow-state-flow-state);
+- `connectionState` — the current Connection State, per [Flow State](#vsa-vti-flow-state-flow-state);
+- `pendingAction` — the party that must act for the flow to progress, derived from `flowState` and `role` per the table below;
 - `lastEventAt` — timestamp of the last event;
 - the submitted credential claims and proofs;
-- `oobLinkUrl` — the outstanding `OOB_LINK` URL, when one exists;
-- `validation` — for an Onboarding Process flow after `validateFlow`: `decidedAt`, `submission` (`AGENT` or `OPERATOR`), the agreed fees, discounts, `effectiveUntil` and `opSummaryDigest`, `terms` (`credentialFormat`, `presentAsLinkedVp`, `credentialValidFrom`, `credentialValidUntil`), and `tx` (`hash`, `height`, `status`, `reason`, `error`) when the agent submitted the transaction (see [[VSA-ADM-VT-FL-VALIDATE]](#vsa-adm-vt-fl-validate-validateflow));
+- `oobLink` — the outstanding `oob-link`, when one exists: `url`, `description`, `expiresAt`, and `at` (the time the agent sent or received the message). The agent sets it on `oob-link`, and clears it on `validating`, on expiry, and on every other transition out of `OOB_PENDING`;
+- `messages[]` — the human-readable messages of the flow, in order: for a validator, those it sent; for an applicant, those it received. Each entry carries `type` (`oob-link`, `validating`, or `problem-report`), `text` (the `description`, `comment`, or problem description), `at`, and `url` for an `oob-link`;
+- `validation` — for an Onboarding Process flow after `validateFlow`: `decidedAt`, `submission` (`AGENT` or `OPERATOR`), the agreed fees, discounts, `effectiveUntil` and `opSummaryDigest`, and `tx` (`hash`, `height`, `status`, `reason`, `error`) when the agent submitted the transaction (see [[VSA-ADM-VT-FL-VALIDATE]](#vsa-adm-vt-fl-validate-validateflow));
 - after the agent generates a credential: the identifier of the offered credential, its `digestJCS`, and the reference to the on-chain `ParticipantSession`.
+
+`pendingAction` is one of `APPLICANT`, `VALIDATOR`, `AGENT`, `CHAIN`, `NONE`:
+
+| Flow State | `role` = `applicant` | `role` = `validator` |
+| --- | --- | --- |
+| `AWAITING_OP` | `APPLICANT` | — |
+| `OR_SENT`, `IR_SENT`, `AWAITING_OR`, `AWAITING_IR` | `AGENT` | `AGENT` |
+| `OOB_PENDING` | `APPLICANT` | `APPLICANT` |
+| `VALIDATING` | `VALIDATOR` | `VALIDATOR` |
+| `AWAITING_VALIDATION_TX`, `VALIDATION_TX_FAILED`, `VALIDATED_PENDING_CLAIMS` | — | `VALIDATOR` |
+| `VALIDATION_TX_SUBMITTED` | — | `CHAIN` |
+| `VALIDATED` | `AGENT` when the applicant `Participant` role is `HOLDER`, `NONE` otherwise | same |
+| `CRED_OFFERED` | `AGENT` | `AGENT` |
+| `COMPLETED`, `CRED_REVOKED`, and every terminal state | `NONE` | `NONE` |
 
 **Requirements**: none beyond the Admin API access checks (see [Authorization](#authorization)).
 
@@ -2030,7 +2050,7 @@ Creates, modifies, or overrides the credential claims of a given flow: the claim
 **Requirements**:
 
 - The agent MUST refuse the request when the connection is not in `ESTABLISHED` state.
-- The agent MUST refuse the request when the flow is not `VALIDATING`, `AWAITING_VALIDATION_TX`, `VALIDATION_TX_SUBMITTED`, `VALIDATION_TX_FAILED`, `VALIDATED_PENDING_CLAIMS`, or `CRED_REVOKED` (see [Flow State](#vsa-vti-flow-state-flow-state)).
+- The agent MUST refuse the request when the flow is not `OOB_PENDING`, `VALIDATING`, `AWAITING_VALIDATION_TX`, `VALIDATION_TX_SUBMITTED`, `VALIDATION_TX_FAILED`, `VALIDATED_PENDING_CLAIMS`, or `CRED_REVOKED` (see [Flow State](#vsa-vti-flow-state-flow-state)). The request changes no Flow State.
 - The agent MUST refuse the request for an Onboarding Process flow whose applicant `Participant` role is not `HOLDER`: no credential is issued for such a flow ([VSA-VTI-FLOW-OP-ISSUE-2]).
 - The agent stores the claim set as given and MUST NOT validate it against the `json_schema` of the schema: a partial set is accepted. Validation happens in [`validateFlow`](#vsa-adm-vt-fl-validate-validateflow) and before the offer ([VSA-VTI-FLOW-OP-ISSUE-4]).
 
@@ -2041,7 +2061,7 @@ Creates, modifies, or overrides the credential claims of a given flow: the claim
 
 ##### [VSA-ADM-VT-FL-SEND] sendOobLink
 
-Sends or resends an `OOB_LINK` DIDComm message to the applicant, to collect information out of DIDComm (see [[VSA-VTI-FLOW-DIDCOMM] DIDComm Protocol](#vsa-vti-flow-didcomm-didcomm-protocol)).
+Sends an [`oob-link`](../vt-flow-protocol/spec.md#oob-link) DIDComm message to the applicant, to collect information out of DIDComm (see [[VSA-VTI-FLOW-DIDCOMM] DIDComm Protocol](#vsa-vti-flow-didcomm-didcomm-protocol)): for a first out-of-band step, for corrections or additions after one, or to replace an outstanding link.
 
 **Path parameters**:
 
@@ -2049,18 +2069,45 @@ Sends or resends an `OOB_LINK` DIDComm message to the applicant, to collect info
 
 **Inputs** (request body):
 
-- `url` (REQUIRED) — the OOB URL to send.
-- `message` (OPTIONAL) — text that the agent shows to the applicant.
+- `url` (REQUIRED) — the `url` of the message: the absolute `https://` URL where the applicant completes the step.
+- `description` (REQUIRED) — the `description` of the message: the text the applicant reads.
+- `expiresAt` (OPTIONAL, ISO 8601 UTC datetime) — the `expires_time` of the message.
 
-**Output**: confirmation that the agent dispatched the message.
+**Output**: the updated flow record.
 
 **Requirements**:
 
 - The agent MUST refuse the request when the Connection State of the flow is not `ESTABLISHED`.
+- The agent MUST refuse the request when the flow is not `VALIDATING`, `OOB_PENDING`, or `COMPLETED`.
+- The agent sends the message and records it in `messages[]` and in `oobLink`. From `VALIDATING` and from `COMPLETED`, the flow moves to `OOB_PENDING`; from `OOB_PENDING`, the message replaces the outstanding link and the flow stays in `OOB_PENDING`.
 
 **Errors**:
 
-- `INVALID_STATE` (`409`) — the Connection State of the flow is not `ESTABLISHED`.
+- `INVALID_STATE` (`409`) — the Connection State of the flow is not `ESTABLISHED`, or the flow is not in one of the accepted states.
+
+##### [VSA-ADM-VT-FL-VALIDATING] sendValidating
+
+Sends a [`validating`](../vt-flow-protocol/spec.md#validating) DIDComm message to the applicant: when the applicant has completed the out-of-band step of an `oob-link`, or to update the status text while the validator reviews.
+
+**Path parameters**:
+
+- `participantSessionId` (REQUIRED) — identifier of the target flow.
+
+**Inputs** (request body):
+
+- `comment` (OPTIONAL) — the `comment` of the message: the text the applicant reads.
+
+**Output**: the updated flow record.
+
+**Requirements**:
+
+- The agent MUST refuse the request when the Connection State of the flow is not `ESTABLISHED`.
+- The agent MUST refuse the request when the flow is not `OOB_PENDING` or `VALIDATING`.
+- The agent sends the message and records it in `messages[]`. From `OOB_PENDING`, the agent clears `oobLink` and moves the flow to `VALIDATING`, or to `COMPLETED` when the outstanding link was sent from `COMPLETED`. From `VALIDATING`, the flow state does not change.
+
+**Errors**:
+
+- `INVALID_STATE` (`409`) — the Connection State of the flow is not `ESTABLISHED`, or the flow is not in one of the accepted states.
 
 ##### [VSA-ADM-VT-FL-VALIDATE] validateFlow
 
@@ -2070,10 +2117,10 @@ For a [Credential Direct Issuance](#vsa-vti-flow-di-credential-direct-issuance) 
 
 For an Onboarding Process flow, the method validates the claim set of a `HOLDER` flow, records the decision and the agreed fees, and either submits `SetParticipantOPtoValidated` ([[MOD-PP-MSG-3]](https://verana-labs.github.io/verifiable-trust-vpr-spec/#mod-pp-msg-3-set-participant-op-to-validated)) itself or hands the transaction over to an operator of the validator Corporation:
 
-- [VSA-ADM-VT-FL-VALIDATE-1] The method is accepted when the flow is `VALIDATING`, `VALIDATION_TX_FAILED` (retry), or `VALIDATED_PENDING_CLAIMS` (issuance after corrected claims). Any other state is refused with `INVALID_STATE`.
-- [VSA-ADM-VT-FL-VALIDATE-2] When the applicant `Participant` role is `HOLDER`, the agent MUST validate the claim set of the flow against the `json_schema` of the `CredentialSchema` entry before anything else. On failure the agent MUST return `INVALID_CLAIMS` with the list of violations, and MUST NOT record the decision nor submit anything. The agent MUST also check the terms: `credentialFormat` MUST be a format the agent can issue for the schema (`JSON_LD` only in this version), and `presentAsLinkedVp` MUST be compatible with the policy the agent can read (`true` for the ECS Service, Organization and Persona schemas; the `CredentialSchema` policy once the VPR carries one, [vpr-spec #171](https://github.com/verana-labs/verifiable-trust-vpr-spec/issues/171)). `credentialValidFrom` and `credentialValidUntil` MUST satisfy the rules stated with the inputs. On failure the agent MUST return `INVALID_TERMS` and record nothing.
+- [VSA-ADM-VT-FL-VALIDATE-1] The method is accepted when the flow is `VALIDATING`, `OOB_PENDING`, `VALIDATION_TX_FAILED` (retry), or `VALIDATED_PENDING_CLAIMS` (issuance after corrected claims). Any other state is refused with `INVALID_STATE`. In `OOB_PENDING`, the agent first sends `validating` and moves the flow to `VALIDATING`, as [`sendValidating`](#vsa-adm-vt-fl-validating-sendvalidating) does.
+- [VSA-ADM-VT-FL-VALIDATE-2] When the applicant `Participant` role is `HOLDER`, the agent MUST validate the claim set of the flow against the `json_schema` of the `CredentialSchema` entry before anything else. On failure the agent MUST return `INVALID_CLAIMS` with the list of violations, and MUST NOT record the decision nor submit anything. When the VTJSC of the schema requires the `validUntil` property (the ECS Organization and Persona schemas) and neither the call carries `effectiveUntil` nor the applicant entry carries `effective_until`, the agent MUST return `INVALID_INPUT` and record nothing: the credential takes its `validUntil` from that value ([Credential format and presentation](#participant-and-credential-acquisition-flows)).
 - [VSA-ADM-VT-FL-VALIDATE-3] In `VALIDATED_PENDING_CLAIMS`, the agent then starts issuance per [[VSA-VTI-FLOW-OP-ISSUE] Issuance After Validation](#vsa-vti-flow-op-issue-issuance-after-validation) (steps 6 to 13) and returns.
-- [VSA-ADM-VT-FL-VALIDATE-4] Otherwise the agent records the decision and the inputs on the flow (`validation.decidedAt`, `validation.fees`, `validation.effectiveUntil`, `validation.opSummaryDigest`, `validation.terms`) and determines the submission path, recorded in `validation.submission`: `AGENT` when the agent holds an active `ParticipantAuthorizationRecord` for its validator `Participant` entry whose `msg_types` include `SetParticipantOPtoValidated` and whose `expiration` has not passed (see [Agent Account Authorizations](#agent-account-authorizations)); `OPERATOR` otherwise.
+- [VSA-ADM-VT-FL-VALIDATE-4] Otherwise the agent records the decision and the inputs on the flow (`validation.decidedAt`, `validation.fees`, `validation.effectiveUntil`, `validation.opSummaryDigest`) and determines the submission path, recorded in `validation.submission`: `AGENT` when the agent holds an active `ParticipantAuthorizationRecord` for its validator `Participant` entry whose `msg_types` include `SetParticipantOPtoValidated` and whose `expiration` has not passed (see [Agent Account Authorizations](#agent-account-authorizations)); `OPERATOR` otherwise.
 - [VSA-ADM-VT-FL-VALIDATE-5] `OPERATOR`: the flow moves to `AWAITING_VALIDATION_TX` and the agent MUST NOT submit the transaction. An operator of the validator Corporation submits it under its own `OperatorAuthorization`, for example from the Verana frontend; the `SetParticipantOPtoValidated` notification then moves the flow to `VALIDATED`.
 - [VSA-ADM-VT-FL-VALIDATE-6] `AGENT`: before broadcasting, the agent MUST run a pre-flight: simulate the transaction, and check that the fee payer can pay it, that is the agent account, or, when the record has `with_feegrant`, the `FeeGrant` allowance and the balance of the Corporation account. A failed pre-flight moves the flow to `VALIDATION_TX_FAILED` without broadcasting.
 - [VSA-ADM-VT-FL-VALIDATE-7] The agent signs the transaction with its own account key, and only that key, and broadcasts it. A broadcast rejected by the node moves the flow to `VALIDATION_TX_FAILED`; an accepted broadcast moves it to `VALIDATION_TX_SUBMITTED` with `validation.tx.hash`, and the method returns without waiting for inclusion.
@@ -2086,14 +2133,7 @@ For an Onboarding Process flow, the method validates the claim set of a `HOLDER`
 
 - `participantSessionId` (REQUIRED) — identifier of the target flow.
 
-**Inputs** (request body):
-
-- `credentialFormat` (OPTIONAL, default `JSON_LD`) — the format of the credential to issue; `JSON_LD` is the only value accepted in this version. Both flow kinds.
-- `presentAsLinkedVp` (OPTIONAL, default `true`) — whether the applicant is to publish the credential as a `LinkedVerifiablePresentation` entry of its DID Document (see [Credential format and presentation](#participant-and-credential-acquisition-flows)). Both flow kinds.
-- `credentialValidFrom`, `credentialValidUntil` (OPTIONAL, nullable, ISO 8601 UTC datetimes) — the `validFrom` and `validUntil` properties of the credential ([VC Data Model 2.0 validity period](https://www.w3.org/TR/vc-data-model-2.0/#validity-period)). Each value, when present, MUST be later than the time of the call, and `credentialValidFrom` MUST be earlier than `credentialValidUntil` when both are present. REQUIRED when the VTJSC of the schema requires the property (the ECS Organization and Persona schemas). When absent, the property is not set. No bound against the applicant entry's `effective_until` applies. Both flow kinds.
-
-The following inputs apply to Onboarding Process flows only and are ignored for Direct Issuance:
-
+**Inputs** (request body; Onboarding Process flows only, ignored for Direct Issuance; an empty body is a valid call):
 
 - `validationFees`, `issuanceFees`, `verificationFees` (OPTIONAL, default `0`) — the fee values of [[MOD-PP-MSG-3]](https://verana-labs.github.io/verifiable-trust-vpr-spec/#mod-pp-msg-3-set-participant-op-to-validated).
 - `issuanceFeeDiscount`, `verificationFeeDiscount` (OPTIONAL, default `0`) — the discount values of [[MOD-PP-MSG-3]](https://verana-labs.github.io/verifiable-trust-vpr-spec/#mod-pp-msg-3-set-participant-op-to-validated), between `0` and `1`.
@@ -2110,7 +2150,7 @@ The fee and discount values are agreed at the first validation of the entry. For
 
 - `INVALID_STATE` (`409`) — the flow is not in one of the accepted states.
 - `INVALID_CLAIMS` (`422`) — the claim set does not satisfy the `json_schema`; `violations` is an array of `{ path, message }`.
-- `INVALID_TERMS` (`422`) — `credentialFormat` is not supported for the schema, `presentAsLinkedVp` conflicts with the presentation policy, or the validity inputs break their rules ([VSA-ADM-VT-FL-VALIDATE-2]).
+- `INVALID_INPUT` (`400`) — the VTJSC of the schema requires `validUntil` and no `effectiveUntil` applies ([VSA-ADM-VT-FL-VALIDATE-2]).
 
 A transaction failure is not an error of this method: the method returns `200` with the flow in `VALIDATION_TX_FAILED` when the pre-flight or the broadcast fails, and the asynchronous outcomes are read from the flow record.
 
@@ -2133,7 +2173,7 @@ Terminates a flow on the validator's decision, without any on-chain transaction:
 
 - [VSA-ADM-VT-FL-REJECT-1] The method is accepted, for an Onboarding Process flow, in `AWAITING_OR`, `OOB_PENDING`, `VALIDATING`, `AWAITING_VALIDATION_TX` and `VALIDATION_TX_FAILED`; for a Credential Direct Issuance flow, in `AWAITING_IR`, `OOB_PENDING` and `VALIDATING`. The agent MUST refuse it in `VALIDATION_TX_SUBMITTED` (a transaction is in flight) and in every state from `VALIDATED` on.
 - [VSA-ADM-VT-FL-REJECT-2] The agent MUST NOT submit any on-chain transaction. For an Onboarding Process, the applicant `Participant` entry stays `PENDING` with its escrow until the applicant cancels it ([Cancel OP Last Request](#vsa-vti-flow-op-cancel-cancel-op-last-request)) or the process expires.
-- [VSA-ADM-VT-FL-REJECT-3] The agent MUST send the `problem-report` with the given `code` and `description`, then move the flow to `TERMINATED_BY_VALIDATOR` and the connection to `TERMINATED`, as the [vt-flow protocol States](../vt-flow-protocol/spec.md#states) define.
+- [VSA-ADM-VT-FL-REJECT-3] The agent MUST send the `problem-report` with the given `code` and `description`, record it in `messages[]`, then move the flow to `TERMINATED_BY_VALIDATOR` and the connection to `TERMINATED`, as the [vt-flow protocol States](../vt-flow-protocol/spec.md#states) define.
 
 **Errors**:
 
