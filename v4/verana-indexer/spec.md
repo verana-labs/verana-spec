@@ -1,6 +1,6 @@
 # Indexer v4 Specification
 
-**Latest Draft:** spec v4-draft11
+**Latest Draft:** spec v4-draft13
 
 ## Abstract
 
@@ -23,6 +23,16 @@ Every datetime value defined or surfaced by this specification — including but
 ```
 
 The JSON Schemas published alongside this document expose this constraint as the reusable `#/$defs/Iso8601DateTime` definition; every datetime property in those schemas references it.
+
+### Duration encoding
+
+Every duration value surfaced by this specification MUST be encoded as the [protobuf JSON mapping of `google.protobuf.Duration`](https://protobuf.dev/programming-guides/json/): a decimal number of seconds followed by the suffix `s`, for example `"315360000s"` or `"1.5s"`. Fractional seconds are OPTIONAL and carry at most nine digits. A duration MUST be strictly positive: the ledger never stores a zero or negative duration, and the indexer MUST omit the field (or serialise `null` when the field is declared nullable) rather than emit `"0s"`. The normative regular expression is:
+
+```regex
+^[0-9]+(\.[0-9]{1,9})?s$
+```
+
+A duration on an authorization, record or grant means that the entry **auto-renews**: per VPR [[AUTHZ-CHECK-1]](https://verana-labs.github.io/verifiable-trust-vpr-spec/versions/v4/#authz-check-1-operator-authorization-checks), [[AUTHZ-CHECK-2]](https://verana-labs.github.io/verifiable-trust-vpr-spec/versions/v4/#authz-check-2-fee-grant-checks) and [[AUTHZ-CHECK-3]](https://verana-labs.github.io/verifiable-trust-vpr-spec/versions/v4/#authz-check-3-vs-operator-authorization-checks), when `period` is set and `now() >= expiration`, the ledger resets the spend balances and advances `expiration` by `period` at the next authorization check, instead of treating the entry as expired. Consumers evaluating activity client-side, and the `only_active` filters of the Delegation methods, MUST therefore treat an entry as active when `expiration` is unset, when `expiration > now`, or when `period` is set — whatever the stored `expiration` value.
 
 ## Terminology
 
@@ -82,10 +92,10 @@ The JSON Schemas published alongside this document expose this constraint as the
 | Exchange Rate | Get Exchange Rate | `/v4/exchange-rate/get` | Query | [`IDX-XR-QRY-1`](#idx-xr-qry-1-get-exchange-rate) | PUBLIC |
 | Exchange Rate | List Exchange Rates | `/v4/exchange-rate/list` | Query | [`IDX-XR-QRY-2`](#idx-xr-qry-2-list-exchange-rates) | PUBLIC |
 | Exchange Rate | Get Price | `/v4/exchange-rate/price` | Query | [`IDX-XR-QRY-3`](#idx-xr-qry-3-get-price) | PUBLIC |
-| Metrics | Get Global Metrics | `/v4/metrics/all` | Query | [`IDX-METRICS-QRY-1`](#idx-metrics-qry-1-get-global-metrics) | PUBLIC |
 | Statistics | Get Stats | `/v4/stats/get` | Query | [`IDX-STATS-QRY-1`](#idx-stats-qry-1-get-stats) | PUBLIC |
 | Statistics | Get Stats Range | `/v4/stats/stats` | Query | [`IDX-STATS-QRY-2`](#idx-stats-qry-2-get-stats-range) | PUBLIC |
 | Statistics | Count Participants | `/v4/stats/count-participants` | Query | [`IDX-STATS-QRY-3`](#idx-stats-qry-3-count-participants) | PUBLIC |
+| Statistics | Get Stats Snapshot | `/v4/stats/snapshot` | Query | [`IDX-STATS-QRY-4`](#idx-stats-qry-4-get-stats-snapshot) | PUBLIC |
 | Indexer | Get Block Height | `/v4/indexer/block-height` | Query | [`IDX-INDEXER-QRY-1`](#idx-indexer-qry-1-get-block-height) | PUBLIC |
 | Indexer | Get Indexer Status | `/v4/indexer/status` | Query | [`IDX-INDEXER-QRY-2`](#idx-indexer-qry-2-get-indexer-status) | PUBLIC |
 | Indexer | Get Version | `/v4/indexer/version` | Query | [`IDX-INDEXER-QRY-3`](#idx-indexer-qry-3-get-version) | PUBLIC |
@@ -248,7 +258,7 @@ Both `*_available_actions[]` arrays are purely indexer-computed. They are not pa
 
 `Participant`-count aggregates surface on every queryable entity that has a related Participant tree:
 
-- **Global Current Metrics** ([`IDX-METRICS-QRY-1`](#idx-metrics-qry-1-get-global-metrics)) — network-wide totals.
+- **Network-wide** ([`IDX-STATS-QRY-4 Get Stats Snapshot`](#idx-stats-qry-4-get-stats-snapshot) with `entity_type = GLOBAL`) — totals across every Ecosystem.
 - **Ecosystem** ([`IDX-ES-QRY-1`](#idx-es-qry-1-get-ecosystem)) — totals for every `CredentialSchema` owned by the Ecosystem and the Participant tree under each.
 - **CredentialSchema** ([`IDX-CS-QRY-1`](#idx-cs-qry-1-get-credential-schema)) — totals for the schema's Participant tree.
 - **Participant** ([`IDX-PP-QRY-1`](#idx-pp-qry-1-get-participant)) — totals for the sub-tree of `Participant` entries having this `Participant.id` somewhere in their `validator_participant_id` ancestry.
@@ -263,7 +273,7 @@ On every such entity the indexer exposes the same seven-field breakdown, resolve
 - `participants_verifier` — `ACTIVE` and `role` = `VERIFIER`.
 - `participants_holder` — `ACTIVE` and `role` = `HOLDER`.
 
-The same counts are queryable historically by block-height via [`IDX-STATS-QRY-3 Count Participants`](#idx-stats-qry-3-count-participants).
+The same counts are queryable by block-height via [`IDX-STATS-QRY-3 Count Participants`](#idx-stats-qry-3-count-participants) (one role of one entity) and [`IDX-STATS-QRY-4 Get Stats Snapshot`](#idx-stats-qry-4-get-stats-snapshot) (the full breakdown of one entity, alongside every other tracked metric).
 
 ###### The recomputation problem
 
@@ -425,7 +435,7 @@ Within a single block `H`, multiple flips touching the same `(entity_kind, entit
 
 ###### Read query
 
-[`IDX-STATS-QRY-3 Count Participants`](#idx-stats-qry-3-count-participants) and the inline `participants*` fields on Ecosystem / CredentialSchema / Participant entries all resolve via the same one-row lookup:
+[`IDX-STATS-QRY-3 Count Participants`](#idx-stats-qry-3-count-participants), the `participants*` fields of [`IDX-STATS-QRY-4 Get Stats Snapshot`](#idx-stats-qry-4-get-stats-snapshot), and the inline `participants*` fields on Ecosystem / CredentialSchema / Participant entries all resolve via the same one-row lookup:
 
 ```sql
 SELECT value
@@ -496,7 +506,7 @@ Retrieve the network-level Corporation module parameters. *Aligned with VPR [[MO
 
 (No method-specific parameters.)
 
-**Response:** `{ params: { ... } }` — the Corporation module parameter set as defined by VPR governance (e.g. minimum trust-deposit for Corporation creation, CGF document-size limits). Exact keys are determined by the on-chain parameter set.
+**Response:** `{ params: { ... } }` — the Corporation module parameter set as defined by VPR governance. VPR v4 [[GLO]](https://verana-labs.github.io/verifiable-trust-vpr-spec/versions/v4/#glo-global-variables) defines no Corporation-specific global variable, so the set MAY be empty; exact keys are determined by the on-chain parameter set.
 
 ##### IDX-CO-QRY-4 Get Corporation History
 
@@ -510,7 +520,7 @@ Retrieve the activity timeline for a Corporation, ordered by `id` descending (ne
 
 Supports pagination through attributes `max_id`, `min_id`, `limit` and `sort`, as explained in [Pagination](#pagination).
 
-**Response:** `ActivityTimelineResponse` with `entity_type: "Corporation"`. Each `ActivityItem`'s `msg` is one of `CreateCorporation`, `UpdateCorporation`, `AddCGFDocument`, `IncreaseCGFActiveVersion`, etc.
+**Response:** `ActivityTimelineResponse` with `entity_type: "Corporation"`. Each `ActivityItem`'s `msg` is one of `CreateCorporation`, `UpdateCorporation`, `AddGovernanceFrameworkDocument`, `IncreaseActiveGovernanceFrameworkVersion`, etc.
 
 #### Ecosystem methods
 
@@ -568,7 +578,7 @@ Retrieve the network-level Ecosystem module parameters. *Aligned with VPR [[MOD-
 
 (No method-specific parameters.)
 
-**Response:** `{ params: { trust_unit_price: decimal, ecosystem_trust_deposit: decimal } }` — the price-per-trust-unit and the trust-deposit required to create an Ecosystem, as defined by the Ecosystem module parameters.
+**Response:** `{ params: { ... } }` — the Ecosystem module parameter set as defined by VPR governance. VPR v4 [[GLO]](https://verana-labs.github.io/verifiable-trust-vpr-spec/versions/v4/#glo-global-variables) defines no Ecosystem-specific global variable (the v3 `trust_unit_price` and `ecosystem_trust_deposit` parameters no longer exist), so the set MAY be empty; exact keys are determined by the on-chain parameter set.
 
 ##### IDX-ES-QRY-4 Get Ecosystem History
 
@@ -582,7 +592,7 @@ Retrieve the activity timeline for an Ecosystem, ordered by `id` descending (new
 
 Supports pagination through attributes `max_id`, `min_id`, `limit` and `sort`, as explained in [Pagination](#pagination).
 
-**Response:** `ActivityTimelineResponse` — `{ entity_type: "Ecosystem", entity_id, activity: ActivityItem[] }`. Each `ActivityItem` has `id` (uint64; indexer-assigned monotonic per-row surrogate key, used as the pagination cursor — distinct from `entity_id`), `timestamp`, `block_height`, `entity_type`, `entity_id`, `msg` (e.g. `CreateEcosystem`, `AddGovernanceFrameworkDocument`), `account` (signer), and `changes` (object of changed fields). The same `ActivityTimelineResponse` shape is reused by every `*History` and the indexer-level `listChanges` method.
+**Response:** `ActivityTimelineResponse` — `{ entity_type: "Ecosystem", entity_id, activity: ActivityItem[] }`. Each `ActivityItem` has `id` (uint64; indexer-assigned monotonic per-row surrogate key, used as the pagination cursor — distinct from `entity_id`), `timestamp`, `block_height`, `entity_type`, `entity_id`, `msg` (the VPR method that produced the change, in the same PascalCase action-name vocabulary as `IndexerTransactionEvent.event_type`, e.g. `CreateEcosystem`, `AddGovernanceFrameworkDocument`), `account` (signer), and `changes` (object of changed fields). The same `ActivityTimelineResponse` shape is reused by every `*History` and the indexer-level `listChanges` method.
 
 #### Governance Framework methods
 
@@ -679,7 +689,7 @@ Retrieve the network-level Credential Schema module parameters. *Aligned with VP
 
 (No method-specific parameters.)
 
-**Response:** `{ params: { credential_schema_trust_deposit: decimal } }` — the trust-deposit required to register a Credential Schema, as defined by the Credential Schema module parameters.
+**Response:** `{ params: { credential_schema_schema_max_size, credential_schema_issuer_grantor_validation_validity_period_max_days, credential_schema_verifier_grantor_validation_validity_period_max_days, credential_schema_issuer_validation_validity_period_max_days, credential_schema_verifier_validation_validity_period_max_days, credential_schema_holder_validation_validity_period_max_days } }` — the Credential Schema global variables of VPR v4 [[GLO]](https://verana-labs.github.io/verifiable-trust-vpr-spec/versions/v4/#glo-global-variables): the maximum `json_schema` size and the per-role maximum validation validity periods, in days. Exact keys are determined by the on-chain parameter set. (The v3 `credential_schema_trust_deposit` parameter no longer exists: creating a Credential Schema requires no trust deposit in v4.)
 
 ##### IDX-CS-QRY-5 Get Credential Schema History
 
@@ -839,7 +849,7 @@ Retrieve the network-level Participant module parameters. *Aligned with VPR [[MO
 
 (No method-specific parameters.)
 
-**Response:** `{ params: { ... } }` — the Participant module parameter set as defined by VPR governance (e.g. trust-deposit requirements per role, validation-fee floors). Exact keys are determined by the on-chain parameter set.
+**Response:** `{ params: { ... } }` — the Participant module parameter set as defined by VPR governance. VPR v4 [[GLO]](https://verana-labs.github.io/verifiable-trust-vpr-spec/versions/v4/#glo-global-variables) defines no Participant-specific global variable, so the set MAY be empty; exact keys are determined by the on-chain parameter set.
 
 #### Trust Deposit methods
 
@@ -866,7 +876,7 @@ Retrieve the network-level Trust Deposit module parameters. *Aligned with VPR [[
 
 (No method-specific parameters.)
 
-**Response:** `{ params: { trust_deposit_rate, user_agent_reward_rate, trust_deposit_share_value, wallet_user_agent_reward_rate, trust_deposit_reclaim_burn_rate } }` — all decimals; the network governance rates that drive yield, reward distribution, share-value translation, and the burn fraction applied on reclaim.
+**Response:** `{ params: { trust_deposit_share_value, trust_deposit_rate, trust_deposit_max_yield_rate, trust_deposit_block_reward_share, wallet_user_agent_reward_rate, user_agent_reward_rate } }` — all decimals; the Trust Deposit global variables of VPR v4 [[GLO]](https://verana-labs.github.io/verifiable-trust-vpr-spec/versions/v4/#glo-global-variables): share-value translation, the deposit fraction of trust fees, the yield cap and block-reward share, and the agent reward rates. (The v3 `trust_deposit_reclaim_burn_rate` parameter no longer exists: trust deposits are non-withdrawable in v4 and `MOD-TD-MSG-3` is void.)
 
 ##### IDX-TD-QRY-3 Get Trust Deposit History
 
@@ -880,7 +890,7 @@ Retrieve the activity timeline for a Trust Deposit row, ordered by `id` descendi
 
 Supports pagination through attributes `max_id`, `min_id`, `limit` and `sort`, as explained in [Pagination](#pagination).
 
-**Response:** `ActivityTimelineResponse` with `entity_type: "TrustDeposit"`. Each `ActivityItem`'s `msg` is one of `CREATE_TRUST_DEPOSIT`, `ADJUST_TRUST_DEPOSIT`, `SLASH_TRUST_DEPOSIT`, `SLASH_PARTICIPANT_TRUST_DEPOSIT`, `RECLAIM_YIELD`, `RECLAIM_DEPOSIT`, `REPAY_SLASHED`.
+**Response:** `ActivityTimelineResponse` with `entity_type: "TrustDeposit"`. Each `ActivityItem`'s `msg` is one of `AdjustTrustDeposit` (MOD-TD-MSG-1, including the adjustment that creates the row), `ReclaimTrustDepositYield` (MOD-TD-MSG-2), `SlashTrustDeposit` (MOD-TD-MSG-5), `RepaySlashedTrustDeposit` (MOD-TD-MSG-6), `BurnEcosystemSlashedTrustDeposit` (MOD-TD-MSG-7, the burn that a `SlashParticipantTrustDeposit` transaction delegates to): the same PascalCase action-name vocabulary as `IndexerTransactionEvent.event_type` and every other `*History` method. (There is no deposit reclaim in v4: trust deposits are non-withdrawable and `MOD-TD-MSG-3` is void.)
 
 #### Delegation methods
 
@@ -897,7 +907,7 @@ Retrieve a paginated, filtered list of `OperatorAuthorization` entries. Each ent
 | `corporation_id` | query | uint64 | no | Filter by the granting Corporation id |
 | `operator` | query | string | no | Filter by the grantee operator account |
 | `msg_type` | query | string | no | Filter to authorizations whose `msg_types[]` includes this message type |
-| `only_active` | query | boolean | no | If true, only return non-expired authorizations (`expiration > now` or null) |
+| `only_active` | query | boolean | no | If true, only return non-expired authorizations (`expiration > now` or null; for periodic authorizations, the auto-renewing cycle boundary never makes the authorization inactive, see [Duration encoding](#duration-encoding)) |
 | `modified_after` | query | datetime | no | Only return authorizations modified strictly after this datetime |
 
 Supports pagination through attributes `max_id`, `min_id`, `limit` and `sort`, as explained in [Pagination](#pagination).
@@ -917,7 +927,7 @@ Retrieve a paginated, filtered list of `VSOperatorAuthorization` entries. Each e
 | `corporation_id` | query | uint64 | no | Filter by the granting Corporation id |
 | `vs_operator` | query | string | no | Filter by the grantee VS-operator account |
 | `participant_id` | query | uint64 | no | Filter to entries whose `records[]` contains a record for this `Participant.id` |
-| `only_active` | query | boolean | no | If true, only return entries with at least one non-expired record |
+| `only_active` | query | boolean | no | If true, only return entries with at least one non-expired record (`expiration > now` or null; a record with a `period` is never inactive at its cycle boundary, see [Duration encoding](#duration-encoding)) |
 | `modified_after` | query | datetime | no | Only return entries modified strictly after this datetime |
 
 Supports pagination through attributes `max_id`, `min_id`, `limit` and `sort`, as explained in [Pagination](#pagination).
@@ -1007,7 +1017,7 @@ Retrieve the `x/group` state backing a Corporation: the group, the group policy 
 - **Policy:** `policy: { address, version, decision_policy }` — `address` equals the Corporation's `policy_address`; `decision_policy` is the `x/group` decision policy surfaced verbatim (a `ThresholdDecisionPolicy` `{ threshold, windows: { voting_period, min_execution_period } }` or a `PercentageDecisionPolicy` `{ percentage, windows: { … } }`).
 - **Members:** `members[]` — each `{ address, weight (decimal string), metadata, added_at }`. The full list is returned inline, not paginated: corporation groups are small by construction.
 
-The group and policy admin is not surfaced separately: per [[MOD-CO-MSG-1]](https://verana-labs.github.io/verifiable-trust-vpr-spec/versions/v4/#mod-co-msg-1-create-new-corporation), `group_policy_as_admin` is always `true`, so the admin of both the group and the group policy is the `policy.address` itself.
+The group and policy admin is not surfaced separately: per [[MOD-CO-MSG-1]](https://verana-labs.github.io/verifiable-trust-vpr-spec/versions/v4/#mod-co-msg-1-create-corporation), `group_policy_as_admin` is always `true`, so the admin of both the group and the group policy is the `policy.address` itself.
 
 ##### IDX-GR-QRY-2 List Corporations By Member
 
@@ -1132,21 +1142,14 @@ Convert an amount of a base asset to its equivalent in a quote asset using the r
 
 **Response:** `{ price: string, base_asset_type, base_asset, quote_asset_type, quote_asset, rate, rate_scale, expires }` where `price` is a base-10 unsigned integer string in the quote asset's base units. When `(base_asset_type, base_asset) == (quote_asset_type, quote_asset)`, `price == amount` and rate fields are omitted. Otherwise `price = floor(amount * rate / 10^rate_scale)`, integer arithmetic, rounded down. If no matching `ExchangeRate` entry exists, is disabled, or is expired, the response is HTTP 404 / 410.
 
-#### Metrics methods
-
-##### IDX-METRICS-QRY-1 Get Global Metrics
-
-`GET /v4/metrics/all`
-
-Return network-wide aggregate metrics across all Ecosystems, Credential Schemas, and Participants at the current (or historical, via `At-Block-Height`) block. *Indexer-specific (no VPR equivalent).*
-
-(No method-specific parameters.)
-
-**Response:** `GlobalMetricsResponse` — totals per metric: `participants` (and the per-role breakdown `participants_ecosystem`, `participants_issuer_grantor`, `participants_issuer`, `participants_verifier_grantor`, `participants_verifier`, `participants_holder`), `active_ecosystems`, `archived_ecosystems`, `active_schemas`, `archived_schemas`, `weight` (int64), `issued`, `verified`, and the slash ledger (`ecosystem_slash_events`, `ecosystem_slashed_amount`, `ecosystem_slashed_amount_repaid`, `network_slash_events`, `network_slashed_amount`, `network_slashed_amount_repaid`).
-
 #### Statistics methods
 
-The indexer maintains a pre-aggregated **time-bucketed statistics** table refreshed at every block, and exposes it through three query endpoints. Buckets are partitioned by granularity, entity scope, and bucket timestamp.
+The Statistics module exposes one **metric vocabulary** (the [metric columns](#metric-columns) below) over one **entity scope** (`GLOBAL`, `ECOSYSTEM`, `CREDENTIAL_SCHEMA`, `PARTICIPANT`) through two access patterns:
+
+- **Block-keyed snapshots** — the value of every metric for one entity at a single evaluation block (latest, or `At-Block-Height`). Served by [`IDX-STATS-QRY-4 Get Stats Snapshot`](#idx-stats-qry-4-get-stats-snapshot) and, for a single participant-count value, by [`IDX-STATS-QRY-3 Count Participants`](#idx-stats-qry-3-count-participants).
+- **Timestamp-keyed series** — the same metrics pre-aggregated into a **time-bucketed statistics** table refreshed at every block, partitioned by granularity, entity scope, and bucket timestamp. Served by [`IDX-STATS-QRY-1 Get Stats`](#idx-stats-qry-1-get-stats) and [`IDX-STATS-QRY-2 Get Stats Range`](#idx-stats-qry-2-get-stats-range).
+
+Both patterns MUST agree on the metric definitions: for any entity and any block `H`, the snapshot value of a metric `m` at `H` equals `cumulative_m` of the latest `stats` row for that entity whose bucket closes at or before `H.block_time` (forward-filled across sparse buckets per [Persistence rule 3](#persistence-rules)), plus the in-bucket changes up to `H`. The persistence model below is shared by both.
 
 ##### Statistics Persistence Model
 
@@ -1176,6 +1179,8 @@ Every row carries two parallel families of integer columns — `cumulative_*` an
 | Metric | `cumulative_*` meaning | Notes |
 | --- | --- | --- |
 | `participants` | Active `Participant` count at the close of the bucket. | Sub-tree count if `entity_type = PARTICIPANT`; see [Active Participant Count Semantics](#active-participant-count-semantics). |
+| `active_ecosystems` | Non-archived `Ecosystem` count. | For `entity_type = ECOSYSTEM`: `1` if the ecosystem is currently active, else `0`. Always `0` for `CREDENTIAL_SCHEMA` and `PARTICIPANT` rows. |
+| `archived_ecosystems` | Archived `Ecosystem` count. | For `entity_type = ECOSYSTEM`: `1` if archived, else `0`. Always `0` for `CREDENTIAL_SCHEMA` and `PARTICIPANT` rows. |
 | `active_schemas` | Non-archived `CredentialSchema` count. | For `entity_type = CREDENTIAL_SCHEMA`: `1` if the schema is currently active, else `0`. |
 | `archived_schemas` | Archived `CredentialSchema` count. | For `entity_type = CREDENTIAL_SCHEMA`: `1` if archived, else `0`. |
 | `weight` | Sum of Participant trust-deposit weights (int64). | |
@@ -1204,7 +1209,7 @@ For each metric `m`:
 
 When [`IDX-STATS-QRY-2 Get Stats Range`](#idx-stats-qry-2-get-stats-range) returns a `total: StatsTotal`, the summed `delta_*` fields are computed by the database engine (`SUM(delta_*)`) in a single query — never accumulated by the application layer — to guarantee constant-time read performance on long ranges.
 
-> Note: [`IDX-STATS-QRY-3 Count Participants`](#idx-stats-qry-3-count-participants) is **not** served by the `stats` table. It reads from the `entity_participant_changes` block-keyed log described in [Active Participant Count Semantics](#active-participant-count-semantics), because it answers point-in-time block-height queries rather than time-bucketed range queries.
+> Note: the snapshot methods [`IDX-STATS-QRY-3 Count Participants`](#idx-stats-qry-3-count-participants) and [`IDX-STATS-QRY-4 Get Stats Snapshot`](#idx-stats-qry-4-get-stats-snapshot) are **not** served by the `stats` table. They answer point-in-time block-height queries rather than time-bucketed range queries: participant counts read from the `entity_participant_changes` block-keyed log described in [Active Participant Count Semantics](#active-participant-count-semantics), and the remaining metrics from the height-versioned entity tables.
 
 ##### IDX-STATS-QRY-1 Get Stats
 
@@ -1222,7 +1227,7 @@ Retrieve a single statistics row — either by its primary key `id`, or by the n
 
 ¹ Either `id` MUST be provided, **or** the composite key (`granularity`, `timestamp`, `entity_type`, `entity_id`) MUST be provided.
 
-**Response:** A `StatsEntry` — `id`, `granularity`, `timestamp`, `entity_type`, `entity_id`, the full set of `cumulative_*` running totals (`cumulative_participants`, `cumulative_active_schemas`, `cumulative_archived_schemas`, `cumulative_weight`, `cumulative_issued`, `cumulative_verified`, and the ecosystem/network slash counters and amounts), and the corresponding `delta_*` change-since-previous-measurement fields.
+**Response:** A `StatsEntry` — `id`, `granularity`, `timestamp`, `entity_type`, `entity_id`, the full set of `cumulative_*` running totals (`cumulative_participants`, `cumulative_active_ecosystems`, `cumulative_archived_ecosystems`, `cumulative_active_schemas`, `cumulative_archived_schemas`, `cumulative_weight`, `cumulative_issued`, `cumulative_verified`, and the ecosystem/network slash counters and amounts), and the corresponding `delta_*` change-since-previous-measurement fields.
 
 ##### IDX-STATS-QRY-2 Get Stats Range
 
@@ -1254,6 +1259,23 @@ Return the count of participants of a given role for a given entity at the block
 | `role_type` | query | integer | yes | `0`=ANY, `1`=ECOSYSTEM, `2`=ISSUER_GRANTOR, `3`=ISSUER, `4`=VERIFIER_GRANTOR, `5`=VERIFIER, `6`=HOLDER |
 
 **Response:** Inline object `{ entity_kind, entity_id, role_type, block_height, participants }` where `block_height` echoes the resolved evaluation block and `participants` is the integer count.
+
+This is the single-value form of [`IDX-STATS-QRY-4 Get Stats Snapshot`](#idx-stats-qry-4-get-stats-snapshot): for the same entity and evaluation block, `participants` here MUST equal the snapshot's `participants` (for `role_type = ANY`) or the matching `participants_<role>` field.
+
+##### IDX-STATS-QRY-4 Get Stats Snapshot
+
+`GET /v4/stats/snapshot`
+
+Return the current value of every tracked metric for one entity — the whole network, an Ecosystem, a Credential Schema, or a Participant sub-tree — at the block selected by the `At-Block-Height` header (or the latest indexed block when omitted). This is the point-in-time counterpart of [`IDX-STATS-QRY-2 Get Stats Range`](#idx-stats-qry-2-get-stats-range): the same [metric vocabulary](#metric-columns), evaluated at a block instead of aggregated into buckets. *Indexer-specific (no VPR equivalent).*
+
+| Name | In | Type | Required | Description |
+| --- | --- | --- | --- | --- |
+| `entity_type` | query | enum | no | `GLOBAL` \| `ECOSYSTEM` \| `CREDENTIAL_SCHEMA` \| `PARTICIPANT` (default `GLOBAL`) |
+| `entity_id` | query | uint64 | conditional | Required for non-`GLOBAL` entity types; MUST be omitted for `GLOBAL` |
+
+**Response:** `StatsSnapshot` — `entity_type`, `entity_id` (`null` for `GLOBAL`), `block_height` (the resolved evaluation block), `timestamp` (that block's time), and one field per tracked metric using the bare metric names: `participants` and the per-role breakdown (`participants_ecosystem`, `participants_issuer_grantor`, `participants_issuer`, `participants_verifier_grantor`, `participants_verifier`, `participants_holder`), `active_ecosystems`, `archived_ecosystems`, `active_schemas`, `archived_schemas`, `weight` (int64), `issued`, `verified`, and the slash ledger (`ecosystem_slash_events`, `ecosystem_slashed_amount`, `ecosystem_slashed_amount_repaid`, `network_slash_events`, `network_slashed_amount`, `network_slashed_amount_repaid`).
+
+Every non-`participants*` field is the value that `cumulative_<metric>` would hold for a `stats` bucket closing exactly at the evaluation block (see the agreement rule in [Statistics methods](#statistics-methods)). The `participants*` fields resolve through the [Active Participant Count Semantics](#active-participant-count-semantics) one-row lookup, one query per `role_type`; the per-role breakdown is snapshot-only and has no `cumulative_*` / `delta_*` column in the `stats` table. Unknown `entity_id` is HTTP 404.
 
 #### Indexer methods
 
@@ -1324,7 +1346,7 @@ Replay persisted indexer events scoped by the same membership filter as [`IDX-IN
 
 When **both** `dids` and `corporation_id` are present, only events matching **both** filters are returned (intersection). When **both** are absent, the response is unfiltered.
 
-**Response:** Inline `{ events: IndexerTransactionEvent[], count, after_block_height }`. Each `IndexerTransactionEvent` carries `type: "indexer-event"`, `event_type` (Cosmos action name, e.g. `StartParticipantOP`), `did`, `block_height`, `tx_hash`, `timestamp`, and `payload: { module, action, message_type, tx_index, message_index, sender, related_dids[], entity_type, entity_id }`.
+**Response:** Inline `{ events: IndexerTransactionEvent[], count, after_block_height }`. Each `IndexerTransactionEvent` carries `type: "indexer-event"`, `event_type` (the VPR method name in PascalCase, e.g. `StartParticipantOP`), `did`, `block_height`, `tx_hash`, `timestamp`, and `payload: { module, action, message_type, tx_index, message_index, sender, related_dids[], entity_type, entity_id }`.
 
 ##### IDX-INDEXER-SUB-1 Subscribe Indexer Events
 
