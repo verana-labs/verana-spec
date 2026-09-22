@@ -606,7 +606,7 @@ Error codes are carried in the adopted `problem-report`'s `description.code` fie
 | `vt-flow.not-a-verifiable-service` | Either | Peer's DID does not satisfy [[VS-CONN-VS]][vt-spec-conn-vs]. | `none` | `connection` | `ERROR` |
 | `vt-flow.validation-failed` | Validator | Off-chain validation of submitted documentation failed. | `you` (OPTIONAL) | `thread` | unchanged when `who_retries` is `you`; `ERROR` otherwise |
 | `vt-flow.validation-refused` | Validator | The Validator refused the request after its off-chain validation; the flow is terminated. | `none` | `connection` | `TERMINATED_BY_VALIDATOR` |
-| `vt-flow.oob-expired` | Validator | OOB link expired before Applicant completed the step. | `you` | `thread` | unchanged |
+| `vt-flow.oob-expired` | Validator | OOB link expired before Applicant completed the step, and the Validator ended the flow rather than sending a new link. | `none` | `connection` | `TERMINATED_BY_VALIDATOR` |
 | `vt-flow.session-terminated` | Either | Party explicitly terminated the session. | `none` | `connection` | `TERMINATED_BY_VALIDATOR` when the Validator sends it; `TERMINATED_BY_APPLICANT` when the Applicant sends it |
 | `vt-flow.internal-error` | Either | Unspecified error. | varies | `thread` | `ERROR` when fatal; unchanged otherwise |
 

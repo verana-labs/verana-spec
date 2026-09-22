@@ -2509,7 +2509,7 @@ Terminates a flow on the validator's decision, without any on-chain transaction:
 
 **Inputs** (request body):
 
-- `code` (OPTIONAL, default `vt-flow.validation-refused`) — the `problem-report` code.
+- `code` (OPTIONAL, default `vt-flow.validation-refused`) — the `problem-report` code. It MUST be a code that the [vt-flow Error Codes](../vt-flow-protocol/spec.md#error-codes) registry maps to `TERMINATED_BY_VALIDATOR`: `vt-flow.validation-refused`, `vt-flow.session-terminated` or `vt-flow.oob-expired`.
 - `description` (REQUIRED) — the reason, for a human reader; sent to the applicant in the `problem-report`.
 
 **Output**: the updated flow record.
@@ -2518,11 +2518,12 @@ Terminates a flow on the validator's decision, without any on-chain transaction:
 
 - [VSA-ADM-VT-FL-REJECT-1] The method is accepted, for an Onboarding Process flow, in `AWAITING_OR`, `OOB_PENDING`, `VALIDATING`, `AWAITING_VALIDATION_TX` and `VALIDATION_TX_FAILED`; for a Credential Direct Issuance flow, in `AWAITING_IR`, `OOB_PENDING` and `VALIDATING`. The agent MUST refuse it in `VALIDATION_TX_SUBMITTED` (a transaction is in flight) and in every state from `VALIDATED` on. In `AWAITING_VALIDATION_TX` and `VALIDATION_TX_FAILED`, the agent reads the applicant entry first: when its `op_state` is `VALIDATED`, the agent refuses with `INVALID_STATE` and moves the flow to `VALIDATED` per [[VSA-VTI-FLOW-OP-ISSUE] Issuance After Validation](#vsa-vti-flow-op-issue-issuance-after-validation).
 - [VSA-ADM-VT-FL-REJECT-2] The agent MUST NOT submit any on-chain transaction. For an Onboarding Process, the applicant `Participant` entry stays `PENDING` with its escrow until the applicant cancels it ([Cancel OP Last Request](#vsa-vti-flow-op-cancel-cancel-op-last-request)) or the process expires. When a `SetParticipantOPtoValidated` transaction that was in flight at the time of the reject lands, the on-chain outcome prevails: the notification handler moves the flow to `VALIDATED` with the Connection State `TERMINATED` ([[VSA-VTI-FLOW-OP-ISSUE] Issuance After Validation](#vsa-vti-flow-op-issue-issuance-after-validation)), issuance waits for a reconnection of the applicant ([[VSA-VTI-FLOW-MISC]](#vsa-vti-flow-misc-additional-considerations)), and a validator that stands by its refusal has a Corporation operator revoke the entry ([[MOD-PP-MSG-9]](https://verana-labs.github.io/verifiable-trust-vpr-spec/#mod-pp-msg-9-revoke-participant)).
-- [VSA-ADM-VT-FL-REJECT-3] The agent MUST send the `problem-report` with the given `code` and `description`, record it in `messages[]`, then move the flow to `TERMINATED_BY_VALIDATOR` and the connection to `TERMINATED`, as the [vt-flow protocol States](../vt-flow-protocol/spec.md#states) define.
+- [VSA-ADM-VT-FL-REJECT-3] The agent MUST refuse a `code` that the [vt-flow Error Codes](../vt-flow-protocol/spec.md#error-codes) registry does not map to `TERMINATED_BY_VALIDATOR`, with `INVALID_INPUT`: this method always terminates, so a code that leaves the applicant in its state, or moves it to `ERROR`, would leave the two parties in different states. It MUST then send the `problem-report` with the given `code` and `description`, record it in `messages[]`, and move the flow to `TERMINATED_BY_VALIDATOR` and the connection to `TERMINATED`, as the registry and the [vt-flow protocol States](../vt-flow-protocol/spec.md#states) define.
 
 **Errors**:
 
 - `INVALID_STATE` (`409`) — the flow is not in one of the accepted states.
+- `INVALID_INPUT` (`400`) — `code` is not one of the codes the registry maps to `TERMINATED_BY_VALIDATOR`.
 
 **Events**: [`vt.flows.state-updated`](#vsa-evt-cat-event-catalog).
 
@@ -3724,7 +3725,7 @@ Every identifier of this document, in lexical order. A section identifier links 
 | `VSA-ADM-VT-FL-REJECT` | [rejectFlow](#vsa-adm-vt-fl-reject-rejectflow) | Flow Management |
 | `VSA-ADM-VT-FL-REJECT-1` | The method is accepted, for an Onboarding Process flow, in `AWAITING_OR`, `OOB_PENDING`, `VALIDATING`, `AWAITING_VALIDATION_TX` and `VALIDAT… |  |
 | `VSA-ADM-VT-FL-REJECT-2` | The agent MUST NOT submit any on-chain transaction. For an Onboarding Process, the applicant `Participant` entry stays `PENDING` with its es… |  |
-| `VSA-ADM-VT-FL-REJECT-3` | The agent MUST send the `problem-report` with the given `code` and `description`, record it in `messages[]`, then move the flow to `TERMINAT… |  |
+| `VSA-ADM-VT-FL-REJECT-3` | The agent MUST refuse a `code` that the [vt-flow Error Codes](../vt-flow-protocol/spec.md#error-codes) registry does not map to `TERMINATED_BY… |  |
 | `VSA-ADM-VT-FL-SEND` | [sendOobLink](#vsa-adm-vt-fl-send-sendooblink) | Flow Management |
 | `VSA-ADM-VT-FL-START` | [startValidation](#vsa-adm-vt-fl-start-startvalidation) | Flow Management |
 | `VSA-ADM-VT-FL-VALIDATE` | [validateFlow](#vsa-adm-vt-fl-validate-validateflow) | Flow Management |
