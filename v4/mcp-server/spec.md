@@ -648,9 +648,10 @@ VS Agent tools authenticate to the target VS Agent's [Administration API](../vs-
 |---|---|---|
 | `verana.vsa.flow.listFlows` | [`listFlows`](../vs-agent/spec.md#vsa-adm-vt-fl-list-listflows) | Enumerate active and historical flows on the agent. |
 | `verana.vsa.flow.editCredentialClaims` | [`editCredentialClaims`](../vs-agent/spec.md#vsa-adm-vt-fl-edit-editcredentialclaims) | Edit pending credential claims for a flow. |
-| `verana.vsa.flow.sendOobLink` | [`sendOobLink`](../vs-agent/spec.md#vsa-adm-vt-fl-send-sendooblink) | Re-send an OOB invitation link for a flow. |
-| `verana.vsa.flow.validateFlow` | [`validateFlow`](../vs-agent/spec.md#vsa-adm-vt-fl-validate-validateflow) | Mark a flow as validated, allowing the agent to call `MOD-PP-MSG-3` Set Participant OP To Validated on chain. |
-| `verana.vsa.flow.revokeCredential` | [`revokeFlowCredential`](../vs-agent/spec.md#vsa-adm-vt-fl-revoke-revokeflowcredential) | Revoke the credential issued in a flow, notifying the applicant over DIDComm. Does not revoke the corresponding `Participant`. |
+| `verana.vsa.flow.sendOobLink` | [`sendOobLink`](../vs-agent/spec.md#vsa-adm-vt-fl-send-sendooblink) | Send or re-send an out-of-band link to the applicant of a flow, with its description and expiry. |
+| `verana.vsa.flow.startValidation` | [`startValidation`](../vs-agent/spec.md#vsa-adm-vt-fl-start-startvalidation) | Move a flow in `OOB_PENDING` back to `VALIDATING` and tell the applicant with a `validating` message, after the out-of-band step is complete. |
+| `verana.vsa.flow.validateFlow` | [`validateFlow`](../vs-agent/spec.md#vsa-adm-vt-fl-validate-validateflow) | Mark the applicant's documentation as validated, with, for an Onboarding Process flow, the fee terms, discounts, `effectiveUntil` and `opSummaryDigest`. Starts issuance for a Credential Direct Issuance flow. For an Onboarding Process flow: validates the claims of a `HOLDER` flow, records the decision, and submits `SetParticipantOPtoValidated` itself when the agent holds a VS operator authorization that covers it, or leaves the transaction to an operator (see vs-agent [VSA-ADM-VT-FL-VALIDATE](../vs-agent/spec.md#vsa-adm-vt-fl-validate-validateflow)). |
+| `verana.vsa.flow.rejectFlow` | [`rejectFlow`](../vs-agent/spec.md#vsa-adm-vt-fl-reject-rejectflow) | Terminate a flow on the validator's decision with a `problem-report` to the applicant; no on-chain transaction. |
 
 #### [VMS-TOOLS-VSA-SE] Service Endpoint Management
 
