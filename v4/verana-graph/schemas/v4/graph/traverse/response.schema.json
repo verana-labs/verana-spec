@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://verana.io/schemas/v4/graph/traverse/response.schema.json",
   "title": "TraverseResponse",
-  "description": "Response payload for the verana-graph canonical traversal queries [TG-QRY-3]. The single endpoint `POST /v4/graph/traverse` returns a per-query `output` shape mirroring the **Output (shape)** column of the [TG-QRY-3] tables. Every entity reference carries its primary key, `lastObservedAtTime`, and the visibility flags applicable to its type (`isTrustExpired` for `Did`, `archived` for `Ecosystem` / `CredentialSchema`). All datetime values are ISO 8601 / RFC 3339 UTC strings (see `#/$defs/Iso8601DateTime`). See `### Traversal REST binding` in the verana-graph spec.",
+  "description": "Response payload for the verana-graph canonical traversal queries [TG-QRY-3]. The single endpoint `POST /v4/graph/traverse` returns a per-query `output` shape mirroring the **Output (shape)** column of the [TG-QRY-3] tables. Every entity reference other than an `IdOnlyRef` carries its primary key, `lastObservedAtTime`, and the visibility flags applicable to its type (`isTrustExpired` for `Did`, `archived` for `Ecosystem` / `CredentialSchema`). All datetime values are ISO 8601 / RFC 3339 UTC strings (see `#/$defs/Iso8601DateTime`). See `### Traversal REST binding` in the verana-graph spec.",
   "type": "object",
   "additionalProperties": false,
   "required": ["query", "evaluatedAtTime", "output"],
