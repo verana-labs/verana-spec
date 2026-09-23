@@ -460,7 +460,7 @@ This invariant does NOT extend to `EcsCredential` or `Vtc`. For both, the `crede
 - `Corporation` surface: `deposit` (numeric range), `slashedEvents` (numeric range), `lastSlashedAtTime` (temporal range)
 - `CredentialSchema` surface: `archived`, `ecosystemId`, `issuedCredentials` (numeric range), `verifiedCredentials` (numeric range)
 - `ServiceEndpoint` surface: `type`
-- Free-text indexes on every field of the [[TG-FCT-4]] table — the credential text fields, the schema-text and VTC-subject denormalisation slots on the `Did` document, the bound-DID identity-text slots on the `Ecosystem` / `Corporation` documents, and `CredentialSchema.{title, description}` — plus full-text indexes on `Corporation.cgf` and `Ecosystem.egf` document content when fetched per [[TG-DEREF-2a]] / [[TG-DEREF-2b]].
+- Free-text indexes on every field of the [[TG-FCT-4]] table — the credential text fields, the schema-text and VTC-subject denormalisation slots on the `Did` document, the bound-DID identity-text slots on the `Ecosystem` / `Corporation` documents, `CredentialSchema.{title, description}`, and `ServiceEndpoint.{id, type, serviceEndpoint}` — plus full-text indexes on `Corporation.cgf` and `Ecosystem.egf` document content when fetched per [[TG-DEREF-2a]] / [[TG-DEREF-2b]].
 
 ## Block-Progress Subscription
 
@@ -515,7 +515,7 @@ The graph's traversal surface is for **browsing, discovery, and audit retrospect
 
 [TG-QRY-2] **Visibility gates on traversal vs. listing.** ID-based GETs (every query in [[TG-QRY-3]]) MUST resolve the input entity regardless of its trust-expiry / archival state — these are referential lookups, and the input's status is conveyed in the response via per-node visibility flags (`isTrustExpired` for `Did` per [[TG-ACT-3]], `archived` for `Ecosystem` / `CredentialSchema` per [[TG-ACT-2]], `state` for `Participant` per [[TG-ACT-1]]). Traversal results MUST include trust-expired and archived nodes when reached by walking edges; that is exactly why [[TG-ACT-2]] and [[TG-ACT-3]] retain those records. The direct-trust-surface gate of [[TG-ACT-3]] applies only to [Faceted-search Queries](#faceted-search-queries) list results, not to the shape-fixed traversals defined here.
 
-[TG-QRY-3] **Canonical query set.** Implementations MUST answer each of the queries in the tables below correctly, given the documented input shape, with a result conforming to the documented output shape. Implementations MAY expose additional traversals beyond this set; they MUST NOT omit any. Every entity reference returned in any of these queries MUST carry, at minimum, its primary key, its `lastObservedAtTime`, and the visibility flags applicable to its type. Whether the full record contents are inlined or returned as references resolved within the same API call boundary is implementation-defined.
+[TG-QRY-3] **Canonical query set.** Implementations MUST answer each of the queries in the tables below correctly, given the documented input shape, with a result conforming to the documented output shape. Implementations MAY expose additional traversals beyond this set; they MUST NOT omit any. Every entity reference returned in any of these queries MUST carry, at minimum, its primary key, its `lastObservedAtTime`, and the visibility flags applicable to its type. When a referenced `CredentialSchema`, `Ecosystem` or `Corporation` record is not yet materialised ([[TG-EDGE-1]], [[TG-DEREF-2]]), the item is still returned and that reference takes the id-only form `{ "id": <id> }`. Whether the full record contents are inlined or returned as references resolved within the same API call boundary is implementation-defined.
 
 ### A. DID-rooted
 
@@ -746,7 +746,7 @@ Worked example: a `Did`-surface query for *"plumber issuers"* (free-text *"plumb
 
 | Field               | Operators | Notes                                            |
 | ---                 | ---       | ---                                              |
-| `deposit`           | range     | numeric ranking signal                           |
+| `deposit`           | range     | numeric ranking signal. Operands are non-negative integers in the Coin's base denomination (`uvna`), without the denom |
 | `slashedEvents`     | range     | typical default constraint: `= 0` ("untainted") |
 | `lastSlashedAtTime` | range     |                                                  |
 
@@ -778,6 +778,7 @@ Worked example: a `Did`-surface query for *"plumber issuers"* (free-text *"plumb
 | `{title, description}` of any `CredentialSchema` the `Did` has a `Participant` for | low–medium | **denormalised onto the `Did` doc at index time.** Per-role weighting (e.g. higher weight for ISSUER Participants) is implementation-defined. Enables one-shot "*plumber issuers*" queries on the `Did` surface — no two-step search-the-schema-then-search-the-DIDs flow                          |
 | `{textual fields}` of `credentialSubject` of any non-ECS `Vtc` the `Did` holds       | medium     | **denormalised onto the `Did` doc at index time. MUST.** Domain-credential discovery — *"baby shoes in Bogotá"*, *"streaming video for kids"* — relies on free-text matching content authored on non-ECS VTCs. Requires the VP body fetches of [[TG-DEREF-3]] (RECOMMENDED); if a VP body is not fetched, only schema-level text contributes |
 | bound-DID identity text on the `Ecosystem` / `Corporation` surfaces: the bound DID's `ServiceCredential.{name, description}` and operative operator `name` | high       | **denormalised onto the `Ecosystem` / `Corporation` surface documents at index time. MUST.** These entities carry no name of their own — the bound DID's credentials are their only human-readable identity (the `didCard` rationale of [[TG-FCT-6b]]) — so name-based discovery (*"EU banking registry"*) depends on this slot. Refresh follows the `didCard` denormalisation rule of [[TG-FCT-6b]] |
+| `ServiceEndpoint.{id, type, serviceEndpoint}`                                        | medium     | scored on the `ServiceEndpoint` surface. `serviceEndpoint` contributes its string form, or every string value inside its object or array form |
 
 [TG-FCT-4a] **Matching semantics.** So that a given `freeText` payload admits the same result set on every conformant implementation regardless of the backing engine, the free-text matcher MUST apply the following baseline:
 
@@ -1402,5 +1403,6 @@ The user wants AI-agent VSs operated by a Persona named "@fabrice". Surface: `Di
 | `UNKNOWN_FILTER_FIELD` | 400 | A `filters` key is not a declared filter field of the queried surface ([[TG-FCT-3]]) |
 | `INVALID_CURSOR` | 400 | The `cursor` is malformed or no longer valid ([[TG-FCT-7]]) — never silently re-anchored |
 | `UNKNOWN_ID` | 404 | The input's entity identifier (`did`, `credentialId`, `participantId`, `ecosystemId`, `credentialSchemaId`, `corporationId`) resolves to no persisted record |
+| `INTERNAL` | 500 | The implementation failed to serve the request through no fault of the client |
 
 An empty result is **not** an error: a traversal whose walk yields no records and a search with zero hits return their normal success envelopes. Success responses MUST validate against the corresponding response schema; error responses MUST validate against the error schema — the two are disjoint (`additionalProperties: false` on both sides).
