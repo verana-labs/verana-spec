@@ -327,7 +327,7 @@ A `ServiceEndpoint` record corresponds 1:1 to a non-`LinkedVerifiablePresentatio
 | `id`              | string              | `services[].id`              | Identity (DID Document service entry id)                             |
 | `didId`           | string              | the queried DID              | edge anchor to `Did`                                                 |
 | `type`            | string              | `services[].type`            | e.g. `did-communication`, `MCP`, `A2A`, `VsAgentAdminAPI`              |
-| `serviceEndpoint` | string \| object    | `services[].serviceEndpoint` | preserved verbatim                                                   |
+| `serviceEndpoint` | string \| object \| array | `services[].serviceEndpoint` | preserved verbatim                                                   |
 | `accept`          | string[] \| `null`  | `services[].accept`          | when present                                                         |
 
 #### `LinkedVerifiablePresentation`

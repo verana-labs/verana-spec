@@ -165,9 +165,10 @@
         "serviceEndpoint": {
           "anyOf": [
             { "type": "string", "format": "uri" },
-            { "type": "object" }
+            { "type": "object" },
+            { "type": "array", "minItems": 1, "items": { "anyOf": [{ "type": "string", "format": "uri" }, { "type": "object" }] } }
           ],
-          "description": "Endpoint value preserved verbatim per DID-CORE (URI string or object)."
+          "description": "Endpoint value preserved verbatim per DID-CORE (URI string, object, or array of these)."
         }
       }
     },
@@ -445,9 +446,10 @@
         "serviceEndpoint": {
           "anyOf": [
             { "type": "string", "format": "uri" },
-            { "type": "object" }
+            { "type": "object" },
+            { "type": "array", "minItems": 1, "items": { "anyOf": [{ "type": "string", "format": "uri" }, { "type": "object" }] } }
           ],
-          "description": "Endpoint value preserved verbatim per DID-CORE (URI string or object)."
+          "description": "Endpoint value preserved verbatim per DID-CORE (URI string, object, or array of these)."
         },
         "lastObservedAtTime": { "$ref": "#/$defs/Iso8601DateTime" },
         "didCard": { "$ref": "#/$defs/DidCard", "description": "[TG-FCT-6b] `didCard` group — the owning DID as a card. Present iff selected (default set)." }
