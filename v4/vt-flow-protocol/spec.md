@@ -608,6 +608,8 @@ Error codes are carried in the adopted `problem-report`'s `description.code` fie
 | `vt-flow.validation-refused` | Validator | The Validator refused the request after its off-chain validation; the flow is terminated. | `none` | `connection` | `TERMINATED_BY_VALIDATOR` |
 | `vt-flow.oob-expired` | Validator | OOB link expired before Applicant completed the step, and the Validator ended the flow rather than sending a new link. | `none` | `connection` | `TERMINATED_BY_VALIDATOR` |
 | `vt-flow.session-terminated` | Either | Party explicitly terminated the session. | `none` | `connection` | `TERMINATED_BY_VALIDATOR` when the Validator sends it; `TERMINATED_BY_APPLICANT` when the Applicant sends it |
+| `vt-flow.participant-revoked` | Either | The on-chain `Participant` entry of the session was revoked (`RevokeParticipant`); the sender ended the flow on the indexer notification. | `none` | `connection` | `PARTICIPANT_REVOKED` |
+| `vt-flow.participant-slashed` | Either | The trust deposit of the on-chain `Participant` entry of the session was slashed (`SlashParticipantTrustDeposit`); the sender ended the flow on the indexer notification. | `none` | `connection` | `PARTICIPANT_SLASHED` |
 | `vt-flow.internal-error` | Either | Unspecified error. | varies | `thread` | `ERROR` when fatal; unchanged otherwise |
 
 Errors during the Issue Credential V2 subprotocol use that protocol's own problem-report with codes like `issuance-abandoned` per [RFC 0453][rfc0453].
