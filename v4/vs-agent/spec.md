@@ -2385,14 +2385,12 @@ Lists and inspects the credential acquisition flows that the agent handles.
 - `flowState` — the current Flow State, per [Flow State](#vsa-vti-flow-state-flow-state);
 - `connectionState` — the current Connection State, per [Flow State](#vsa-vti-flow-state-flow-state);
 - `pendingAction` — the party that must act for the flow to progress, derived from `flowState` and `role` per the table below;
-- `flowState` — the current Flow State, per [Flow State](#vsa-vti-flow-state-flow-state);
-- `connectionState` — the current Connection State, per [Flow State](#vsa-vti-flow-state-flow-state);
 - `lastEventAt` — timestamp of the last event;
 - the submitted credential claims and proofs;
 - `oobLink` — the outstanding `oob-link`, when one exists: `url`, `description`, `expiresAt`, and `at` (the time the agent sent or received the message). The agent sets it on `oob-link` and clears it on every transition out of `OOB_PENDING`. An expired link stays on the record until then, and `pendingAction` reports it;
 - `messages[]` — the human-readable messages of the flow, in order: for a validator, those it sent; for an applicant, those it received. Each entry carries `type` (`oob-link`, `validating`, or `problem-report`), `text` (the `description`, `comment`, or problem description), `at`, and `url` for an `oob-link`;
-- `validation` — for an Onboarding Process flow after `validateFlow`: `decidedAt`, `submission` (`AGENT` or `OPERATOR`), the agreed fees, discounts, `effectiveUntil` and `opSummaryDigest`, and `tx` (`hash`, `height`, `status`, `reason`, `error`) when the agent submitted the transaction (see [[VSA-ADM-VT-FL-VALIDATE]](#vsa-adm-vt-fl-validate-validateflow));
-- `issuance` — for a flow in which the agent issues, once the applicant has requested the credential: `tx` (`hash`, `height`, `status`, `reason`, `error`) of the `CreateOrUpdateParticipantSession` transaction that anchors the credential ([VSA-VTI-FLOW-ISSUE-1]), with the same `reason` values as `validation.tx`;
+- `validation` — for an Onboarding Process flow after `validateFlow`: `decidedAt`, `submission` (`AGENT` or `OPERATOR`), the agreed fees, discounts, `effectiveUntil` and `opSummaryDigest`, and `tx` (`hash`, `height`, `status`, `reason`, `error`) when the agent submitted the transaction: `status` is `SUBMITTED` after the broadcast, `SUCCEEDED` once the transaction is included with result code `0`, and `FAILED` otherwise, with `reason` and `error` set (see [[VSA-ADM-VT-FL-VALIDATE]](#vsa-adm-vt-fl-validate-validateflow));
+- `issuance` — for a flow in which the agent issues, once the applicant has requested the credential: `tx` (`hash`, `height`, `status`, `reason`, `error`) of the `CreateOrUpdateParticipantSession` transaction that anchors the credential ([VSA-VTI-FLOW-ISSUE-1]), with the same `status` and `reason` values as `validation.tx`;
 - after the agent generates a credential: the identifier of the offered credential, its `digestJCS`, and the reference to the on-chain `ParticipantSession`.
 
 `pendingAction` is one of `APPLICANT`, `VALIDATOR`, `AGENT`, `CHAIN`, `NONE`, derived from `flowState`, `role`, and the record fields that the table names:
