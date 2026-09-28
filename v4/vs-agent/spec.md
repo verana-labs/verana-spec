@@ -3894,7 +3894,7 @@ Every identifier of this document, in lexical order. A section identifier links 
 | `VSA-VTI-ECS-DELEGATED` | [ECS Delegated Mode](#vsa-vti-ecs-delegated-ecs-delegated-mode) | ECS Participants and Credentials |
 | `VSA-VTI-ECS-SELF` | [ECS Self-Issuance](#vsa-vti-ecs-self-ecs-self-issuance) | ECS Participants and Credentials |
 | `VSA-VTI-ECS-SELF-1` | The agent MUST issue its own credential of an ECS schema when it holds an active ISSUER `Participant` entry for that schema, that entry… |  |
-| `VSA-VTI-ECS-SELF-2` | To issue the credential, the agent MUST compose and validate the claims per [[VSA-VTI-ECS]](#vsa-vti-ecs-ecs-participants-and-credentials),… |  |
+| `VSA-VTI-ECS-SELF-2` | To issue the credential, the agent MUST compose and validate the claims per VSA-VTI-ECS, sign the credential, compute its `digestJCS`, and a… |  |
 | `VSA-VTI-ECS-SELF-3` | When the ISSUER `Participant` entry becomes revoked or slashed, the agent MUST delete each credential that it issued to itself under… |  |
 | `VSA-VTI-ECS-STANDALONE` | [ECS Standalone Mode](#vsa-vti-ecs-standalone-ecs-standalone-mode) | ECS Participants and Credentials |
 | `VSA-VTI-FLOW-DI` | [Credential Direct Issuance](#vsa-vti-flow-di-credential-direct-issuance) | Participant and Credential Acquisition Flows |
