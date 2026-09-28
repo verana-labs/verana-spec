@@ -1,6 +1,6 @@
 # Verana Graph spec
 
-**Latest Draft:** spec v4-draft7
+**Latest Draft:** spec v4-draft8
 
 ## Abstract
 
@@ -327,7 +327,7 @@ A `ServiceEndpoint` record corresponds 1:1 to a non-`LinkedVerifiablePresentatio
 | `id`              | string              | `services[].id`              | Identity (DID Document service entry id)                             |
 | `didId`           | string              | the queried DID              | edge anchor to `Did`                                                 |
 | `type`            | string              | `services[].type`            | e.g. `did-communication`, `MCP`, `A2A`, `VsAgentAdminAPI`              |
-| `serviceEndpoint` | string \| object    | `services[].serviceEndpoint` | preserved verbatim                                                   |
+| `serviceEndpoint` | string \| object \| array | `services[].serviceEndpoint` | preserved verbatim                                                   |
 | `accept`          | string[] \| `null`  | `services[].accept`          | when present                                                         |
 
 #### `LinkedVerifiablePresentation`
@@ -460,7 +460,7 @@ This invariant does NOT extend to `EcsCredential` or `Vtc`. For both, the `crede
 - `Corporation` surface: `deposit` (numeric range), `slashedEvents` (numeric range), `lastSlashedAtTime` (temporal range)
 - `CredentialSchema` surface: `archived`, `ecosystemId`, `issuedCredentials` (numeric range), `verifiedCredentials` (numeric range)
 - `ServiceEndpoint` surface: `type`
-- Free-text indexes on every field of the [[TG-FCT-4]] table — the credential text fields, the schema-text and VTC-subject denormalisation slots on the `Did` document, the bound-DID identity-text slots on the `Ecosystem` / `Corporation` documents, and `CredentialSchema.{title, description}` — plus full-text indexes on `Corporation.cgf` and `Ecosystem.egf` document content when fetched per [[TG-DEREF-2a]] / [[TG-DEREF-2b]].
+- Free-text indexes on every field of the [[TG-FCT-4]] table — the credential text fields, the schema-text and VTC-subject denormalisation slots on the `Did` document, the bound-DID identity-text slots on the `Ecosystem` / `Corporation` documents, `CredentialSchema.{title, description}`, and `ServiceEndpoint.{id, type, serviceEndpoint}` — plus full-text indexes on `Corporation.cgf` and `Ecosystem.egf` document content when fetched per [[TG-DEREF-2a]] / [[TG-DEREF-2b]].
 
 ## Block-Progress Subscription
 
@@ -515,7 +515,7 @@ The graph's traversal surface is for **browsing, discovery, and audit retrospect
 
 [TG-QRY-2] **Visibility gates on traversal vs. listing.** ID-based GETs (every query in [[TG-QRY-3]]) MUST resolve the input entity regardless of its trust-expiry / archival state — these are referential lookups, and the input's status is conveyed in the response via per-node visibility flags (`isTrustExpired` for `Did` per [[TG-ACT-3]], `archived` for `Ecosystem` / `CredentialSchema` per [[TG-ACT-2]], `state` for `Participant` per [[TG-ACT-1]]). Traversal results MUST include trust-expired and archived nodes when reached by walking edges; that is exactly why [[TG-ACT-2]] and [[TG-ACT-3]] retain those records. The direct-trust-surface gate of [[TG-ACT-3]] applies only to [Faceted-search Queries](#faceted-search-queries) list results, not to the shape-fixed traversals defined here.
 
-[TG-QRY-3] **Canonical query set.** Implementations MUST answer each of the queries in the tables below correctly, given the documented input shape, with a result conforming to the documented output shape. Implementations MAY expose additional traversals beyond this set; they MUST NOT omit any. Every entity reference returned in any of these queries MUST carry, at minimum, its primary key, its `lastObservedAtTime`, and the visibility flags applicable to its type. Whether the full record contents are inlined or returned as references resolved within the same API call boundary is implementation-defined.
+[TG-QRY-3] **Canonical query set.** Implementations MUST answer each of the queries in the tables below correctly, given the documented input shape, with a result conforming to the documented output shape. Implementations MAY expose additional traversals beyond this set; they MUST NOT omit any. Every entity reference returned in any of these queries MUST carry, at minimum, its primary key, its `lastObservedAtTime`, and the visibility flags applicable to its type. When the `corporation` of A2, or the `schema` or `ecosystem` of A5, A6, A7 or B1, refers to a record that is not yet materialised ([[TG-EDGE-1]], [[TG-DEREF-2]]), the enclosing item is still returned and that reference takes the id-only form `{ "id": <id> }`. Whether the full record contents are inlined or returned as references resolved within the same API call boundary is implementation-defined.
 
 ### A. DID-rooted
 
@@ -534,7 +534,7 @@ The graph's traversal surface is for **browsing, discovery, and audit retrospect
 | #      | Name              | Input                                              | Output                                                              | Walk                                                                                                                                                       |
 | ---    | ---               | ---                                                | ---                                                                 | ---                                                                                                                                                        |
 | **B1** | Issuer recovery   | `did`, `credentialId` (`EcsCredential` keyed `(subjectDid = did, id)`; a `Vtc` is matched by `credentialId` among the VTCs presented by `did`) | `{ credential, issuerDid, issuerParticipant, schema, ecosystem }` | `{ EcsCredential \| Vtc } —ISSUED_BY→ Participant —PARTICIPATES_IN← Did_issuer`; plus `—BASED_ON_SCHEMA→ CredentialSchema` and `—GOVERNED_BY→ Ecosystem`  |
-| **B2** | Holder recovery   | `did`, `credentialId` (same resolution as B1)      | `{ credential, subjectDid, holderParticipant }`                   | `{ EcsCredential \| Vtc } —HELD_AS→ Participant`; for `EcsCredential` the subject DID is also `EcsCredential.subjectDid`                                  |
+| **B2** | Holder recovery   | `did`, `credentialId` (same resolution as B1)      | `{ credential, subjectDid, holderParticipant }`                   | `{ EcsCredential \| Vtc } —HELD_AS→ Participant`; for `EcsCredential` the subject DID is also `EcsCredential.subjectDid`. `holderParticipant` is `null` when the credential has no HOLDER `Participant` (its `participantId` is `0`, as for a self-issued Pattern A credential) |
 
 > **Note.** `B1` / `B2` return **current-state** issuer / holder context for credentials surfaced into the graph — i.e. ECS credentials and Vtcs admitted via Linked Verifiable Presentations from the holder's DID Document (per [[TG-INGEST-6]]). They are intended for **browsing, discovery, and audit retrospectives**. Credentials presented out-of-band (DIDComm, OID4VP) are not visible to the graph; verifying such credentials — including *"was the issuer authorised at the digest-anchored issuance time?"* and *"is the verifier currently authorised to request this presentation?"* — uses the upstream Indexer's TRQP per [[TG-QRY-1]], not the graph.
 
@@ -607,7 +607,7 @@ The normative JSON Schema for the traversal request is published alongside this 
 
 #### Traversal response schema
 
-The normative JSON Schema for the traversal response is published alongside this document at [`schemas/v4/graph/traverse/response.schema.json`](./schemas/v4/graph/traverse/response.schema.json). It defines the envelope fields (`query` echo, `evaluatedAtTime`, `output`, and the nullable `nextCursor` of [[TG-QRY-6]]) and the per-query `output` shape, which mirrors the **Output (shape)** column of [[TG-QRY-3]] tables. Every entity reference in `output` MUST carry the entity's primary key, its `lastObservedAtTime`, and the visibility flags applicable to its type (`isTrustExpired` for `Did`, `archived` for `Ecosystem` / `CredentialSchema`, `state` for `Participant`), and its DID binding where its type has one (`did` on `CorporationRef` / `EcosystemRef`, `didId` on `ParticipantRef`). DID bindings are **identity only**: a reference never duplicates the DID's trust state, which is obtained from the `Did` node itself (per [[TG-QRY-2]]).
+The normative JSON Schema for the traversal response is published alongside this document at [`schemas/v4/graph/traverse/response.schema.json`](./schemas/v4/graph/traverse/response.schema.json). It defines the envelope fields (`query` echo, `evaluatedAtTime`, `output`, and the nullable `nextCursor` of [[TG-QRY-6]]) and the per-query `output` shape, which mirrors the **Output (shape)** column of [[TG-QRY-3]] tables. Every entity reference in `output` other than the id-only form of [[TG-QRY-3]] MUST carry the entity's primary key, its `lastObservedAtTime`, and the visibility flags applicable to its type (`isTrustExpired` for `Did`, `archived` for `Ecosystem` / `CredentialSchema`, `state` for `Participant`), and its DID binding where its type has one (`did` on `CorporationRef` / `EcosystemRef`, `didId` on `ParticipantRef`). DID bindings are **identity only**: a reference never duplicates the DID's trust state, which is obtained from the `Did` node itself (per [[TG-QRY-2]]).
 
 #### Example traversal request
 
@@ -746,7 +746,7 @@ Worked example: a `Did`-surface query for *"plumber issuers"* (free-text *"plumb
 
 | Field               | Operators | Notes                                            |
 | ---                 | ---       | ---                                              |
-| `deposit`           | range     | numeric ranking signal                           |
+| `deposit`           | range     | numeric ranking signal. Operands are non-negative integers in the Coin's base denomination (`uvna`), without the denom |
 | `slashedEvents`     | range     | typical default constraint: `= 0` ("untainted") |
 | `lastSlashedAtTime` | range     |                                                  |
 
@@ -778,6 +778,7 @@ Worked example: a `Did`-surface query for *"plumber issuers"* (free-text *"plumb
 | `{title, description}` of any `CredentialSchema` the `Did` has a `Participant` for | low–medium | **denormalised onto the `Did` doc at index time.** Per-role weighting (e.g. higher weight for ISSUER Participants) is implementation-defined. Enables one-shot "*plumber issuers*" queries on the `Did` surface — no two-step search-the-schema-then-search-the-DIDs flow                          |
 | `{textual fields}` of `credentialSubject` of any non-ECS `Vtc` the `Did` holds       | medium     | **denormalised onto the `Did` doc at index time. MUST.** Domain-credential discovery — *"baby shoes in Bogotá"*, *"streaming video for kids"* — relies on free-text matching content authored on non-ECS VTCs. Requires the VP body fetches of [[TG-DEREF-3]] (RECOMMENDED); if a VP body is not fetched, only schema-level text contributes |
 | bound-DID identity text on the `Ecosystem` / `Corporation` surfaces: the bound DID's `ServiceCredential.{name, description}` and operative operator `name` | high       | **denormalised onto the `Ecosystem` / `Corporation` surface documents at index time. MUST.** These entities carry no name of their own — the bound DID's credentials are their only human-readable identity (the `didCard` rationale of [[TG-FCT-6b]]) — so name-based discovery (*"EU banking registry"*) depends on this slot. Refresh follows the `didCard` denormalisation rule of [[TG-FCT-6b]] |
+| `ServiceEndpoint.{id, type, serviceEndpoint}`                                        | medium     | scored on the `ServiceEndpoint` surface. `serviceEndpoint` contributes its string form, or every string value inside its object or array form |
 
 [TG-FCT-4a] **Matching semantics.** So that a given `freeText` payload admits the same result set on every conformant implementation regardless of the backing engine, the free-text matcher MUST apply the following baseline:
 
@@ -837,7 +838,7 @@ For the **`ServiceEndpoint` surface**, the core additionally carries `type` and 
 
 Everything else a hit carries is organised into the queried surface's named field groups of [[TG-FCT-6b]], returned according to the projection contract of [[TG-FCT-6c]].
 
-[TG-FCT-6b] **Snippet field groups.** Each surface's snippet payload beyond the [[TG-FCT-6a]] core is partitioned into named groups; each group is returned as one snippet field of the same name, according to the projection contract of [[TG-FCT-6c]]. Within a returned group, a field with no value MUST be present with the value `null`, not omitted. A group that is returned but empty is `null` (nullable object groups), `[]` (array groups), or a zero-`total` envelope (list-envelope groups), as stated per group. For every list-envelope group, implementations MAY truncate `entries` to an implementation-defined maximum against pathological cardinalities; the envelope's aggregate fields (`total`, and where present `ecosystemCount` / `byRole`) MUST always reflect the untruncated population. Groups never affect visibility: a group that embeds another entity's data carries that entity's own flags, and per the non-propagation rule of [[TG-FCT-2]] MUST NOT gate the hit it appears on.
+[TG-FCT-6b] **Snippet field groups.** Each surface's snippet payload beyond the [[TG-FCT-6a]] core is partitioned into named groups; each group is returned as one snippet field of the same name, according to the projection contract of [[TG-FCT-6c]]. Within a returned group, a field with no value MUST be present with the value `null`, not omitted. A `schemas` entry (the `Ecosystem`-surface group, or inside the `Did`-surface `ecosystems` group) whose `CredentialSchema` record is not yet materialised ([[TG-DEREF-2]]) is still returned, in the id-only form `{ "id": <id> }` of [[TG-QRY-3]]. A group that is returned but empty is `null` (nullable object groups), `[]` (array groups), or a zero-`total` envelope (list-envelope groups), as stated per group. For every list-envelope group, implementations MAY truncate `entries` to an implementation-defined maximum against pathological cardinalities; the envelope's aggregate fields (`total`, and where present `ecosystemCount` / `byRole`) MUST always reflect the untruncated population. Groups never affect visibility: a group that embeds another entity's data carries that entity's own flags, and per the non-propagation rule of [[TG-FCT-2]] MUST NOT gate the hit it appears on.
 
 **Shared shape: `didCard`.** Every DID-bound surface other than `Did` itself defines a `didCard` group — the surface's bound DID rendered as a result card, so a single UI component can render any DID-bound hit. Shape: `{ did, trusted, isTrustExpired, service, operator }`, where `service` and `operator` follow exactly the `Did`-surface group shapes below and are nullable under the same conditions. The group itself is never `null` — the bound DID always exists as a `Did` record. Its `trusted` / `isTrustExpired` flags describe the bound DID without gating the hit; on surfaces whose hits are already hidden when the bound DID is trust-expired ([[TG-FCT-2]]), `isTrustExpired` is necessarily `false` on every visible hit and is kept for shape uniformity.
 
@@ -1402,5 +1403,6 @@ The user wants AI-agent VSs operated by a Persona named "@fabrice". Surface: `Di
 | `UNKNOWN_FILTER_FIELD` | 400 | A `filters` key is not a declared filter field of the queried surface ([[TG-FCT-3]]) |
 | `INVALID_CURSOR` | 400 | The `cursor` is malformed or no longer valid ([[TG-FCT-7]]) — never silently re-anchored |
 | `UNKNOWN_ID` | 404 | The input's entity identifier (`did`, `credentialId`, `participantId`, `ecosystemId`, `credentialSchemaId`, `corporationId`) resolves to no persisted record |
+| `INTERNAL` | 500 | The implementation failed to serve the request through no fault of the client |
 
 An empty result is **not** an error: a traversal whose walk yields no records and a search with zero hits return their normal success envelopes. Success responses MUST validate against the corresponding response schema; error responses MUST validate against the error schema — the two are disjoint (`additionalProperties: false` on both sides).
