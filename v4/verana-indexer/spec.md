@@ -1,6 +1,6 @@
 # Indexer v4 Specification
 
-**Latest Draft:** spec v4-draft14
+**Latest Draft:** spec v4-draft15
 
 ## Abstract
 
@@ -32,7 +32,11 @@ Every duration value surfaced by this specification MUST be encoded as the [prot
 ^[0-9]+(\.[0-9]{1,9})?s$
 ```
 
-A duration on an authorization, record or grant means that the entry **auto-renews**: per VPR [[AUTHZ-CHECK-1]](https://verana-labs.github.io/verifiable-trust-vpr-spec/versions/v4/#authz-check-1-operator-authorization-checks), [[AUTHZ-CHECK-2]](https://verana-labs.github.io/verifiable-trust-vpr-spec/versions/v4/#authz-check-2-fee-grant-checks) and [[AUTHZ-CHECK-3]](https://verana-labs.github.io/verifiable-trust-vpr-spec/versions/v4/#authz-check-3-vs-operator-authorization-checks), when `period` is set and `now() >= expiration`, the ledger resets the spend balances and advances `expiration` by `period` at the next authorization check, instead of treating the entry as expired. Consumers evaluating activity client-side, and the `only_active` filters of the Delegation methods, MUST therefore treat an entry as active when `expiration` is unset, when `expiration > now`, or when `period` is set — whatever the stored `expiration` value.
+Durations surfaced include `period` on `OperatorAuthorization`, `ParticipantAuthorizationRecord` and `FeeGrant`, and `validity_duration` on `ExchangeRate`. The ledger also stores the VPR `GlobalVariables.vs_operator_fee_period` as a `google.protobuf.Duration`; it reaches clients as the `period` of a `vs_operator` `FeeGrant` (see [`listFeeGrants`](#idx-de-qry-5-list-fee-grants)), encoded as above.
+
+A `period` on an `OperatorAuthorization` or a `FeeGrant` means that the entry **auto-renews**: per VPR [[AUTHZ-CHECK-1]](https://verana-labs.github.io/verifiable-trust-vpr-spec/versions/v4/#authz-check-1-operator-authorization-checks) and [[AUTHZ-CHECK-2]](https://verana-labs.github.io/verifiable-trust-vpr-spec/versions/v4/#authz-check-2-fee-grant-checks), when `period` is set and `now() >= expiration`, the ledger resets the spend balance and starts a new cycle at the next authorization check (for a `FeeGrant`, at the next fee draw), instead of treating the entry as expired. Consumers evaluating activity client-side, and the `only_active` filters of [`listOperatorAuthorizations`](#idx-de-qry-1-list-operator-authorizations) and [`listFeeGrants`](#idx-de-qry-5-list-fee-grants), MUST therefore treat an `OperatorAuthorization` or a `FeeGrant` as active when `expiration` is unset, when `expiration > now`, or when `period` is set, whatever the stored `expiration` value.
+
+A `period` on a `ParticipantAuthorizationRecord` means something else: it is the length of the record's operation-budget cycle for `spend_limit`, and `expiration`, when set, is the end of the current cycle (VPR [ParticipantAuthorizationRecord](https://verana-labs.github.io/verifiable-trust-vpr-spec/versions/v4/#participantauthorizationrecord)). Neither field says whether the record can be used. Per VPR [[AUTHZ-CHECK-3]](https://verana-labs.github.io/verifiable-trust-vpr-spec/versions/v4/#authz-check-3-vs-operator-authorization-checks), a record can be used only while its `Participant` entry is an active participant (step 1), and a past `expiration` only means that the cycle resets at the next check (step 5 never aborts). Consumers MUST NOT derive the activity of a record from its `expiration` or `period`; see [`listVSOperatorAuthorizations`](#idx-de-qry-2-list-vs-operator-authorizations).
 
 ## Terminology
 
@@ -927,12 +931,23 @@ Retrieve a paginated, filtered list of `VSOperatorAuthorization` entries. Each e
 | `corporation_id` | query | uint64 | no | Filter by the granting Corporation id |
 | `vs_operator` | query | string | no | Filter by the grantee VS-operator account |
 | `participant_id` | query | uint64 | no | Filter to entries whose `records[]` contains a record for this `Participant.id` |
-| `only_active` | query | boolean | no | If true, only return entries with at least one non-expired record (`expiration > now` or null; a record with a `period` is never inactive at its cycle boundary, see [Duration encoding](#duration-encoding)) |
+| `only_active` | query | boolean | no | If true, only return entries with at least one record whose `Participant` entry is an active participant at `now`: `effective_from` is set and `effective_from <= now`, `effective_until` is null or `effective_until > now`, `revoked` is null, and `slashed` is null (it stays set after a repay, so a repaid entry is not active). This is the VPR definition that [[AUTHZ-CHECK-3]](https://verana-labs.github.io/verifiable-trust-vpr-spec/versions/v4/#authz-check-3-vs-operator-authorization-checks) step 1 applies, so an entry that was never validated (no `effective_from` yet) is not active. The record's own `expiration` and `period` play no part (see [Duration encoding](#duration-encoding)) |
 | `modified_after` | query | datetime | no | Only return entries modified strictly after this datetime |
 
 Supports pagination through attributes `max_id`, `min_id`, `limit` and `sort`, as explained in [Pagination](#pagination).
 
-**Response:** `{ authorizations: VSOperatorAuthorization[] }` — each entry carries `id` (auto-incremented uint64), `corporation_id`, `vs_operator`, and `records[]: ParticipantAuthorizationRecord[]`. Each `ParticipantAuthorizationRecord` carries `participant_id` (globally unique), `msg_types[]`, `spend_limit[]` (optional), `remaining_spend[]` (when `spend_limit` is set), `fee_spend_limit[]` (optional), `remaining_fee_spend[]` (when `fee_spend_limit` is set), `with_feegrant` (boolean), `expiration` (timestamp), and `period` (optional duration). This is the canonical surface for the data that was previously inlined as `Participant.vs_operator_authz_*` fields.
+**Response:** `{ authorizations: VSOperatorAuthorization[] }`. Each entry carries `id` (auto-incremented uint64), `corporation_id`, `vs_operator`, and `records[]: ParticipantAuthorizationRecord[]`. Each `ParticipantAuthorizationRecord` carries, per VPR [ParticipantAuthorizationRecord](https://verana-labs.github.io/verifiable-trust-vpr-spec/versions/v4/#participantauthorizationrecord):
+
+- `participant_id` (globally unique)
+- `msg_types[]`
+- `spend_limit[]` (optional)
+- `remaining_spend[]` (present iff `spend_limit` is set)
+- `fee_spend_limit[]` (present iff `with_feegrant` is true): this entry's contribution, per `vs_operator_fee_period`, to the aggregate fee allowance of the `vs_operator`, counted while the `Participant` entry is an active or future participant. It is not a balance of its own.
+- `with_feegrant` (boolean)
+- `expiration` (timestamp; present iff `period` is set and the cycle has started, which is at creation, or at validation for an entry started through an onboarding process): the end of the current operation-budget cycle, not the end of a validity window.
+- `period` (optional duration): the length of the operation-budget cycle for `spend_limit`. It never applies to fees.
+
+A record carries no `remaining_fee_spend`: the fee cap is the aggregate `vs_operator` `FeeGrant` (see [`listFeeGrants`](#idx-de-qry-5-list-fee-grants)). This is the canonical surface for the data that was previously inlined as `Participant.vs_operator_authz_*` fields.
 
 ##### IDX-DE-QRY-3 Get Operator Authorization
 
@@ -956,7 +971,7 @@ Retrieve a specific `VSOperatorAuthorization` entry by its id, including its nes
 | --- | --- | --- | --- | --- |
 | `id` | path | uint64 | yes | The VSOperatorAuthorization ID |
 
-**Response:** `{ authorization: VSOperatorAuthorization }` — same shape as an entry returned by [`listVSOperatorAuthorizations`](#idx-de-qry-2-list-vs-operator-authorizations): `id`, `corporation_id`, `vs_operator`, and `records[]: ParticipantAuthorizationRecord[]` (each record carries `participant_id`, `msg_types[]`, `spend_limit[]` and `remaining_spend[]`, `fee_spend_limit[]` and `remaining_fee_spend[]`, `with_feegrant`, `expiration`, `period`).
+**Response:** `{ authorization: VSOperatorAuthorization }`, the same shape as an entry returned by [`listVSOperatorAuthorizations`](#idx-de-qry-2-list-vs-operator-authorizations): `id`, `corporation_id`, `vs_operator`, and `records[]: ParticipantAuthorizationRecord[]` (each record carries `participant_id`, `msg_types[]`, `spend_limit[]` and `remaining_spend[]`, `fee_spend_limit[]` when `with_feegrant` is true, `with_feegrant`, `expiration` when a budget cycle has started, and `period`; there is no `remaining_fee_spend`).
 
 ##### IDX-DE-QRY-5 List Fee Grants
 
@@ -977,6 +992,8 @@ The primary consumer use case is a client deciding, before broadcasting a delega
 Supports pagination through attributes `max_id`, `min_id`, `limit` and `sort`, as explained in [Pagination](#pagination). Since the VPR `FeeGrant` has a composite primary key `(grantor_corporation_id, grantee)` and no `id` of its own, the cursor key is an indexer-assigned per-row monotonic uint64 `id` surfaced on each entry (same mechanic as `ActivityItem.id`), distinct from any on-chain identifier.
 
 **Response:** `{ fee_grants: FeeGrant[] }` — each entry carries `id` (indexer-assigned per-row uint64, the pagination cursor), `grantor_corporation_id`, `grantee`, `msg_types[]`, `spend_limit[]` (optional `DenomAmount[]`), `remaining_spend[]` (when `spend_limit` is set — sourced from the underlying `x/feegrant` allowance's running balance, per the VPR Delegation module realization note), `expiration` (optional timestamp), and `period` (optional duration). For periodic grants, `expiration` reflects the underlying allowance's current `period_reset` (the end of the current auto-renewing cycle), per the VPR Delegation module mapping — not the value stored at grant time, which never advances on-chain.
+
+The `vs_operator` path is always periodic. A Corporation's grant to a `vs_operator` is the aggregate allowance that VPR [[MOD-DE-MSG-5-5]](https://verana-labs.github.io/verifiable-trust-vpr-spec/versions/v4/#mod-de-msg-5-5-recompute-vs-operator-fee-allowance) derives from the records of the `VSOperatorAuthorization` whose `with_feegrant` is true and whose `Participant` entry is an active or future participant: `period` is the `GlobalVariables.vs_operator_fee_period` in force when the grant was last recomputed, `spend_limit[]` is the sum of those records' `fee_spend_limit[]` per `denom`, `msg_types[]` is the union of their `msg_types[]`, and `expiration` is the allowance's current `period_reset`, as for any periodic grant. Until `expiration`, `remaining_spend[]` is what is left of the current period's limit. The ledger recomputes the grant whenever a record is granted, revoked or synced, and at the EndBlocker of the first block whose time reaches a contributing entry's `effective_until`; it revokes the grant once no such record remains.
 
 #### Digest methods
 
