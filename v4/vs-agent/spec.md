@@ -657,21 +657,24 @@ The caller proves control of a Verana account by signing an agent-issued nonce w
 
 The exchange has three steps:
 
-1. **Request a challenge.** The caller posts its account address to [`challenge`](#vsa-adm-auth-challenge-challenge). The agent returns a single-use `nonce` and its expiry.
-2. **Sign the challenge.** The caller builds the sign doc described below over the challenge payload, and signs it with the private key of that account.
+1. **Request a challenge.** The caller posts its account address to [`challenge`](#vsa-adm-auth-challenge-challenge). The agent returns a single-use `nonce`, its expiry, and the agent's `audience` (its `ADMIN_API_PUBLIC_URL`).
+2. **Sign the challenge.** The caller checks that `audience` is the origin it resolved for this agent, builds the sign doc described below over the audience-bound challenge payload, and signs it with the private key of that account.
 3. **Exchange for a token.** The caller posts the account, public key, signature and nonce to [`token`](#vsa-adm-auth-token-token). The agent verifies the signature and returns a bearer token and its expiry.
 
 An external caller reaches both endpoints without a token, since it cannot hold a token before it completes the exchange (see [Authorization](#vsa-adm-access-authz-authorization)). The agent serves them only when `ADMIN_API_AUTH_MODE` is `corporation`. A trusted-network caller needs no token, and therefore has no use for them.
 
 ###### Challenge payload
 
-The `data` string that MUST be signed is a fixed prefix concatenated with the issued nonce:
+The `data` string that MUST be signed binds the target agent into the signature: a fixed prefix, the agent's audience, and the issued nonce, joined with `:`:
 
 ```
-vs-agent-admin-auth:<nonce>
+vs-agent-admin-auth:<audience>:<nonce>
 ```
 
-A signature computed over any other payload MUST be rejected.
+- `<audience>` is the agent's `ADMIN_API_PUBLIC_URL`, verbatim: the same value its `VsAgentAdminAPI` DID Document entry carries per [[VSA-VTI-DIDDOC]](#vsa-vti-diddoc-did-document-service-entries). The caller MUST take it from the origin it resolved for the agent, MUST compare it with the `audience` returned by [`challenge`](#vsa-adm-auth-challenge-challenge), and MUST NOT sign when they differ.
+- `<nonce>` is the value returned by [`challenge`](#vsa-adm-auth-challenge-challenge). A nonce contains no `:`, so the payload is unambiguous.
+
+A signature computed over any other payload MUST be rejected. The agent verifies the signature against the payload it builds from its own `ADMIN_API_PUBLIC_URL` and the nonce it issued, never from a caller-supplied audience. Without the audience in the payload, a compromised agent could obtain a nonce from another agent, present it to a caller as its own challenge, and trade the resulting signature for a token at that other agent; with the audience bound in, a signature is usable at exactly one agent.
 
 ###### Sign doc
 
@@ -706,7 +709,7 @@ The agent MUST reject the exchange unless all of the following hold:
 
 1. The `nonce` is known, has not expired, and was issued to the same `account`.
 2. The supplied `pubKey` derives to `account`: the bech32 encoding, with the `verana` prefix, of the address derived from `pubKey` MUST equal the supplied account address.
-3. The `signature` verifies as a `secp256k1` signature over the SHA-256 digest of the serialised sign doc, under `pubKey`.
+3. The `signature` verifies as a `secp256k1` signature over the SHA-256 digest of the serialised sign doc, under `pubKey`, where the sign doc carries the payload the agent builds from its own `ADMIN_API_PUBLIC_URL` and the presented `nonce`.
 
 A nonce MUST be single-use: the agent MUST invalidate it as soon as it is presented, whether or not verification then succeeds. Nonces MUST expire; the RECOMMENDED lifetime is 120 seconds. An agent MAY bound the number of outstanding nonces and evict the oldest.
 
@@ -931,8 +934,9 @@ Issues a single-use nonce for the supplied Verana account.
 
 **Output**:
 
-- `nonce` — the challenge to sign. Opaque, single-use, and unpredictable.
+- `nonce` — the challenge to sign. Opaque, single-use, and unpredictable. It MUST NOT contain `:`.
 - `expiresAt` — ISO 8601 UTC datetime after which the agent no longer accepts the nonce.
+- `audience` — the agent's `ADMIN_API_PUBLIC_URL`, which the caller binds into the signed payload per [[VSA-ADM-AUTH-PROTO]](#vsa-adm-auth-proto-account-challengeresponse).
 
 **Errors**: `INVALID_INPUT` (`400`) when `account` is absent or is not a `verana` address.
 
@@ -954,7 +958,7 @@ Verifies a signature over a previously issued challenge, and returns a bearer to
 - `token` — the bearer token to present in the `Authorization` header.
 - `expiresAt` — ISO 8601 UTC datetime after which the agent rejects the token.
 
-**Errors**: `UNAUTHENTICATED` (`401`) when the nonce is unknown, is expired, or was issued to a different account, or when the signature does not verify. The agent MUST NOT distinguish these conditions in the response, so that a caller cannot probe which nonces or accounts exist.
+**Errors**: `UNAUTHENTICATED` (`401`) when the nonce is unknown, is expired, or was issued to a different account, or when the signature does not verify, including a signature over a payload bound to another audience. The agent MUST NOT distinguish these conditions in the response, so that a caller cannot probe which nonces or accounts exist.
 
 ### [VSA-ADM-AG] Agent
 
