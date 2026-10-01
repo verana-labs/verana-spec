@@ -1,6 +1,6 @@
 # VS Agent v4 Specification
 
-**Latest Draft:** spec v4-draft15
+**Latest Draft:** spec v4-draft16
 
 ## Abstract
 
@@ -173,7 +173,7 @@ The `vs_operator` account should have been granted appropriate authorizations by
 recommended:
 
 - **`VSOperatorAuthorization`** (see [[VSOperatorAuthorization]](https://verana-labs.github.io/verifiable-trust-vpr-spec/#vsoperatorauthorization) and [[ParticipantAuthorizationRecord]](https://verana-labs.github.io/verifiable-trust-vpr-spec/#participantauthorizationrecord)): groups one or more `ParticipantAuthorizationRecord` entries, each keyed by `participant_id`, that grant the agent the right to execute, on behalf of the Corporation and in the context of that specific `Participant`, the message types declared in `record.msg_types` (typically `CreateOrUpdateParticipantSession`, `TriggerResolver`, `SetParticipantOPtoValidated`). See [[AUTHZ-CHECK-3]](https://verana-labs.github.io/verifiable-trust-vpr-spec/#authz-check-3-vs-operator-authorization-checks).
-  - If `record.with_feegrant` is `true` for the relevant `Participant`, the Corporation's `policy_address` covers transaction fees via an on-chain `FeeGrant` and the agent account does not need to be independently funded.
+  - If `record.with_feegrant` is `true` for the relevant `Participant`, the Corporation's `policy_address` covers transaction fees via an on-chain `FeeGrant` and the agent account does not need to be independently funded. The agent MUST name that `policy_address` as the fee `granter` of each transaction it sends under the record ([[VSA-VPR-TX-3]](#vsa-vpr-tx-on-chain-transactions)); a transaction that does not name the granter is paid by the agent account.
   - If `record.with_feegrant` is `false`, the agent account MUST have sufficient balance to pay transaction fees.
 
 > If no `VSOperatorAuthorization` record exists for a `Participant`, the VS Agent MUST have VNA balance in its `vs_operator` account to cover transaction and trust fees, and the Corporation `policy_address` MUST co-sign every message that targets that `Participant`. This fallback does not apply to `SetParticipantOPtoValidated`, which the agent then hands to an operator ([[VSA-ADM-VT-FL-VALIDATE-5]](#vsa-adm-vt-fl-validate-validateflow)).
@@ -208,7 +208,6 @@ The table lists every environment variable of the VS Agent container. The subsec
 | [`VERANA_INDEXER_SUBSCRIPTION_SCOPE`](#vsa-vti-cfg-env-net-network-configuration) | OPTIONAL | Network Configuration |
 | [`VERANA_INDEXER_DEFAULT_HANDLERS_OVERRIDE`](#vsa-vti-cfg-env-net-network-configuration) | OPTIONAL | Network Configuration |
 | [`VERANA_GAS_ADJUSTMENT`](#vsa-vti-cfg-env-net-network-configuration) | OPTIONAL | Network Configuration |
-| [`VERANA_AUTO_TRIGGER_RESOLVER`](#vsa-vti-cfg-env-net-network-configuration) | OPTIONAL | Network Configuration |
 | [`AGENT_MODE`](#vsa-vti-cfg-env-mode-agent-configuration-mode) | OPTIONAL | Agent Configuration Mode |
 | [`AGENT_DELEGATED_PARENT_VS_DID`](#vsa-vti-cfg-env-mode-agent-configuration-mode) | CONDITIONAL | Agent Configuration Mode |
 | [`TRUSTED_ECS_ECOSYSTEM_DIDS`](#vsa-vti-cfg-env-mode-agent-configuration-mode) | CONDITIONAL | Agent Configuration Mode |
@@ -267,7 +266,6 @@ The table lists every environment variable of the VS Agent container. The subsec
 | `VERANA_INDEXER_SUBSCRIPTION_SCOPE` | OPTIONAL | Scope of the indexer subscription and of the REST catch-up: `did` (default) subscribes to the agent's own DID only, `corporation` subscribes to every event of `VERANA_CORPORATION_ID`. |
 | `VERANA_INDEXER_DEFAULT_HANDLERS_OVERRIDE` | OPTIONAL | Comma-separated list of indexer `event_type` names whose default handler is disabled, or `*` for all of them. The operator sets it when a backend implements the reaction itself: the backend observes each chain event through the [`vpr.notification`](#vsa-evt-cat-event-catalog) event. State synchronisation is never affected. |
 | `VERANA_GAS_ADJUSTMENT` | OPTIONAL | Multiplier the agent applies to the simulated gas of each transaction it signs. Default: `1.5`. A simulation signs with an empty signature and runs against the state of the moment, so it reports less gas than the delivery consumes; the multiplier covers that difference. Raise it when a transaction reports `out of gas` although its simulation succeeded. |
-| `VERANA_AUTO_TRIGGER_RESOLVER` | OPTIONAL | Whether the agent sends `TriggerResolver` by itself after it publishes a credential or changes a service endpoint. Default: `true`. Set it to `false` when the operator triggers the resolver out of band. |
 
 #### [VSA-VTI-CFG-ENV-MODE] Agent Configuration Mode
 
@@ -2601,7 +2599,7 @@ The `serviceEndpoint` field of these methods is the `serviceEndpoint` property o
 For each successful mutation (`addServiceEndpoint`, `updateServiceEndpoint`, `deleteServiceEndpoint`):
 
 - the agent MUST publish the updated DID Document;
-- the agent SHOULD call `TriggerResolver` on-chain, so that the trust-resolution state of the agent reflects the change.
+- the agent MUST call `TriggerResolver` on-chain per [[VSA-VPR-TX]](#vsa-vpr-tx-on-chain-transactions), so that the trust-resolution state of the agent reflects the change; a failed call is logged per [[VSA-VPR-TX-4]](#vsa-vpr-tx-on-chain-transactions).
 
 ##### [VSA-ADM-VT-SE-LIST] listServiceEndpoints
 
@@ -2888,11 +2886,17 @@ The agent signs a small, fixed set of VPR messages with its own `vs_operator` ac
 |---|---|---|
 | `SetParticipantOPtoValidated` [[MOD-PP-MSG-3]](https://verana-labs.github.io/verifiable-trust-vpr-spec/#mod-pp-msg-3-set-participant-op-to-validated) | As Validator, after it validates the Applicant of an Onboarding Process. | [[VSA-VTI-FLOW-OP-NEW]](#vsa-vti-flow-op-new-new-onboarding-process), [[VSA-VTI-FLOW-OP-RENEW]](#vsa-vti-flow-op-renew-renew-onboarding-process) |
 | `CreateOrUpdateParticipantSession` [[MOD-PP-MSG-10]](https://verana-labs.github.io/verifiable-trust-vpr-spec/#mod-pp-msg-10-create-or-update-participant-session) | As Validator, to anchor the `digestJCS` of a credential before it delivers it; as issuer of its own ECS credential. | [[VSA-VTI-FLOW-ISSUE]](#vsa-vti-flow-issue-credential-issuance-and-acceptance), [[VSA-VTI-ECS-SELF]](#vsa-vti-ecs-self-ecs-self-issuance) |
-| `TriggerResolver` [[MOD-PP-MSG-15]](https://verana-labs.github.io/verifiable-trust-vpr-spec/#mod-pp-msg-15-trigger-resolver) | After it adds or removes a `LinkedVerifiablePresentation` entry, after it becomes a Verifiable Service, or after a service endpoint mutation, when `VERANA_AUTO_TRIGGER_RESOLVER` is `true`. | [Linked VP Management](#vsa-vt-lvp-linked-vp-management), [[VSA-ADM-VT-SE]](#vsa-adm-vt-se-service-endpoint-management) |
+| `TriggerResolver` [[MOD-PP-MSG-15]](https://verana-labs.github.io/verifiable-trust-vpr-spec/#mod-pp-msg-15-trigger-resolver) | After it adds, removes, or replaces a `LinkedVerifiablePresentation` entry, or changes the presentation that an entry serves, after it becomes a Verifiable Service, or after a service endpoint mutation, when it holds an entry of [VSA-VPR-TX-5]. | [Linked VP Management](#vsa-vt-lvp-linked-vp-management), [[VSA-ADM-VT-SE]](#vsa-adm-vt-se-service-endpoint-management) |
 
 [VSA-VPR-TX-1] The agent MUST sign each of these messages with its `vs_operator` account, and MUST simulate the gas of each transaction and apply `VERANA_GAS_ADJUSTMENT` to the result, per [[VSA-VTI-CFG-ENV-NET]](#vsa-vti-cfg-env-net-network-configuration).
 
 [VSA-VPR-TX-2] The VPR enforces the authorization of the agent for each message independently of the caller that led to it: a `VSOperatorAuthorization` record MUST exist for the `Participant` in scope, or the agent MUST operate in the fallback mode of [Agent Account Authorizations](#vsa-vti-corp-authz-agent-account-authorizations). `SetParticipantOPtoValidated` has no fallback mode: without a record, the agent hands the transaction to an operator per [[VSA-ADM-VT-FL-VALIDATE-5]](#vsa-adm-vt-fl-validate-validateflow).
+
+[VSA-VPR-TX-3] The fee payer of a transaction follows the `ParticipantAuthorizationRecord` of the `Participant` entry in scope, as [VSA-ADM-VT-FL-VALIDATE-6] states for `SetParticipantOPtoValidated`. For `TriggerResolver`, the entry in scope is the entry of [VSA-VPR-TX-5]. When the record has `with_feegrant`, the agent MUST set the fee `granter` of the transaction to the `policy_address` of the Corporation, so that the aggregate `FeeGrant` of [[MOD-DE-MSG-5-5]](https://verana-labs.github.io/verifiable-trust-vpr-spec/#mod-de-msg-5-5-recompute-vs-operator-fee-allowance) pays the fee; the VPR debits a fee grant only when the transaction names it. Otherwise the agent account pays. The agent MUST run the pre-flight of [VSA-ADM-VT-FL-VALIDATE-6] on every transaction before it broadcasts it, and MUST NOT fall back from one payer to the other: a missing, expired, or exhausted allowance is a failure with the matching `reason` of [VSA-ADM-VT-FL-VALIDATE-9]. The agent reports a missing allowance with `FEEGRANT_EXPIRED`.
+
+[VSA-VPR-TX-4] A transaction that no flow record reports MUST NOT fail silently. In this version, these transactions are `TriggerResolver` and the `CreateOrUpdateParticipantSession` of [[VSA-VTI-ECS-SELF-2]](#vsa-vti-ecs-self-ecs-self-issuance). When the pre-flight stops the transaction, when the broadcast is rejected, when the chain includes it with a non-zero result code, or when the agent cannot find it on chain, the agent MUST log one line at error level that names the message, the `Participant` entry, why the agent sent it, and the `reason` of [VSA-ADM-VT-FL-VALIDATE-9] or the raw chain error. The agent does not send the transaction again: the log line is the report, and the operator acts on it. For a failed `TriggerResolver`, the trust state of the agent stays stale until the next signal, per [[IDX-VT-EVAL-3]](../verana-indexer/spec.md#trust-evaluation-lifecycle).
+
+[VSA-VPR-TX-5] A `TriggerResolver` that the agent sends for its own DID MUST name an active HOLDER `Participant` entry whose `did` is the DID of the agent, and whose `ParticipantAuthorizationRecord` lists `TriggerResolver`. Path 1 of [[MOD-PP-MSG-15-2-2]](https://verana-labs.github.io/verifiable-trust-vpr-spec/#mod-pp-msg-15-2-2-trigger-resolver-authorization-checks) requires that record, and only a HOLDER record can list `TriggerResolver` ([[MOD-PP-MSG-1-1]](https://verana-labs.github.io/verifiable-trust-vpr-spec/#mod-pp-msg-1-1-start-participant-op-parameters), [[MOD-PP-MSG-14-1]](https://verana-labs.github.io/verifiable-trust-vpr-spec/#mod-pp-msg-14-1-self-create-participant-parameters)). [[MOD-PP-MSG-15]](https://verana-labs.github.io/verifiable-trust-vpr-spec/#mod-pp-msg-15-trigger-resolver) re-evaluates the DID of the entry, so each such entry gives the same result. When the agent holds no such entry, it MUST NOT send the transaction, and MUST log one line at warning level that names why it did not send it. An agent that holds only ISSUER or VERIFIER entries, such as an agent under [[VSA-VTI-ECS-SELF]](#vsa-vti-ecs-self-ecs-self-issuance), is in this case; an ancestor validator of its entries can still trigger the resolver through Path 2. When the agent cannot read its entries from the indexer, it MUST log the failure per [VSA-VPR-TX-4].
 
 The allowlist governs only **who may call the Admin API**. Whenever a method leads the agent to submit an on-chain VPR `Msg` (`SetParticipantOPtoValidated`, `CreateOrUpdateParticipantSession`, `TriggerResolver`), the agent signs with its own `vs_operator` account, and the VPR independently enforces the agent's authorization per [[AUTHZ-CHECK-3]](https://verana-labs.github.io/verifiable-trust-vpr-spec/#authz-check-3-vs-operator-authorization-checks) / [[AUTHZ-CHECK-4]](https://verana-labs.github.io/verifiable-trust-vpr-spec/#authz-check-4-vs-operator-fee-grant-checks) against its `VSOperatorAuthorization` records (see [Agent Account Authorizations](#vsa-vti-corp-authz-agent-account-authorizations)). A call accepted by the allowlist still fails if the agent lacks the on-chain grant for the resulting transaction.
 
@@ -3143,7 +3147,7 @@ sequenceDiagram
     Applicant Agent->>Validator: 10. Accept Credential
     Note over Applicant Agent: 11. Store credential
     Note over Applicant Agent: 12. Linked VP in DID Doc
-    Applicant Agent->>VPR: 13. (optional) TriggerResolver
+    Applicant Agent->>VPR: 13. TriggerResolver
 ```
 
 **Step-by-step**:
@@ -3362,7 +3366,7 @@ sequenceDiagram
     Applicant->>Validator: 8. Accept Credential
     Note over Applicant: 9. Store credential
     Note over Applicant: 10. Linked VP in DID Doc
-    Applicant->>VPR: 11. (optional) TriggerResolver
+    Applicant->>VPR: 11. TriggerResolver
 ```
 
 **Step-by-step**:
@@ -3402,9 +3406,7 @@ These steps close every flow in which the Validator issues a credential: the [Ne
 
 7. The applicant publishes the credential as a `LinkedVerifiablePresentation` entry of its DID Document per [[VT-CRED-W3C-LINKED-VP]](https://verana-labs.github.io/verifiable-trust-spec/#vt-cred-w3c-linked-vp-w3c-vtc-linked-vp) ([VSA-VTI-FLOW-FMT-4], [[VSA-VT-LVP-1]](#vsa-vt-lvp-linked-vp-management)).
 
-8. The applicant calls `TriggerResolver` ([[MOD-PP-MSG-15]](https://verana-labs.github.io/verifiable-trust-vpr-spec/#mod-pp-msg-15-trigger-resolver)) on-chain to refresh its Verifiable Service resolution state, per [[VSA-VT-LVP-5]](#vsa-vt-lvp-linked-vp-management). The applicant SHOULD call `TriggerResolver` after step 7, and in particular when:
-   - it has just become a Verifiable Service by newly complying with [[VS-REQ]](https://verana-labs.github.io/verifiable-trust-spec/#vs-req-verifiable-service-basic-requirements-and-linked-vps); or
-   - it has added or removed a `LinkedVerifiablePresentation` entry in its DID Document.
+8. The applicant calls `TriggerResolver` ([[MOD-PP-MSG-15]](https://verana-labs.github.io/verifiable-trust-vpr-spec/#mod-pp-msg-15-trigger-resolver)) on-chain to refresh its Verifiable Service resolution state, per [[VSA-VT-LVP-5]](#vsa-vt-lvp-linked-vp-management).
 
 [VSA-VTI-FLOW-ISSUE-1] When `CreateOrUpdateParticipantSession` fails at step 2 (pre-flight, broadcast, or a non-zero result code, per the rules of [VSA-ADM-VT-FL-VALIDATE-6] to [VSA-ADM-VT-FL-VALIDATE-9] applied to this transaction), the validator records the outcome in `issuance.tx` on the flow record, keeps the Flow State `CRED_OFFERED` with the subprotocol waiting for the credential, sends no problem report, and sets `pendingAction` to `VALIDATOR`. The operator repeats step 2 with [`validateFlow`](#vsa-adm-vt-fl-validate-validateflow) ([VSA-ADM-VT-FL-VALIDATE-3]); on success the validator continues with step 3.
 
@@ -3598,7 +3600,9 @@ The agent publishes credentials in its DID Document as `LinkedVerifiablePresenta
 
 [VSA-VT-LVP-4] The agent MUST publish its DID Document after each change of a `LinkedVerifiablePresentation` entry, per [[VSA-PUB-DID-3]](#vsa-pub-did-did-document-and-did-log).
 
-[VSA-VT-LVP-5] When `VERANA_AUTO_TRIGGER_RESOLVER` is `true`, the agent SHOULD call `TriggerResolver` ([[MOD-PP-MSG-15]](https://verana-labs.github.io/verifiable-trust-vpr-spec/#mod-pp-msg-15-trigger-resolver)) on-chain, per [[VSA-VPR-TX]](#vsa-vpr-tx-on-chain-transactions), when it has just become a Verifiable Service by newly complying with [[VS-REQ]](https://verana-labs.github.io/verifiable-trust-spec/#vs-req-verifiable-service-basic-requirements-and-linked-vps), or when it has added or removed a `LinkedVerifiablePresentation` entry.
+[VSA-VT-LVP-5] When the agent holds an entry of [[VSA-VPR-TX-5]](#vsa-vpr-tx-on-chain-transactions), it MUST call `TriggerResolver` ([[MOD-PP-MSG-15]](https://verana-labs.github.io/verifiable-trust-vpr-spec/#mod-pp-msg-15-trigger-resolver)) on-chain, per [[VSA-VPR-TX]](#vsa-vpr-tx-on-chain-transactions), when it has just become a Verifiable Service by newly complying with [[VS-REQ]](https://verana-labs.github.io/verifiable-trust-spec/#vs-req-verifiable-service-basic-requirements-and-linked-vps), when it has added, removed, or replaced a `LinkedVerifiablePresentation` entry, a removal under [VSA-VT-LVP-3] included, and when it has changed the presentation that an entry serves while the entry stays the same. A credential that the agent issues again under the same URL is an example of the last case. When it holds no such entry, it logs per [VSA-VPR-TX-5] and sends nothing. A failed call is logged per [VSA-VPR-TX-4]: [[IDX-VT-EVAL-3]](../verana-indexer/spec.md#trust-evaluation-lifecycle) makes this call the only signal of an off-chain change, so without it the trust state of the agent stays stale.
+
+[VSA-VT-LVP-6] The agent MAY send one `TriggerResolver` for several changes of [VSA-VT-LVP-5] that occur within a short interval, because the resolver reads the DID Document as it is when it runs. The agent MUST send that `TriggerResolver` after the last change of the interval. The agent MUST send each `TriggerResolver` that it holds back before it stops: a change without a trigger leaves the trust state of the agent stale.
 
 ## Data and State
 
@@ -3868,12 +3872,16 @@ Every identifier of this document, in lexical order. A section identifier links 
 | `VSA-VPR-TX` | [On-chain Transactions](#vsa-vpr-tx-on-chain-transactions) | VPR and Indexer Interface |
 | `VSA-VPR-TX-1` | The agent MUST sign each of these messages with its `vs_operator` account, and MUST simulate the gas of each transaction and apply `VERANA_G… |  |
 | `VSA-VPR-TX-2` | The VPR enforces the authorization of the agent for each message independently of the caller that led to it: a `VSOperatorAuthorization` rec… |  |
+| `VSA-VPR-TX-3` | The fee payer of a transaction follows the `ParticipantAuthorizationRecord` of the `Participant` entry in scope, as [VSA-ADM-VT-FL-VALIDATE-… |  |
+| `VSA-VPR-TX-4` | A transaction that no flow record reports MUST NOT fail silently. In this version, these transactions are `TriggerResolver` and the `CreateO… |  |
+| `VSA-VPR-TX-5` | A `TriggerResolver` that the agent sends for its own DID MUST name an active HOLDER `Participant` entry whose `did` is the DID of the agent,… |  |
 | `VSA-VT-LVP` | [Linked VP Management](#vsa-vt-lvp-linked-vp-management) | Verifiable Trust Behaviors |
 | `VSA-VT-LVP-1` | The agent MUST publish each ECS credential that it holds, and each credential that it receives through a credential acquisition flow ([[VSA-… |  |
 | `VSA-VT-LVP-2` | When the agent replaces a stored credential with an updated one — after a renewal, or after a [Validator Update](#vsa-vti-flow-upd-validator… |  |
 | `VSA-VT-LVP-3` | When a credential is revoked, or when the HOLDER `Participant` under which the agent holds it is revoked or slashed, the agent MUST remove t… |  |
 | `VSA-VT-LVP-4` | The agent MUST publish its DID Document after each change of a `LinkedVerifiablePresentation` entry, per [[VSA-PUB-DID-3]](#vsa-pub-did-did-… |  |
-| `VSA-VT-LVP-5` | When `VERANA_AUTO_TRIGGER_RESOLVER` is `true`, the agent SHOULD call `TriggerResolver` ([[MOD-PP-MSG-15]](https://verana-labs.github.io/veri… |  |
+| `VSA-VT-LVP-5` | When the agent holds an entry of [[VSA-VPR-TX-5]](#vsa-vpr-tx-on-chain-transactions), it MUST call `TriggerResolver` ([[MOD-PP-MSG-15]](http… |  |
+| `VSA-VT-LVP-6` | The agent MAY send one `TriggerResolver` for several changes of [VSA-VT-LVP-5] that occur within a short interval, because the resolver read… |  |
 | `VSA-VTI-BOOT` | [Bootstrap Sequence](#vsa-vti-boot-bootstrap-sequence) | Agent Lifecycle |
 | `VSA-VTI-BOOT-DID` | [DID Creation](#vsa-vti-boot-did-did-creation) | Bootstrap Sequence |
 | `VSA-VTI-CFG` | [Configuration](#vsa-vti-cfg-configuration) |  |
@@ -3949,6 +3957,7 @@ Every identifier of this document, in lexical order. A section identifier links 
 | `VSA-VTI-VTJSC` | [VTJSC Management](#vsa-vti-vtjsc-vtjsc-management) | Verifiable Trust Behaviors |
 
 ## Appendix B: Change Log
+- **v4-draft16 (2026-09-30)** — Every transaction the agent signs names the Corporation as fee `granter` when the `ParticipantAuthorizationRecord` of the entry has `with_feegrant`, and passes the pre-flight of [VSA-ADM-VT-FL-VALIDATE-6] first; there is no fallback between the two fee payers ([[VSA-VPR-TX-3]](#vsa-vpr-tx-on-chain-transactions)). A `TriggerResolver` that is not sent or that fails is logged at error level with its reason ([[VSA-VPR-TX-4]](#vsa-vpr-tx-on-chain-transactions)). [[VSA-VT-LVP-5]](#vsa-vt-lvp-linked-vp-management) and the service endpoint rule of [[VSA-ADM-VT-SE]](#vsa-adm-vt-se-service-endpoint-management) move from SHOULD to MUST, and a removal or a replacement of a `LinkedVerifiablePresentation` entry triggers the resolver too, as does a change of the presentation that an entry serves. The agent MAY send one `TriggerResolver` for several changes close in time, and MUST send a trigger that it holds back before it stops ([[VSA-VT-LVP-6]](#vsa-vt-lvp-linked-vp-management)). [[VSA-VPR-TX-5]](#vsa-vpr-tx-on-chain-transactions) states that the trigger names an active HOLDER entry of the agent whose `ParticipantAuthorizationRecord` lists `TriggerResolver`, because only a HOLDER record can list it; an agent with no such entry sends nothing and logs a warning. [VSA-VPR-TX-4] also covers the anchoring of [VSA-VTI-ECS-SELF-2] and a transaction that the agent cannot find on chain, and states that the agent does not send a failed transaction again. The `VERANA_AUTO_TRIGGER_RESOLVER` environment variable is removed: the agent always calls `TriggerResolver` after these changes, because the call is the only signal of an off-chain change.
 - **v4-draft15 (2026-09-29)** — The `name` of the SD-JWT VC Type Metadata document ([[VSA-PUB-VT-5]](#vsa-pub-vt-verifiable-trust-resources)) and the display `name` of a credential configuration ([OpenID4VC Scope](#openid4vc-scope)) fall back to the same value when the JSON schema carries no `title`: the reference of the VTJSC to its on-chain `CredentialSchema` entry, `vpr:verana:{chainId}:cs:{credentialSchemaId}`, instead of the bare `id`. The Ecosystem agent and every issuer agent then name a type the same way. An SD-JWT VTC carries no `credentialSubject.id`, since `cnf` binds the holder: `createCredentialOffer` refuses an `id` in `claims` as a claim of the credential envelope and validates the claim set with `id` removed from the required properties ([[VSA-ADM-OID-CE-OFFER]](#vsa-adm-oid-ce-offer-createcredentialoffer)), and a credential configuration lists no `id` claim ([OpenID4VC Scope](#openid4vc-scope)).
 - **v4-draft14 (2026-09-22)** — [`sendInvitation`](#vsa-adm-dc-inv-send-sendinvitation) on a DIDComm v2 connection sends the Out-of-Band 2.0 invitation as an `application/didcomm-plain+json` attachment of a Media Sharing `share-media` message. DIDComm v2 binds the `from` of a message to the sender key, so the invitation cannot be a message of the connection. `label` and `imageUrl` apply to a DIDComm v2 connection again, as the `description` of the message and the `metadata.title` and `metadata.icon` of the item. The behaviour on a DIDComm v1 connection does not change. A [Media Sharing](#vsa-adm-dc-ms-media-sharing) item carries its media by `uri` or inline as `json`, in [`shareMedia`](#vsa-adm-dc-ms-share-sharemedia) and in the `share-media-received` event.
 - **v4-draft13 (2026-09-21)** — Onboarding flows driven from the Administration API: [[VSA-VTI-FLOW-OP-OR]](#vsa-vti-flow-op-or-onboarding-request-composition) composes the `onboarding-request` for any schema, with or without `claims`; [[VSA-VTI-FLOW-OP-ISSUE]](#vsa-vti-flow-op-issue-issuance-after-validation) decides issuance from the validated `Participant` entry; [`validateFlow`](#vsa-adm-vt-fl-validate-validateflow) validates the claim set, records fees and terms, and submits `SetParticipantOPtoValidated` under a `VSOperatorAuthorization` or hands it to an operator, with the `AWAITING_VALIDATION_TX`, `VALIDATION_TX_SUBMITTED`, `VALIDATION_TX_FAILED`, and `VALIDATED_PENDING_CLAIMS` states; [`startValidation`](#vsa-adm-vt-fl-start-startvalidation) and [`rejectFlow`](#vsa-adm-vt-fl-reject-rejectflow) added; flow records carry `role`, `pendingAction`, `oobLink`, `messages[]`, `validation`, and `issuance`. `revokeFlowCredential` is removed: a credential that a flow issues has no credential-level revocation in v4 ([VSA-VTI-FLOW-FMT-5]). A renewal re-enters the flow of the entry with the same `participant_session_id`. The error envelope gains an OPTIONAL `details` object ([[VSA-ADM-CONV-ERR]](#vsa-adm-conv-err-errors)). Flows issue VC Data Model 2.0 Verifiable Trust Credentials secured with Data Integrity proofs, over the RFC 0809 attachment format, always published as a linked VP ([[VSA-VTI-FLOW-FMT]](#vsa-vti-flow-fmt-credential-format-over-didcomm)).
