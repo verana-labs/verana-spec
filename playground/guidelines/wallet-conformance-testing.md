@@ -27,7 +27,7 @@ None of these needed a phone to detect. The point of this document is that they 
 | **Build** | One installable artifact of a wallet: `store` (app store listing), `publisher` (APK published by the wallet's own project), `fork` (our Verana-integrated build), `browser` (web wallet, nothing to install). |
 | **Profile** | The machine-readable description of a wallet: its rails, its builds, its quirks, its unlock recipe. The single source of truth every tier reads. |
 | **Tier** | A class of verification: contract (§4), flow (§5), device (§6). |
-| **Outcome** | `works`, `broken`, or `incompatible-by-design` (§7). Never a bare pass/fail. |
+| **Outcome** | `works`, `broken`, `incompatible-by-design`, `unknown`, or `not-testable` (§7). Never a bare pass/fail. |
 
 ## 3. The wallet profile [CONF-PROF]
 
@@ -54,7 +54,7 @@ Contract checks fetch exactly what a wallet fetches and assert it, without runni
 Tier 2 runs the protocol with the libraries the wallets ship, and asserts the **inputs** on which a wallet's trust verdict depends.
 
 - **[CONF-T2-1]** For each rail a wallet claims, the suite MUST complete the flow end to end against the demo cast: offer resolved, token obtained, credential issued and stored; request resolved, presentation submitted and accepted.
-- **[CONF-T2-2]** The suite MUST assert the resolver answer that [PW-RES] requires the wallet to act on, by field: `trustStatus`, `production`, `evaluatedAt`, `expiresAt`, `credentials`, `dereferenceErrors`, `failedCredentials`. A wallet cannot render a correct verdict from a wrong answer, so the answer is verified first.
+- **[CONF-T2-2]** The suite MUST assert the resolver answer that [PW-RES] requires the wallet to act on, by field: `trustStatus`, `production`, `evaluatedAt`, `expiresAt`, `credentials`, `dereferenceErrors`, `failedCredentials`. A wallet cannot render a correct verdict from a wrong answer, so the answer is verified first. On a v4 network, which has no resolver, the same inputs come from the indexer: its resolve answer (`trusted`, `evaluatedAtTime`, `expiresAtTime`, the ECS credentials, `unresolvableCredentialIds`) for Q1, and an `ACTIVE` participant with the `ISSUER` or `VERIFIER` role on the offered schema for Q2 or Q3.
 - **[CONF-T2-3]** Q2 and Q3 MUST be asserted per scenario: an accredited issuer authorises the offered schema, an unaccredited one does not, and an untrusted service resolves `UNTRUSTED`. These map one-to-one onto the six [PW-TEST] scenarios.
 - **[CONF-T2-4]** Policies that a published build enforces MUST be encoded as assertions, so their effect is proven rather than assumed: signed issuer metadata, certificate-chain trust anchoring, and refusal of DID methods the build cannot resolve.
 - **[CONF-T2-5]** A flow check MUST read its verdict from the service's recorded exchange state, never only from the client's belief. Where the two disagree, the disagreement is the finding.
@@ -64,13 +64,13 @@ Tier 2 runs the protocol with the libraries the wallets ship, and asserts the **
 Tier 3 exists only for what no simulator can prove: that a human sees the truth.
 
 - **[CONF-T3-1]** The device tier MUST verify, per listed wallet, that the Proof-of-Trust renders per [PW-POT] and that a failed Q2 or Q3 **blocks** the accept or share control per [PW-POT-2] and [PW-POT-3]. Rendering and gating are the only claims this tier owns.
-- **[CONF-T3-2]** The device tier MUST run on a real device against deployed services. It SHOULD run on a schedule rather than per change, and its scope SHOULD stay small enough to finish within one overnight window.
+- **[CONF-T3-2]** The device tier MUST run the build a user installs (its APK, its store install, or its hosted wallet) against deployed services, on an emulator or a real device. It SHOULD run on a schedule rather than per change, and its scope SHOULD stay small enough to finish within one overnight window.
 - **[CONF-T3-3]** Screen evidence MUST be captured for every device run and retained with the verdict, so a disputed result is settled by looking rather than by re-running.
 - **[CONF-T3-4]** Where a wallet's view tree cannot be read (single-view renderers), the screen MUST be read by OCR from a screenshot. A tier that cannot read a screen MUST report "unknown", and MUST NOT infer a verdict from an earlier screen: grading a wallet by a stale capture produces a confident wrong answer, which is worse than no answer.
 
 ## 7. Outcomes and reporting [CONF-OUT]
 
-- **[CONF-OUT-1]** Every wallet × build × scenario cell MUST carry one of three outcomes: `works`, `broken`, or `incompatible-by-design`. The third MUST carry its cause and reference, and MUST NOT be counted as a failure.
+- **[CONF-OUT-1]** Every wallet × build × scenario cell MUST carry one of five outcomes: `works`, `broken`, `incompatible-by-design`, `unknown`, or `not-testable`. `incompatible-by-design` MUST carry its cause and reference, and MUST NOT be counted as a failure. `unknown` means the check could not read what it needed; it MUST say why and MUST NOT be read as `works`. `not-testable` means the network, build or scenario cannot be exercised yet, and MUST say why. Only `works` is evidence.
 - **[CONF-OUT-2]** A report MUST name the exact identity of what was tested: build kind, package and version or commit, the service, the vs-agent image version behind it, and the network. A result that cannot name its inputs is not evidence.
 - **[CONF-OUT-3]** Results MUST be machine-readable and diffable, so a regression is a change between runs rather than an impression.
 - **[CONF-OUT-4]** The public listing of a wallet MUST reflect what is proven for the build a user can actually install, and MUST distinguish a proven store build from a proven fork. Claiming compatibility a user cannot obtain is a defect of the listing.
@@ -79,7 +79,7 @@ Tier 3 exists only for what no simulator can prove: that a human sees the truth.
 
 - **[CONF-NET-1]** Network endpoints (resolver, indexer, chain) and the target vs-agent version MUST be inputs to every tier, never constants. A check that cannot be pointed at another network cannot survive the v3→v4 migration.
 - **[CONF-NET-2]** Assertions that name registry vocabulary MUST be expressed so that the v3↔v4 rename (Trust Registry → Ecosystem, Permission → Participant) is a configuration change, not a rewrite.
-- **[CONF-NET-3]** A network is testable when it exposes a resolver **and** deployed cast services. As of this draft, testnet v3 qualifies and devnet v4 does not: devnet serves an indexer only. The suite MUST run every network that qualifies and MUST report the others as not yet testable rather than silently skipping them.
+- **[CONF-NET-3]** A network is testable when it exposes its trust backend **and** a playground with deployed demo services. The trust backend is the resolver on a v3 network and the indexer on a v4 network, which answers Q1 itself (`POST /v4/verifiable-trust/resolve`) and Q2 and Q3 from its participants. As of this draft both qualify: testnet v3 resolves through `resolver.testnet.verana.network`, and devnet v4 runs the demo cast on vs-agent v2 and resolves through `idx.devnet.verana.network`, with no resolver service. The suite MUST run every network that qualifies, only on the casts it has deployed (devnet: `demo`), and MUST report the others as not yet testable rather than silently skipping them.
 
 ## 9. Hazards the checks MUST encode [CONF-OPS]
 
