@@ -28,6 +28,8 @@ None of these needed a phone to detect. The point of this document is that they 
 | **Profile** | The machine-readable description of a wallet: its rails, its builds, its quirks, its unlock recipe. The single source of truth every tier reads. |
 | **Tier** | A class of verification: contract (§4), flow (§5), device (§6). |
 | **Outcome** | `works`, `broken`, `incompatible-by-design`, `unknown`, or `not-testable` (§7). Never a bare pass/fail. |
+| **Level** | What one build is proven to do on one network: `trust-screen`, `protocol`, or `incompatible` (§10). |
+| **Evidence** | The result cells a level rests on (§12). |
 
 ## 3. The wallet profile [CONF-PROF]
 
@@ -63,7 +65,7 @@ Tier 2 runs the protocol with the libraries the wallets ship, and asserts the **
 
 Tier 3 exists only for what no simulator can prove: that a human sees the truth.
 
-- **[CONF-T3-1]** The device tier MUST verify, per listed wallet, that the Proof-of-Trust renders per [PW-POT] and that a failed Q2 or Q3 **blocks** the accept or share control per [PW-POT-2] and [PW-POT-3]. Rendering and gating are the only claims this tier owns.
+- **[CONF-T3-1]** The device tier MUST verify, per listed build, the scenarios its level requires (§11): for a `trust-screen` build, that the Proof-of-Trust renders per [PW-POT] and that a failed Q2 or Q3 **blocks** the accept or share control per [PW-POT-2] and [PW-POT-3]; for a `protocol` build, that the accredited scenarios complete. Rendering, gating and completion on a device are the only claims this tier owns.
 - **[CONF-T3-2]** The device tier MUST run the build a user installs (its APK, its store install, or its hosted wallet) against deployed services, on an emulator or a real device. It SHOULD run on a schedule rather than per change, and its scope SHOULD stay small enough to finish within one overnight window.
 - **[CONF-T3-3]** Screen evidence MUST be captured for every device run and retained with the verdict, so a disputed result is settled by looking rather than by re-running.
 - **[CONF-T3-4]** Where a wallet's view tree cannot be read (single-view renderers), the screen MUST be read by OCR from a screenshot. A tier that cannot read a screen MUST report "unknown", and MUST NOT infer a verdict from an earlier screen: grading a wallet by a stale capture produces a confident wrong answer, which is worse than no answer.
@@ -90,14 +92,85 @@ These have each cost a day and MUST NOT be rediscovered by hand.
 - **[CONF-OPS-3]** Cast services drift apart in version. A failure MUST be attributed against the version a service is really running before it is attributed to a wallet.
 - **[CONF-OPS-4]** Cast deployments share one concurrency group and only one queued run survives per group, so rolls MUST be issued one at a time. Parallel dispatches report as cancelled and leave services on the old version.
 
-## 10. Listing policy [CONF-LIST]
+## 10. Compatibility levels [CONF-LVL]
 
-- **[CONF-LIST-1]** A wallet MAY be listed when at least one of its builds reaches `works` on the canonical six [PW-TEST] scenarios for every rail it claims.
+Compatibility belongs to one build on one network, never to a wallet. One wallet ships builds that behave differently, and one build can pass on one network and fail on the next: the Hologram store build renders the trust screen, yet it cannot open devnet's DIDComm v2-only invitations.
+
+- **[CONF-LVL-1]** Every listed build MUST hold exactly one level on each testable network it targets, on every rail it claims, derived from its evidence (§12) and never from what its vendor says:
+  - **(a) `trust-screen`**: the build renders the Q1 verdict and the Q2 or Q3 authorization per [PW-POT], and gates the accept or share control on them, in all six demo scenarios (§11).
+  - **(b) `protocol`**: the build completes issuance and presentation with the accredited services (`issue-accredited` and `present-accredited`) but does not meet (a), typically because it has no Verana trust screen and checks nothing against the registry. It cannot be relied on to refuse the unaccredited or untrusted services.
+  - **(c) `incompatible`**: the build does not complete the accredited scenarios, by design ([CONF-PROF-4]) or not.
+- **[CONF-LVL-2]** A partial trust screen is not a level. A build that shows Q1 without Q2 or Q3, shows them without gating, or gates only some of the six scenarios holds `protocol` when it meets (b), and `incompatible` otherwise.
+- **[CONF-LVL-3]** The profile MUST declare the level each listed build claims on each network it targets, and the listing MUST agree with the profile. CI MUST derive the level the evidence supports and MUST fail when a claim is higher.
+- **[CONF-LVL-4]** The listing of a network MUST show each build by its level there:
+  - `trust-screen`: as a Verana build, before every other build;
+  - `protocol`: after every `trust-screen` build, labelled as completing the demos without checking the registry. Its captures MUST NOT present a refusal scenario as a refusal;
+  - `incompatible`: never as an install link. It MAY be named in a "tested, not compatible" note with its build identity, the date and the cause.
+
+Levels on devnet v4 from the device runs of early October 2026 (informative; the latest run is authoritative):
+
+| Build | Level | Why |
+| --- | --- | --- |
+| EUDI, swiyu and Inji (`v4-develop`) Verana forks, hosted wwWallet fork | `trust-screen` | issue and present with the accredited services, refuse the unaccredited and untrusted ones |
+| Lissi, Paradym and Procivis One store builds | `protocol` | issue and present, check nothing against the registry |
+| Hologram Messaging store build | `incompatible` | has the trust screen, but cannot open devnet's DIDComm v2-only invitations |
+| Altme and Talao store builds | `incompatible` | the offer is ignored |
+| swiyu store build | `incompatible` | "Invalid credential": it accepts only issuers on the Swiss trust infrastructure |
+| BC Wallet | `incompatible` | cannot open devnet's DIDComm v2-only invitations |
+
+## 11. The six demo scenarios [CONF-SCN]
+
+The canonical scenarios are the six of [PW-TEST], run against the demo cast of the network. Each has one id, used in `scenarios.yaml`, in the listing captures and in every result cell.
+
+- **[CONF-SCN-1]** The scenarios, the service each runs against, and the trust answer it exercises:
+
+  | Id | Service, OpenID4VC rail | Service, DIDComm rail | Q1 | Q2 or Q3 |
+  | --- | --- | --- | --- | --- |
+  | `issue-accredited` | `demo-issuer-accredited` | `demo-issuer-accredited` | `TRUSTED` | authorized issuer |
+  | `issue-unaccredited` | `demo-issuer-unaccredited` | `demo-issuer-unaccredited` | `TRUSTED` | not authorized |
+  | `issue-untrusted` | `demo-issuer-untrusted` | `demo-untrusted` | `UNTRUSTED` | n/a |
+  | `present-accredited` | `demo-verifier-accredited` | `demo-verifier-accredited` | `TRUSTED` | authorized verifier |
+  | `present-unaccredited` | `demo-verifier-unaccredited` | `demo-verifier-unaccredited` | `TRUSTED` | not authorized |
+  | `present-untrusted` | `demo-verifier-untrusted` | `demo-untrusted` | `UNTRUSTED` | n/a |
+
+  The presentation scenarios present the DemoCredential received in `issue-accredited`. On a v4 network, authorized means an `ACTIVE` participant with the `ISSUER` or `VERIFIER` role on the DemoCredential schema of the Playground Ecosystem.
+- **[CONF-SCN-2]** The expected verdict per level. A scenario completes when the service's exchange state reaches `done` for an issuance or `verified` for a presentation ([CONF-T2-5]), and is refused when it never gets there:
+
+  | Id | `trust-screen` | `protocol` |
+  | --- | --- | --- |
+  | `issue-accredited` | `TRUSTED`, Q2 pass, accept enabled; completes | completes |
+  | `issue-unaccredited` | `TRUSTED`, Q2 fail, accept disabled or absent; refused | recorded, not graded |
+  | `issue-untrusted` | `UNTRUSTED` with its failure reasons, no accept; refused | recorded, not graded |
+  | `present-accredited` | `TRUSTED`, Q3 pass, share enabled; completes | completes |
+  | `present-unaccredited` | `TRUSTED`, Q3 fail, share disabled or absent; refused | recorded, not graded |
+  | `present-untrusted` | `UNTRUSTED` with its failure reasons, no share; refused | recorded, not graded |
+
+- **[CONF-SCN-3]** For a `trust-screen` build the negative scenarios are the point. A refusal scenario is `works` only when the screen shows the failed verdict, the control is disabled, absent or behind the explicit unsafe step of [PW-POT-2], **and** the service never completes. A build that completes a refusal scenario, or leaves its accept or share control enabled there, is `broken` whatever it rendered; so is a build that blocks an accredited scenario.
+- **[CONF-SCN-4]** For a `protocol` build the refusal scenarios MAY run. Their outcome is recorded with the build and MUST NOT count for or against its level.
+
+## 12. Evidence per level [CONF-EVD]
+
+A level holds only while every cell it requires is `works` in the latest run that produces that cell. Network-wide cells are prerequisites and are judged by the gate; build cells are the level's own evidence and are judged by their outcome.
+
+- **[CONF-EVD-1] Service prerequisites.** Every tier 1 cell of the network and of the demo cast services (`network-testable`, `serving-version`, `did-resolves`, `webvh-log-signed`, `tls-certificate`, `no-cleartext`, `short-link-browser`, `metadata-parses`, `metadata-both-shapes`, `as-discovery:*`, `link:*`, `strings:*`) MUST pass the gate. A failing prerequisite blocks admission and re-validation on that network and demotes no build, because it is the service's failure ([CONF-OPS-3]).
+- **[CONF-EVD-2] Reference holder.** On the OpenID4VC rail, every `reference-holder` and `reference-holder-*` cell of the DemoCredential on the network MUST pass the gate, with eudi-dev in strict mode. `reference-holder-haip` is required only for a build whose profile declares that it enforces HAIP, and is informative for every other build. These cells are prerequisites of the network too, not evidence about a build.
+- **[CONF-EVD-3] Headless flow.** The tier 2 `flow` cells of the build, run on its own request shape ([CONF-PROF-3]), MUST be `works`: `issue-accredited` and `present-accredited` for `protocol`, all six for `trust-screen`, so the trust inputs of every refusal are proven before a screen is judged. Until tier 2 covers a rail (DIDComm today), a build on that rail rests on its device evidence alone, and its listing MUST say so.
+- **[CONF-EVD-4] Device run.** The scenarios the level requires (§11) MUST be `works` on the build a user installs, from either source:
+  - tier 3: the `consent-flow` cells of the build on the network;
+  - a recorded real-device run, committed as cells in the tier 3 format and marked as recorded by hand. It MUST name the date; the build identity (package and version for a store build; package, version and tag or commit for a fork; URL and deployed commit for a hosted wallet); the platform, OS version and device model; the network and the vs-agent version each scenario service was serving; and, per scenario, the outcome, the service's exchange state and a capture of the consent screen. A run that cannot name all of these is not evidence.
+- **[CONF-EVD-5] Rendering.** For `trust-screen`, the device evidence of each scenario MUST show the status band and, where consent is reached, the Q2 or Q3 sentence of [PW-POT-2] or [PW-POT-3]. Where the device tier reads the control but not the verdict, the rendering rests on the captures, and a reviewer MUST check them before the build is admitted.
+- **[CONF-EVD-6] Platforms.** Evidence covers the platform it ran on and no other. A declared platform with no evidence MUST be listed as presumptive ([CONF-LIST-4]). As of this draft, iOS is presumptive for every build.
+- **[CONF-EVD-7] No evidence, no level.** `incompatible` needs a cause, not a full run: one `incompatible-by-design` or `broken` cell on an accredited scenario, with its cause, is enough. A build with no evidence holds no level and is not listed.
+
+## 13. Listing policy [CONF-LIST]
+
+- **[CONF-LIST-1]** A build MAY be listed on a network when it holds `trust-screen` or `protocol` there (§10). A wallet is listed when at least one of its builds is.
 - **[CONF-LIST-2]** A listing MUST state which build was proven and when, and MUST be marked unverified when its evidence is older than the current vs-agent version on the cast it was proven against.
 - **[CONF-LIST-3]** A wallet whose maintenance is paused SHOULD be hidden rather than deleted: hiding keeps the evidence and the entry, and makes re-listing a one-line change.
 - **[CONF-LIST-4]** Where a wallet ships on more than one platform from a single codebase, a proven build on one platform MAY be recorded as presumptive for the other, and MUST be labelled as presumption rather than evidence.
+- **[CONF-LIST-5]** Every install link of a listing MUST be the `obtain` of a listed build of the wallet's profile, on the platform of the link, and every listed build MUST have its link, so a listing cannot point at a build nobody tested.
 
-## 11. References
+## 14. References
 
 - [Personal wallet integration guideline](./personal-wallet-integration.md) — [PW-CFG], [PW-RES], [PW-POT], [PW-TEST]
 - [Business wallet integration guideline](./business-wallet-integration.md)
