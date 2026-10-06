@@ -1,6 +1,6 @@
 # Verana Playground — Wallet Conformance Testing
 
-**Status:** DRAFT 0.1 · 2026-09-14
+**Status:** DRAFT 0.2 · 2026-10-06
 **Audience:** maintainers of the Verana playground and of the wallet forks it links, and anyone who needs to answer "does this wallet still work with our services?" without taking someone's word for it.
 **Goal:** make the compatibility of every listed wallet **continuously provable**, so a listing is evidence rather than a memory of a demo that once worked.
 
@@ -150,7 +150,7 @@ The canonical scenarios are the six of [PW-TEST], run against the demo cast of t
 
 ## 12. Evidence per level [CONF-EVD]
 
-A level holds only while every cell it requires is `works` in the latest run that produces that cell. Network-wide cells are prerequisites and are judged by the gate; build cells are the level's own evidence and are judged by their outcome.
+A level holds only while every cell it requires is `works` in the latest run that read that cell; a run that ends the cell `unknown` or `not-testable` did not read it, and leaves the earlier outcome standing (§13). Network-wide cells are prerequisites and are judged by the gate; build cells are the level's own evidence and are judged by their outcome.
 
 - **[CONF-EVD-1] Service prerequisites.** Every tier 1 cell of the network and of the demo cast services (`network-testable`, `serving-version`, `did-resolves`, `webvh-log-signed`, `tls-certificate`, `no-cleartext`, `short-link-browser`, `metadata-parses`, `metadata-both-shapes`, `as-discovery:*`, `link:*`, `strings:*`) MUST pass the gate. A failing prerequisite blocks admission and re-validation on that network and demotes no build, because it is the service's failure ([CONF-OPS-3]).
 - **[CONF-EVD-2] Reference holder.** On the OpenID4VC rail, every `reference-holder` and `reference-holder-*` cell of the DemoCredential on the network MUST pass the gate, with eudi-dev in strict mode. `reference-holder-haip` is required only for a build whose profile declares that it enforces HAIP, and is informative for every other build. These cells are prerequisites of the network too, not evidence about a build.
@@ -162,18 +162,46 @@ A level holds only while every cell it requires is `works` in the latest run tha
 - **[CONF-EVD-6] Platforms.** Evidence covers the platform it ran on and no other. A declared platform with no evidence MUST be listed as presumptive ([CONF-LIST-4]). As of this draft, iOS is presumptive for every build.
 - **[CONF-EVD-7] No evidence, no level.** `incompatible` needs a cause, not a full run: one `incompatible-by-design` or `broken` cell on an accredited scenario, with its cause, is enough. A build with no evidence holds no level and is not listed.
 
-## 13. Listing policy [CONF-LIST]
+## 13. Re-validation and demotion [CONF-REV]
+
+Evidence is tied to a build identity and to the service versions it ran against. When either moves, the evidence goes stale, and CI has to notice before a user does.
+
+- **[CONF-REV-1] Schedule.** Tier 1 and tier 2 MUST run nightly on every testable network, and on every change to a profile, the listing, the scenarios, the networks or the checks. Tier 3 SHOULD run nightly on every listed build it can install.
+- **[CONF-REV-2] Service change.** When a demo service starts serving another vs-agent image (as `serving-version` reads it, [CONF-OPS-2]), tier 1 and tier 2 MUST run on that network against the new image, and device evidence recorded against the previous image becomes stale.
+- **[CONF-REV-3] Build change.** A new fork tag or commit, a new store version, or a new deployment of a hosted wallet is a new build identity, and its device evidence starts empty. The profile MUST pin the new identity. A store version published without us, the usual case, MUST be detected by CI and handled the same way.
+- **[CONF-REV-4] Stale evidence.** A build whose device evidence is stale keeps its level, marked unverified ([CONF-LIST-2]), until tier 3 or a new recorded run covers it. A build still unverified 30 days later MUST come off the listing until it is covered, its profile entry kept ([CONF-LIST-3]).
+- **[CONF-REV-5] Known issues.** A known-issue entry MUST name the cells it covers, its cause, and an expiry at most 30 days after it was added or last renewed; an entry for a wallet-side failure MUST also name the wallet and the build. Renewing an entry is a reviewed change, like adding one. After expiry its cells fail the gate again, and an entry that matched nothing in a run of its tier and network MUST be removed.
+- **[CONF-REV-6] Known issues hold the gate, not the level.** A known issue keeps the gate green. It never keeps a level: the level of every build is derived again from the outcomes of its own cells (§12) after every run, whether or not a known issue covers them.
+- **[CONF-REV-7] Demotion.** When a cell a build's level requires (§12) turns `broken`, the build drops at once to the highest level whose required cells are all still `works`: a refusal scenario that stops blocking moves a `trust-screen` build to `protocol`, and a failed accredited scenario moves any build to `incompatible`. `unknown` neither demotes nor refreshes. The demotion MUST reach the listing with the next deployment of the playground, and a demoted build regains a level only with the complete evidence of that level, not by passing again the one cell that failed.
+
+## 14. Listing policy [CONF-LIST]
 
 - **[CONF-LIST-1]** A build MAY be listed on a network when it holds `trust-screen` or `protocol` there (§10). A wallet is listed when at least one of its builds is.
-- **[CONF-LIST-2]** A listing MUST state which build was proven and when, and MUST be marked unverified when its evidence is older than the current vs-agent version on the cast it was proven against.
+- **[CONF-LIST-2]** A listing MUST state, per build, its level, the build identity that was proven and the date of that evidence, and MUST mark the build unverified while its evidence is stale ([CONF-REV-2], [CONF-REV-3]).
 - **[CONF-LIST-3]** A wallet whose maintenance is paused SHOULD be hidden rather than deleted: hiding keeps the evidence and the entry, and makes re-listing a one-line change.
 - **[CONF-LIST-4]** Where a wallet ships on more than one platform from a single codebase, a proven build on one platform MAY be recorded as presumptive for the other, and MUST be labelled as presumption rather than evidence.
 - **[CONF-LIST-5]** Every install link of a listing MUST be the `obtain` of a listed build of the wallet's profile, on the platform of the link, and every listed build MUST have its link, so a listing cannot point at a build nobody tested.
 
-## 14. References
+## 15. Admitting a wallet [CONF-ADM]
+
+A new wallet, or a new build of a listed one, is admitted by a pull request to [`verana-labs/playground`](https://github.com/verana-labs/playground). CI decides; a reviewer checks only what CI cannot read yet ([CONF-EVD-5]).
+
+- **[CONF-ADM-1]** The pull request MUST contain:
+  1. the profile `conformance/profiles/<id>.yaml` per §3: the rails and request shape, and per build its kind, `obtain`, identity, platforms, presumptive platforms, networks, promises, policies, recorded incompatibilities, and the level it claims on each network ([CONF-LVL-3]);
+  2. every build identity pinned: a fork to a tag or a commit, never a branch; a store build to its package and the version tested; a hosted build to its URL, repository and deployed commit;
+  3. for an Android build with a direct APK, its signing certificate digest (`signerSha256`) and the `device` steps that onboard it and reach its scanner, so tier 3 can drive it;
+  4. the entry in `personal-wallets.yaml`, whose links match the listed builds one to one ([CONF-LIST-5]) and whose trust-screen flag matches each build's claimed level;
+  5. the device evidence of [CONF-EVD-4] for every listed build and network, unless tier 3 produces it in the same CI run.
+- **[CONF-ADM-2]** The pull request MUST NOT merge unless CI shows that the profile and the listing validate, that the gate is green on every network the builds target, and that the evidence supports the level every listed build claims.
+- **[CONF-ADM-3]** A wallet tested and found `incompatible` SHOULD still get a profile with its builds and their recorded incompatibilities, unlisted, so the next attempt starts from the facts instead of a new device session.
+
+## 16. References
 
 - [Personal wallet integration guideline](./personal-wallet-integration.md) — [PW-CFG], [PW-RES], [PW-POT], [PW-TEST]
 - [Business wallet integration guideline](./business-wallet-integration.md)
 - [Playground README](../README.md) — demo cast, endpoints, v3↔v4 mapping
 - Trust Resolver API — `https://resolver.testnet.verana.network/docs`
+- Indexer v4 API — `https://idx.devnet.verana.network/openapi.json`
+- Conformance harness — [`conformance/`](https://github.com/verana-labs/playground/tree/main/conformance) in the playground repo: `scenarios.yaml`, `networks.yaml`, `known-issues.yaml`, the profiles and the gate
+- [eudi-dev](https://github.com/dominikschlosser/eudi-dev) — the reference holder of [CONF-EVD-2]
 - OpenID4VCI drafts 11 through current, and the wallet libraries that implement them
