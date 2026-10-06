@@ -1995,7 +1995,7 @@ Creates an OpenID4VP authorization request for one credential type, and for the 
 - `jsonSchemaCredentialId` (REQUIRED) — the credential type that the request asks for, per the [OpenID4VC Scope](#openid4vc-scope).
 - `requestedClaims` (OPTIONAL) — the claim names that the request asks for, without a duplicate, each a property of the JSON schema of that type. When the caller omits it, the agent MUST request every property of the schema, as in [[VSA-ADM-DC-PR-CREATE]](#vsa-adm-dc-pr-create-createpresentationrequest).
 - `queryLanguage` (OPTIONAL, default `dcql`) — `dcql` or `presentation_exchange`. A caller selects `presentation_exchange` for a wallet that never implemented DCQL.
-- `requestSigner` (OPTIONAL, default `x5c`) — `x5c` or `did`. `x5c` produces an `x509_hash` client identifier, for a wallet that cannot resolve a DID. `x5c` gives `x509_san_dns` on a `presentation_exchange` request, because OpenID4VP draft 21 predates `x509_hash`; the leaf certificate of the verifier capability then MUST carry the host of `PUBLIC_API_BASE_URL` as a DNS SAN. `did` names the DID of the agent as the client identifier of the authorization request, and the signing key MUST be published under `authentication`.
+- `requestSigner` (OPTIONAL, default `x5c`) — `x5c` or `did`. `x5c` produces an `x509_hash` client identifier, for a wallet that cannot resolve a DID. `x5c` gives `x509_san_dns` on a `presentation_exchange` request, because OpenID4VP draft 21 predates `x509_hash`; such a request needs a leaf certificate of the verifier capability that carries the host of `PUBLIC_API_BASE_URL` as a DNS SAN, and the agent answers `INVALID_STATE` when the certificate carries none. A development certificate carries it; a configured certificate is accepted at startup with a URI SAN alone, since a deployment that never serves `presentation_exchange` does not need the DNS SAN. `did` names the DID of the agent as the client identifier of the authorization request, and the signing key MUST be published under `authentication`.
 
 **Requirements**:
 
@@ -2019,7 +2019,7 @@ Creates an OpenID4VP authorization request for one credential type, and for the 
 - `UNKNOWN_ID` (`404`) — the document at `jsonSchemaCredentialId` is not a VTJSC that binds to a `CredentialSchema` on the chain of the agent ([[VSA-VTI-FLOW-VERIFY-AC-1]](#vsa-vti-flow-verify-ac-anoncreds-trust-decision)): it is not a verifiable credential, its proof does not verify, its `issuer` is not the `did` of the Ecosystem of that `CredentialSchema`, or it names no `CredentialSchema` of the chain.
 - `NOT_AUTHORIZED` (`409`) — the agent holds no active VERIFIER `Participant` for the `CredentialSchema` of the type.
 - `RESOLVER_UNAVAILABLE` (`503`) — the agent cannot read the VTJSC, or cannot complete the check.
-- `INVALID_STATE` (`409`) — the request selects the `did` signer and the DID of the agent does not publish the signing key under `authentication`.
+- `INVALID_STATE` (`409`) — the request selects the `did` signer and the DID of the agent does not publish the signing key under `authentication`; or the request selects `presentation_exchange` with the `x5c` signer and the certificate of the verifier capability carries no DNS SAN for the host of `PUBLIC_API_BASE_URL`.
 
 **Events**: [`openid4vc.presentations.state-updated`](#vsa-evt-cat-event-catalog).
 
