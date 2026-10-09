@@ -68,6 +68,8 @@ Tier 3 exists only for what no simulator can prove: that a human sees the truth.
 - **[CONF-T3-1]** The device tier MUST verify, per listed build, the scenarios its level requires (§11): for a `trust-screen` build, that the Proof-of-Trust renders per [PW-POT] and that a failed Q2 or Q3 **blocks** the accept or share control per [PW-POT-2] and [PW-POT-3]; for a `protocol` build, that the accredited scenarios complete. Rendering, gating and completion on a device are the only claims this tier owns.
 - **[CONF-T3-2]** The device tier MUST run the build a user installs (its APK, its store install, or its hosted wallet) against deployed services, on an emulator or a real device. It SHOULD run on a schedule rather than per change, and its scope SHOULD stay small enough to finish within one overnight window.
 - **[CONF-T3-3]** Screen evidence MUST be captured for every device run and retained with the verdict, so a disputed result is settled by looking rather than by re-running.
+
+The procedure the playground runs today (the scenarios per wallet and per use case, minting through `/api/demo`, delivery to each integrated wallet and the evidence layout) is described in the playground's [`docs/testing.md`](https://github.com/verana-labs/playground/blob/v4/docs/testing.md) (informative).
 - **[CONF-T3-4]** Where a wallet's view tree cannot be read (single-view renderers), the screen MUST be read by OCR from a screenshot. A tier that cannot read a screen MUST report "unknown", and MUST NOT infer a verdict from an earlier screen: grading a wallet by a stale capture produces a confident wrong answer, which is worse than no answer.
 
 ## 7. Outcomes and reporting [CONF-OUT]
@@ -107,12 +109,13 @@ Compatibility belongs to one build on one network, never to a wallet. One wallet
   - `protocol`: after every `trust-screen` build, labelled as completing the demos without checking the registry. Its captures MUST NOT present a refusal scenario as a refusal;
   - `incompatible`: never as an install link. It MAY be named in a "tested, not compatible" note with its build identity, the date and the cause.
 
-Levels on devnet v4 from the device runs of early October 2026 (informative; the latest run is authoritative):
+Levels on devnet v4 from the device runs up to 2026-10-09 (informative; the latest run is authoritative):
 
 | Build | Level | Why |
 | --- | --- | --- |
-| EUDI, swiyu and Inji (`v4-develop`) Verana forks, hosted wwWallet fork | `trust-screen` | issue and present with the accredited services, refuse the unaccredited and untrusted ones |
+| EUDI, swiyu and Inji (`v4-develop`) Verana forks, hosted wwWallet fork (swiyu needs the Type Metadata `locale` fix of [eidch-android-wallet#1](https://github.com/verana-labs/eidch-android-wallet/pull/1)) | `trust-screen` | issue and present with the accredited services, refuse the unaccredited and untrusted ones |
 | Lissi, Paradym and Procivis One store builds | `protocol` | issue and present, check nothing against the registry |
+| Hologram Messaging, `2060-io/hologram-app` main | `trust-screen` | issues and presents over DIDComm with the accredited services; a failed Q2 or Q3 is shown, but the wallet offers "Accept anyway (unsafe)" and "Share anyway (unsafe)" instead of blocking |
 | Hologram Messaging store build | `incompatible` | has the trust screen, but cannot open devnet's DIDComm v2-only invitations |
 | Altme and Talao store builds | `incompatible` | the offer is ignored |
 | swiyu store build | `incompatible` | "Invalid credential": it accepts only issuers on the Swiss trust infrastructure |
