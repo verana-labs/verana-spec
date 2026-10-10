@@ -100,7 +100,7 @@ Each vt-flow session has **two orthogonal state dimensions**:
 |---|---|
 | `NOT_CONNECTED` | No DIDComm connection established, handshake in progress, or the existing connection is closed. |
 | `ESTABLISHED` | DIDComm connection fully open; vt-flow messages can be exchanged. For the Validator, the VS-CONN-VS check has also passed. |
-| `TERMINATED` | Connection permanently closed (handshake abandoned, or the connection record was deleted). |
+| `TERMINATED` | Connection closed (handshake abandoned, connection record deleted, or session ended by a fatal `problem-report`). The vt-flow session outlives the connection: the Applicant MAY re-attach it to a new connection per [Reconnection](#reconnection). |
 
 #### Flow State
 
@@ -115,20 +115,20 @@ All states enumerated below are normative.
 | `AWAITING_IR` | Validator | Direct Issuance | `ESTABLISHED`. `issuance-request` expected but not yet received, or last request was rejected (Applicant may retry). |
 | `OOB_PENDING` | Both | Both | `ESTABLISHED`. Validator sent an `oob-link`; the Applicant completes the out-of-band step. Left on `validating`. |
 | `VALIDATING` | Both | Both | `ESTABLISHED`. Validator performing off-chain validation (Onboarding Process) or processing an accepted issuance request (Direct Issuance). Entered when the Validator accepts the request, and on `validating` after an out-of-band step; the Validator returns to `OOB_PENDING` with a further `oob-link` when it needs corrections or additions. |
-| `VALIDATED` | Both | Onboarding Process | `ESTABLISHED`. Validator called `SetParticipantOPtoValidated` on-chain; `op_state` is now `VALIDATED`. Terminal state when the validated `Participant` role is not `HOLDER`, until a renewal re-enters the flow: no credential is issued. When the role is `HOLDER`, the Validator sends `offer-credential` (transition to `CRED_OFFERED`), or moves to `VALIDATED_PENDING_CLAIMS` when it holds no claim set that satisfies the schema (see [Issuance After Validation](../vs-agent/spec.md#vsa-vti-flow-op-issue-issuance-after-validation)). |
+| `VALIDATED` | Both | Onboarding Process | `ESTABLISHED`, or `TERMINATED` when the validation landed after a termination of the flow, until the Applicant re-attaches it (see [Reconnection](#reconnection)). Validator called `SetParticipantOPtoValidated` on-chain; `op_state` is now `VALIDATED`. Terminal state when the validated `Participant` role is not `HOLDER`, until a renewal re-enters the flow: no credential is issued. When the role is `HOLDER`, the Validator sends `offer-credential` (transition to `CRED_OFFERED`), or moves to `VALIDATED_PENDING_CLAIMS` when it holds no claim set that satisfies the schema (see [Issuance After Validation](../vs-agent/spec.md#vsa-vti-flow-op-issue-issuance-after-validation)). |
 | `VALIDATED_PENDING_CLAIMS` | Validator | Onboarding Process | `ESTABLISHED`. `op_state` is `VALIDATED` and the role is `HOLDER`, but the Validator holds no claim set that satisfies the schema. The Validator obtains the claims out of band, then sends `offer-credential`. The Applicant stays in `VALIDATED`. |
 | `CRED_OFFERED` | Both | Both | `ESTABLISHED`. Issue Credential V2 subprotocol in flight. Applicant verifies on-chain digest while in this state; acceptance transitions to `COMPLETED`. |
 | `COMPLETED` | Both | Both | `ESTABLISHED`. Credential delivered, verified, and accepted (Issue Credential V2 Ack sent). Connection remains open for future updates. A renewal re-enters the flow from here: the Applicant resends `onboarding-request` with the same `participant_session_id` and moves to `OR_SENT`; the Validator moves to `AWAITING_OR` and accepts it as a new process. The same re-entry applies from `VALIDATED` for a role other than `HOLDER`. |
 | `CRED_REVOKED` | Both | Both | `ESTABLISHED`. Validator sent `credential-state-change` with `state=REVOKED`. Applicant removed the linked VP, if any, and deleted the credential. Connection remains open. |
-| `TERMINATED_BY_VALIDATOR` | Both | Both | `TERMINATED`. Validator explicitly terminated the flow (rejection, timeout, or policy decision). |
-| `TERMINATED_BY_APPLICANT` | Both | Both | `TERMINATED`. Applicant explicitly terminated the flow. |
+| `TERMINATED_BY_VALIDATOR` | Both | Both | `TERMINATED`. Validator explicitly terminated the flow (rejection, timeout, or policy decision). For an Onboarding Process, not final: when the `Participant` entry of the flow is validated on chain afterwards and is active, both parties move to `VALIDATED` (see [Reconnection](#reconnection)). |
+| `TERMINATED_BY_APPLICANT` | Both | Both | `TERMINATED`. Applicant explicitly terminated the flow. For an Onboarding Process, not final: when the `Participant` entry of the flow is validated on chain afterwards and is active, both parties move to `VALIDATED` (see [Reconnection](#reconnection)); an entry the Applicant cancelled on chain cannot be validated. |
 | `ERROR` | Both | Both | `TERMINATED`. Unrecoverable protocol error (subprotocol `abandoned`, VS-CONN-VS failure, unreachable peer). |
 | `PARTICIPANT_REVOKED` | Both | Onboarding Process | `TERMINATED`. On-chain Participant revoked (notification via indexer); Validator closed the connection. |
 | `PARTICIPANT_SLASHED` | Both | Onboarding Process | `TERMINATED`. On-chain Participant slashed; Validator closed the connection. |
 
 #### Error Handling
 
-All protocol errors are modelled with the adopted `problem-report` message (see [Problem Report (adopted)](#problem-report-adopted)). Errors that allow retry (e.g., `vt-flow.invalid-claims`) return the Validator to `AWAITING_OR` / `AWAITING_IR` and allow the Applicant to resend a corrected request. Fatal errors **MUST** transition both parties' Connection State to `TERMINATED`, and their Flow State to the state that the [Error Codes](#error-codes) table gives for the code: `TERMINATED_BY_VALIDATOR` or `TERMINATED_BY_APPLICANT` for an explicit termination, `ERROR` for every other fatal code.
+All protocol errors are modelled with the adopted `problem-report` message (see [Problem Report (adopted)](#problem-report-adopted)). Errors that allow retry (e.g., `vt-flow.invalid-claims`) return the Validator to `AWAITING_OR` / `AWAITING_IR` and allow the Applicant to resend a corrected request. Fatal errors **MUST** transition both parties' Connection State to `TERMINATED`, and their Flow State to the state that the [Error Codes](#error-codes) table gives for the code: `TERMINATED_BY_VALIDATOR` or `TERMINATED_BY_APPLICANT` for an explicit termination, `ERROR` for every other fatal code. An explicit termination does not bind the chain: when the on-chain Onboarding Process of a `TERMINATED_BY_VALIDATOR` or `TERMINATED_BY_APPLICANT` flow is validated afterwards, both parties move to `VALIDATED` and the Applicant re-attaches the session (see [Reconnection](#reconnection)). `ERROR`, `PARTICIPANT_REVOKED`, and `PARTICIPANT_SLASHED` are final.
 
 Errors during the Issue Credential V2 subprotocol use the subprotocol's own `problem-report` message. The vt-flow Flow State transitions to `ERROR` when the subprotocol exchange transitions to `abandoned`.
 
@@ -433,6 +433,12 @@ If the Applicant reconnects after a connection closes:
 
 If the Validator cannot find a matching session, a new session is created normally.
 
+The same re-attach serves a flow that a termination closed and that the chain re-opened. These rules apply to the Onboarding Process variant only; a Credential Direct Issuance has no on-chain validation.
+
+5. When the `SetParticipantOPtoValidated` of the `Participant` entry of a `TERMINATED_BY_VALIDATOR` or `TERMINATED_BY_APPLICANT` flow lands afterwards and the entry is active, both parties **MUST** move the flow to `VALIDATED` (see [States](#states)). The Applicant **MUST** then reconnect per steps 1 and 2 when the role of the entry is `HOLDER`; for any other role `VALIDATED` is terminal and no reconnection follows. `ERROR`, `PARTICIPANT_REVOKED`, and `PARTICIPANT_SLASHED` are not re-opened.
+6. The Validator **MUST** re-attach a request that names a `VALIDATED` flow and resume at `offer-credential` (step 6 of the [Onboarding Process Flow](#onboarding-process-flow)). It **MUST NOT** run the validation again, **MUST NOT** send `validating`, and **MUST NOT** answer `vt-flow.invalid-participant-session-id` on the ground that the flow was terminated. The `problem-report` that closed the flow is superseded by the chain event, and the reconnection is not a retry of the request it refused.
+7. A `participant_session_id` is not a secret. The Validator **MUST** re-attach a flow only to a connection from the same peer DID as the connection it replaces, and **MUST** refuse any other request that names it with `vt-flow.invalid-participant-session-id`.
+
 ## State Machine Diagrams
 
 Diagrams show the **Flow State** dimension only. Connection State transitions (`NOT_CONNECTED → ESTABLISHED → TERMINATED`) are implicit and accompany the Flow State changes shown.
@@ -453,6 +459,8 @@ stateDiagram-v2
     VALIDATING --> VALIDATED: SetParticipantOPtoValidated on-chain
     OOB_PENDING --> VALIDATED: SetParticipantOPtoValidated on-chain
     OR_SENT --> VALIDATED: SetParticipantOPtoValidated on-chain
+    TERMINATED_BY_VALIDATOR --> VALIDATED: SetParticipantOPtoValidated on-chain (termination overridden)
+    TERMINATED_BY_APPLICANT --> VALIDATED: SetParticipantOPtoValidated on-chain (termination overridden)
     VALIDATED --> CRED_OFFERED: offer-credential received
     CRED_OFFERED --> COMPLETED: Ack sent after verification
 
@@ -525,6 +533,8 @@ stateDiagram-v2
     VALIDATING --> OOB_PENDING: send oob-link
     OOB_PENDING --> VALIDATING: send validating
     VALIDATING --> VALIDATED: validation complete
+    TERMINATED_BY_VALIDATOR --> VALIDATED: SetParticipantOPtoValidated on-chain (termination overridden)
+    TERMINATED_BY_APPLICANT --> VALIDATED: SetParticipantOPtoValidated on-chain (termination overridden)
     VALIDATING --> CRED_OFFERED: offer-credential sent (Direct Issuance)
     VALIDATED --> CRED_OFFERED: offer-credential sent
     VALIDATED --> VALIDATED_PENDING_CLAIMS: claims missing or invalid
@@ -602,12 +612,12 @@ Error codes are carried in the adopted `problem-report`'s `description.code` fie
 | `vt-flow.invalid-participant-id` | Validator | `participant_id` does not exist, does not reference the Validator's Participant, or is in the wrong `op_state`. | `you` | `thread` | unchanged |
 | `vt-flow.invalid-schema-id` | Validator | `schema_id` does not exist or is not supported by the Validator. | `you` | `thread` | unchanged |
 | `vt-flow.invalid-claims` | Validator | Submitted `claims` do not satisfy the schema. | `you` | `thread` | unchanged |
-| `vt-flow.invalid-participant-session-id` | Validator | `participant_session_id` is malformed or collides with an existing session. | `you` | `thread` | unchanged |
+| `vt-flow.invalid-participant-session-id` | Validator | `participant_session_id` is malformed, collides with the session of another `participant_id` or another peer, or names a flow that cannot be re-attached (`ERROR`, `PARTICIPANT_REVOKED`, `PARTICIPANT_SLASHED`). A terminated flow that the chain re-opened re-attaches instead (see [Reconnection](#reconnection)). | `you` | `thread` | unchanged |
 | `vt-flow.not-a-verifiable-service` | Either | Peer's DID does not satisfy [[VS-CONN-VS]][vt-spec-conn-vs]. | `none` | `connection` | `ERROR` |
 | `vt-flow.validation-failed` | Validator | Off-chain validation of submitted documentation failed. | `you` (OPTIONAL) | `thread` | unchanged when `who_retries` is `you`; `ERROR` otherwise |
-| `vt-flow.validation-refused` | Validator | The Validator refused the request after its off-chain validation; the flow is terminated. | `none` | `connection` | `TERMINATED_BY_VALIDATOR` |
-| `vt-flow.oob-expired` | Validator | OOB link expired before Applicant completed the step, and the Validator ended the flow rather than sending a new link. | `none` | `connection` | `TERMINATED_BY_VALIDATOR` |
-| `vt-flow.session-terminated` | Either | Party explicitly terminated the session. | `none` | `connection` | `TERMINATED_BY_VALIDATOR` when the Validator sends it; `TERMINATED_BY_APPLICANT` when the Applicant sends it |
+| `vt-flow.validation-refused` | Validator | The Validator refused the request after its off-chain validation; the flow is terminated. Superseded when the `Participant` entry is validated on chain afterwards (see [Reconnection](#reconnection)). | `none` | `connection` | `TERMINATED_BY_VALIDATOR` |
+| `vt-flow.oob-expired` | Validator | OOB link expired before Applicant completed the step, and the Validator ended the flow rather than sending a new link. Superseded when the `Participant` entry is validated on chain afterwards (see [Reconnection](#reconnection)). | `none` | `connection` | `TERMINATED_BY_VALIDATOR` |
+| `vt-flow.session-terminated` | Either | Party explicitly terminated the session. For an Onboarding Process, superseded when the `Participant` entry is validated on chain afterwards (see [Reconnection](#reconnection)). | `none` | `connection` | `TERMINATED_BY_VALIDATOR` when the Validator sends it; `TERMINATED_BY_APPLICANT` when the Applicant sends it |
 | `vt-flow.participant-revoked` | Either | The on-chain `Participant` entry of the session was revoked (`RevokeParticipant`); the sender ended the flow on the indexer notification. | `none` | `connection` | `PARTICIPANT_REVOKED` |
 | `vt-flow.participant-slashed` | Either | The trust deposit of the on-chain `Participant` entry of the session was slashed (`SlashParticipantTrustDeposit`); the sender ended the flow on the indexer notification. | `none` | `connection` | `PARTICIPANT_SLASHED` |
 | `vt-flow.internal-error` | Either | Unspecified error. | varies | `thread` | `ERROR` when fatal; unchanged otherwise |
@@ -701,6 +711,7 @@ Additional format identifiers **MAY** be negotiated by mutual agreement.
 1. **Cross-layer coupling.** The protocol couples DIDComm message flow with Verana on-chain transactions. Correct timing is implementation work and cannot be fully specified at the protocol layer.
 2. **Session persistence.** Because the connection is kept open after `COMPLETED` to receive `credential-state-change`, implementations must persist vt-flow state across restarts and reconnections.
 3. **Atomicity.** Credential delivery and `CreateOrUpdateParticipantSession` are not atomic. A malicious or faulty Validator could create the session and anchor the digest but never deliver the credential, or vice-versa. Applicants **MUST** verify the on-chain `ParticipantSession` and the anchored `Digest` entry before accepting (see [Subprotocols](#subprotocols)).
+4. **The chain and the session can disagree.** A `SetParticipantOPtoValidated` submitted by an operator of the Validator Corporation can land after either party terminated the session. [Reconnection](#reconnection) steps 5 to 7 resolve it in favour of the chain: a Validator that terminated a flow can still have to issue, and stands by its refusal only by revoking the entry on chain.
 
 ## Prior Art
 
