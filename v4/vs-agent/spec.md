@@ -1,6 +1,6 @@
 # VS Agent v4 Specification
 
-**Latest Draft:** spec v4-draft19
+**Latest Draft:** spec v4-draft20
 
 ## Abstract
 
@@ -537,9 +537,9 @@ A wallet MUST follow the URLs that the Admin API and the metadata return. The ag
 
 ### [VSA-PUB-INV] Invitation Parameters
 
-A DIDComm exchange that the agent starts with no established connection begins with an Out-of-Band invitation. [`createPresentationRequest`](#vsa-adm-dc-pr-create-createpresentationrequest) and [`createCredentialOffer`](#vsa-adm-dc-ce-offer-createcredentialoffer) return the invitation as `invitation` — the Out-of-Band invitation object — and as `shortUrl` when the agent supports a short form. The agent does not build a URL around the invitation: the caller decides where a link lands, and encodes the invitation as the `oob` query parameter of that URL, per [Aries RFC 0434](https://github.com/decentralized-identity/aries-rfcs/tree/main/features/0434-outofband) for DIDComm v1 and [DIDComm Messaging § Out of Band Messages](https://identity.foundation/didcomm-messaging/spec/#out-of-band-messages) for DIDComm v2.
+A DIDComm exchange that the agent starts with no established connection begins with an Out-of-Band invitation. [`createInvitation`](#vsa-adm-dc-inv-create-createinvitation), [`createPresentationRequest`](#vsa-adm-dc-pr-create-createpresentationrequest), and [`createCredentialOffer`](#vsa-adm-dc-ce-offer-createcredentialoffer) return the invitation as `invitation` — the Out-of-Band invitation object — and as `shortUrl` when the agent supports a short form. The agent does not build a URL around the invitation: the caller decides where a link lands, and encodes the invitation as the `oob` query parameter of that URL, per [Aries RFC 0434](https://github.com/decentralized-identity/aries-rfcs/tree/main/features/0434-outofband) for DIDComm v1 and [DIDComm Messaging § Out of Band Messages](https://identity.foundation/didcomm-messaging/spec/#out-of-band-messages) for DIDComm v2.
 
-[`sendInvitation`](#vsa-adm-dc-inv-send-sendinvitation) also produces an Out-of-Band invitation, but sends it on an established connection instead of returning it; the parameters of this section do not apply to it.
+Each of these methods sends the invitation on an established connection instead when the caller supplies `connectionId`; the parameters of this section do not apply to that case. A peer accepts an invitation with a new connection, or with a connection that it already holds with the agent, per [[VSA-DC-OOB]](#vsa-dc-oob-out-of-band-invitation-acceptance).
 
 Each method that produces an Out-of-Band invitation accepts these OPTIONAL parameters:
 
@@ -548,7 +548,7 @@ Each method that produces an Out-of-Band invitation accepts these OPTIONAL param
 
 **Short URLs.** A short URL stands in for the encoded invitation, so that a QR code stays small and a wallet fetches the invitation from the agent.
 
-[VSA-PUB-INV-1] When the agent returns a `shortUrl`, that URL MUST be under `PUBLIC_API_BASE_URL`, and the agent MUST resolve it for as long as the exchange that produced it is not in a terminal state. The path shape is the agent's choice ([[VSA-PUB-LISTENER-3]](#vsa-pub-listener-public-listener)).
+[VSA-PUB-INV-1] When the agent returns a `shortUrl`, that URL MUST be under `PUBLIC_API_BASE_URL`, and the agent MUST resolve it for as long as the record that produced it is not in a terminal state: the presentation record, the credential exchange record, or the invitation record of [`createInvitation`](#vsa-adm-dc-inv-create-createinvitation) while it is `created`, or until its deletion when it is reusable. The path shape is the agent's choice ([[VSA-PUB-LISTENER-3]](#vsa-pub-listener-public-listener)).
 
 [VSA-PUB-INV-2] On `GET` of a short URL, the agent MUST answer with the Out-of-Band invitation as a JSON body of type `application/json` — the same object that the method returned as `invitation` — as [Aries RFC 0434 § Short URL](https://github.com/decentralized-identity/aries-rfcs/tree/main/features/0434-outofband#url-shortening) defines the resolution of a shortened invitation. The agent MUST answer an unknown short URL with HTTP `404`.
 
@@ -561,6 +561,38 @@ This section specifies what a DIDComm peer observes of the agent: the envelopes 
 [VSA-VTI-DIDCOMM-1] A VS Agent MUST implement DIDComm v1 (Aries-style) and DIDComm v2 ([DIF DIDComm Messaging](https://identity.foundation/didcomm-messaging/spec/)). The agent MUST accept an inbound connection over either envelope. The agent MUST establish an outbound connection over either envelope.
 
 [VSA-VTI-DIDCOMM-2] The agent MUST publish a `DIDCommMessaging` service entry that reaches both envelopes, per [[VS-SVC-2]](https://verana-labs.github.io/verifiable-trust-spec/#vs-svc-service-declaration). A caller selects the envelope of an outbound invitation with the `didcommVersion` parameter of [Invitation parameters](#vsa-pub-inv-invitation-parameters); when the caller omits it, the agent MUST use v2.
+
+### [VSA-DC-OOB] Out-of-Band Invitation Acceptance
+
+The agent creates an Out-of-Band invitation with [`createInvitation`](#vsa-adm-dc-inv-create-createinvitation), [`createPresentationRequest`](#vsa-adm-dc-pr-create-createpresentationrequest), or [`createCredentialOffer`](#vsa-adm-dc-ce-offer-createcredentialoffer), and takes the inviter role. A peer accepts the invitation in one of two ways: it establishes a new connection, or it reuses a connection that it already holds with the agent. This section states what the agent observes in each case, and what it does.
+
+[VSA-DC-OOB-1] The response to an invitation carries the `id` of the invitation as its parent thread: `~thread.pthid` in DIDComm v1, per [Aries RFC 0434](https://github.com/decentralized-identity/aries-rfcs/tree/main/features/0434-outofband), and `pthid` in DIDComm v2, per [DIDComm Messaging § Out of Band Messages](https://identity.foundation/didcomm-messaging/spec/#out-of-band-messages). The agent MUST correlate a response to the invitation by this value. A parent thread that names no invitation of the agent has no effect on any record.
+
+[VSA-DC-OOB-2] **Acceptance by a new connection.** In DIDComm v1, the peer runs the handshake protocol that the invitation lists, and the first message of the handshake carries the parent thread. In DIDComm v2, there is no handshake: the peer sends its first message from a DID that the agent does not know, with the parent thread, and the DID pair is the connection. In both cases the agent MUST create a connection record that carries the identifier of the invitation record as `invitationId`, when the invitation has one.
+
+[VSA-DC-OOB-3] **Acceptance by reuse.** A peer that holds a connection with the DID that the invitation names reuses that connection. The agent MUST accept the invitation on the connection of the authenticated sender, as follows:
+
+- In DIDComm v1, the peer sends a `handshake-reuse` message of `https://didcomm.org/out-of-band/1.1` on the connection, with the parent thread. The agent MUST answer with `handshake-reuse-accepted` on the same connection, as Aries RFC 0434 defines it. A peer that answers an attached request of the invitation on the connection, with the parent thread, also reuses it: the agent MUST accept that response without a `handshake-reuse`.
+- In DIDComm v2, the peer sends a message on the connection, with the parent thread. When the message is a `ping` of `https://didcomm.org/trust-ping/2.0`, the agent MUST answer with `ping-response`, as that protocol defines it, and the acceptance is the only other effect of the message. When the message is of another type, the agent MUST also process it as its module defines. An anoncrypted message authenticates no sender: it MUST NOT accept an invitation.
+
+[VSA-DC-OOB-4] **Record update.** On an acceptance of either kind, the agent MUST update the record that the invitation belongs to. The invitation record of `createInvitation` moves to `accepted`, or stays there when it is reusable, and records the acceptance — the connection, and whether the peer reused it — per [[VSA-ADM-DC-INV]](#vsa-adm-dc-inv-invitations): at the creation of the connection record for a new connection, at the answer for a reuse. The presentation record of `createPresentationRequest` and the credential exchange record of `createCredentialOffer` progress as their protocols define, on the accepted connection; the invitation of these methods has no record of its own.
+
+[VSA-DC-OOB-5] **Single use.** Every invitation that the agent creates is single-use, except a standalone invitation whose record has `reusable` `true`: the agent MUST accept that invitation at each response that carries its parent thread, from a new DID or on an existing connection, until the caller deletes the record. After the first acceptance of a single-use invitation, and after the deletion of any invitation record, the agent MUST NOT accept the invitation again: it MUST NOT answer a `handshake-reuse` that names it, and MUST process a DIDComm v2 message that names it as parent thread as an ordinary message of its connection, with no effect on any record. A DIDComm v2 first message from an unknown DID that names a consumed invitation is a connection to the DID that it addresses, not an acceptance: the connection record that it produces, if any, carries no `invitationId`, and [[VSA-DC-CONN]](#vsa-dc-conn-connection-acceptance-policy) applies to it. The agent MUST log each refused acceptance at warning level, with the identifier of the invitation and the DID of the sender.
+
+> Non-normative: the `ping` with which a wallet accepts the invitation `0a2c6f3e-94d1-4f1b-b0a5-3e8d7c6b5a49` on the DIDComm v2 connection that it already holds with the agent:
+
+```json
+{
+  "type": "https://didcomm.org/trust-ping/2.0/ping",
+  "id": "c3f9b2a7-5e41-4d0c-9b8a-2f6e1d7c4a90",
+  "pthid": "0a2c6f3e-94d1-4f1b-b0a5-3e8d7c6b5a49",
+  "from": "did:peer:4zQmConnectionDidOfThePeer",
+  "to": ["did:webvh:QmExample:service.example"],
+  "body": { "response_requested": true }
+}
+```
+
+> Non-normative: DIDComm v2 has no `handshake-reuse` message. An Out-of-Band 2.0 invitation starts a thread, not a handshake, so a peer that already holds the DID pair starts the thread on it. A wallet that receives an invitation looks for a connection whose peer DID is the `from` of the invitation. When it finds one, it sends the `ping` above and waits for the `ping-response`. When it finds none, or no response arrives, it sends its first message from a new DID. The DIDComm Messaging specification names no message for the acceptance of an invitation that carries no request; this specification selects Trust Ping 2.0 for that case.
 
 ### [VSA-DC-CONN] Connection Acceptance Policy
 
@@ -850,7 +882,10 @@ The table lists every method of the Administration API. It is a non-normative ov
 |  | `listConnections` | `GET` | `/v2/didcomm/connections` | [[VSA-ADM-DC-CN-LIST]](#vsa-adm-dc-cn-list-listconnections) |
 |  | `getConnection` | `GET` | `/v2/didcomm/connections/{connectionId}` | [[VSA-ADM-DC-CN-GET]](#vsa-adm-dc-cn-get-getconnection) |
 |  | `deleteConnection` | `DELETE` | `/v2/didcomm/connections/{connectionId}` | [[VSA-ADM-DC-CN-DELETE]](#vsa-adm-dc-cn-delete-deleteconnection) |
-|  | `sendInvitation` | `POST` | `/v2/didcomm/invitations` | [[VSA-ADM-DC-INV-SEND]](#vsa-adm-dc-inv-send-sendinvitation) |
+|  | `createInvitation` | `POST` | `/v2/didcomm/invitations` | [[VSA-ADM-DC-INV-CREATE]](#vsa-adm-dc-inv-create-createinvitation) |
+|  | `listInvitations` | `GET` | `/v2/didcomm/invitations` | [[VSA-ADM-DC-INV-LIST]](#vsa-adm-dc-inv-list-listinvitations) |
+|  | `getInvitation` | `GET` | `/v2/didcomm/invitations/{invitationId}` | [[VSA-ADM-DC-INV-GET]](#vsa-adm-dc-inv-get-getinvitation) |
+|  | `deleteInvitation` | `DELETE` | `/v2/didcomm/invitations/{invitationId}` | [[VSA-ADM-DC-INV-DELETE]](#vsa-adm-dc-inv-delete-deleteinvitation) |
 |  | `sendBasicMessage` | `POST` | `/v2/didcomm/basic-messages` | [[VSA-ADM-DC-BM-SEND]](#vsa-adm-dc-bm-send-sendbasicmessage) |
 |  | `listBasicMessages` | `GET` | `/v2/didcomm/basic-messages` | [[VSA-ADM-DC-BM-LIST]](#vsa-adm-dc-bm-list-listbasicmessages) |
 |  | `sendReceipts` | `POST` | `/v2/didcomm/receipts` | [[VSA-ADM-DC-RC-SEND]](#vsa-adm-dc-rc-send-sendreceipts) |
@@ -1026,7 +1061,7 @@ The scope is organized in **protocol modules**. Each DIDComm protocol that the a
 
 The modules of this scope, the protocol of each one, and which ones a deployment serves are defined in [Protocol Modules](#vsa-dc-mod-protocol-modules). The agent MUST answer every path of a module that it does not serve with HTTP `404`.
 
-The agent has no method that returns a bare connection invitation to the caller, and no method that consumes one. A DIDComm connection starts from the invitation that [`createPresentationRequest`](#vsa-adm-dc-pr-create-createpresentationrequest) or [`createCredentialOffer`](#vsa-adm-dc-ce-offer-createcredentialoffer) produces, from an invitation that the agent sends on an established connection with [`sendInvitation`](#vsa-adm-dc-inv-send-sendinvitation), or from a peer that connects to the agent, for example to start a credential acquisition flow.
+The agent has no method that consumes an invitation: it takes the inviter role only. A DIDComm connection starts from an invitation that [`createInvitation`](#vsa-adm-dc-inv-create-createinvitation), [`createPresentationRequest`](#vsa-adm-dc-pr-create-createpresentationrequest), or [`createCredentialOffer`](#vsa-adm-dc-ce-offer-createcredentialoffer) produces, or from a peer that connects to the DID of the agent, for example to start a credential acquisition flow. A peer that already holds a connection with the agent reuses it instead, per [[VSA-DC-OOB]](#vsa-dc-oob-out-of-band-invitation-acceptance).
 
 #### [VSA-ADM-DC-PROTO] Protocol Discovery
 
@@ -1065,8 +1100,8 @@ Returns the connection records, filtered when the caller supplies a filter.
 
 **Inputs** (all OPTIONAL query filters, in addition to the [pagination](#vsa-adm-conv-page-pagination) parameters):
 
-- `outOfBandId` — filter by Out-of-Band identifier.
-- `parentConnectionId` — filter by the connection that carried the invitation which produced this one (see [`sendInvitation`](#vsa-adm-dc-inv-send-sendinvitation)).
+- `invitationId` — filter by the invitation record that produced the connection (see [[VSA-ADM-DC-INV]](#vsa-adm-dc-inv-invitations)).
+- `parentConnectionId` — filter by the connection that carried the invitation which produced this one (see [`createInvitation`](#vsa-adm-dc-inv-create-createinvitation)).
 - `state` — one of `start`, `invitation-sent`, `invitation-received`, `request-sent`, `request-received`, `response-sent`, `response-received`, `abandoned`, `completed`.
 - `role` — `requester` or `responder`.
 - `did` — filter by my DID for this connection.
@@ -1076,7 +1111,7 @@ Returns the connection records, filtered when the caller supplies a filter.
 - `didcommVersion` — `v1` or `v2`.
 - `mediatorId` — filter by mediator identifier.
 
-**Output**: a page of connection records. Each record contains at minimum `id`, `state`, `role`, `did`, `theirDid`, `threadId`, `outOfBandId`, `parentConnectionId`, `createdAt`, and `updatedAt`. `parentConnectionId` is the identifier of the connection on which the agent sent the invitation that produced this connection, per [`sendInvitation`](#vsa-adm-dc-inv-send-sendinvitation), and `null` for every other connection.
+**Output**: a page of connection records. Each record contains at minimum `id`, `state`, `role`, `did`, `theirDid`, `threadId`, `invitationId`, `parentConnectionId`, `createdAt`, and `updatedAt`. `invitationId` is the identifier of the invitation record that produced this connection, per [[VSA-ADM-DC-INV]](#vsa-adm-dc-inv-invitations), and `null` for every other connection; a reuse of the connection for a later invitation does not change it. `parentConnectionId` is the identifier of the connection on which the agent sent the sub-connection invitation that produced this connection, per [`createInvitation`](#vsa-adm-dc-inv-create-createinvitation), and `null` for every other connection.
 
 ##### [VSA-ADM-DC-CN-GET] getConnection
 
@@ -1104,46 +1139,71 @@ Deletes a connection record. The agent MAY also close the related DIDComm sessio
 
 #### [VSA-ADM-DC-INV] Invitations
 
-Methods that send an Out-of-Band invitation on an established connection, per the Out-of-Band protocol (`https://didcomm.org/out-of-band/1.1` for DIDComm v1, `https://didcomm.org/out-of-band/2.0` for DIDComm v2). On a DIDComm v1 connection, the invitation is the message. On a DIDComm v2 connection, a `share-media` message of the Media Sharing protocol (`https://didcomm.org/media-sharing/1.0`) carries the invitation as an attachment. The invitation asks the peer to open a second connection: a **sub-connection** to this agent, related to the connection that carried the invitation, or a connection to another service that publishes a DID — a **referral**.
+Methods that create an Out-of-Band invitation, per the Out-of-Band protocol (`https://didcomm.org/out-of-band/1.1` for DIDComm v1, `https://didcomm.org/out-of-band/2.0` for DIDComm v2), and the records that track its acceptance. An invitation is one of three kinds:
 
-The agent takes the inviter role only. The module stores no record that the API exposes: the connection that a sub-connection invitation produces is a connection record, per [[VSA-ADM-DC-CN]](#vsa-adm-dc-cn-connections), and carries `parentConnectionId` and `outOfBandId` so that the caller correlates it.
+- A **standalone invitation** is returned to the caller, which puts it in a link or a QR code. It names the DID of the agent, so that a peer which already holds a connection with the agent reuses that connection, per [[VSA-DC-OOB]](#vsa-dc-oob-out-of-band-invitation-acceptance). It is single-use, or reusable when the caller says so.
+- A **sub-connection invitation** is sent on an established connection, and asks the peer to open a second connection to this agent, related to the connection that carried the invitation. It names a service specific to the invitation, so that the peer opens a new connection.
+- A **referral** is sent on an established connection, and asks the peer to connect to another service that publishes a DID.
 
-> Non-normative: a service that talks to a wallet through one connection uses a sub-connection to open a second conversation with the same user — a separate contact in the wallet, with its own label and image — and a referral to hand the user over to another service, for example a verifier.
+On a DIDComm v1 connection, the invitation is the message. On a DIDComm v2 connection, a `share-media` message of the Media Sharing protocol (`https://didcomm.org/media-sharing/1.0`) carries the invitation as an attachment.
+
+The agent takes the inviter role only. The agent stores an **invitation record** for each standalone invitation and each sub-connection invitation. A referral produces no record: the connection that it produces belongs to the other service. The connection that an invitation produces is a connection record, per [[VSA-ADM-DC-CN]](#vsa-adm-dc-cn-connections), and carries `invitationId`, and `parentConnectionId` for a sub-connection.
+
+> Non-normative: a service shows a standalone invitation as a QR code at a counter or in a web page, and learns from the `accepted` state which code a user scanned, also when the wallet of the user was connected before. A service that talks to a wallet through one connection uses a sub-connection to open a second conversation with the same user — a separate contact in the wallet, with its own label and image — and a referral to hand the user over to another service, for example a verifier.
 
 | Module | Method Name | HTTP Method | Relative REST API path | Requirements |
 | --- | --- | --- | --- | --- |
-| Invitations | `sendInvitation` | `POST` | `/v2/didcomm/invitations` | [see](#vsa-adm-dc-inv-send-sendinvitation) |
+| Invitations | `createInvitation` | `POST` | `/v2/didcomm/invitations` | [see](#vsa-adm-dc-inv-create-createinvitation) |
+| Invitations | `listInvitations` | `GET` | `/v2/didcomm/invitations` | [see](#vsa-adm-dc-inv-list-listinvitations) |
+| Invitations | `getInvitation` | `GET` | `/v2/didcomm/invitations/{invitationId}` | [see](#vsa-adm-dc-inv-get-getinvitation) |
+| Invitations | `deleteInvitation` | `DELETE` | `/v2/didcomm/invitations/{invitationId}` | [see](#vsa-adm-dc-inv-delete-deleteinvitation) |
 
-##### [VSA-ADM-DC-INV-SEND] sendInvitation
+##### [VSA-ADM-DC-INV-CREATE] createInvitation
 
-Sends an Out-of-Band invitation on an established connection.
+Creates an Out-of-Band invitation: a standalone invitation that the method returns, or, when the caller supplies `connectionId`, a sub-connection invitation or a referral that the agent sends on that connection.
 
 **Inputs** (request body):
 
-- `connectionId` (REQUIRED) — connection to send the invitation on.
-- `did` (OPTIONAL) — DID of the service that the peer is invited to connect to. When absent, the invitation is for a sub-connection to this agent.
-- `label` (OPTIONAL) — text that the peer shows for the invitation. When absent for a sub-connection, the agent uses the `name` of its ECS-Service credential, or omits the field when it holds none. When absent for a referral, the agent omits the field.
-- `imageUrl` (OPTIONAL) — URL of an image that the peer shows for the invitation.
+- `connectionId` (OPTIONAL) — an established connection to send the invitation on. When the caller omits it, the agent creates a standalone invitation and returns it.
+- `did` (OPTIONAL) — DID of the service that the peer is invited to connect to: a referral. Requires `connectionId`. When absent, the invitation is for a connection to this agent.
+- `reusable` (OPTIONAL, default `false`) — when `true`, the agent accepts the standalone invitation any number of times, per [[VSA-DC-OOB-5]](#vsa-dc-oob-out-of-band-invitation-acceptance). Requires that `connectionId` is absent.
+- `label` (OPTIONAL) — text that the peer shows for a sub-connection invitation or a referral. When absent for a sub-connection, the agent uses the `name` of its ECS-Service credential, or omits the field when it holds none. When absent for a referral, the agent omits the field. The agent MUST ignore it for a standalone invitation.
+- `imageUrl` (OPTIONAL) — URL of an image that the peer shows for a sub-connection invitation or a referral. The agent MUST ignore it for a standalone invitation.
 - `goal` (OPTIONAL) and `goalCode` (OPTIONAL) — the `goal` and `goal_code` of the invitation.
+- `useLegacyDid` and `didcommVersion` (OPTIONAL) — see [Invitation Parameters](#vsa-pub-inv-invitation-parameters). The agent MUST ignore both when `connectionId` is present.
 
 **Output**:
 
-- `id` — identifier of the sent message: the invitation on a DIDComm v1 connection, the `share-media` message on a DIDComm v2 connection.
-- `outOfBandId` — identifier of the Out-of-Band record that the agent created for a sub-connection invitation. Absent for a referral. The connection that the invitation produces carries this value as `outOfBandId`.
+- `id` — identifier of the invitation record. Absent for a referral. The connection that the invitation produces carries this value as `invitationId`.
+- `invitation` — the Out-of-Band invitation, as a JSON object, in the envelope that `didcommVersion` selects. Present for a standalone invitation only.
+- `shortUrl` — a URL under `PUBLIC_API_BASE_URL` that resolves to the same invitation, per [[VSA-PUB-INV-2]](#vsa-pub-inv-invitation-parameters), for a QR code that stays small. Present for a standalone invitation when the agent supports short URLs.
+- `messageId` — identifier of the sent message: the invitation on a DIDComm v1 connection, the `share-media` message on a DIDComm v2 connection. Present when `connectionId` is present.
 
-**Requirements**:
+**Requirements** for a standalone invitation:
 
-- The agent MUST create the invitation in the envelope of the connection: an Out-of-Band 1.1 invitation on a DIDComm v1 connection, an Out-of-Band 2.0 invitation on a DIDComm v2 connection. A sub-connection uses the envelope of the invitation. The `didcommVersion` and `useLegacyDid` parameters of [Invitation Parameters](#vsa-pub-inv-invitation-parameters) do not apply.
+- The agent MUST create the invitation in the envelope that `didcommVersion` selects, and MUST name the DID of the agent as its only service (`services` in Out-of-Band 1.1, `from` in Out-of-Band 2.0): the `did:webvh` DID, or its parallel `did:web` form when `useLegacyDid` is set, per [[VSA-PUB-DID-4]](#vsa-pub-did-did-document-and-did-log). A peer that holds a connection with that DID then reuses it, per [[VSA-DC-OOB-3]](#vsa-dc-oob-out-of-band-invitation-acceptance).
+- An Out-of-Band 1.1 invitation MUST list at least one handshake protocol that the agent serves in `handshake_protocols`. The invitation MUST carry no `label` and no `imageUrl`, in either envelope: the peer resolves the DID of the agent, and takes the name and the logo of the service from its ECS-Service credential.
+- The agent MUST NOT attach a request to the invitation: it has no `requests~attach` in Out-of-Band 1.1 and no `attachments` in Out-of-Band 2.0.
+- The agent MUST create an invitation record in state `created`, with `parentConnectionId` `null` and `reusable` as supplied, and MUST return its identifier as `id`.
+
+**Requirements** for a sub-connection invitation and a referral:
+
+- The agent MUST create the invitation in the envelope of the connection: an Out-of-Band 1.1 invitation on a DIDComm v1 connection, an Out-of-Band 2.0 invitation on a DIDComm v2 connection. A sub-connection uses the envelope of the invitation.
 - On a DIDComm v1 connection, the agent MUST send the Out-of-Band 1.1 invitation as a message of the connection. `label` and `imageUrl` are the `label` and `imageUrl` fields of the invitation.
 - On a DIDComm v2 connection, the agent MUST send a `share-media` message that has one item. The attachment of the item MUST have the `media_type` `application/didcomm-plain+json`, and MUST hold the Out-of-Band 2.0 invitation in `data.json`. The agent MUST NOT send the invitation as a message of the connection.
 - An Out-of-Band 2.0 invitation has no `label` field and no `imageUrl` field. On a DIDComm v2 connection, the agent MUST set `label` as the `description` of the `share-media` message and as the `metadata.title` of the item, and MUST set `imageUrl` as the `metadata.icon` of the item. The agent MUST omit each field that has no value.
 - The agent MUST be able to send this `share-media` message when it does not serve the [Media Sharing](#vsa-adm-dc-ms-media-sharing) module.
-- For a sub-connection, the agent MUST create a single-use invitation whose service is specific to the invitation — not the DID of the agent — so that the peer establishes a new connection instead of reusing the one it holds with the DID of the agent. The agent MUST accept at most one connection from the invitation. The connection record MUST carry `outOfBandId` equal to the returned `outOfBandId`, and `parentConnectionId` equal to `connectionId`.
+- For a sub-connection, the agent MUST create an invitation whose service is specific to the invitation — not the DID of the agent — so that the peer establishes a new connection instead of reusing the one it holds with the DID of the agent. The agent MUST create an invitation record in state `created`, with `parentConnectionId` equal to `connectionId`, and MUST return its identifier as `id`. The connection record that the invitation produces MUST carry `invitationId` equal to `id`, and `parentConnectionId` equal to `connectionId`.
 - For a referral, the agent MUST set `did` as the only service of the invitation (`services` in Out-of-Band 1.1, `from` in Out-of-Band 2.0), and MUST create no record. The agent does not verify that `did` resolves: the peer resolves it when it connects.
 
-**Errors**: `UNKNOWN_ID` (`404`) when no connection has the supplied identifier.
+Every invitation is single-use, except a standalone invitation with `reusable` `true`. Its acceptance follows [[VSA-DC-OOB]](#vsa-dc-oob-out-of-band-invitation-acceptance).
 
-**Events**: [`didcomm.connections.state-updated`](#vsa-evt-cat-event-catalog) when a sub-connection invitation produces a connection. A referral produces no event: the connection it produces belongs to the other service.
+**Errors**:
+
+- `UNKNOWN_ID` (`404`) — `connectionId` resolves to no connection.
+- `INVALID_INPUT` (`400`) — `did` is present and `connectionId` is absent, or `reusable` is `true` and `connectionId` is present.
+
+**Events**: [`didcomm.invitations.state-updated`](#vsa-evt-cat-event-catalog) when the agent creates the invitation record and when a peer accepts the invitation; [`didcomm.connections.state-updated`](#vsa-evt-cat-event-catalog) when the invitation produces a connection. A referral produces no event: the connection it produces belongs to the other service.
 
 > Non-normative: the `share-media` message of a sub-connection invitation on a DIDComm v2 connection:
 
@@ -1187,6 +1247,60 @@ Sends an Out-of-Band invitation on an established connection.
 ```
 
 > Non-normative: a peer in the invitee role accepts the attachment only when the `type` of the message in `data.json` is an Out-of-Band 2.0 invitation. The `from` of that invitation is not authenticated: only the connection peer vouches for it. The peer thus handles the attachment as an invitation that the connection peer presents, and does not process it as a message that `from` sent.
+
+##### [VSA-ADM-DC-INV-LIST] listInvitations
+
+Returns the invitation records, filtered when the caller supplies a filter.
+
+**Inputs** (all OPTIONAL query filters, in addition to the [pagination](#vsa-adm-conv-page-pagination) parameters):
+
+- `state` — `created` or `accepted`.
+- `parentConnectionId` — filter by the connection that carried a sub-connection invitation.
+- `connectionId` — filter by a connection that appears in `acceptances`.
+- `reusable` — `true` or `false`.
+- `didcommVersion` — `v1` or `v2`.
+
+**Output**: a page of invitation records. Each record contains at minimum:
+
+- `id` — identifier of the record.
+- `state` — `created` or `accepted`.
+- `didcommVersion` — `v1` or `v2`: the envelope of the invitation.
+- `reusable` — `true` when the agent accepts the invitation any number of times; `false` for a single-use invitation.
+- `invitation` — the Out-of-Band invitation, as a JSON object.
+- `shortUrl` — the short URL of a standalone invitation, when the agent supports short URLs; `null` otherwise.
+- `parentConnectionId` — the connection that carried a sub-connection invitation; `null` for a standalone invitation.
+- `acceptances` — array of the acceptances of the invitation, empty while the state is `created`. Each entry contains `connectionId` — the connection that the acceptance produced, or that the peer reused — `reused` — `true` when the peer accepted the invitation on a connection that it already held, `false` when the acceptance produced a new connection — and `acceptedAt`. A single-use invitation has at most one entry. A reusable invitation has one entry per acceptance, and the same connection can appear in several entries: a peer that scans a reusable code twice accepts it twice.
+- `createdAt` and `updatedAt`.
+
+**States**: `created` — the agent created the invitation, and no peer has accepted it. `accepted` — a peer accepted the invitation, per [[VSA-DC-OOB]](#vsa-dc-oob-out-of-band-invitation-acceptance); terminal. A reusable invitation stays `accepted`: for each further acceptance, the agent appends an entry to `acceptances` and emits a `state-updated` event with `previousState` `accepted`.
+
+##### [VSA-ADM-DC-INV-GET] getInvitation
+
+Retrieves one invitation record by identifier.
+
+**Path parameters**:
+
+- `invitationId` (REQUIRED) — identifier of the invitation record.
+
+**Output**: the invitation record, with the same shape as in `listInvitations`.
+
+**Errors**: `UNKNOWN_ID` (`404`) when no invitation record has the supplied identifier.
+
+##### [VSA-ADM-DC-INV-DELETE] deleteInvitation
+
+Deletes an invitation record. After the deletion, the agent MUST NOT accept the invitation ([[VSA-DC-OOB-5]](#vsa-dc-oob-out-of-band-invitation-acceptance)), and MUST answer its short URL with HTTP `404` ([[VSA-PUB-INV-2]](#vsa-pub-inv-invitation-parameters)). A connection that the invitation produced keeps its `invitationId`.
+
+**Path parameters**:
+
+- `invitationId` (REQUIRED) — identifier of the invitation record to delete.
+
+**Inputs**: none.
+
+**Output**: empty body (HTTP `204`).
+
+**Errors**: `UNKNOWN_ID` (`404`) when no invitation record has the supplied identifier.
+
+**Events**: none. A deletion is a caller action, per [[VSA-EVT-CAT]](#vsa-evt-cat-event-catalog).
 
 #### [VSA-ADM-DC-BM] Basic Messages
 
@@ -1659,7 +1773,7 @@ Shares media items on an established connection.
 - Each item MUST carry exactly one of `uri` and `json`. The agent sends `uri` as the `data.links` of the attachment of the item, and `json` as its `data.json`.
 - An item that carries `json` MUST NOT carry `ciphering`: the connection already encrypts the media.
 - The agent MUST deliver an inbound item in the same shape: with `uri` when the attachment holds `data.links`, with `json` when it holds `data.json`. The agent MUST ignore an item whose attachment holds neither.
-- The agent does not interpret the `json` of an inbound item. An item whose `mimeType` is `application/didcomm-plain+json` holds a DIDComm message, for example the Out-of-Band 2.0 invitation that [`sendInvitation`](#vsa-adm-dc-inv-send-sendinvitation) sends. The agent MUST NOT process that message: it takes the inviter role only, per [[VSA-ADM-DC-INV]](#vsa-adm-dc-inv-invitations).
+- The agent does not interpret the `json` of an inbound item. An item whose `mimeType` is `application/didcomm-plain+json` holds a DIDComm message, for example the Out-of-Band 2.0 invitation that [`createInvitation`](#vsa-adm-dc-inv-create-createinvitation) sends on a connection. The agent MUST NOT process that message: it takes the inviter role only, per [[VSA-ADM-DC-INV]](#vsa-adm-dc-inv-invitations).
 
 **Errors**: `UNKNOWN_ID` (`404`) when no connection has the supplied identifier. `INVALID_INPUT` (`400`) when an item carries both `uri` and `json`, or neither.
 
@@ -2751,7 +2865,7 @@ Every event is one JSON object:
 
 An event type follows the grammar `{scope}.{module}.{event}`. The scope and the module mirror the path segments of the [Administration API](#administration-api), so that a consumer maps an event to the methods that read and progress the underlying record. There are two event kinds:
 
-- **`state-updated`** — a record changed state, or was created. `data` MUST hold the record, in the same shape as the `get` method of that record returns it, plus `previousState` — the state before the change, or `null` when the event reports the creation of the record.
+- **`state-updated`** — a record changed state, was created, or, for a reusable invitation, recorded a further acceptance ([[VSA-ADM-DC-INV-LIST]](#vsa-adm-dc-inv-list-listinvitations)). `data` MUST hold the record, in the same shape as the `get` method of that record returns it, plus `previousState` — the state before the change, or `null` when the event reports the creation of the record.
 - **message events** — an inbound DIDComm message arrived on a module. The event segment is the kebab-case message name of the protocol, with the suffix `-received` — one event type per message kind, so that a consumer branches on `type` alone; `data` holds the received content, per the module definition. The rule binds every module, the [extension protocol modules](#vsa-adm-dc-ext-extension-protocol-modules) included ([[VSA-ADM-DC-EXT-4]](#vsa-adm-dc-ext-extension-protocol-modules)).
 
 The type `vpr.notification` is the one exception to the grammar: it reports a transaction on the Verana Public Registry, which the agent observes through the indexer; it mirrors no Administration API path, and belongs to neither kind.
@@ -2763,6 +2877,7 @@ The agent MUST emit each event of this table when its trigger occurs.
 | `type` | Trigger | `data` |
 |---|---|---|
 | `didcomm.connections.state-updated` | A connection record is created or changes state, per [[VSA-ADM-DC-CN]](#vsa-adm-dc-cn-connections). | The connection record, as [`getConnection`](#vsa-adm-dc-cn-get-getconnection) returns it, plus `previousState`. |
+| `didcomm.invitations.state-updated` | An invitation record is created or changes state, per [[VSA-ADM-DC-INV]](#vsa-adm-dc-inv-invitations) and [[VSA-DC-OOB]](#vsa-dc-oob-out-of-band-invitation-acceptance). | The invitation record, as [`getInvitation`](#vsa-adm-dc-inv-get-getinvitation) returns it, plus `previousState`. |
 | `didcomm.basic-messages.message-received` | The agent receives a basic message, per [[VSA-ADM-DC-BM]](#vsa-adm-dc-bm-basic-messages). | The message record, as [`listBasicMessages`](#vsa-adm-dc-bm-list-listbasicmessages) returns it. |
 | `didcomm.receipts.message-receipts-received` | The agent receives a `message-receipts` message, per [[VSA-ADM-DC-RC]](#vsa-adm-dc-rc-receipts). | `connectionId` and `receipts` — the entries of the message, each with `messageId`, `state`, and `timestamp`. |
 | `didcomm.reactions.message-reactions-received` | The agent receives a `message-reactions` message, per [[VSA-ADM-DC-RA]](#vsa-adm-dc-ra-reactions). | `connectionId` and `reactions` — the entries of the message, each with `messageId`, `emoji`, `action`, and `timestamp`. |
@@ -3656,10 +3771,10 @@ The table lists the state that the agent holds, and whether the agent MUST keep 
 | Credential store: the credentials the agent holds | Persistent. A credential is deleted on revocation. | [[VSA-VTI-FLOW-ISSUE]](#vsa-vti-flow-issue-credential-issuance-and-acceptance), [[VSA-VT-LVP]](#vsa-vt-lvp-linked-vp-management) |
 | Flow records, keyed by `participantSessionId` | Persistent | [[VSA-ADM-VT-FL]](#vsa-adm-vt-fl-flow-management), [[VSA-VTI-FLOW-STATE]](#vsa-vti-flow-state-flow-state) |
 | Connection, basic message, presentation, and credential exchange records | Persistent | [DIDComm Scope](#didcomm-scope) |
-| Out-of-Band records of sub-connection invitations | Persistent until the invitation produces a connection | [[VSA-ADM-DC-INV]](#vsa-adm-dc-inv-invitations) |
+| Invitation records | Persistent until the caller deletes them | [[VSA-ADM-DC-INV]](#vsa-adm-dc-inv-invitations) |
 | AnonCreds credential definitions, revocation registries, status lists | Persistent | [AnonCreds Scope](#anoncreds-scope) |
 | AnonCreds tails files and `did:webvh` attested resources | Persistent, for as long as a credential can reference them | [[VSA-PUB-AC]](#vsa-pub-ac-anoncreds-registry-resources) |
-| Short URL records | Persistent until the exchange ends | [[VSA-PUB-INV]](#vsa-pub-inv-invitation-parameters) |
+| Short URL records | Persistent until the record that produced them reaches a terminal state or is deleted | [[VSA-PUB-INV]](#vsa-pub-inv-invitation-parameters) |
 | OpenID4VC issuance sessions and verification sessions | Persistent until deleted or expired | [OpenID4VC Scope](#openid4vc-scope) |
 | OpenID4VC Token Status Lists, with the binding of each index | Persistent, for as long as a credential can reference them | [[VSA-ADM-OID-SL]](#vsa-adm-oid-sl-status-lists), [[VSA-PUB-OID-1]](#vsa-pub-oid-openid4vc-public-protocol-endpoints) |
 | OpenID4VC development signing certificates | Persistent | [[VSA-VTI-CFG-ENV-OID]](#vsa-vti-cfg-env-oid-openid4vc) |
@@ -3676,6 +3791,7 @@ Each record type of the agent has a state field, and the agent emits a `state-up
 | Record | States | Defined in |
 |---|---|---|
 | Connection | `start`, `invitation-sent`, `invitation-received`, `request-sent`, `request-received`, `response-sent`, `response-received`, `abandoned`, `completed` | [[VSA-ADM-DC-CN-LIST]](#vsa-adm-dc-cn-list-listconnections) |
+| Invitation | `created`, `accepted` | [[VSA-ADM-DC-INV-LIST]](#vsa-adm-dc-inv-list-listinvitations) |
 | Presentation | `request-sent`, `request-received`, `presentation-sent`, `presentation-received`, `declined`, `abandoned`, `done` | [[VSA-ADM-DC-PR]](#vsa-adm-dc-pr-presentations) |
 | Credential exchange | `offer-sent`, `offer-received`, `request-sent`, `request-received`, `credential-issued`, `credential-received`, `declined`, `abandoned`, `done` | [[VSA-ADM-DC-CE]](#vsa-adm-dc-ce-credential-exchanges) |
 | Flow: Connection State and Flow State | `NOT_CONNECTED`, `ESTABLISHED`, `TERMINATED`; the Flow States of [[VSA-VTI-FLOW-STATE]](#vsa-vti-flow-state-flow-state) | [vt-flow States](../vt-flow-protocol/spec.md#states) |
@@ -3789,7 +3905,10 @@ Every identifier of this document, in lexical order. A section identifier links 
 | `VSA-ADM-DC-EXT-4` | The agent MUST deliver each inbound message of an extension protocol module as a message event `didcomm.{module}.{message-type}-received`, w… |  |
 | `VSA-ADM-DC-EXT-5` | The agent MUST answer every path of a module that it does not serve with HTTP `404`. |  |
 | `VSA-ADM-DC-INV` | [Invitations](#vsa-adm-dc-inv-invitations) | DIDComm Scope |
-| `VSA-ADM-DC-INV-SEND` | [sendInvitation](#vsa-adm-dc-inv-send-sendinvitation) | Invitations |
+| `VSA-ADM-DC-INV-CREATE` | [createInvitation](#vsa-adm-dc-inv-create-createinvitation) | Invitations |
+| `VSA-ADM-DC-INV-DELETE` | [deleteInvitation](#vsa-adm-dc-inv-delete-deleteinvitation) | Invitations |
+| `VSA-ADM-DC-INV-GET` | [getInvitation](#vsa-adm-dc-inv-get-getinvitation) | Invitations |
+| `VSA-ADM-DC-INV-LIST` | [listInvitations](#vsa-adm-dc-inv-list-listinvitations) | Invitations |
 | `VSA-ADM-DC-MRTD` | [MRTD](#vsa-adm-dc-mrtd-mrtd) | DIDComm Scope |
 | `VSA-ADM-DC-MRTD-EMRTD` | [requestEmrtdData](#vsa-adm-dc-mrtd-emrtd-requestemrtddata) | MRTD |
 | `VSA-ADM-DC-MRTD-MRZ` | [requestMrz](#vsa-adm-dc-mrtd-mrz-requestmrz) | MRTD |
@@ -3865,6 +3984,12 @@ Every identifier of this document, in lexical order. A section identifier links 
 | `VSA-DC-CONN-1` | Before it accepts a DIDComm connection from another service, the agent MUST verify that the connecting peer complies with [[VS-CONN-VS]](htt… |  |
 | `VSA-DC-CONN-2` | As [[VS-CONN-VS]](https://verana-labs.github.io/verifiable-trust-spec/#vs-conn-vs-requirements-for-a-vs-to-accept-a-connection-from-another-… |  |
 | `VSA-DC-MOD` | [Protocol Modules](#vsa-dc-mod-protocol-modules) | DIDComm Interface |
+| `VSA-DC-OOB` | [Out-of-Band Invitation Acceptance](#vsa-dc-oob-out-of-band-invitation-acceptance) | DIDComm Interface |
+| `VSA-DC-OOB-1` | The response to an invitation carries the `id` of the invitation as its parent thread: `~thread.pthid` in DIDComm v1, per [Aries RFC 0434](h… |  |
+| `VSA-DC-OOB-2` | **Acceptance by a new connection.** In DIDComm v1, the peer runs the handshake protocol that the invitation lists, and the first message of… |  |
+| `VSA-DC-OOB-3` | **Acceptance by reuse.** A peer that holds a connection with the DID that the invitation names reuses that connection. The agent MUST accept… |  |
+| `VSA-DC-OOB-4` | **Record update.** On an acceptance of either kind, the agent MUST update the record that the invitation belongs to. The invitation record o… |  |
+| `VSA-DC-OOB-5` | **Single use.** Every invitation that the agent creates is single-use, except a standalone invitation whose record has `reusable` `true`: th… |  |
 | `VSA-EVT-CAT` | [Event Catalog](#vsa-evt-cat-event-catalog) | Events API |
 | `VSA-EVT-DEL` | [Delivery](#vsa-evt-del-delivery) | Events API |
 | `VSA-EVT-DEL-1` | The agent MUST deliver each event with one HTTP `POST` request to `EVENTS_WEBHOOK_URL`. The request body is the [envelope](#vsa-evt-env-enve… |  |
@@ -3892,7 +4017,7 @@ Every identifier of this document, in lexical order. A section identifier links 
 | `VSA-PUB-DIDCOMM-2` | On an `https://` endpoint the agent MUST accept a DIDComm message as the body of an HTTP `POST`; on a `wss://` endpoint the agent MUST accep… |  |
 | `VSA-PUB-DIDCOMM-3` | For each endpoint, the DID Document MUST carry one DIDComm v1 service entry and one DIDComm v2 service entry, each as its specification defi… |  |
 | `VSA-PUB-INV` | [Invitation Parameters](#vsa-pub-inv-invitation-parameters) | Public Endpoints |
-| `VSA-PUB-INV-1` | When the agent returns a `shortUrl`, that URL MUST be under `PUBLIC_API_BASE_URL`, and the agent MUST resolve it for as long as the exchange… |  |
+| `VSA-PUB-INV-1` | When the agent returns a `shortUrl`, that URL MUST be under `PUBLIC_API_BASE_URL`, and the agent MUST resolve it for as long as the record t… |  |
 | `VSA-PUB-INV-2` | On `GET` of a short URL, the agent MUST answer with the Out-of-Band invitation as a JSON body of type `application/json` — the same object t… |  |
 | `VSA-PUB-LISTENER` | [Public Listener](#vsa-pub-listener-public-listener) | Public Endpoints |
 | `VSA-PUB-LISTENER-1` | The agent MUST serve every path of this section under `PUBLIC_API_BASE_URL`, and MUST compose each URL that it publishes for a peer — in its… |  |
@@ -4004,12 +4129,13 @@ Every identifier of this document, in lexical order. A section identifier links 
 | `VSA-VTI-VTJSC` | [VTJSC Management](#vsa-vti-vtjsc-vtjsc-management) | Verifiable Trust Behaviors |
 
 ## Appendix B: Change Log
+- **v4-draft20 (2026-10-14)** — The Invitations module ([[VSA-ADM-DC-INV]](#vsa-adm-dc-inv-invitations)) creates a **standalone invitation**, which the caller puts in a link or a QR code, and tracks its acceptance. `sendInvitation` becomes [`createInvitation`](#vsa-adm-dc-inv-create-createinvitation), with `connectionId` OPTIONAL like `createPresentationRequest` and `createCredentialOffer`: without it, the method returns `invitation` and `shortUrl`, and the invitation names the DID of the agent, so that a wallet which is connected reuses its connection. A standalone invitation carries no `label` and no `imageUrl`: the peer resolves the DID of the agent for the name and the logo of the service. With `reusable` `true`, the agent accepts a standalone invitation any number of times, until the caller deletes its record. The module stores an **invitation record** — `created`, then `accepted`, with one entry of `acceptances` per acceptance — which [`listInvitations`](#vsa-adm-dc-inv-list-listinvitations), [`getInvitation`](#vsa-adm-dc-inv-get-getinvitation), and [`deleteInvitation`](#vsa-adm-dc-inv-delete-deleteinvitation) expose, and which the event `didcomm.invitations.state-updated` reports ([[VSA-EVT-CAT]](#vsa-evt-cat-event-catalog)). The connection field `outOfBandId` becomes `invitationId`. [[VSA-DC-OOB] Out-of-Band Invitation Acceptance](#vsa-dc-oob-out-of-band-invitation-acceptance) states how a peer accepts an invitation — with a new connection, or with the connection that it holds: `handshake-reuse` in DIDComm v1, a message that carries the `pthid` of the invitation on the connection in DIDComm v2, a Trust Ping 2.0 `ping` when the invitation carries no request — and that every invitation is single-use. The short URL of a standalone invitation resolves while its record is `created` ([[VSA-PUB-INV-1]](#vsa-pub-inv-invitation-parameters)).
 - **v4-draft19 (2026-10-13)** — The SD-JWT VC Type Metadata document carries a `display` array, which a wallet reads for the name of a credential, since SD-JWT VC writes the top-level `name` for developers: one object with `locale` `en`, the top-level `name`, and the top-level `description` when there is one, and a `display` on each entry of `claims` whose `label` is the `title` of the property, or its name when it has no `title` ([[VSA-PUB-VT-6]](#vsa-pub-vt-verifiable-trust-resources), per [SD-JWT VC draft-19](https://www.ietf.org/archive/id/draft-ietf-oauth-sd-jwt-vc-19.html#section-5.5)). A document stored before keeps its bytes. The `display` of a credential configuration states its `locale` `en`, so the issuer metadata and the Type Metadata name a type the same way ([OpenID4VC Scope](#openid4vc-scope)). A blank `title`, or one that is not a string, falls back like a missing one for the `name` of the document and of the credential configuration.
 - **v4-draft18 (2026-10-10)** — Resolves [#109](https://github.com/verana-labs/verana-spec/issues/109). [[VSA-VTI-FLOW-OP-OVERRIDE] Validation After a Termination](#vsa-vti-flow-op-override-validation-after-a-termination) states what happens when a `SetParticipantOPtoValidated` lands after a termination of the flow. The chain prevails: on the notification, both agents move a `TERMINATED_BY_VALIDATOR` or `TERMINATED_BY_APPLICANT` flow to `VALIDATED` on the chain state alone; a `HOLDER` applicant reconnects and resends the `onboarding-request` with the same `participant_session_id`, and the validator re-attaches the flow and issues without a further operator action. `ERROR`, `PARTICIPANT_REVOKED` and `PARTICIPANT_SLASHED` stay final. [[VSA-ADM-VT-FL-REJECT-2]](#vsa-adm-vt-fl-reject-rejectflow) defers to the new section; [[VSA-VTI-NOTIF-PP]](#vsa-vti-notif-pp-participant-notifications) describes the applicant side of the notification, which it left out; `pendingAction` reports `APPLICANT` for a `VALIDATED` validator flow on a `TERMINATED` connection ([[VSA-ADM-VT-FL-LIST]](#vsa-adm-vt-fl-list-listflows)); [[VSA-DC-CONN-2]](#vsa-dc-conn-connection-acceptance-policy) accepts a not-yet-verifiable applicant whose entry is `VALIDATED` until the credential is delivered, which a dropped connection after validation needs as well.
 - **v4-draft17 (2026-10-02)** — The OpenID4VP trust decision ([[VSA-VTI-FLOW-VERIFY-OID]](#vsa-vti-flow-verify-oid-openid4vp-trust-decision)) names the result of each step. A failure of step 1 ends the session in `Error`. The agent runs the `status` check of step 6 as a part of step 1: the agent evaluates only a `status_list` reference, requires the signer of the token to be the signer of the credential, and ends the session in `Error` on a failure instead of the verdict `UNTRUSTED`; a change of the signing certificate ends the acceptance of the credentials of the previous certificate. Steps 2 to 5 and step 7 state their verdict, and `RESOLVER_UNAVAILABLE` covers every read that the agent cannot complete: the issuer DID, the Type Metadata document, the Verifiable Trust resolution, and the indexer; a DID Document with another identifier answers `UNTRUSTED`. The agent resolves the issuer DID again for each decision. For an `x5c` credential, the presented leaf certificate is the only anchor of step 1. Step 7 uses the resolution of [[VSA-DC-CONN-1]](#vsa-dc-conn-connection-acceptance-policy), with a 15-second bound and a cache of positive answers, and a read of the ISSUER `Participant` of the issuer for the stored `CredentialSchema`, at the present time, instead of [`IDX-VT-QRY-1` Resolve](../verana-indexer/spec.md#idx-vt-qry-1-resolve). `requestSigner` `x5c` gives `x509_san_dns` on a `presentation_exchange` request ([[VSA-ADM-OID-PR-CREATE]](#vsa-adm-oid-pr-create-createpresentationrequest)). Resolves [#82](https://github.com/verana-labs/verana-spec/issues/82): `trustStatus` is the enumeration `TRUSTED` or `UNTRUSTED` that the agent derives from the resolution. [[VSA-ADM-OID-PR-CREATE]](#vsa-adm-oid-pr-create-createpresentationrequest) derives the credential type from the VTJSC and not from the issuer capability, stores the `CredentialSchema` identifier on the session, and sets the identifier of the requested credential to `cs-{credentialSchemaId}`. [[VSA-ADM-OID-PR-GET]](#vsa-adm-oid-pr-get-getpresentation) specifies each field of `evidence`, the values `TRUSTED` and `UNTRUSTED` of `trustStatus`, and the contents of `disclosedClaims`. [[VSA-VPR-QRY]](#vsa-vpr-qry-indexer-queries) lists the reads of both OpenID4VP moments.
 - **v4-draft16 (2026-09-30)** — Every transaction the agent signs names the Corporation as fee `granter` when the `ParticipantAuthorizationRecord` of the entry has `with_feegrant`, and passes the pre-flight of [VSA-ADM-VT-FL-VALIDATE-6] first; there is no fallback between the two fee payers ([[VSA-VPR-TX-3]](#vsa-vpr-tx-on-chain-transactions)). A `TriggerResolver` that is not sent or that fails is logged at error level with its reason ([[VSA-VPR-TX-4]](#vsa-vpr-tx-on-chain-transactions)). [[VSA-VT-LVP-5]](#vsa-vt-lvp-linked-vp-management) and the service endpoint rule of [[VSA-ADM-VT-SE]](#vsa-adm-vt-se-service-endpoint-management) move from SHOULD to MUST, and a removal or a replacement of a `LinkedVerifiablePresentation` entry triggers the resolver too, as does a change of the presentation that an entry serves. The agent MAY send one `TriggerResolver` for several changes close in time, and MUST send a trigger that it holds back before it stops ([[VSA-VT-LVP-6]](#vsa-vt-lvp-linked-vp-management)). [[VSA-VPR-TX-5]](#vsa-vpr-tx-on-chain-transactions) states that the trigger names an active HOLDER entry of the agent whose `ParticipantAuthorizationRecord` lists `TriggerResolver`, because only a HOLDER record can list it; an agent with no such entry sends nothing and logs a warning. [VSA-VPR-TX-4] also covers the anchoring of [VSA-VTI-ECS-SELF-2] and a transaction that the agent cannot find on chain, and states that the agent does not send a failed transaction again. The `VERANA_AUTO_TRIGGER_RESOLVER` environment variable is removed: the agent always calls `TriggerResolver` after these changes, because the call is the only signal of an off-chain change.
 - **v4-draft15 (2026-09-29)** — The `name` of the SD-JWT VC Type Metadata document ([[VSA-PUB-VT-5]](#vsa-pub-vt-verifiable-trust-resources)) and the display `name` of a credential configuration ([OpenID4VC Scope](#openid4vc-scope)) fall back to the same value when the JSON schema carries no `title`: the reference of the VTJSC to its on-chain `CredentialSchema` entry, `vpr:verana:{chainId}:cs:{credentialSchemaId}`, instead of the bare `id`. The Ecosystem agent and every issuer agent then name a type the same way. An SD-JWT VTC carries no `credentialSubject.id`, since `cnf` binds the holder: `createCredentialOffer` refuses an `id` in `claims` as a claim of the credential envelope and validates the claim set with `id` removed from the required properties ([[VSA-ADM-OID-CE-OFFER]](#vsa-adm-oid-ce-offer-createcredentialoffer)), and a credential configuration lists no `id` claim ([OpenID4VC Scope](#openid4vc-scope)).
-- **v4-draft14 (2026-09-22)** — [`sendInvitation`](#vsa-adm-dc-inv-send-sendinvitation) on a DIDComm v2 connection sends the Out-of-Band 2.0 invitation as an `application/didcomm-plain+json` attachment of a Media Sharing `share-media` message. DIDComm v2 binds the `from` of a message to the sender key, so the invitation cannot be a message of the connection. `label` and `imageUrl` apply to a DIDComm v2 connection again, as the `description` of the message and the `metadata.title` and `metadata.icon` of the item. The behaviour on a DIDComm v1 connection does not change. A [Media Sharing](#vsa-adm-dc-ms-media-sharing) item carries its media by `uri` or inline as `json`, in [`shareMedia`](#vsa-adm-dc-ms-share-sharemedia) and in the `share-media-received` event.
+- **v4-draft14 (2026-09-22)** — [`sendInvitation`](#vsa-adm-dc-inv-create-createinvitation) on a DIDComm v2 connection sends the Out-of-Band 2.0 invitation as an `application/didcomm-plain+json` attachment of a Media Sharing `share-media` message. DIDComm v2 binds the `from` of a message to the sender key, so the invitation cannot be a message of the connection. `label` and `imageUrl` apply to a DIDComm v2 connection again, as the `description` of the message and the `metadata.title` and `metadata.icon` of the item. The behaviour on a DIDComm v1 connection does not change. A [Media Sharing](#vsa-adm-dc-ms-media-sharing) item carries its media by `uri` or inline as `json`, in [`shareMedia`](#vsa-adm-dc-ms-share-sharemedia) and in the `share-media-received` event.
 - **v4-draft13 (2026-09-21)** — Onboarding flows driven from the Administration API: [[VSA-VTI-FLOW-OP-OR]](#vsa-vti-flow-op-or-onboarding-request-composition) composes the `onboarding-request` for any schema, with or without `claims`; [[VSA-VTI-FLOW-OP-ISSUE]](#vsa-vti-flow-op-issue-issuance-after-validation) decides issuance from the validated `Participant` entry; [`validateFlow`](#vsa-adm-vt-fl-validate-validateflow) validates the claim set, records fees and terms, and submits `SetParticipantOPtoValidated` under a `VSOperatorAuthorization` or hands it to an operator, with the `AWAITING_VALIDATION_TX`, `VALIDATION_TX_SUBMITTED`, `VALIDATION_TX_FAILED`, and `VALIDATED_PENDING_CLAIMS` states; [`startValidation`](#vsa-adm-vt-fl-start-startvalidation) and [`rejectFlow`](#vsa-adm-vt-fl-reject-rejectflow) added; flow records carry `role`, `pendingAction`, `oobLink`, `messages[]`, `validation`, and `issuance`. `revokeFlowCredential` is removed: a credential that a flow issues has no credential-level revocation in v4 ([VSA-VTI-FLOW-FMT-5]). A renewal re-enters the flow of the entry with the same `participant_session_id`. The error envelope gains an OPTIONAL `details` object ([[VSA-ADM-CONV-ERR]](#vsa-adm-conv-err-errors)). Flows issue VC Data Model 2.0 Verifiable Trust Credentials secured with Data Integrity proofs, over the RFC 0809 attachment format, always published as a linked VP ([[VSA-VTI-FLOW-FMT]](#vsa-vti-flow-fmt-credential-format-over-didcomm)).
 - **v4-draft12 (2026-09-13)** — Revocation for the OpenID4VC scope over Token Status Lists: a [[VSA-ADM-OID-SL]](#vsa-adm-oid-sl-status-lists) Status Lists module that creates, lists, and deletes the lists that the agent hosts at [[VSA-PUB-OID-1]](#vsa-pub-oid-openid4vc-public-protocol-endpoints), `statusListId` and `statusListIndex` on the OpenID4VCI offer, the coordinates on the issuance session record, and [[VSA-ADM-OID-CR-REVOKE] `revokeCredential`](#vsa-adm-oid-cr-revoke-revokecredential) addressed by list and index. `ttlSeconds` allows one year for a registered credential and keeps the 90-day ceiling for an unregistered one. The [OpenID4VC Scope](#openid4vc-scope) states the assumption behind the `vct` URL. The scope aligns with [[VT-CRED-SDJWT]](https://verana-labs.github.io/verifiable-trust-spec/versions/v4/#vt-cred-sdjwt-sd-jwt-verifiable-trust-credential-vtc): every credential carries `vct#integrity`, the issuer DID follows [[VT-CRED-SDJWT-6]](https://verana-labs.github.io/verifiable-trust-spec/versions/v4/#vt-cred-sdjwt-sd-jwt-verifiable-trust-credential-vtc), and the trust decision verifies the Type Metadata and its link to the VTJSC before it evaluates the `status` claim that [[VT-CRED-SDJWT-7]](https://verana-labs.github.io/verifiable-trust-spec/versions/v4/#vt-cred-sdjwt-sd-jwt-verifiable-trust-credential-vtc) permits.
 - **v4-draft11 (2026-09-10)** — `createCredentialOffer` answers `INVALID_INPUT` (`400`) when the credential definition gives no `CredentialSchema`. [[VSA-ADM-DC-PR-CREATE]](#vsa-adm-dc-pr-create-createpresentationrequest) already answers this code for an entry of a request. `createPresentationRequest` records the `CredentialSchema` of each requested-attribute group. [[VSA-VTI-FLOW-VERIFY-AC-7]](#vsa-vti-flow-verify-ac-anoncreds-trust-decision) states how the agent finds the credential that answers a group. A group that no sub-proof answers, or that `self_attested_attrs` answers, fails the check.
