@@ -1668,6 +1668,8 @@ Deletes a credential exchange record. It does not delete a stored credential, an
 
 **Output**: empty body (HTTP `204`).
 
+**Errors**: `INVALID_STATE` (`409`) — a credential acquisition flow that is not in a terminal state names the exchange.
+
 **Events**: none. A deletion is a caller action, per [[VSA-EVT-CAT]](#vsa-evt-cat-event-catalog).
 
 #### [VSA-ADM-DC-RA] Reactions
