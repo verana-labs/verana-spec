@@ -244,16 +244,13 @@ In the `SetParticipantEffectiveUntil` column, "new `effective_until`" refers to 
 | `role` | `issuer_onboarding_mode` | `verifier_onboarding_mode` | `participant_state` | `op_state` | `SetParticipantOPtoValidated` | `SetParticipantEffectiveUntil` | `RevokeParticipant` | `SlashParticipantTrustDeposit` |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | `ISSUER_GRANTOR`, `ISSUER` | `GRANTOR_ONBOARDING_PROCESS`, `ECOSYSTEM_ONBOARDING_PROCESS` | any | any | any |||| yes |
-| `ISSUER_GRANTOR`, `ISSUER` | `GRANTOR_ONBOARDING_PROCESS`, `ECOSYSTEM_ONBOARDING_PROCESS` | any | `ACTIVE`, `FUTURE` | any ||| yes | yes |
-| `ISSUER_GRANTOR`, `ISSUER` | `GRANTOR_ONBOARDING_PROCESS`, `ECOSYSTEM_ONBOARDING_PROCESS` | any | `ACTIVE`, `FUTURE` | `VALIDATED` || yes — iff new `effective_until` ≤ `op_exp` | yes | yes |
+| `ISSUER_GRANTOR`, `ISSUER` | `GRANTOR_ONBOARDING_PROCESS`, `ECOSYSTEM_ONBOARDING_PROCESS` | any | `ACTIVE` | any || yes — iff new `effective_until` ≤ `op_exp` | yes | yes |
 | `ISSUER_GRANTOR`, `ISSUER` | `GRANTOR_ONBOARDING_PROCESS`, `ECOSYSTEM_ONBOARDING_PROCESS` | any | `ACTIVE`, `FUTURE`, `INACTIVE` | `PENDING` | yes ||||
 | `VERIFIER_GRANTOR`, `VERIFIER` | any | `GRANTOR_ONBOARDING_PROCESS`, `ECOSYSTEM_ONBOARDING_PROCESS` | any | any |||| yes |
-| `VERIFIER_GRANTOR`, `VERIFIER` | any | `GRANTOR_ONBOARDING_PROCESS`, `ECOSYSTEM_ONBOARDING_PROCESS` | `ACTIVE`, `FUTURE` | any ||| yes | yes |
-| `VERIFIER_GRANTOR`, `VERIFIER` | any | `GRANTOR_ONBOARDING_PROCESS`, `ECOSYSTEM_ONBOARDING_PROCESS` | `ACTIVE`, `FUTURE` | `VALIDATED` || yes — iff new `effective_until` ≤ `op_exp` | yes | yes |
+| `VERIFIER_GRANTOR`, `VERIFIER` | any | `GRANTOR_ONBOARDING_PROCESS`, `ECOSYSTEM_ONBOARDING_PROCESS` | `ACTIVE` | any || yes — iff new `effective_until` ≤ `op_exp` | yes | yes |
 | `VERIFIER_GRANTOR`, `VERIFIER` | any | `GRANTOR_ONBOARDING_PROCESS`, `ECOSYSTEM_ONBOARDING_PROCESS` | `ACTIVE`, `FUTURE`, `INACTIVE` | `PENDING` | yes ||||
 | `HOLDER` | any | any | any | any |||| yes |
-| `HOLDER` | any | any | `ACTIVE`, `FUTURE` | any ||| yes | yes |
-| `HOLDER` | any | any | `ACTIVE`, `FUTURE` | `VALIDATED` || yes — iff new `effective_until` ≤ `op_exp` | yes | yes |
+| `HOLDER` | any | any | `ACTIVE` | any || yes — iff new `effective_until` ≤ `op_exp` | yes | yes |
 | `HOLDER` | any | any | `ACTIVE`, `FUTURE`, `INACTIVE` | `PENDING` | yes ||||
 
 Both `*_available_actions[]` arrays are purely indexer-computed. They are not part of the VPR `Participant` data model.
