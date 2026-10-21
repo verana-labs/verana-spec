@@ -1,6 +1,6 @@
 # Verana Frontend v4 Specification
 
-**Latest Draft:** spec v4-draft3
+**Latest Draft:** spec v4-draft4
 
 ## Abstract
 
@@ -109,7 +109,7 @@ The user journey is: connect wallet → discover Corporations the account can ac
 - [VFE-WALLET-2] If a previously-granted wallet is detected on load, the frontend MUST reconnect silently and restore the session (including the acting Corporation, subject to [VFE-CORP-SEL-3]).
 - [VFE-WALLET-3] The connected account's keys never leave the wallet: the frontend MUST NOT request, store, or transmit private key material. All signing goes through the wallet's signer interface.
 - [VFE-WALLET-4] Session state (locale, acting Corporation, list filters) MUST be persisted client-side with a lifetime of `NEXT_PUBLIC_SESSION_LIFETIME_SECONDS` and MUST be invalidated on wallet disconnect or account switch.
-- [VFE-WALLET-5] When the connected account's spendable balance falls below `NEXT_PUBLIC_LOW_BALANCE_WARN_UVNA` **and** the pending action's fees are not covered by a FeeGrant ([VFE-TX-FEEGRANT]), the frontend MUST warn the user before broadcast.
+- [VFE-WALLET-5] When the connected account's spendable balance falls below `NEXT_PUBLIC_LOW_BALANCE_WARN_UVNA` **and** the pending transaction debits the connected account, because it is the fee payer elected per [VFE-TX-FEEGRANT-1] or because the action itself takes funds from it, the frontend MUST warn the user before broadcast.
 
 ## [VFE-CORP] Corporation Context
 
@@ -166,7 +166,7 @@ The user journey is: connect wallet → discover Corporations the account can ac
 
 ### [VFE-TX-FEEGRANT] Fee Payer Election
 
-- [VFE-TX-FEEGRANT-1] Before broadcasting a delegable Msg, the frontend MUST check [`IDX-DE-QRY-5 List Fee Grants`](../verana-indexer/spec.md#idx-de-qry-5-list-fee-grants) with `grantor_corporation_id=<acting>&grantee=<account>&msg_type=<Msg>&only_active=true`. If an active grant covers the Msg type (and its `remaining_spend`, when limited, covers the estimated fee), the transaction's fee `granter` MUST be set to the Corporation's `policy_address`; otherwise the connected account pays. When the frontend reads the `policy_address` balance and it is below the estimated fee, the connected account pays instead; a balance that could not be read MUST NOT change the payer.
+- [VFE-TX-FEEGRANT-1] Before broadcasting a delegable Msg, the frontend MUST check [`IDX-DE-QRY-5 List Fee Grants`](../verana-indexer/spec.md#idx-de-qry-5-list-fee-grants) with `grantor_corporation_id=<acting>&grantee=<account>&msg_type=<Msg>&only_active=true`. If an active grant covers the Msg type (and its `remaining_spend`, when limited, covers the estimated fee), the transaction's fee `granter` MUST be set to the Corporation's `policy_address`; otherwise the connected account pays. Once such a grant is found, the frontend MUST read the `policy_address` balance in the fee denom via RPC (`cosmos.bank.v1beta1.Query/Balance`); when it is below the estimated fee, the connected account pays instead; a balance that could not be read MUST NOT change the payer.
 - [VFE-TX-FEEGRANT-2] The cost preview ([VFE-TX-SIM]) MUST state who pays the network fee (corporation via fee grant, or the connected account).
 
 ### [VFE-TX-SIM] Simulation and Cost Preview
@@ -201,7 +201,7 @@ Trust-economics previews MUST be computed from live chain parameters — never h
 
 ### [VFE-DATA-IDX] Indexer Conventions
 
-- [VFE-DATA-IDX-1] List views MUST use the indexer's keyset pagination (`limit`, `min_id` / `max_id`, `sort=±id`) with **cursor-style** prev/next paging. Numbered page controls MUST NOT be shown (no total counts exist). Client-side sorting/filtering of a fetched window is permitted and MUST be labeled as scoped to loaded results when partial.
+- [VFE-DATA-IDX-1] List views MUST use the indexer's keyset pagination (`limit`, `min_id` / `max_id`, `sort=±id`) with **cursor-style** prev/next paging. Numbered page controls MUST NOT be shown (no total counts exist). Client-side sorting/filtering of a fetched window is permitted and MUST be labeled as scoped to loaded results when partial. A page MAY replace cursor paging with one window of up to the indexer's maximum `limit` while a search, filter or ordering is active, only where its own requirements say so ([VFE-PAGE-DISCOVER-1]).
 - [VFE-DATA-IDX-2] Card and list trust enrichment MUST use the `trust_data=summary|full` parameter of the corporation/ecosystem/participant methods rather than issuing one resolve call per row.
 - [VFE-DATA-IDX-3] The `At-Block-Height` header MAY be used to pin multi-request page loads to one consistent height; the frontend otherwise reads latest state.
 - [VFE-DATA-IDX-4] Entity history panels MUST use the corresponding `*History` methods (`ActivityTimelineResponse`), rendered newest-first with per-item changed fields.
@@ -288,7 +288,7 @@ Trust-economics previews MUST be computed from live chain parameters — never h
 ### [VFE-PAGE-ES-LIST] Ecosystems
 
 - [VFE-PAGE-ES-LIST-1] MUST list the Ecosystems of the acting Corporation via [`IDX-ES-QRY-2`](../verana-indexer/spec.md#idx-es-qry-2-list-ecosystems) with `participant_corporation_id=<acting>` (control **or** active participation), `trust_data=full` for card identity, distinguishing *controlled* from *joined* (role badges from the Corporation's ACTIVE Participants, [`IDX-PP-QRY-2`](../verana-indexer/spec.md#idx-pp-qry-2-list-participants) with `corporation_id` + `ecosystem_id`).
-- [VFE-PAGE-ES-LIST-2] Cards MUST show: service/organization identity per [VFE-TRUST-CLAIMS], trust state, active schema count, participant count, locked trust value (`weight`), issued/verified counters, archived watermark when archived. Filters: show archived, controlled/joined, text filter (client-side over the loaded window per [VFE-DATA-IDX-1]).
+- [VFE-PAGE-ES-LIST-2] Cards MUST show: service/organization identity per [VFE-TRUST-CLAIMS], trust state, active schema count, participant count, locked trust value (`weight`), issued/verified counters, archived watermark when archived. Filters: show archived, controlled/joined, text filter (client-side over the current keyset page per [VFE-DATA-IDX-1]; unlike [VFE-PAGE-DISCOVER-1], this list does not widen the window).
 - [VFE-PAGE-ES-LIST-3] **Create Ecosystem** (`MOD-ES-MSG-1`): DID, language, EGF v1 document URL with computed `digest_sri`; capability-gated with proposal fallback.
 
 ### [VFE-PAGE-ES] Ecosystem
