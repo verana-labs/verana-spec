@@ -1,6 +1,6 @@
 # Verana Frontend v4 Specification
 
-**Latest Draft:** spec v4-draft3
+**Latest Draft:** spec v4-draft4
 
 ## Abstract
 
@@ -109,7 +109,7 @@ The user journey is: connect wallet → discover Corporations the account can ac
 - [VFE-WALLET-2] If a previously-granted wallet is detected on load, the frontend MUST reconnect silently and restore the session (including the acting Corporation, subject to [VFE-CORP-SEL-3]).
 - [VFE-WALLET-3] The connected account's keys never leave the wallet: the frontend MUST NOT request, store, or transmit private key material. All signing goes through the wallet's signer interface.
 - [VFE-WALLET-4] Session state (locale, acting Corporation, list filters) MUST be persisted client-side with a lifetime of `NEXT_PUBLIC_SESSION_LIFETIME_SECONDS` and MUST be invalidated on wallet disconnect or account switch.
-- [VFE-WALLET-5] When the connected account's spendable balance falls below `NEXT_PUBLIC_LOW_BALANCE_WARN_UVNA` **and** the pending action's fees are not covered by a FeeGrant ([VFE-TX-FEEGRANT]), the frontend MUST warn the user before broadcast.
+- [VFE-WALLET-5] When the connected account's spendable balance falls below `NEXT_PUBLIC_LOW_BALANCE_WARN_UVNA` **and** the connected account pays the pending transaction's fee, either because no FeeGrant applies or because [VFE-TX-FEEGRANT-1] falls back to it, the frontend MUST warn the user before broadcast.
 
 ## [VFE-CORP] Corporation Context
 
@@ -166,7 +166,7 @@ The user journey is: connect wallet → discover Corporations the account can ac
 
 ### [VFE-TX-FEEGRANT] Fee Payer Election
 
-- [VFE-TX-FEEGRANT-1] Before broadcasting a delegable Msg, the frontend MUST check [`IDX-DE-QRY-5 List Fee Grants`](../verana-indexer/spec.md#idx-de-qry-5-list-fee-grants) with `grantor_corporation_id=<acting>&grantee=<account>&msg_type=<Msg>&only_active=true`. If an active grant covers the Msg type (and its `remaining_spend`, when limited, covers the estimated fee), the transaction's fee `granter` MUST be set to the Corporation's `policy_address`; otherwise the connected account pays.
+- [VFE-TX-FEEGRANT-1] Before broadcasting a delegable Msg, the frontend MUST check [`IDX-DE-QRY-5 List Fee Grants`](../verana-indexer/spec.md#idx-de-qry-5-list-fee-grants) with `grantor_corporation_id=<acting>&grantee=<account>&msg_type=<Msg>&only_active=true`. If an active grant covers the Msg type (and its `remaining_spend`, when limited, covers the estimated fee), the transaction's fee `granter` MUST be set to the Corporation's `policy_address`; otherwise the connected account pays. Once such a grant is found, the frontend MUST read the `policy_address` spendable balance in the fee denom via RPC (`cosmos.bank.v1beta1.Query/SpendableBalanceByDenom`); when it is below the estimated fee, the connected account MUST pay instead; a balance that could not be read MUST NOT change the payer.
 - [VFE-TX-FEEGRANT-2] The cost preview ([VFE-TX-SIM]) MUST state who pays the network fee (corporation via fee grant, or the connected account).
 
 ### [VFE-TX-SIM] Simulation and Cost Preview
@@ -201,7 +201,7 @@ Trust-economics previews MUST be computed from live chain parameters — never h
 
 ### [VFE-DATA-IDX] Indexer Conventions
 
-- [VFE-DATA-IDX-1] List views MUST use the indexer's keyset pagination (`limit`, `min_id` / `max_id`, `sort=±id`) with **cursor-style** prev/next paging. Numbered page controls MUST NOT be shown (no total counts exist). Client-side sorting/filtering of a fetched window is permitted and MUST be labeled as scoped to loaded results when partial.
+- [VFE-DATA-IDX-1] List views MUST use the indexer's keyset pagination (`limit`, `min_id` / `max_id`, `sort=±id`) with **cursor-style** prev/next paging. Numbered page controls MUST NOT be shown (no total counts exist). Client-side sorting/filtering of a fetched window is permitted and MUST be labeled as scoped to loaded results when partial. The only exception is [VFE-PAGE-DISCOVER-1], which defines its own search window.
 - [VFE-DATA-IDX-2] Card and list trust enrichment MUST use the `trust_data=summary|full` parameter of the corporation/ecosystem/participant methods rather than issuing one resolve call per row.
 - [VFE-DATA-IDX-3] The `At-Block-Height` header MAY be used to pin multi-request page loads to one consistent height; the frontend otherwise reads latest state.
 - [VFE-DATA-IDX-4] Entity history panels MUST use the corresponding `*History` methods (`ActivityTimelineResponse`), rendered newest-first with per-item changed fields.
@@ -288,7 +288,7 @@ Trust-economics previews MUST be computed from live chain parameters — never h
 ### [VFE-PAGE-ES-LIST] Ecosystems
 
 - [VFE-PAGE-ES-LIST-1] MUST list the Ecosystems of the acting Corporation via [`IDX-ES-QRY-2`](../verana-indexer/spec.md#idx-es-qry-2-list-ecosystems) with `participant_corporation_id=<acting>` (control **or** active participation), `trust_data=full` for card identity, distinguishing *controlled* from *joined* (role badges from the Corporation's ACTIVE Participants, [`IDX-PP-QRY-2`](../verana-indexer/spec.md#idx-pp-qry-2-list-participants) with `corporation_id` + `ecosystem_id`).
-- [VFE-PAGE-ES-LIST-2] Cards MUST show: service/organization identity per [VFE-TRUST-CLAIMS], trust state, active schema count, participant count, locked trust value (`weight`), issued/verified counters, archived watermark when archived. Filters: show archived, controlled/joined, text filter (client-side over the loaded window per [VFE-DATA-IDX-1]).
+- [VFE-PAGE-ES-LIST-2] Cards MUST show: service/organization identity per [VFE-TRUST-CLAIMS], trust state, active schema count, participant count, locked trust value (`weight`), issued/verified counters, archived watermark when archived. Filters: show archived, controlled/joined, text filter (client-side over the loaded window per [VFE-DATA-IDX-1], without the [VFE-PAGE-DISCOVER-1] search window).
 - [VFE-PAGE-ES-LIST-3] **Create Ecosystem** (`MOD-ES-MSG-1`): DID, language, EGF v1 document URL with computed `digest_sri`; capability-gated with proposal fallback.
 
 ### [VFE-PAGE-ES] Ecosystem
@@ -331,7 +331,7 @@ Trust-economics previews MUST be computed from live chain parameters — never h
 
 ### [VFE-PAGE-DISCOVER] Discover & Join
 
-- [VFE-PAGE-DISCOVER-1] MUST list all non-archived Ecosystems (`IDX-ES-QRY-2`, `trust_data=full`) with their schema cards (`IDX-CS-QRY-2` grouped by `ecosystem_id`), each ecosystem card carrying identity, trust state, EGF link, counters, and the acting Corporation's existing role badges. Ordering (e.g. by locked trust value) and text search operate client-side over the loaded window per [VFE-DATA-IDX-1].
+- [VFE-PAGE-DISCOVER-1] MUST list all non-archived Ecosystems (`IDX-ES-QRY-2`, `trust_data=full`) with their schema cards (`IDX-CS-QRY-2` grouped by `ecosystem_id`), each ecosystem card carrying identity, trust state, EGF link, counters, and the acting Corporation's existing role badges. With the default filters the list pages by keyset per [VFE-DATA-IDX-1]. While a text search, a client-side filter (hiding untrusted Ecosystems, or those where the acting Corporation is the owner or a participant) or a non-default ordering (e.g. by locked trust value) is active, the frontend MUST load one window at the indexer's maximum `limit` (1024) and apply them client-side over it, labeled as scoped to the loaded results when that window is partial.
 - [VFE-PAGE-DISCOVER-2] The **Join wizard** MUST guide: (1) review ecosystem (identity, EGF through the viewer of [VFE-GEN-SRV-3], trust state); (2) pick schema; (3) pick role (ISSUER / VERIFIER / ISSUER_GRANTOR / VERIFIER_GRANTOR / HOLDER); (4) apply the pricing gate of [VFE-TX-COSTS-2] — for a schema not priced in the native Coin, the wizard MUST stop here with the unsupported-pricing notice — then resolve the path from the schema's onboarding mode for that role, per the VPR mode tables: `OPEN` (issuer/verifier) → **Self-create** (`MsgSelfCreateParticipant`) with DID, effective window, optional fees; `GRANTOR_ONBOARDING_PROCESS` / `ECOSYSTEM_ONBOARDING_PROCESS` (and HOLDER under `ISSUER_ONBOARDING_PROCESS`) → **validator selection**: candidate validators of the required role from `IDX-PP-QRY-2` (`schema_id`, `role`, `participant_state=ACTIVE`, `trust_data=summary`), shown as trust cards with their `validation_fees`; then **Start OP** (`MsgStartParticipantOP`) with the cost preview of [VFE-TX-COSTS-3]; (5) after broadcast, show the created Participant (op_state PENDING) and state that validation continues between the Corporations' VS Agents over DIDComm ([vt-flow](../vt-flow-protocol/spec.md)) — the frontend tracks progress via Participant events. When a candidate validator's DID declares an `EcosystemOnboardingService` service entry ([VFE-OBS-1]), its trust card MUST surface the validator's offer from the service descriptor per [VFE-OBS-3], the wizard MUST record the governance framework acceptance per [VFE-OBS-4] before Start OP, and the case then continues in the frontend ([VFE-OBS-5]).
 - [VFE-PAGE-DISCOVER-3] For HOLDER on a `PERMISSIONLESS` schema, the wizard MUST explain that no on-chain onboarding is required and issuance happens directly against an authorized issuer's Verifiable Service.
 - [VFE-PAGE-DISCOVER-4] The optional VS-operator delegation parameters of `MsgStartParticipantOP` / `MsgSelfCreateParticipant` (`vs_operator`, `vs_operator_authz_*`) MAY be exposed behind an advanced section for corporations operating a VS Agent; the frontend MUST warn that this configuration is frozen at creation.
