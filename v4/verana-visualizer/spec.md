@@ -97,7 +97,7 @@ Boundaries:
 ## [VVZ-DATA] Data Sources
 
 - [VVZ-DATA-1] The Indexer `/v4/*` API MUST be the default source for every entity, history, statistic and event. Real-time events MUST come from [`IDX-INDEXER-SUB-1`](../verana-indexer/spec.md#idx-indexer-sub-1-subscribe-indexer-events).
-- [VVZ-DATA-2] Validator-chain traces MUST use the Graph traversal query **G1** ([`TG-QRY-3`](../verana-graph/spec.md#graph-traversal-queries) via the binding of [`TG-QRY-5`](../verana-graph/spec.md#traversal-rest-binding)); search MUST use the Graph faceted-search binding ([`TG-FCT-9`](../verana-graph/spec.md#search-rest-binding)).
+- [VVZ-DATA-2] Validator-chain traces MUST use the Graph traversal query **G1** ([`TG-QRY-3`](../verana-graph/spec.md#graph-traversal-queries) via the binding of [`TG-QRY-5`](../verana-graph/spec.md#traversal-rest-binding)); search MUST use the Graph faceted-search binding ([`TG-FCT-9`](../verana-graph/spec.md#search-rest-binding)). A free-text query MUST be sent to the `Did`, `Ecosystem`, `Corporation` and `CredentialSchema` surfaces, with untrusted services included so that every service in the scene can be found. Participants and governance proposals, which are not Graph search surfaces ([`TG-FCT-1`](../verana-graph/spec.md#faceted-search-queries)), and exact identifiers (a DID, an account address, `#<id>`) MUST be matched against the loaded network instead. A failed Graph search MUST be shown in the palette ([VVZ-DATA-4]) alongside the local matches.
 - [VVZ-DATA-3] Bank, mint, staking, distribution and governance figures MUST come from Cosmos REST; blocks and the chain head from CometBFT RPC.
 - [VVZ-DATA-4] A failed request MUST surface as an explicit error state. The Visualizer MUST NOT substitute demo, cached-as-fresh or generated data.
 - [VVZ-DATA-5] **Show the query.** Every inspector panel and lens MUST be able to display the exact Indexer, Graph or chain request behind its figures, with a copy-as-curl action.
@@ -106,7 +106,7 @@ Boundaries:
 |---|---|
 | Ecosystems, schemas, corporations | `IDX-ES-QRY-1/2/3/4`, `IDX-CS-QRY-1/2/4/5`, `IDX-CO-QRY-1/2/3/4` |
 | Participants and lifecycle | `IDX-PP-QRY-1/2/3/5/8` |
-| Trust deposits and fee economics | `IDX-TD-QRY-1/2/3`, `IDX-PP-QRY-4`, `IDX-ES-QRY-3`, `IDX-CS-QRY-4` |
+| Trust deposits and fee economics | `IDX-TD-QRY-1/2`, `IDX-PP-QRY-4`, `IDX-ES-QRY-3`, `IDX-CS-QRY-4` |
 | TU exchange rate | `IDX-XR-QRY-1/2/3` |
 | Corporation groups, proposals and votes | `IDX-GR-QRY-1/2/3/4/5` |
 | Growth, history and time replay | `IDX-STATS-QRY-1/2/3/4`, `IDX-INDEXER-QRY-5` (`next_change_at`), `IDX-PP-QRY-3`, `IDX-ES-QRY-4` |
@@ -125,7 +125,7 @@ Boundaries:
 |---|---|---|
 | **Network** | Ecosystems as stars, Participants on orbits (one orbit per Credential Schema, radius by accreditation tier), Verifiable Services near the accreditations they hold. | `IDX-ES-QRY-2`, `IDX-CS-QRY-2`, `IDX-PP-QRY-2`, `IDX-CO-QRY-2`, `IDX-VT-QRY-3` |
 | **Trust** | Accreditation trees per Ecosystem: root → grantors → issuers and verifiers → holders, following `validator_participant_id`. Hosts the trust check ([VVZ-TRUST]). | `IDX-PP-QRY-2`, `TG-QRY-3` (G1), `IDX-VT-QRY-1` |
-| **Economics** | Trust deposits, fee rules per schema and Participant, cumulative fees, yield and slashes, and the what-if simulator ([VVZ-ECON]). | `IDX-TD-QRY-1/2/3`, `IDX-STATS-QRY-1/2`, `IDX-XR-QRY-1/2/3` |
+| **Economics** | Trust deposits, fee rules per schema and Participant, cumulative fees, yield and slashes, and the what-if simulator ([VVZ-ECON]). | `IDX-TD-QRY-1/2`, `IDX-STATS-QRY-1/2`, `IDX-XR-QRY-1/2/3` |
 | **Chain** | Consensus and liveness: validators sized by voting power around the chain core, and the stream of recent blocks with transaction counts. | Cosmos REST staking, CometBFT RPC, `IDX-INDEXER-SUB-1` |
 | **Time** | Replay of the network from genesis or any block: entities appear when created and states change as they did, with a scrubber, an event-density strip and jump to the next event. | `IDX-STATS-QRY-2`, `IDX-INDEXER-QRY-5`, `*-History` queries, `At-Block-Height` |
 | **Governance** | Each Corporation as a constellation of its group members with weights, open and past proposals and votes; chain-level governance and software-upgrade proposals. | `IDX-GR-QRY-1/3/4/5`, Cosmos `gov/v1` |
@@ -188,7 +188,7 @@ Boundaries:
 
 ## [VVZ-HONEST] Honesty Rules
 
-- [VVZ-HONEST-1] **Real events only.** Every animation MUST correspond to a real, timestamped event from the Indexer or the chain. Nothing MUST be generated to fill a quiet network. The only simulated content is the simulator of [VVZ-ECON-3], and purely decorative background elements MUST NOT be presented as data.
+- [VVZ-HONEST-1] **Real events only.** Every animation MUST correspond to a real, timestamped event from the Indexer or the chain. Nothing MUST be generated to fill a quiet network. With no event behind them, entities MUST stay still: no idle pulsing, breathing, bobbing or spinning, including on open proposals. Camera motion (auto-rotation per [VVZ-GEN-SCOPE-3], transitions between views) is navigation, not data, and is permitted. The only simulated content is the simulator of [VVZ-ECON-3], and purely decorative background elements MUST NOT be presented as data.
 - [VVZ-HONEST-2] The Visualizer MUST NOT present a "last transaction N ago" indicator or any equivalent statement that the network is quiet.
 - [VVZ-HONEST-3] **The Indexer verdict is authoritative.** The Visualizer MUST NOT re-implement trust evaluation. Each hop of a trace MUST be labelled as state (Participant state and onboarding state from the Indexer and G1), never as a verdict of its own.
 - [VVZ-HONEST-4] **TU without a rate.** While no TU exchange rate is published, all amounts MUST be shown in TU only ([VVZ-ECON-4]).
