@@ -20,6 +20,9 @@ Specifications are versioned at the top level. Each version contains one folder 
 ```text
 playground/            Verana Playground: site spec, wallet-integration guidelines,
                        the Verana Explained story, and the publication/award kit
+v5/
+  vt-flow-protocol/
+    spec.md
 v4/
   vs-agent/
     spec.md
@@ -31,6 +34,12 @@ v4/
 The `playground/` directory is unversioned: it specifies the [Verana Playground](./playground/README.md) website (`playground.testnet.verana.network`) and the third-party wallet-integration guidelines.
 
 ## Current specifications
+
+### v5
+
+| Component        | Spec                                                                | Status |
+| ---------------- | ------------------------------------------------------------------- | ------ |
+| VT Flow Protocol | [`v5/vt-flow-protocol/spec.md`](./v5/vt-flow-protocol/spec.md)       | Draft  |
 
 ### v4
 
