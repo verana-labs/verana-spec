@@ -3156,6 +3156,12 @@ These requirements apply in both [ECS Standalone Mode](#vsa-vti-ecs-standalone-e
 
 [VSA-VTI-ECS-SELF-3] When the ISSUER `Participant` entry becomes revoked or slashed, the agent MUST delete each credential that it issued to itself under that entry, and MUST remove the `LinkedVerifiablePresentation` entry of each one, per [[VSA-VT-LVP-3]](#vsa-vt-lvp-linked-vp-management) and [[VSA-VTI-FLOW-OP-REVOKE]](#vsa-vti-flow-op-revoke-revoke-participant--slash-participant-trust-deposit).
 
+> **Open question: ECS Badge and ECS UserAgent self-issuance.** [VSA-VTI-ECS-SELF-1] applies to every ECS schema, and [VSA-VTI-ECS-SELF-2] publishes the credential as a `LinkedVerifiablePresentation` entry, which [VSA-VTI-FLOW-FMT-4] forbids for an ECS Badge and an ECS UserAgent credential; [[VSA-VT-LVP-1]](#vsa-vt-lvp-linked-vp-management) requires that publication for every ECS credential that the agent holds. An agent that holds an active ISSUER `Participant` entry on one of those two schemas therefore has no compliant behaviour. The agent is the subject of neither credential — a Badge describes a person, a UserAgent describes a software instance — and [[VSA-VTI-CFG-ENV-ECS]](#vsa-vti-cfg-env-ecs-ecs-credential-claims) defines no claims variable for either schema. The resolution is open. Three handlings are candidates:
+>
+> 1. **No self-issuance.** [VSA-VTI-ECS-SELF-1] excludes the two schemas. An ISSUER `Participant` entry on one of them authorizes the agent to issue the credential to another subject, and the agent runs no self-issuance for that entry.
+> 2. **Self-issuance without publication.** The agent composes, signs and anchors the credential, and publishes no `LinkedVerifiablePresentation` entry for it. This needs a claims source that [[VSA-VTI-CFG-ENV-ECS]](#vsa-vti-cfg-env-ecs-ecs-credential-claims) does not define.
+> 3. **Self-issuance with publication.** [VSA-VTI-FLOW-FMT-4] admits an exception for a self-issued credential. This serves the claims of a Badge, which include `name` and `photo`, at an unauthenticated URL.
+
 ##### [VSA-VTI-ECS-STANDALONE] ECS Standalone Mode
 
 The agent holds an ECS-Organization or an ECS-Persona credential, and issues its own Service credential ([[VS-REQ-3]](https://verana-labs.github.io/verifiable-trust-spec/#vs-req-verifiable-service-basic-requirements-and-linked-vps)). The agent:
