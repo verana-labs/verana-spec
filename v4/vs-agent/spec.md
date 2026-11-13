@@ -247,6 +247,7 @@ The table lists every environment variable of the VS Agent container. The subsec
 | [`EVENTS_WEBHOOK_API_KEY`](#vsa-vti-cfg-env-evt-events-api) | OPTIONAL | Events API |
 | [`OID4VC_CONFIG_FILE_LOCATION`](#vsa-vti-cfg-env-oid-openid4vc) | OPTIONAL | OpenID4VC |
 | [`OID4VC_CREDENTIAL_OFFER_EXPIRATION_SECONDS`](#vsa-vti-cfg-env-oid-openid4vc) | OPTIONAL | OpenID4VC |
+| [`OID4VC_PRESENTATION_REQUEST_EXPIRATION_SECONDS`](#vsa-vti-cfg-env-oid-openid4vc) | OPTIONAL | OpenID4VC |
 | [`AGENT_LOG_LEVEL`](#vsa-vti-cfg-env-log-logging) | OPTIONAL | Logging |
 | [`ADMIN_API_LOG_LEVEL`](#vsa-vti-cfg-env-log-logging) | OPTIONAL | Logging |
 
@@ -365,6 +366,7 @@ These variables configure the listener and the access model of the [Administrati
 |---|---|---|
 | `OID4VC_CONFIG_FILE_LOCATION` | OPTIONAL | Location of the OpenID4VC configuration file, a JSON document with the structure below: a local filesystem path, or an `https://` URL that the agent reads once at startup, as for `MRTD_MASTER_LIST_CSCA_LOCATION`. When the operator sets it, the agent enables OpenID4VC; when the operator leaves it unset, the agent serves no OpenID4VC path. The file can hold a private key, so the operator SHOULD manage it as a secret: a read-only mount, or a URL that only the agent reaches. |
 | `OID4VC_CREDENTIAL_OFFER_EXPIRATION_SECONDS` | OPTIONAL | Lifetime of a credential offer in seconds, an integer from `60` to `7776000`. Defaults to `900`. The agent reports it as `expiresAt`, independent of `ttlSeconds`, and MUST refuse to start on any other value. |
+| `OID4VC_PRESENTATION_REQUEST_EXPIRATION_SECONDS` | OPTIONAL | Lifetime of a presentation request in seconds, an integer from `60` to `7776000`. Defaults to `900`. The agent reports it as `expiresAt`, and MUST refuse to start on any other value. |
 
 The agent MUST read the file at startup, MUST validate it, and MUST refuse to start when it cannot read the location or when validation fails, including on a key that the table does not define. When the location is a URL, the agent MUST refuse any scheme other than `https`, MUST follow no redirect, and MUST NOT read the location again while it runs. Field names are camelCase (see [API Conventions](#vsa-adm-conv-api-conventions)).
 
@@ -2125,11 +2127,13 @@ Creates an OpenID4VP authorization request for one credential type, and for the 
 - The identifier of the requested credential MUST be `cs-{credentialSchemaId}`, where `{credentialSchemaId}` is the `id` of the `CredentialSchema` of the type. This value is the `id` of the credential query for `dcql`, and the `id` of the input descriptor for `presentation_exchange`. DCQL permits only the characters `[a-zA-Z0-9_-]` in this identifier, so the `jsonSchemaCredentialId`, which is a URL, cannot be the identifier. The `id` of a presentation definition is `cs-{credentialSchemaId}-presentation-exchange`.
 - The agent MUST use the response mode `direct_post.jwt` for a `dcql` request.
 - The agent MUST use the response mode `direct_post` for a `presentation_exchange` request, because a wallet that predates DCQL cannot construct the encrypted response.
+- The request MUST expire after the lifetime that `OID4VC_PRESENTATION_REQUEST_EXPIRATION_SECONDS` sets (see [[VSA-VTI-CFG-ENV-OID]](#vsa-vti-cfg-env-oid-openid4vc)), and the agent reports it as `expiresAt`.
 
 **Output**:
 
 - `proofExchangeId` — identifier of the resulting verification session, for later tracking.
 - `url` — the authorization request URI, ready to render as a QR code or to send as a link.
+- `expiresAt` — ISO 8601 UTC datetime after which the request is no longer valid.
 
 **Errors**:
 
@@ -2168,6 +2172,7 @@ Retrieves one verification session by identifier, with its trust result.
 - `state` — state of the verification session.
 - `createdAt` — ISO 8601 UTC datetime at which the agent created the request.
 - `updatedAt` — ISO 8601 UTC datetime at which the session last changed.
+- `expiresAt` — ISO 8601 UTC datetime after which the request is no longer valid.
 - `errorMessage` — OPTIONAL. The error that stopped the session.
 - `cryptographicVerified` — `true` when the agent verified the OpenID4VP response, the nonce, the audience, the holder binding, the SD-JWT disclosures, the signature of the credential, its validity period, and its `status` claim when the credential carries a Token Status List reference. These are step 1 and step 6 of the [trust decision](#vsa-vti-flow-verify-oid-openid4vp-trust-decision).
 - `accepted` — `true` only when the trust decision returns the verdict `TRUSTED_AUTHORIZED`. See [Trust decision](#vsa-vti-flow-verify-oid-openid4vp-trust-decision).
@@ -3825,7 +3830,7 @@ The agent reports its state through [`getLiveness`](#vsa-adm-ag-live-getliveness
 
 | Condition | Level | Effect | Section |
 |---|---|---|---|
-| A REQUIRED variable is missing or invalid, or the agent cannot read `OID4VC_CONFIG_FILE_LOCATION`, or the OpenID4VC configuration file fails validation, or `OID4VC_CREDENTIAL_OFFER_EXPIRATION_SECONDS` is invalid | Error | The agent fails to start. | [[VSA-VTI-BOOT]](#vsa-vti-boot-bootstrap-sequence), [[VSA-VTI-CFG-ENV-OID]](#vsa-vti-cfg-env-oid-openid4vc) |
+| A REQUIRED variable is missing or invalid, or the agent cannot read `OID4VC_CONFIG_FILE_LOCATION`, or the OpenID4VC configuration file fails validation, or `OID4VC_CREDENTIAL_OFFER_EXPIRATION_SECONDS` or `OID4VC_PRESENTATION_REQUEST_EXPIRATION_SECONDS` is invalid | Error | The agent fails to start. | [[VSA-VTI-BOOT]](#vsa-vti-boot-bootstrap-sequence), [[VSA-VTI-CFG-ENV-OID]](#vsa-vti-cfg-env-oid-openid4vc) |
 | The location derived from `PUBLIC_API_BASE_URL` differs from the location of the persisted DID | Error, naming both values | The agent fails to start. | [[VSA-VTI-BOOT-DID]](#vsa-vti-boot-did-did-creation) |
 | No `VSOperatorAuthorization` is granted and the `vs_operator` balance is zero | Warning | None. | [[VSA-VTI-BOOT]](#vsa-vti-boot-bootstrap-sequence) |
 | `Corporation.did` rotates away from the DID of the agent, under the per-DID subscription scope | Warning | The agent stops processing events on the previous DID. | [[VSA-VTI-NOTIF-CO]](#vsa-vti-notif-co-corporation-notifications) |
