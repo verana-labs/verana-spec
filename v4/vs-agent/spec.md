@@ -1,6 +1,6 @@
 # VS Agent v4 Specification
 
-**Latest Draft:** spec v4-draft24
+**Latest Draft:** spec v4-draft25
 
 ## Abstract
 
@@ -2079,6 +2079,7 @@ Asks the peer of a connection for the data groups of its electronic travel docum
 **Inputs** (request body):
 
 - `connectionId` (REQUIRED) — connection to send the request on.
+- `parentThreadId` (OPTIONAL) — thread identifier of the MRZ exchange that this request follows: the `threadId` of the `didcomm.mrtd.mrz-data-received` event. The agent sends it as the parent thread of the request, so that the peer reads the chip with the MRZ of that exchange.
 
 **Output**:
 
@@ -4265,6 +4266,7 @@ Every identifier of this document, in lexical order. A section identifier links 
 | `VSA-VTI-VTJSC` | [VTJSC Management](#vsa-vti-vtjsc-vtjsc-management) | Verifiable Trust Behaviors |
 
 ## Appendix B: Change Log
+- **v4-draft25 (2026-11-16)** — [`requestEmrtdData`](#vsa-adm-dc-mrtd-emrtd-requestemrtddata) takes an OPTIONAL `parentThreadId`: the thread identifier of the MRZ exchange that the request follows. The agent sends it as the parent thread of the request, so that the peer reads the chip with the MRZ of that exchange.
 - **v4-draft24 (2026-11-13)** — Resolves [#132](https://github.com/verana-labs/verana-spec/issues/132). [[VSA-VTI-ECS-SELF-1]](#vsa-vti-ecs-self-ecs-self-issuance) names the schemas that the agent issues to itself: ECS-Organization, ECS-Persona, and ECS-Service. The agent does not issue its own ECS-Badge or ECS-UserAgent credential: an ISSUER `Participant` entry for one of these two schemas authorizes the agent to issue the credential to another subject, and starts no self-issuance. Before this draft the rule covered every ECS schema, and its publication step contradicted [[VSA-VTI-FLOW-FMT-4]](#vsa-vti-flow-fmt-credential-format-over-didcomm) for these two. [[VSA-VTI-FLOW-FMT-4]](#vsa-vti-flow-fmt-credential-format-over-didcomm) excepts them from the credentials that the applicant publishes, and states that the agent does not issue them to itself, and [[VSA-VT-LVP-1]](#vsa-vt-lvp-linked-vp-management) names the three ECS credentials that the agent publishes and forbids the publication of the other two, also when a credential acquisition flow delivers one.
 - **v4-draft23 (2026-11-13)** — [`declinePresentationExchange`](#vsa-adm-dc-pr-decline-declinepresentationexchange) answers `INVALID_STATE` when the agent is the verifier and the trust decision of [[VSA-VTI-FLOW-VERIFY-AC-7]](#vsa-vti-flow-verify-ac-anoncreds-trust-decision) has not completed for the received presentation: the caller waits for the event of `presentation-received`, and acts on it only when it carries `verified` `true`. The trust decision applies to a presentation with or without a connection. When the agent starts, it completes each trust decision that an earlier run did not complete, with the state of the Verana ledger at that time ([[VSA-VTI-FLOW-VERIFY-AC-8]](#vsa-vti-flow-verify-ac-anoncreds-trust-decision)). When the entries of `rejectedCredentials` carry different codes, `errorMessage` and the `problem-report` carry `e.p.issuer-not-authorized`.
 - **v4-draft22 (2026-11-12)** — The DIDComm presentation record ([[VSA-ADM-DC-PR-GET]](#vsa-adm-dc-pr-get-getpresentation)) carries `credentials`: one entry for each requested credential, with the credential definition, the issuer DID, the `CredentialSchema`, the Ecosystem, the VTJSC, the claims, and the unrevealed attributes of the presented credential. The agent records these values when the trust decision of [[VSA-VTI-FLOW-VERIFY-AC-7]](#vsa-vti-flow-verify-ac-anoncreds-trust-decision) succeeds, and emits the `didcomm.presentations.state-updated` event of the change to `presentation-received` after that decision, with its result. A presentation that fails the decision gives that event with `verified` `false` and the cause in `errorMessage`, and then the event of `abandoned`. The record of such a presentation carries `rejectedCredentials`: one entry for each requested credential that failed, with the problem-report code, the cause, and the credential definition, the issuer DID, and the `CredentialSchema` when the agent has them. `verified` is `false` until the trust decision completes, and [`acceptPresentation`](#vsa-adm-dc-pr-accept-acceptpresentation) answers `INVALID_STATE` for such a record.
