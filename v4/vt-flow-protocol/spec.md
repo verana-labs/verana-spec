@@ -130,7 +130,7 @@ All states enumerated below are normative.
 
 All protocol errors are modelled with the adopted `problem-report` message (see [Problem Report (adopted)](#problem-report-adopted)). Errors that allow retry (e.g., `vt-flow.invalid-claims`) return the Validator to `AWAITING_OR` / `AWAITING_IR` and allow the Applicant to resend a corrected request. Fatal errors **MUST** transition both parties' Connection State to `TERMINATED`, and their Flow State to the state that the [Error Codes](#error-codes) table gives for the code: `TERMINATED_BY_VALIDATOR` or `TERMINATED_BY_APPLICANT` for an explicit termination, `ERROR` for every other fatal code. An explicit termination does not bind the chain: when the on-chain Onboarding Process of a `TERMINATED_BY_VALIDATOR` or `TERMINATED_BY_APPLICANT` flow is validated afterwards, both parties move to `VALIDATED` and the Applicant re-attaches the session (see [Reconnection](#reconnection)). `ERROR`, `PARTICIPANT_REVOKED`, and `PARTICIPANT_SLASHED` are final.
 
-Errors during the Issue Credential V2 subprotocol use the subprotocol's own `problem-report` message. The vt-flow Flow State transitions to `ERROR` when the subprotocol exchange transitions to `abandoned`.
+Errors during the Issue Credential V2 subprotocol use the subprotocol's own `problem-report` message. The vt-flow Flow State transitions to `ERROR` when the subprotocol exchange transitions to `abandoned`, with one exception: an Applicant whose `request-credential` gets no credential in answer, or gets a problem report in answer, repairs the issuance per step 8 of [Reconnection](#reconnection), and its Flow State stays `CRED_OFFERED`.
 
 ### Flow Variants
 
@@ -418,7 +418,7 @@ The vt-flow session correlates with its Issue Credential V2 subprotocol through 
 | `credential-issued` | — | (no transition) |
 | `credential-received` | *(perform on-chain digest verification, then either Ack or problem-report)* | — |
 | `done` | `COMPLETED` | `COMPLETED` |
-| `abandoned` | `ERROR` (Connection → `TERMINATED`) | `ERROR` (Connection → `TERMINATED`) |
+| `abandoned` | `ERROR` (Connection → `TERMINATED`), except after a problem report that answers its `request-credential`: no transition, see [Reconnection](#reconnection) step 8 | `ERROR` (Connection → `TERMINATED`) |
 
 Receiving `credential-received` on the Applicant side is the hook point for on-chain digest verification.
 
@@ -433,11 +433,12 @@ If the Applicant reconnects after a connection closes:
 
 If the Validator cannot find a matching session, a new session is created normally.
 
-The same re-attach serves a flow that a termination closed and that the chain re-opened. These rules apply to the Onboarding Process variant only; a Credential Direct Issuance has no on-chain validation.
+The same re-attach serves a flow that a termination closed and that the chain re-opened. Steps 5 to 7 apply to the Onboarding Process variant only; a Credential Direct Issuance has no on-chain validation.
 
 5. When the `SetParticipantOPtoValidated` of the `Participant` entry of a `TERMINATED_BY_VALIDATOR` or `TERMINATED_BY_APPLICANT` flow lands afterwards and the entry is active, both parties **MUST** move the flow to `VALIDATED` (see [States](#states)). The Applicant **MUST** then reconnect per steps 1 and 2 when the role of the entry is `HOLDER`; for any other role `VALIDATED` is terminal and no reconnection follows. `ERROR`, `PARTICIPANT_REVOKED`, and `PARTICIPANT_SLASHED` are not re-opened.
 6. The Validator **MUST** re-attach a request that names a `VALIDATED` flow and resume at `offer-credential` (step 6 of the [Onboarding Process Flow](#onboarding-process-flow)). It **MUST NOT** run the validation again, **MUST NOT** send `validating`, and **MUST NOT** answer `vt-flow.invalid-participant-session-id` on the ground that the flow was terminated. The `problem-report` that closed the flow is superseded by the chain event, and the reconnection is not a retry of the request it refused.
 7. A `participant_session_id` is not a secret. The Validator **MUST** re-attach a flow only to a connection from the same peer DID as the connection it replaces, and **MUST** refuse any other request that names it with `vt-flow.invalid-participant-session-id`.
+8. To repair the issuance run of a `CRED_OFFERED` flow, the Applicant also resends the request on an established connection, with the same `thid`, when its `request-credential` gets no credential in answer, or gets a problem report in answer. The Validator re-attaches it per step 3 and resumes the run. It **MUST NOT** submit `CreateOrUpdateParticipantSession` a second time for a run whose anchoring succeeded or is pending. A run whose messages used an earlier connection cannot go on: when it sent no anchoring transaction, the Validator abandons it and sends a new `offer-credential`; otherwise it sends nothing. On the same connection, when the run received no `request-credential`, the Validator abandons the run and sends a new `offer-credential`; when it received the request and did not try to broadcast an anchoring transaction, it starts the anchoring; when the anchoring succeeded, it sends the stored `issue-credential` again; otherwise it sends nothing. When the Applicant receives a new `offer-credential` for the flow, it continues with it and abandons the earlier run. A repair is not a renewal: it changes no on-chain state.
 
 ## State Machine Diagrams
 
