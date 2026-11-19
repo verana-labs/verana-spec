@@ -2079,6 +2079,7 @@ Asks the peer of a connection for the data groups of its electronic travel docum
 **Inputs** (request body):
 
 - `connectionId` (REQUIRED) — connection to send the request on.
+- `parentThreadId` (OPTIONAL) — thread identifier of the MRZ exchange that this request follows: the `threadId` of the `didcomm.mrtd.mrz-data-received` event. The agent sends it as the parent thread of the request, so that the peer reads the chip with the MRZ of that exchange.
 
 **Output**:
 
