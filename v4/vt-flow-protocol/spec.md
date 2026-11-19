@@ -130,7 +130,7 @@ All states enumerated below are normative.
 
 All protocol errors are modelled with the adopted `problem-report` message (see [Problem Report (adopted)](#problem-report-adopted)). Errors that allow retry (e.g., `vt-flow.invalid-claims`) return the Validator to `AWAITING_OR` / `AWAITING_IR` and allow the Applicant to resend a corrected request. Fatal errors **MUST** transition both parties' Connection State to `TERMINATED`, and their Flow State to the state that the [Error Codes](#error-codes) table gives for the code: `TERMINATED_BY_VALIDATOR` or `TERMINATED_BY_APPLICANT` for an explicit termination, `ERROR` for every other fatal code. An explicit termination does not bind the chain: when the on-chain Onboarding Process of a `TERMINATED_BY_VALIDATOR` or `TERMINATED_BY_APPLICANT` flow is validated afterwards, both parties move to `VALIDATED` and the Applicant re-attaches the session (see [Reconnection](#reconnection)). `ERROR`, `PARTICIPANT_REVOKED`, and `PARTICIPANT_SLASHED` are final.
 
-Errors during the Issue Credential V2 subprotocol use the subprotocol's own `problem-report` message. The vt-flow Flow State transitions to `ERROR` when the subprotocol exchange transitions to `abandoned`, with one exception: an Applicant that has sent its `request-credential` and has received no credential of the run repairs the issuance per step 8 of [Reconnection](#reconnection), and its Flow State stays `CRED_OFFERED`.
+Errors during the Issue Credential V2 subprotocol use the subprotocol's own `problem-report` message. The vt-flow Flow State transitions to `ERROR` when the subprotocol exchange transitions to `abandoned`, with one exception: an Applicant that has sent its `request-credential` and has received no credential of the run repairs the issuance per step 8 of [Reconnection](#reconnection), and its Flow State stays `CRED_OFFERED`. A run that a party abandons by a rule of step 8 or by a renewal changes no Flow State.
 
 ### Flow Variants
 
@@ -418,7 +418,7 @@ The vt-flow session correlates with its Issue Credential V2 subprotocol through 
 | `credential-issued` | — | (no transition) |
 | `credential-received` | *(perform on-chain digest verification, then either Ack or problem-report)* | — |
 | `done` | `COMPLETED` | `COMPLETED` |
-| `abandoned` | `ERROR` (Connection → `TERMINATED`), except for an Applicant that has sent its `request-credential` and has received no credential of the run: no transition, see [Reconnection](#reconnection) step 8 | `ERROR` (Connection → `TERMINATED`) |
+| `abandoned` | `ERROR` (Connection → `TERMINATED`), except for an Applicant that has sent its `request-credential` and has received no credential of the run, and for a run that the party abandons by a rule of step 8 or by a renewal: no transition, see [Reconnection](#reconnection) step 8 | `ERROR` (Connection → `TERMINATED`), except for a run that the party abandons by a rule of [Reconnection](#reconnection) step 8 or by a renewal: no transition |
 
 Receiving `credential-received` on the Applicant side is the hook point for on-chain digest verification.
 
