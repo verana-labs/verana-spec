@@ -117,7 +117,7 @@ All states enumerated below are normative.
 | `VALIDATING` | Both | Both | `ESTABLISHED`. Validator performing off-chain validation (Onboarding Process) or processing an accepted issuance request (Direct Issuance). Entered when the Validator accepts the request, and on `validating` after an out-of-band step; the Validator returns to `OOB_PENDING` with a further `oob-link` when it needs corrections or additions. |
 | `VALIDATED` | Both | Onboarding Process | `ESTABLISHED`, or `TERMINATED` when the validation landed after a termination of the flow, until the Applicant re-attaches it (see [Reconnection](#reconnection)). Validator called `SetParticipantOPtoValidated` on-chain; `op_state` is now `VALIDATED`. Terminal state when the validated `Participant` role is not `HOLDER`, until a renewal re-enters the flow: no credential is issued. When the role is `HOLDER`, the Validator sends `offer-credential` (transition to `CRED_OFFERED`), or moves to `VALIDATED_PENDING_CLAIMS` when it holds no claim set that satisfies the schema (see [Issuance After Validation](../vs-agent/spec.md#vsa-vti-flow-op-issue-issuance-after-validation)). |
 | `VALIDATED_PENDING_CLAIMS` | Validator | Onboarding Process | `ESTABLISHED`. `op_state` is `VALIDATED` and the role is `HOLDER`, but the Validator holds no claim set that satisfies the schema. The Validator obtains the claims out of band, then sends `offer-credential`. The Applicant stays in `VALIDATED`. |
-| `CRED_OFFERED` | Both | Both | `ESTABLISHED`. Issue Credential V2 subprotocol in flight. Applicant verifies on-chain digest while in this state; acceptance transitions to `COMPLETED`. |
+| `CRED_OFFERED` | Both | Both | `ESTABLISHED`. Issue Credential V2 subprotocol in flight. Applicant verifies on-chain digest while in this state; acceptance transitions to `COMPLETED`. In the Onboarding Process variant, a renewal also re-enters the flow from here, as from `COMPLETED`, while the `op_state` of the `Participant` entry is `PENDING`: both parties abandon the run in flight. |
 | `COMPLETED` | Both | Both | `ESTABLISHED`. Credential delivered, verified, and accepted (Issue Credential V2 Ack sent). Connection remains open for future updates. A renewal re-enters the flow from here: the Applicant resends `onboarding-request` with the same `participant_session_id` and moves to `OR_SENT`; the Validator moves to `AWAITING_OR` and accepts it as a new process. The same re-entry applies from `VALIDATED` for a role other than `HOLDER`. |
 | `CRED_REVOKED` | Both | Both | `ESTABLISHED`. Validator sent `credential-state-change` with `state=REVOKED`. Applicant removed the linked VP, if any, and deleted the credential. Connection remains open. |
 | `TERMINATED_BY_VALIDATOR` | Both | Both | `TERMINATED`. Validator explicitly terminated the flow (rejection, timeout, or policy decision). For an Onboarding Process, not final: when the `Participant` entry of the flow is validated on chain afterwards and is active, both parties move to `VALIDATED` (see [Reconnection](#reconnection)). |
@@ -130,7 +130,7 @@ All states enumerated below are normative.
 
 All protocol errors are modelled with the adopted `problem-report` message (see [Problem Report (adopted)](#problem-report-adopted)). Errors that allow retry (e.g., `vt-flow.invalid-claims`) return the Validator to `AWAITING_OR` / `AWAITING_IR` and allow the Applicant to resend a corrected request. Fatal errors **MUST** transition both parties' Connection State to `TERMINATED`, and their Flow State to the state that the [Error Codes](#error-codes) table gives for the code: `TERMINATED_BY_VALIDATOR` or `TERMINATED_BY_APPLICANT` for an explicit termination, `ERROR` for every other fatal code. An explicit termination does not bind the chain: when the on-chain Onboarding Process of a `TERMINATED_BY_VALIDATOR` or `TERMINATED_BY_APPLICANT` flow is validated afterwards, both parties move to `VALIDATED` and the Applicant re-attaches the session (see [Reconnection](#reconnection)). `ERROR`, `PARTICIPANT_REVOKED`, and `PARTICIPANT_SLASHED` are final.
 
-Errors during the Issue Credential V2 subprotocol use the subprotocol's own `problem-report` message. The vt-flow Flow State transitions to `ERROR` when the subprotocol exchange transitions to `abandoned`.
+Errors during the Issue Credential V2 subprotocol use the subprotocol's own `problem-report` message. The vt-flow Flow State transitions to `ERROR` when the subprotocol exchange transitions to `abandoned`, with one exception: an Applicant that has sent its `request-credential` and has received no credential of the run repairs the issuance per step 8 of [Reconnection](#reconnection), and its Flow State stays `CRED_OFFERED`.
 
 ### Flow Variants
 
@@ -418,7 +418,7 @@ The vt-flow session correlates with its Issue Credential V2 subprotocol through 
 | `credential-issued` | — | (no transition) |
 | `credential-received` | *(perform on-chain digest verification, then either Ack or problem-report)* | — |
 | `done` | `COMPLETED` | `COMPLETED` |
-| `abandoned` | `ERROR` (Connection → `TERMINATED`) | `ERROR` (Connection → `TERMINATED`) |
+| `abandoned` | `ERROR` (Connection → `TERMINATED`), except for an Applicant that has sent its `request-credential` and has received no credential of the run: no transition, see [Reconnection](#reconnection) step 8 | `ERROR` (Connection → `TERMINATED`) |
 
 Receiving `credential-received` on the Applicant side is the hook point for on-chain digest verification.
 
@@ -427,17 +427,32 @@ Receiving `credential-received` on the Applicant side is the hook point for on-c
 If the Applicant reconnects after a connection closes:
 
 1. The Applicant **MUST** establish a new DIDComm connection (via implicit invitation to the Validator's DID).
-2. The Applicant **MUST** resend an `onboarding-request` or `issuance-request` matching the original, carrying the **same** `participant_session_id` and (for Onboarding Process) `participant_id` or (for Direct Issuance) `schema_id`.
+2. The Applicant **MUST** resend an `onboarding-request` or `issuance-request` matching the original, carrying the **same** `thid`, the **same** `participant_session_id` and (for Onboarding Process) `participant_id` or (for Direct Issuance) `schema_id`. In the Onboarding Process variant, the Validator **MUST** take a request with another `thid` for a `CRED_OFFERED` flow as a renewal only while the `op_state` of the `Participant` entry is `PENDING` (see [States](#states)); for any other `op_state` it **MUST** take the request as a reconnection, and **MUST NOT** abandon the issuance run on that ground.
 3. The Validator **MUST** recognize the request as belonging to an existing session by matching on `participant_session_id` (plus `participant_id` or `schema_id` for defence-in-depth) and re-attach the existing flow to the new connection.
 4. The reattached flow's Flow State resumes from whatever stage it was in when the connection dropped.
 
 If the Validator cannot find a matching session, a new session is created normally.
 
-The same re-attach serves a flow that a termination closed and that the chain re-opened. These rules apply to the Onboarding Process variant only; a Credential Direct Issuance has no on-chain validation.
+The same re-attach serves a flow that a termination closed and that the chain re-opened. Steps 5 to 7 apply to the Onboarding Process variant only; a Credential Direct Issuance has no on-chain validation.
 
 5. When the `SetParticipantOPtoValidated` of the `Participant` entry of a `TERMINATED_BY_VALIDATOR` or `TERMINATED_BY_APPLICANT` flow lands afterwards and the entry is active, both parties **MUST** move the flow to `VALIDATED` (see [States](#states)). The Applicant **MUST** then reconnect per steps 1 and 2 when the role of the entry is `HOLDER`; for any other role `VALIDATED` is terminal and no reconnection follows. `ERROR`, `PARTICIPANT_REVOKED`, and `PARTICIPANT_SLASHED` are not re-opened.
 6. The Validator **MUST** re-attach a request that names a `VALIDATED` flow and resume at `offer-credential` (step 6 of the [Onboarding Process Flow](#onboarding-process-flow)). It **MUST NOT** run the validation again, **MUST NOT** send `validating`, and **MUST NOT** answer `vt-flow.invalid-participant-session-id` on the ground that the flow was terminated. The `problem-report` that closed the flow is superseded by the chain event, and the reconnection is not a retry of the request it refused.
 7. A `participant_session_id` is not a secret. The Validator **MUST** re-attach a flow only to a connection from the same peer DID as the connection it replaces, and **MUST** refuse any other request that names it with `vt-flow.invalid-participant-session-id`.
+8. A repair of the issuance run of a `CRED_OFFERED` flow follows these rules. They apply to both variants. A repair is not a renewal: it changes no on-chain state and has no on-chain cost. No rule of this step makes a party pay a second time for a credential.
+   - An Applicant that has sent its `request-credential` and has received no credential of the run, because no answer arrived or because a problem report answered the request, **MUST** resend the request of step 2 on an established connection, with the same `thid`.
+   - The Validator **MUST** re-attach the request per step 3. It **MUST NOT** submit `CreateOrUpdateParticipantSession` a second time for a run whose anchoring succeeded or is pending.
+   - The Validator **MUST** then resume the run by the row of this table that applies. The connection of the run is the connection that carried its messages.
+
+   | Connection of the run | `request-credential` received | Anchoring of the run | The Validator |
+   | --- | --- | --- | --- |
+   | Any | — | A transaction was sent, and it is pending or it failed | **MUST** send nothing. |
+   | The connection of the flow | No | No transaction was sent | **MUST** abandon the run and send a new `offer-credential`. |
+   | The connection of the flow | Yes | No transaction was sent | **MUST** start the anchoring. |
+   | The connection of the flow | Yes | Succeeded | **MUST** send the stored `issue-credential` again. |
+   | An earlier connection | Any | No transaction was sent | **MUST** abandon the run and send a new `offer-credential`. |
+   | An earlier connection | Any | Succeeded | **MUST** abandon the run, send a new `offer-credential` on the connection of the flow, and issue in the new run the credential that it anchored. It **MUST NOT** anchor a second time. |
+
+   - An Applicant that receives a new `offer-credential` for the flow **MUST** continue with it and abandon the earlier run.
 
 ## State Machine Diagrams
 
@@ -452,6 +467,7 @@ stateDiagram-v2
     AWAITING_OP --> OR_SENT: send onboarding-request
     COMPLETED --> OR_SENT: send onboarding-request (renewal)
     VALIDATED --> OR_SENT: send onboarding-request (renewal)
+    CRED_OFFERED --> OR_SENT: send onboarding-request (renewal, entry PENDING)
     OR_SENT --> VALIDATING: validating received
     OR_SENT --> OOB_PENDING: oob-link received
     VALIDATING --> OOB_PENDING: oob-link received
@@ -470,7 +486,7 @@ stateDiagram-v2
     OR_SENT --> ERROR: problem-report
     VALIDATING --> ERROR: problem-report
     OOB_PENDING --> ERROR: problem-report
-    CRED_OFFERED --> ERROR: subprotocol abandoned
+    CRED_OFFERED --> ERROR: subprotocol abandoned (not when no credential answered the request, Reconnection step 8)
     OR_SENT --> TERMINATED_BY_VALIDATOR: validator terminates
     VALIDATING --> TERMINATED_BY_VALIDATOR: validator terminates
     OOB_PENDING --> TERMINATED_BY_VALIDATOR: validator terminates
@@ -508,7 +524,7 @@ stateDiagram-v2
     IR_SENT --> ERROR: problem-report
     VALIDATING --> ERROR: problem-report
     OOB_PENDING --> ERROR: problem-report
-    CRED_OFFERED --> ERROR: subprotocol abandoned
+    CRED_OFFERED --> ERROR: subprotocol abandoned (not when no credential answered the request, Reconnection step 8)
     IR_SENT --> TERMINATED_BY_VALIDATOR: validator terminates
     VALIDATING --> TERMINATED_BY_VALIDATOR: validator terminates
     OOB_PENDING --> TERMINATED_BY_VALIDATOR: validator terminates
@@ -542,6 +558,7 @@ stateDiagram-v2
     CRED_OFFERED --> COMPLETED: Ack received
     COMPLETED --> AWAITING_OR: onboarding-request received (renewal)
     VALIDATED --> AWAITING_OR: onboarding-request received (renewal)
+    CRED_OFFERED --> AWAITING_OR: onboarding-request received (renewal, entry PENDING)
 
     VALIDATED --> [*]: validation-only terminal
     COMPLETED --> CRED_REVOKED: send credential-state-change
