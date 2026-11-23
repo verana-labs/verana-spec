@@ -38,6 +38,7 @@ Changelog:
 - additional vt-flows
 - delegation — two complementary layers: standing registry-anchored authorization on-chain (VSOA-style: operator X may act/pay for ecosystem/service Y — durable, publicly resolvable), plus ephemeral per-action execution grants at the agent runtime (OpenVTC-style consent gate: a human context-admin approves one specific task for one AI agent, then authority evaporates). Combined story: VPR answers "is this agent's operator authorized in this ecosystem at all?", the consent gate answers "did an accountable human approve this specific action?"
 - Enclave & HSM key custody for vs-agent / business wallet: PKCS#11, cloud KMS, TEE deployment profile (vs-agent)
+- Post-quantum signatures, ML-DSA (FIPS 204): credential signatures through Askar / Credo (vs-agent); validator and account keys through the Cosmos SDK v0.55 upgrade (node)
 - [vLEI / GLEIF](https://www.gleif.org/en/organizational-identity/lei-vlei/the-verifiable-lei-vlei) as an alternative source of trust for Organizations (vt-spec)
 - [OpenVTC](https://github.com/OpenVTC) interop/acceptance: Personhood Credentials (PHC) and Verifiable Relationship Credentials (VRC) as an alternative source of trust for natural persons (vt-spec)
 - Verifiable enclave attestation as a trust signal (research — attestation evidence linked from DID doc / ECS credential)
