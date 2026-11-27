@@ -1,6 +1,6 @@
 # VS Agent v4 Specification
 
-**Latest Draft:** spec v4-draft26
+**Latest Draft:** spec v4-draft27
 
 ## Abstract
 
@@ -66,7 +66,7 @@ A conforming VS Agent implements every requirement of this document that is not 
 | External access to the Administration API | `ADMIN_API_AUTH_MODE` = `corporation` | [[VSA-ADM-AUTH-PROTO]](#vsa-adm-auth-proto-account-challengeresponse), [[VSA-ADM-AUTH]](#vsa-adm-auth-authentication) |
 | Events API | `EVENTS_WEBHOOK_URL` set | [Events API](#events-api) |
 | OpenID4VC | `OID4VC_CONFIG_FILE_LOCATION` set | [[VSA-PUB-OID]](#vsa-pub-oid-openid4vc-public-protocol-endpoints), [[VSA-ADM-OID-CE]](#vsa-adm-oid-ce-credential-exchanges), [[VSA-ADM-OID-PR]](#vsa-adm-oid-pr-presentations), [[VSA-ADM-OID-CS]](#vsa-adm-oid-cs-signing-certificates), [[VSA-ADM-OID-SL]](#vsa-adm-oid-sl-status-lists), [[VSA-ADM-OID-CR]](#vsa-adm-oid-cr-credential-revocation), [[VSA-VTI-FLOW-VERIFY-OID]](#vsa-vti-flow-verify-oid-openid4vp-trust-decision) |
-| Optional DIDComm modules | Deployment choice, reported by [`listProtocols`](#vsa-adm-dc-proto-list-listprotocols) | [[VSA-ADM-DC-RC]](#vsa-adm-dc-rc-receipts), [[VSA-ADM-DC-RA]](#vsa-adm-dc-ra-reactions), [[VSA-ADM-DC-UP]](#vsa-adm-dc-up-user-profile), [[VSA-ADM-DC-MS]](#vsa-adm-dc-ms-media-sharing), [[VSA-ADM-DC-CL]](#vsa-adm-dc-cl-calls), [[VSA-ADM-DC-AM]](#vsa-adm-dc-am-action-menu), [[VSA-ADM-DC-QA]](#vsa-adm-dc-qa-question-answer), [[VSA-ADM-DC-MRTD]](#vsa-adm-dc-mrtd-mrtd) |
+| Optional DIDComm modules | Deployment choice, reported by [`listProtocols`](#vsa-adm-dc-proto-list-listprotocols) | [[VSA-ADM-DC-RC]](#vsa-adm-dc-rc-receipts), [[VSA-ADM-DC-RA]](#vsa-adm-dc-ra-reactions), [[VSA-ADM-DC-UP]](#vsa-adm-dc-up-user-profile), [[VSA-ADM-DC-MS]](#vsa-adm-dc-ms-media-sharing), [[VSA-ADM-DC-CL]](#vsa-adm-dc-cl-calls), [[VSA-ADM-DC-AM]](#vsa-adm-dc-am-action-menu), [[VSA-ADM-DC-QA]](#vsa-adm-dc-qa-question-answer), [[VSA-ADM-DC-MRTD]](#vsa-adm-dc-mrtd-mrtd), [[VSA-ADM-DC-DF]](#vsa-adm-dc-df-discover-features) |
 | Extension protocol modules | Deployment choice | [[VSA-ADM-DC-EXT]](#vsa-adm-dc-ext-extension-protocol-modules) |
 
 Every other section applies to every conforming agent. [Protocol Modules](#vsa-dc-mod-protocol-modules) names the DIDComm modules that are REQUIRED.
@@ -614,6 +614,7 @@ The agent implements each DIDComm protocol as one **protocol module**. A module 
 |---|---|---|---|
 | Connections | Connection establishment of the envelope in use ([[VSA-VTI-DIDCOMM]](#vsa-vti-didcomm-didcomm-support)) | REQUIRED | [[VSA-ADM-DC-CN]](#vsa-adm-dc-cn-connections) |
 | Invitations | Out-of-Band invitation of the envelope in use ([[VSA-VTI-DIDCOMM]](#vsa-vti-didcomm-didcomm-support)); on a DIDComm v2 connection, a `share-media` message of `https://didcomm.org/media-sharing/1.0` carries it | REQUIRED | [[VSA-ADM-DC-INV]](#vsa-adm-dc-inv-invitations) |
+| Discover Features | `https://didcomm.org/discover-features/2.0` | REQUIRED | [[VSA-ADM-DC-DF]](#vsa-adm-dc-df-discover-features) |
 | Basic Messages | `https://didcomm.org/basicmessage/1.0`, `https://didcomm.org/basicmessage/2.0` | REQUIRED | [[VSA-ADM-DC-BM]](#vsa-adm-dc-bm-basic-messages) |
 | Presentations | `https://didcomm.org/present-proof/2.0` | REQUIRED | [[VSA-ADM-DC-PR]](#vsa-adm-dc-pr-presentations) |
 | Credential Exchanges | `https://didcomm.org/issue-credential/2.0` | REQUIRED | [[VSA-ADM-DC-CE]](#vsa-adm-dc-ce-credential-exchanges) |
@@ -628,7 +629,7 @@ The agent implements each DIDComm protocol as one **protocol module**. A module 
 | Extension protocol modules | The protocol URI that each module reports | OPTIONAL | [[VSA-ADM-DC-EXT]](#vsa-adm-dc-ext-extension-protocol-modules) |
 | Verifiable Trust flows | `vt-flow` 1.0 | REQUIRED | [[VSA-VTI-FLOW-DIDCOMM]](#vsa-vti-flow-didcomm-didcomm-protocol) |
 
-Connections, Invitations, Basic Messages, Presentations, and Credential Exchanges are REQUIRED. Every other core module is OPTIONAL: the agent MUST answer every path of a module that it does not serve with HTTP `404`. A caller discovers the modules of a deployment with [`listProtocols`](#vsa-adm-dc-proto-list-listprotocols).
+Connections, Invitations, Basic Messages, Presentations, Credential Exchanges, and Discover Features are REQUIRED. Every other core module is OPTIONAL: the agent MUST answer every path of a module that it does not serve with HTTP `404`. A caller discovers the modules of a deployment with [`listProtocols`](#vsa-adm-dc-proto-list-listprotocols).
 
 > Non-normative: the protocol URI of each module names its protocol definition. Receipts, User Profile, and Media Sharing are defined at [didcomm.org](https://didcomm.org); Action Menu ([RFC 0509](https://github.com/decentralized-identity/aries-rfcs/tree/main/features/0509-action-menu)) and Question Answer ([RFC 0113](https://github.com/decentralized-identity/aries-rfcs/tree/main/features/0113-question-answer)) in the Aries RFCs. Reactions, Calls, and MRTD have no formal definition yet: [credo-ts-didcomm-ext](https://github.com/openwallet-foundation/credo-ts-didcomm-ext) defines them.
 
@@ -2045,7 +2046,7 @@ Sends a question on an established connection.
 
 #### [VSA-ADM-DC-MRTD] MRTD
 
-Methods that request machine-readable travel document data, per the MRTD protocol (`https://didcomm.org/mrtd/1.0`). The agent requests the data; the peer answers with an `mrz-data` or an `emrtd-data` message, or refuses with a problem report (refused, timeout).
+Methods that request machine-readable travel document data, per the MRTD protocol (`https://didcomm.org/mrtd/1.0`). The agent requests the data; the peer answers with an `mrz-data` or an `emrtd-data` message, or refuses with a problem report (refused, timeout). A peer that can read the chip of a document discloses the capability `mrtd.emrtd-read-support` with `value` `true`, per [[VSA-ADM-DC-DF]](#vsa-adm-dc-df-discover-features): a caller that wants to avoid a refusal asks for the eMRTD data only on a connection whose peer disclosed it, and falls back to `requestMrz` otherwise. The agent itself does not check the capability before it sends a request.
 
 The module stores no record. The agent parses and verifies each received travel document itself, and delivers the result — not the wire message — through the [events of the catalog](#vsa-evt-cat-event-catalog). Besides `connectionId` and `threadId`, the event `data` carries:
 
@@ -2086,6 +2087,22 @@ Asks the peer of a connection for the data groups of its electronic travel docum
 - `id` — identifier of the sent message.
 
 **Errors**: `UNKNOWN_ID` (`404`) when no connection has the supplied identifier.
+
+#### [VSA-ADM-DC-DF] Discover Features
+
+The agent learns what a peer supports with the Discover Features protocol (`https://didcomm.org/discover-features/2.0`), and answers the queries of its peers with its own features. A caller adapts a flow to the answer: it asks for a travel document only when the peer disclosed the MRTD capability, and falls back to another method otherwise.
+
+The module exposes no method and stores no record that the API exposes. Every agent answers the queries of its peers; the queries that the agent sends itself are configuration of the deployment, and each answer is delivered as a [`didcomm.discover-features.disclose-received`](#vsa-evt-cat-event-catalog) event. The module has no path family, so [`listProtocols`](#vsa-adm-dc-proto-list-listprotocols) does not report it.
+
+[VSA-ADM-DC-DF-1] The deployment configuration names the queries that the agent sends. Each query has a `featureType` — `protocol`, `goal-code`, or an extension type such as `capability` — and a `match` pattern, per the protocol. Without a configured query the agent MUST send no query, and emits no `disclose-received` event.
+
+> Non-normative: the reference implementation reads the queries from the `discovery.json` file of its application directory, for example `[{ "featureType": "capability", "match": "mrtd.*" }]`.
+
+[VSA-ADM-DC-DF-2] The agent MUST send the configured queries on a connection when it becomes `completed`, and again when the peer accepts an invitation of this agent on that connection (a handshake reuse, per [[VSA-DC-OOB]](#vsa-dc-oob-out-of-band-invitation-acceptance)): since it connected, the peer may have gained features, as a wallet does when it is updated. A query that fails MUST NOT affect the connection; the agent logs it.
+
+[VSA-ADM-DC-DF-3] The agent MUST deliver each `disclose` message that answers one of its queries as a [`didcomm.discover-features.disclose-received`](#vsa-evt-cat-event-catalog) event. Its `data` carries `connectionId`, `threadId` — the thread of the query — and `features`: the disclosed features, each with `featureType`, `id`, and the other properties of the feature — `roles` for a protocol, `value` for a capability. A disclosure is not a change of the connection: the agent MUST NOT emit a `didcomm.connections.state-updated` event for it, and the connection record does not change.
+
+[VSA-ADM-DC-DF-4] The agent MUST answer a query of a peer with the features of the modules it serves, per the protocol, and emits no event for it.
 
 #### [VSA-ADM-DC-EXT] Extension Protocol Modules
 
@@ -3035,6 +3052,7 @@ The agent MUST emit each event of this table when its trigger occurs.
 | `didcomm.mrtd.mrz-data-received` | The agent receives an `mrz-data` message, per [[VSA-ADM-DC-MRTD]](#vsa-adm-dc-mrtd-mrtd). | `connectionId`, `threadId`, and `mrzData` — the parsed result, per [[VSA-ADM-DC-MRTD]](#vsa-adm-dc-mrtd-mrtd). |
 | `didcomm.mrtd.emrtd-data-received` | The agent receives an `emrtd-data` message, per [[VSA-ADM-DC-MRTD]](#vsa-adm-dc-mrtd-mrtd). | `connectionId`, `threadId`, and `dataGroups` — the parsed and verified result, per [[VSA-ADM-DC-MRTD]](#vsa-adm-dc-mrtd-mrtd). |
 | `didcomm.mrtd.problem-report-received` | The agent receives an MRTD problem report, per [[VSA-ADM-DC-MRTD]](#vsa-adm-dc-mrtd-mrtd). | `connectionId`, `threadId`, and `reason`. |
+| `didcomm.discover-features.disclose-received` | The agent receives a `disclose` message that answers one of its feature queries, per [[VSA-ADM-DC-DF]](#vsa-adm-dc-df-discover-features). | `connectionId`, `threadId` — the thread of the query — and `features` — the disclosed features, each with `featureType`, `id`, and the other properties of the feature (`roles` for a protocol, `value` for a capability). |
 | `didcomm.presentations.state-updated` | A presentation record is created or changes state, per [[VSA-ADM-DC-PR]](#vsa-adm-dc-pr-presentations). For the verifier, the event of the change to `presentation-received` follows the trust decision of [[VSA-VTI-FLOW-VERIFY-AC-7]](#vsa-vti-flow-verify-ac-anoncreds-trust-decision), and carries its result. | The presentation record, as [`getPresentation`](#vsa-adm-dc-pr-get-getpresentation) returns it, plus `previousState`. |
 | `didcomm.credential-exchanges.state-updated` | A credential exchange record is created or changes state, per [[VSA-ADM-DC-CE]](#vsa-adm-dc-ce-credential-exchanges). | The credential exchange record, as [`getCredentialExchange`](#vsa-adm-dc-ce-get-getcredentialexchange) returns it, plus `previousState`. |
 | `openid4vc.credential-exchanges.state-updated` | An OpenID4VCI issuance session is created or changes state, per [[VSA-ADM-OID-CE]](#vsa-adm-oid-ce-credential-exchanges). | The credential exchange record, as [`getCredentialExchange`](#vsa-adm-oid-ce-get-getcredentialexchange) returns it, plus `previousState`. |
@@ -4044,6 +4062,11 @@ Every identifier of this document, in lexical order. A section identifier links 
 | `VSA-ADM-DC-CN-DELETE` | [deleteConnection](#vsa-adm-dc-cn-delete-deleteconnection) | Connections |
 | `VSA-ADM-DC-CN-GET` | [getConnection](#vsa-adm-dc-cn-get-getconnection) | Connections |
 | `VSA-ADM-DC-CN-LIST` | [listConnections](#vsa-adm-dc-cn-list-listconnections) | Connections |
+| `VSA-ADM-DC-DF` | [Discover Features](#vsa-adm-dc-df-discover-features) | DIDComm Scope |
+| `VSA-ADM-DC-DF-1` | The deployment configuration names the queries that the agent sends. Each query has a `featureType` — `protocol`, `goal-code`, or an extensi… |  |
+| `VSA-ADM-DC-DF-2` | The agent MUST send the configured queries on a connection when it becomes `completed`, and again when the peer accepts an invitation of thi… |  |
+| `VSA-ADM-DC-DF-3` | The agent MUST deliver each `disclose` message that answers one of its queries as a [`didcomm.discover-features.disclose-received`](#vsa-evt… |  |
+| `VSA-ADM-DC-DF-4` | The agent MUST answer a query of a peer with the features of the modules it serves, per the protocol, and emits no event for it. |  |
 | `VSA-ADM-DC-EXT` | [Extension Protocol Modules](#vsa-adm-dc-ext-extension-protocol-modules) | DIDComm Scope |
 | `VSA-ADM-DC-EXT-1` | The methods of an extension protocol module MUST live under `/v2/didcomm/{module}`, where `{module}` is the kebab-case module name that [`li… |  |
 | `VSA-ADM-DC-EXT-2` | A method that sends a protocol message MUST use `POST /v2/didcomm/{module}/{action}`, where `{action}` is a kebab-case verb segment for the… |  |
@@ -4278,6 +4301,7 @@ Every identifier of this document, in lexical order. A section identifier links 
 | `VSA-VTI-VTJSC` | [VTJSC Management](#vsa-vti-vtjsc-vtjsc-management) | Verifiable Trust Behaviors |
 
 ## Appendix B: Change Log
+- **v4-draft27 (2026-11-27)** — New REQUIRED Discover Features module ([[VSA-ADM-DC-DF]](#vsa-adm-dc-df-discover-features)): every agent answers the feature queries of its peers. The agent sends the feature queries of its configuration when a connection completes and again when the peer reuses the connection to accept an invitation, and delivers each answer as the new [`didcomm.discover-features.disclose-received`](#vsa-evt-cat-event-catalog) event, with `connectionId`, `threadId`, and `features`, each with its `featureType`, `id`, and own properties such as `value`. A disclosure is not a connection state change and emits no `didcomm.connections.state-updated`. The agent answers the queries of its peers with the features of the modules it serves.
 - **v4-draft26 (2026-11-19)** — An applicant repairs the issuance run of a `CRED_OFFERED` flow whose `request-credential` gets no credential or a problem report in answer: it resends the request with the same `thid` on the established connection, within one minute, or within five minutes when the validator cannot be reached, and then records the cause in `errorMessage` ([[VSA-VTI-FLOW-ISSUE-2]](#vsa-vti-flow-issue-credential-issuance-and-acceptance)). The record of the cause fires no event, the `pendingAction` of such a flow is `APPLICANT`, and the agent removes `errorMessage` on every transition out of `CRED_OFFERED`. A renewal re-enters a `CRED_OFFERED` flow while the entry is `PENDING` ([[VSA-VTI-FLOW-OP-RENEW]](#vsa-vti-flow-op-renew-renew-onboarding-process)); a reconnection carries the same `thid` as the original request. The validator resumes the run without a second anchoring, looks up the digest of a credential before it anchors it, records a failed lookup as a failed pre-flight, repeats an anchoring whose pre-flight failed, delivers on the present connection a credential that it anchored on an earlier connection, without a second anchoring, and resumes the issuance runs of its flows when it starts ([[VSA-VTI-FLOW-ISSUE-3]](#vsa-vti-flow-issue-credential-issuance-and-acceptance)). `listFlows` reports `errorMessage`. A pre-flight that gets no valid answer from the node or the indexer has the new `reason` `SERVICE_UNAVAILABLE`, and `PREFLIGHT_ERROR` now means that the node answered and the pre-flight failed ([VSA-ADM-VT-FL-VALIDATE-9]). The agent repeats a validation or an anchoring that failed in the pre-flight when it starts, and every 60 seconds while the `reason` is `SERVICE_UNAVAILABLE`; `pendingAction` reports `AGENT` for such a flow ([VSA-ADM-VT-FL-VALIDATE-12], [VSA-VTI-FLOW-ISSUE-1], [VSA-VTI-FLOW-ISSUE-3]).
 - **v4-draft25 (2026-11-16)** — [`requestEmrtdData`](#vsa-adm-dc-mrtd-emrtd-requestemrtddata) takes an OPTIONAL `parentThreadId`: the thread identifier of the MRZ exchange that the request follows. The agent sends it as the parent thread of the request, so that the peer reads the chip with the MRZ of that exchange.
 - **v4-draft24 (2026-11-13)** — Resolves [#132](https://github.com/verana-labs/verana-spec/issues/132). [[VSA-VTI-ECS-SELF-1]](#vsa-vti-ecs-self-ecs-self-issuance) names the schemas that the agent issues to itself: ECS-Organization, ECS-Persona, and ECS-Service. The agent does not issue its own ECS-Badge or ECS-UserAgent credential: an ISSUER `Participant` entry for one of these two schemas authorizes the agent to issue the credential to another subject, and starts no self-issuance. Before this draft the rule covered every ECS schema, and its publication step contradicted [[VSA-VTI-FLOW-FMT-4]](#vsa-vti-flow-fmt-credential-format-over-didcomm) for these two. [[VSA-VTI-FLOW-FMT-4]](#vsa-vti-flow-fmt-credential-format-over-didcomm) excepts them from the credentials that the applicant publishes, and states that the agent does not issue them to itself, and [[VSA-VT-LVP-1]](#vsa-vt-lvp-linked-vp-management) names the three ECS credentials that the agent publishes and forbids the publication of the other two, also when a credential acquisition flow delivers one.
