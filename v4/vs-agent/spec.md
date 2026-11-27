@@ -886,6 +886,7 @@ The table lists every method of the Administration API. It is a non-normative ov
 | DIDComm | `listProtocols` | `GET` | `/v2/didcomm/protocols` | [[VSA-ADM-DC-PROTO-LIST]](#vsa-adm-dc-proto-list-listprotocols) |
 |  | `listConnections` | `GET` | `/v2/didcomm/connections` | [[VSA-ADM-DC-CN-LIST]](#vsa-adm-dc-cn-list-listconnections) |
 |  | `getConnection` | `GET` | `/v2/didcomm/connections/{connectionId}` | [[VSA-ADM-DC-CN-GET]](#vsa-adm-dc-cn-get-getconnection) |
+|  | `terminateConnection` | `POST` | `/v2/didcomm/connections/{connectionId}/terminate` | [[VSA-ADM-DC-CN-TERMINATE]](#vsa-adm-dc-cn-terminate-terminateconnection) |
 |  | `deleteConnection` | `DELETE` | `/v2/didcomm/connections/{connectionId}` | [[VSA-ADM-DC-CN-DELETE]](#vsa-adm-dc-cn-delete-deleteconnection) |
 |  | `createInvitation` | `POST` | `/v2/didcomm/invitations` | [[VSA-ADM-DC-INV-CREATE]](#vsa-adm-dc-inv-create-createinvitation) |
 |  | `listInvitations` | `GET` | `/v2/didcomm/invitations` | [[VSA-ADM-DC-INV-LIST]](#vsa-adm-dc-inv-list-listinvitations) |
@@ -1091,12 +1092,13 @@ Returns the protocol modules that this deployment serves.
 
 #### [VSA-ADM-DC-CN] Connections
 
-Methods that manage the DIDComm connection records held by this agent.
+Methods that manage the DIDComm connection records held by this agent. A connection that this agent or its peer terminated is `abandoned`: the record stays, and the agent sends no further message on it.
 
 | Module | Method Name | HTTP Method | Relative REST API path | Requirements |
 | --- | --- | --- | --- | --- |
 | Connections | `listConnections` | `GET` | `/v2/didcomm/connections` | [see](#vsa-adm-dc-cn-list-listconnections) |
 | Connections | `getConnection` | `GET` | `/v2/didcomm/connections/{connectionId}` | [see](#vsa-adm-dc-cn-get-getconnection) |
+| Connections | `terminateConnection` | `POST` | `/v2/didcomm/connections/{connectionId}/terminate` | [see](#vsa-adm-dc-cn-terminate-terminateconnection) |
 | Connections | `deleteConnection` | `DELETE` | `/v2/didcomm/connections/{connectionId}` | [see](#vsa-adm-dc-cn-delete-deleteconnection) |
 
 ##### [VSA-ADM-DC-CN-LIST] listConnections
@@ -1128,15 +1130,33 @@ Retrieves one connection record by identifier.
 
 **Output**: the connection record, with the same shape as in `listConnections`.
 
+##### [VSA-ADM-DC-CN-TERMINATE] terminateConnection
+
+Ends the DIDComm relationship and keeps the record. The agent tells the peer that the connection ends (a hangup) and moves the record to `abandoned`, so that its history stays readable and no further message is sent on it. A peer that cannot be reached does not fail the call: the agent logs it and terminates the record all the same. A connection that is already `abandoned` is returned unchanged.
+
+**Path parameters**:
+
+- `connectionId` (REQUIRED) — UUID of the connection to terminate.
+
+**Inputs**: none.
+
+**Output**: the connection record, with the same shape as in `listConnections`.
+
+**Errors**: `UNKNOWN_ID` (`404`) when no connection has the supplied identifier.
+
+**Events**: [`didcomm.connections.state-updated`](#vsa-evt-cat-event-catalog), with `state` `abandoned`.
+
 ##### [VSA-ADM-DC-CN-DELETE] deleteConnection
 
-Deletes a connection record. The agent MAY also close the related DIDComm session. Deleting a connection does not affect the connections that were opened from invitations sent on it: each one keeps its `parentConnectionId`.
+Deletes a connection record. Unless `notify` is `false`, the agent first tells the peer that the connection ends, as [`terminateConnection`](#vsa-adm-dc-cn-terminate-terminateconnection) does. Deleting a connection does not affect the connections that were opened from invitations sent on it: each one keeps its `parentConnectionId`.
 
 **Path parameters**:
 
 - `connectionId` (REQUIRED) — UUID of the connection to delete.
 
-**Inputs**: none.
+**Inputs** (query):
+
+- `notify` (OPTIONAL, default `true`) — `false` deletes the record without telling the peer, for example a stale connection whose peer is gone.
 
 **Output**: empty body (HTTP `204`).
 
@@ -4059,6 +4079,7 @@ Every identifier of this document, in lexical order. A section identifier links 
 | `VSA-ADM-DC-CL-OFFER` | [offerCall](#vsa-adm-dc-cl-offer-offercall) | Calls |
 | `VSA-ADM-DC-CL-REJECT` | [rejectCall](#vsa-adm-dc-cl-reject-rejectcall) | Calls |
 | `VSA-ADM-DC-CN` | [Connections](#vsa-adm-dc-cn-connections) | DIDComm Scope |
+| `VSA-ADM-DC-CN-TERMINATE` | [terminateConnection](#vsa-adm-dc-cn-terminate-terminateconnection) | Connections |
 | `VSA-ADM-DC-CN-DELETE` | [deleteConnection](#vsa-adm-dc-cn-delete-deleteconnection) | Connections |
 | `VSA-ADM-DC-CN-GET` | [getConnection](#vsa-adm-dc-cn-get-getconnection) | Connections |
 | `VSA-ADM-DC-CN-LIST` | [listConnections](#vsa-adm-dc-cn-list-listconnections) | Connections |
@@ -4301,7 +4322,7 @@ Every identifier of this document, in lexical order. A section identifier links 
 | `VSA-VTI-VTJSC` | [VTJSC Management](#vsa-vti-vtjsc-vtjsc-management) | Verifiable Trust Behaviors |
 
 ## Appendix B: Change Log
-- **v4-draft27 (2026-11-27)** — New REQUIRED Discover Features module ([[VSA-ADM-DC-DF]](#vsa-adm-dc-df-discover-features)): every agent answers the feature queries of its peers. The agent sends the feature queries of its configuration when a connection completes and again when the peer reuses the connection to accept an invitation, and delivers each answer as the new [`didcomm.discover-features.disclose-received`](#vsa-evt-cat-event-catalog) event, with `connectionId`, `threadId`, and `features`, each with its `featureType`, `id`, and own properties such as `value`. A disclosure is not a connection state change and emits no `didcomm.connections.state-updated`. The agent answers the queries of its peers with the features of the modules it serves.
+- **v4-draft27 (2026-11-27)** — New REQUIRED Discover Features module ([[VSA-ADM-DC-DF]](#vsa-adm-dc-df-discover-features)): every agent answers the feature queries of its peers. The agent sends the feature queries of its configuration when a connection completes and again when the peer reuses the connection to accept an invitation, and delivers each answer as the new [`didcomm.discover-features.disclose-received`](#vsa-evt-cat-event-catalog) event, with `connectionId`, `threadId`, and `features`, each with its `featureType`, `id`, and own properties such as `value`. A disclosure is not a connection state change and emits no `didcomm.connections.state-updated`. The agent answers the queries of its peers with the features of the modules it serves. New [`terminateConnection`](#vsa-adm-dc-cn-terminate-terminateconnection): the agent tells the peer that the connection ends and keeps the record as `abandoned`, the state that a connection closed by either side has; [`deleteConnection`](#vsa-adm-dc-cn-delete-deleteconnection) takes `notify=false` to delete a record without a hangup.
 - **v4-draft26 (2026-11-19)** — An applicant repairs the issuance run of a `CRED_OFFERED` flow whose `request-credential` gets no credential or a problem report in answer: it resends the request with the same `thid` on the established connection, within one minute, or within five minutes when the validator cannot be reached, and then records the cause in `errorMessage` ([[VSA-VTI-FLOW-ISSUE-2]](#vsa-vti-flow-issue-credential-issuance-and-acceptance)). The record of the cause fires no event, the `pendingAction` of such a flow is `APPLICANT`, and the agent removes `errorMessage` on every transition out of `CRED_OFFERED`. A renewal re-enters a `CRED_OFFERED` flow while the entry is `PENDING` ([[VSA-VTI-FLOW-OP-RENEW]](#vsa-vti-flow-op-renew-renew-onboarding-process)); a reconnection carries the same `thid` as the original request. The validator resumes the run without a second anchoring, looks up the digest of a credential before it anchors it, records a failed lookup as a failed pre-flight, repeats an anchoring whose pre-flight failed, delivers on the present connection a credential that it anchored on an earlier connection, without a second anchoring, and resumes the issuance runs of its flows when it starts ([[VSA-VTI-FLOW-ISSUE-3]](#vsa-vti-flow-issue-credential-issuance-and-acceptance)). `listFlows` reports `errorMessage`. A pre-flight that gets no valid answer from the node or the indexer has the new `reason` `SERVICE_UNAVAILABLE`, and `PREFLIGHT_ERROR` now means that the node answered and the pre-flight failed ([VSA-ADM-VT-FL-VALIDATE-9]). The agent repeats a validation or an anchoring that failed in the pre-flight when it starts, and every 60 seconds while the `reason` is `SERVICE_UNAVAILABLE`; `pendingAction` reports `AGENT` for such a flow ([VSA-ADM-VT-FL-VALIDATE-12], [VSA-VTI-FLOW-ISSUE-1], [VSA-VTI-FLOW-ISSUE-3]).
 - **v4-draft25 (2026-11-16)** — [`requestEmrtdData`](#vsa-adm-dc-mrtd-emrtd-requestemrtddata) takes an OPTIONAL `parentThreadId`: the thread identifier of the MRZ exchange that the request follows. The agent sends it as the parent thread of the request, so that the peer reads the chip with the MRZ of that exchange.
 - **v4-draft24 (2026-11-13)** — Resolves [#132](https://github.com/verana-labs/verana-spec/issues/132). [[VSA-VTI-ECS-SELF-1]](#vsa-vti-ecs-self-ecs-self-issuance) names the schemas that the agent issues to itself: ECS-Organization, ECS-Persona, and ECS-Service. The agent does not issue its own ECS-Badge or ECS-UserAgent credential: an ISSUER `Participant` entry for one of these two schemas authorizes the agent to issue the credential to another subject, and starts no self-issuance. Before this draft the rule covered every ECS schema, and its publication step contradicted [[VSA-VTI-FLOW-FMT-4]](#vsa-vti-flow-fmt-credential-format-over-didcomm) for these two. [[VSA-VTI-FLOW-FMT-4]](#vsa-vti-flow-fmt-credential-format-over-didcomm) excepts them from the credentials that the applicant publishes, and states that the agent does not issue them to itself, and [[VSA-VT-LVP-1]](#vsa-vt-lvp-linked-vp-management) names the three ECS credentials that the agent publishes and forbids the publication of the other two, also when a credential acquisition flow delivers one.
